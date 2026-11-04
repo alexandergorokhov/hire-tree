@@ -514,7 +514,7 @@ fn hire_creates_child_from_global_contract() {
         match a {
             MockAction::CreateAccount { .. } => saw.0 = true,
             MockAction::Transfer { deposit, .. } => {
-                assert_eq!(*deposit, NearToken::from_millinear(70));
+                assert_eq!(*deposit, NearToken::from_millinear(50));
                 saw.1 = true;
             }
             MockAction::UseGlobalContract { contract_id, .. } => {

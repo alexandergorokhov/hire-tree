@@ -38,11 +38,15 @@ pub const MAX_WINDOW_SECS: u64 = 30 * 24 * 3600;
 const NS_PER_SEC: u64 = 1_000_000_000;
 
 /// NEAR a new child account gets from the job's own balance (its storage).
-/// The manager may attach more to `hire`; it goes to the child too, so the
-/// child can hire in turn. Tuned on the sandbox day.
-pub const CHILD_BASE_NEAR: NearToken = NearToken::from_millinear(50);
-/// Attached to the token's `storage_deposit` for the child (excess refunded).
-pub const TOKEN_STORAGE_NEAR: NearToken = NearToken::from_micronear(12_500);
+/// Measured on near-sandbox: a job account uses 463-583 bytes (0.005-0.006
+/// NEAR locked); each child record adds about 60 bytes, so 16 children stay
+/// under 0.02 NEAR. The manager may attach more to `hire`; it goes to the
+/// child too, so the child can hire in turn.
+pub const CHILD_BASE_NEAR: NearToken = NearToken::from_millinear(30);
+/// Attached to the token's `storage_deposit` for the child: the NEP-145
+/// minimum of a standard NEP-141 (125 bytes; mock-usdc's bounds are exactly
+/// this). A token that wants more fails the registration and `hire` rolls back.
+pub const TOKEN_STORAGE_NEAR: NearToken = NearToken::from_micronear(1_250);
 const ONE_YOCTO: NearToken = NearToken::from_yoctonear(1);
 const NO_DEPOSIT: NearToken = NearToken::from_yoctonear(0);
 
@@ -829,15 +833,19 @@ impl Job {
         if self.root {
             return delete;
         }
-        let notify = Promise::new(self.parent.clone()).function_call(
-            "child_closed",
-            json!({ "returned": U128(self.returned_to_parent) })
-                .to_string()
-                .into_bytes(),
-            NO_DEPOSIT,
-            GAS_CHILD_CLOSED,
-        );
-        notify.and(delete)
+        // A callback may not return a joint promise (the runtime refuses it,
+        // found on the sandbox), so the parent notice is detached.
+        Promise::new(self.parent.clone())
+            .function_call(
+                "child_closed",
+                json!({ "returned": U128(self.returned_to_parent) })
+                    .to_string()
+                    .into_bytes(),
+                NO_DEPOSIT,
+                GAS_CHILD_CLOSED,
+            )
+            .detach();
+        delete
     }
 
     /// Called by a settled child just before it is deleted. Only a known,
