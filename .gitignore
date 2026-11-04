@@ -1,0 +1,15 @@
+/target
+**/target
+.claude/
+node_modules/
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+proptest-regressions/
+.DS_Store
+
+# Build output (non-reproducible wasm for now; the reproducible build will
+# be committed here once it exists).
+out/

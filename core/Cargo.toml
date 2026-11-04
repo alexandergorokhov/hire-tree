@@ -1,0 +1,24 @@
+[package]
+name = "hire-tree-core"
+description = "Pure Rust core of Hire Tree: money math, receipt binding, signed text, job state machine. No near-sdk."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "ht_core"
+
+[dependencies]
+borsh.workspace = true
+sha2.workspace = true
+sha3.workspace = true
+hex.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+# The contract ABI build (`cargo near build`, a native build) needs
+# BorshSchema for state types. Not compiled into the wasm.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+borsh = { workspace = true, features = ["unstable__schema"] }
