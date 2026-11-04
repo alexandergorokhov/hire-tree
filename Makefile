@@ -32,6 +32,7 @@ test: ## Unit + property tests, offline (PROP_CASES=10000 by default)
 .PHONY: lint
 lint: ## rustfmt check + clippy -D warnings
 	cargo fmt --all -- --check
+	cd tests/sandbox && cargo fmt -- --check
 	cargo clippy --workspace --all-targets --locked --offline -- -D warnings
 
 .PHONY: build
@@ -49,11 +50,21 @@ build: ## Build the contract wasm into out/ with SHA256SUMS (non-reproducible fo
 	cd $(OUT) && sha256sum *.wasm | tee SHA256SUMS
 	@echo "build: non-reproducible wasm in $(OUT)/ (the Docker reproducible build is not built yet)" >&2
 
-# ---------------------------------------------------------------- not built yet
-
+# neard raises its open-file limit to 65535 at start and exits if it cannot.
+# Where the hard limit is lower and cannot be raised (some containers), a
+# tiny LD_PRELOAD shim clamps that one request to the hard limit.
 .PHONY: sandbox
-sandbox: ## (not built yet) near-workspaces integration + attack tests
-	$(call not_built,sandbox,day S+1/S+4: tests/sandbox with near-workspaces)
+sandbox: build ## near-sandbox tests: G1 delete gate, G4 global contract, 2-level tree fold (about 1 min)
+	@cd tests/sandbox && \
+	if ulimit -n 65535 2>/dev/null; then pre=""; else \
+	  echo "sandbox: open-file hard limit is $$(ulimit -Hn), neard asks for 65535; loading fdshim" >&2; \
+	  mkdir -p target && cc -shared -fPIC -O2 -o target/fdshim.so fdshim/fdshim.c -ldl; \
+	  pre="$$PWD/target/fdshim.so"; \
+	fi; \
+	LD_PRELOAD="$$pre" JOB_WASM=$(CURDIR)/$(OUT)/hire_tree_job.wasm USDC_WASM=$(CURDIR)/$(OUT)/mock_usdc.wasm \
+	  cargo test --locked -- --test-threads=1 --nocapture
+
+# ---------------------------------------------------------------- not built yet
 
 .PHONY: demo
 demo: ## (not built yet) offline hermetic demo, diffs fixtures/expected-output.txt

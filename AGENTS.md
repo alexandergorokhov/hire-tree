@@ -24,6 +24,7 @@
 | `make test` | all unit and property tests, offline |
 | `make lint` | `cargo fmt --check` and clippy `-D warnings` |
 | `make build` | wasm into `out/` with `SHA256SUMS` |
+| `make sandbox` | near-sandbox tests (local node only, never testnet or mainnet) |
 
 Run `make test` and `make lint` before every commit. Use
 `CARGO_INCREMENTAL=0` (the Makefile sets it) to keep `target/` small.
@@ -44,3 +45,6 @@ Run `make test` and `make lint` before every commit. Use
 - `core/tests/money_prop.rs`: the money-rule property test.
 - `contracts/job/src/lib.rs`: the job contract; `tests.rs` beside it.
 - `contracts/mock-usdc/src/lib.rs`: the fake token.
+- `tests/sandbox/tests/tree.rs`: G1, G4 and the 2-level fold on near-sandbox.
+  `tests/sandbox/fdshim/` is only loaded when neard cannot raise its
+  open-file limit.

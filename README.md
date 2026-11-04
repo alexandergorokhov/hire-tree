@@ -14,9 +14,9 @@ receipt, the contract checks it on-chain, and the worker's payout right (the
 Job Note) can be sold to the lead's treasury for 1% off, so the worker is
 paid at once.
 
-**Status: work in progress, day 2 of 8.** Testnet only. All money is fake.
+**Status: work in progress, day 3 of 8.** Testnet only. All money is fake.
 
-## Do X, see Y (works today, offline)
+## Do X, see Y (works today)
 
 | Do | See |
 |---|---|
@@ -25,7 +25,8 @@ paid at once.
 | `PROP_CASES=500 make test` | the same, with fewer property cases |
 | `make lint` | rustfmt check and clippy with `-D warnings`; exit 0 |
 | `make build` | `out/hire_tree_job.wasm`, `out/mock_usdc.wasm`, `out/SHA256SUMS` (non-reproducible build for now) |
-| `make sandbox`, `make demo`, `make web`, `make testnet-*` | `not built yet: ...` and a non-zero exit |
+| `make sandbox` | a local NEAR node (near-sandbox; its binary is downloaded on the first build) runs 3 tests: G4 (global contract by code hash, `hire` creates `t1.job-1...` from it), G1 (no delete while a transfer failed or stray tokens remain; delete returns the storage NEAR to the parent), and a 2-level tree that settles bottom-up with every account deleted and `30 + 20 + 8 + 52 == 100 funded + 10 bond`; `test result: ok. 3 passed`, about 1 min |
+| `make demo`, `make web`, `make testnet-*` | `not built yet: ...` and a non-zero exit |
 
 ## What is built
 
@@ -41,11 +42,16 @@ paid at once.
   (without a receipt), `approve`, `settle` (pay, return the rest, check the
   real token balance is zero, then delete), `child_closed`, `get_job`.
 - `contracts/mock-usdc/`: NEP-141 fake test USD, 6 decimals, owner-only mint.
+- `tests/sandbox/`: near-sandbox + near-api integration tests. Measured
+  there: a job account uses 463-583 bytes (about 0.005 NEAR locked; each
+  child record adds about 60 bytes); `hire` burns about 25 Tgas, `settle`
+  11-16 Tgas. The root job is created by hand in the tests until the
+  factory exists.
 
 ## Not built yet
 
 Receipt verification (`ecrecover`), the quality check (OutLayer), note sale,
-disputes, the factory, sandbox tests, agents, MCP server, web page, demo.
+disputes, the factory, attack tests, agents, MCP server, web page, demo.
 Where a later feature is missing, the contract refuses (for example a note is
 never sellable yet) instead of faking success.
 
