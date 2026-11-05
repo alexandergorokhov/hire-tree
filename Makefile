@@ -70,12 +70,23 @@ sandbox: build ## near-sandbox tests: G1 delete gate, G4 global contract, 2-leve
 # ---------------------------------------------------------------- not built yet
 
 .PHONY: demo
-demo: ## (not built yet) offline hermetic demo, diffs fixtures/expected-output.txt
-	$(call not_built,demo,day S+5)
+demo: build ## The whole story on a local NEAR node, narrated; writes out/scene.json (about 2 min)
+	@cd tests/sandbox && \
+	if ulimit -n 65535 2>/dev/null; then pre=""; else \
+	  mkdir -p target && cc -shared -fPIC -O2 -o target/fdshim.so fdshim/fdshim.c -ldl; \
+	  pre="$$PWD/target/fdshim.so"; \
+	fi; \
+	LD_PRELOAD="$$pre" JOB_WASM=$(CURDIR)/$(OUT)/hire_tree_job.wasm USDC_WASM=$(CURDIR)/$(OUT)/mock_usdc.wasm \
+	  FACTORY_WASM=$(CURDIR)/$(OUT)/hire_tree_factory.wasm OUTLAYER_WASM=$(CURDIR)/$(OUT)/mock_outlayer.wasm \
+	  SCENE_OUT=$(CURDIR)/$(OUT)/scene.json \
+	  cargo test --locked --test tree scene_full_tree_on_local_node -- --nocapture --test-threads=1 2>&1 \
+	  | grep -E '^(SCENE|  [^ ]|    [a-z]|scene written|test result)' ; \
+	test -s $(CURDIR)/$(OUT)/scene.json && cp $(CURDIR)/$(OUT)/scene.json $(CURDIR)/web/scene.json
 
 .PHONY: web
-web: ## (not built yet) static tree page
-	$(call not_built,web,day S+5)
+web: ## Serve the tree page on http://localhost:8080 (reads web/scene.json from make demo)
+	@test -s web/scene.json || { echo "web/scene.json missing: run make demo first" >&2; exit 1; }
+	cd web && python3 -m http.server 8080
 
 .PHONY: testnet-deploy
 testnet-deploy: ## (not built yet) [testnet] deploy factory, global job code, mock-usdc

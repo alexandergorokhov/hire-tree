@@ -628,6 +628,57 @@ mod scene_util {
     }
 }
 
+/// The demo story: each step prints a narrated line and records a snapshot
+/// of the tree (for `make demo` and the web page, `out/scene.json`).
+struct Story {
+    steps: Vec<Value>,
+}
+
+impl Story {
+    async fn step(
+        &mut self,
+        w: &World,
+        title: &str,
+        say: &str,
+        jobs: &[(&str, &AccountId)],
+        people: &[(&str, &AccountId)],
+    ) {
+        let n = self.steps.len() + 1;
+        println!("\nSCENE {n}: {title}\n  {say}");
+        let mut tree = vec![];
+        for (label, id) in jobs {
+            let alive = w.account_state(id).await;
+            let v = if alive.is_some() {
+                let j = w.job(id).await;
+                json!({ "label": label, "account": id, "alive": true,
+                        "parent": j["parent"], "status": j["status"], "worker": j["worker"],
+                        "payee": j["payee"], "amount": j["amount"], "ft": w.ft(id).await.to_string(),
+                        "verified": j["verified"], "quality": j["quality"], "note_sold": j["note_sold"],
+                        "storage_near": near_str(alive.map(|a| a.0).unwrap_or(0)) })
+            } else {
+                json!({ "label": label, "account": id, "alive": false })
+            };
+            tree.push(v);
+        }
+        let mut wallets = vec![];
+        for (label, id) in people {
+            let bal = w.ft(id).await;
+            println!("    {label:<11} {:>10.2} fUSD", bal as f64 / 1e6);
+            wallets.push(json!({ "label": label, "account": id, "ft": bal.to_string() }));
+        }
+        self.steps
+            .push(json!({ "n": n, "title": title, "say": say, "jobs": tree, "wallets": wallets }));
+    }
+
+    fn save(&self) {
+        let path = std::env::var("SCENE_OUT")
+            .unwrap_or_else(|_| format!("{}/../../out/scene.json", env!("CARGO_MANIFEST_DIR")));
+        let doc = json!({ "schema": "hiretree-scene.v1", "network": "near-sandbox (local node)", "steps": self.steps });
+        std::fs::write(&path, serde_json::to_string_pretty(&doc).unwrap()).unwrap();
+        println!("\nscene written to {path}");
+    }
+}
+
 /// The demo story on a real local node: factory posts the job; the lead
 /// hires three workers; a cheater's copied receipt is rejected; a verified
 /// and checked worker sells its note to the lead's treasury and is paid at
@@ -676,6 +727,7 @@ async fn scene_full_tree_on_local_node() {
     w.mint(&client.id, 100 * USD).await;
     w.mint(&treasury.id, 50 * USD).await;
     let (hub_near_start, _, _) = w.account_state(&hub.id).await.unwrap();
+    let mut story = Story { steps: vec![] };
 
     // 1. The client posts and funds the job in one transfer.
     let post = json!({ "manager": lead.id, "spec_hash": SPEC, "window_secs": 3600,
@@ -689,6 +741,17 @@ async fn scene_full_tree_on_local_node() {
         w.account_state(&root).await.unwrap().2,
         "root runs the global code"
     );
+    let people = [
+        ("client", &client.id),
+        ("lead", &lead.id),
+        ("treasury", &treasury.id),
+        ("researcher", &researcher.id),
+        ("translator", &translator.id),
+        ("junk", &junk.id),
+    ];
+    story.step(&w, "The client posts a job",
+        "One ft_transfer_call to the factory creates job-1 from the global contract and funds it with 100 fUSD. Nobody holds the money: the job account does.",
+        &[("job-1", &root)], &people).await;
 
     // 2. The lead hires three workers.
     for (wk, pay) in [(&researcher, 30), (&translator, 20), (&junk, 10)] {
@@ -704,6 +767,15 @@ async fn scene_full_tree_on_local_node() {
         .unwrap();
     }
     let (t1, t2, t3) = (child(&root, 1), child(&root, 2), child(&root, 3));
+    let jobs = [
+        ("job-1", &root),
+        ("t1 researcher", &t1),
+        ("t2 translator", &t2),
+        ("t3 junk", &t3),
+    ];
+    story.step(&w, "The lead agent hires three workers",
+        "Each hire creates a sub-account (t1, t2, t3) running the same code by hash and moves that job's pay into it: 30, 20 and 10 fUSD.",
+        &jobs, &people).await;
 
     // 3. Cheat: the translator submits a genuine receipt made for t1's task.
     let stolen = receipt(
@@ -723,6 +795,9 @@ async fn scene_full_tree_on_local_node() {
         .await
         .unwrap_err();
     assert!(err.contains("is not this task"), "{err}");
+    story.step(&w, "A cheater copies a real AI receipt",
+        &format!("The translator submits the researcher's genuine NEAR AI receipt on its own job. The contract refuses: {err}"),
+        &jobs, &people).await;
 
     // 4. The researcher delivers with its own receipt: verified, checked (8).
     w.ok(&researcher, &t1, "deliver", stolen).await;
@@ -730,6 +805,9 @@ async fn scene_full_tree_on_local_node() {
     assert_eq!(j1["status"], "Checked");
     assert_eq!(j1["verified"], true);
     assert_eq!(j1["quality"], 8);
+    story.step(&w, "The researcher proves its work came from NEAR AI",
+        "The contract recomputes sha256(request), checks the HT1 tag binds it to t1 and delivery 1, and ecrecovers the NEAR AI Cloud signature. Then it starts one quality check itself: 8/10.",
+        &jobs, &people).await;
 
     // 5. The lead's treasury buys the note: the researcher is paid now.
     let quote = num(&w.view(&t1, "quote_note", json!({})).await);
@@ -737,6 +815,9 @@ async fn scene_full_tree_on_local_node() {
     w.send(&treasury, &t1, quote, Some("buy_note")).await;
     assert_eq!(w.ft(&researcher.id).await, quote);
     assert_eq!(w.job(&t1).await["payee"], treasury.id.to_string());
+    story.step(&w, "Paid now, not in 72 hours",
+        "The lead's treasury buys the researcher's Job Note for 29.70 (1% off). The researcher is paid in the same transaction; the treasury now collects the 30 at settle.",
+        &jobs, &people).await;
 
     // 6. The translator delivers without a receipt: paid at settle only.
     w.ok(
@@ -748,6 +829,9 @@ async fn scene_full_tree_on_local_node() {
     .await;
     assert_eq!(w.job(&t2).await["verified"], false);
     assert!(w.view(&t2, "quote_note", json!({})).await.is_null());
+    story.step(&w, "No receipt, no early pay",
+        "The translator delivers without a NEAR AI receipt. It will be paid at settle, but its note is not sellable.",
+        &jobs, &people).await;
 
     // 7. Junk passes the first check (7) but the dispute panels say 1 and 2.
     let junk_hash = "03".repeat(32);
@@ -763,6 +847,9 @@ async fn scene_full_tree_on_local_node() {
     assert_eq!(w.job(&t3).await["status"], "Checked");
     w.ok(&lead, &t3, "dispute", json!({})).await;
     assert_eq!(w.job(&t3).await["status"], "Refunded");
+    story.step(&w, "Junk is disputed",
+        "The junk passed one check (7/10). The lead disputes: two more checks with fresh seeds say 1 and 2. Two of three votes say junk, so t3's pay goes back up the tree.",
+        &jobs, &people).await;
 
     // 8. Settle bottom-up: the lead approves the sub-jobs, the client the root.
     for t in [&t1, &t2, &t3] {
@@ -773,6 +860,9 @@ async fn scene_full_tree_on_local_node() {
     w.ok(&client, &root, "approve", json!({})).await;
     w.ok(&lead, &root, "settle", json!({})).await;
     assert!(w.account_state(&root).await.is_none(), "root deleted");
+    story.step(&w, "The tree folds",
+        "Settle runs bottom-up: each account pays its note holder, returns the rest to its parent, proves its token balance is zero, and deletes itself. Storage NEAR flows back up.",
+        &jobs, &people).await;
 
     // 9. Money rule: 100 in, 100 out.
     let (r, tr, tl, jk, ld) = (
@@ -789,6 +879,10 @@ async fn scene_full_tree_on_local_node() {
     assert_eq!(jk, 0);
     assert_eq!(ld, 50 * USD, "lead keeps the unspent 40 + refunded 10");
     assert_eq!(r + (tr - 50 * USD) + tl + jk + ld, 100 * USD);
+    story.step(&w, "100 in, 100 out",
+        "researcher 29.70 + treasury fee 0.30 + translator 20 + junk 0 + lead 50 (unspent 40 + refunded 10) = 100 fUSD. No account is left holding anything.",
+        &jobs, &people).await;
+    story.save();
     let (hub_near_end, _, _) = w.account_state(&hub.id).await.unwrap();
     eprintln!(
         "hub NEAR: {} -> {}",

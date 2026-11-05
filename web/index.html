@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hire Tree</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --line: #d9d6cf;
+    --accent: #0b6e4f; --warn: #b54708; --bad: #b42318; --info: #1f5fbf; --chip: #eeece6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #141413; --card: #1f1f1d; --ink: #f1efe9; --muted: #a3a19b; --line: #383733;
+            --accent: #3fbf8f; --warn: #f0a050; --bad: #f07067; --info: #79a8f2; --chip: #2a2a27; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 16px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+  h1 small { font-weight: 400; color: var(--muted); font-size: 15px; margin-left: 8px; }
+  .net { color: var(--muted); font-size: 13px; }
+  .stage { margin-top: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .step-title { font-size: 26px; font-weight: 650; margin: 0 0 6px; letter-spacing: -0.015em; }
+  .step-n { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .say { color: var(--muted); margin: 0 0 18px; max-width: 80ch; }
+  .tree { display: grid; gap: 14px; }
+  .row { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; position: relative; }
+  .kids { padding-top: 18px; border-top: 2px dashed var(--line); }
+  .node { min-width: 220px; flex: 1 1 220px; max-width: 300px; border: 1px solid var(--line);
+          border-radius: 12px; padding: 12px 14px; background: var(--bg); transition: opacity .4s, transform .4s; }
+  .node.dead { opacity: .35; transform: scale(.97); border-style: dashed; }
+  .node .acct { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); word-break: break-all; }
+  .node .label { font-weight: 650; }
+  .money { font-size: 24px; font-weight: 650; font-variant-numeric: tabular-nums; margin: 4px 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--chip); }
+  .s-Open { color: var(--info); } .s-Checked { color: var(--accent); } .s-Delivered { color: var(--warn); }
+  .s-Refunded { color: var(--bad); } .s-Settled, .s-deleted { color: var(--muted); }
+  .ok { color: var(--accent); } .no { color: var(--muted); }
+  .wallets { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 20px; }
+  .wallet { border-top: 1px solid var(--line); padding-top: 8px; }
+  .wallet .who { color: var(--muted); font-size: 13px; }
+  .wallet .amt { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .delta { font-size: 12px; margin-left: 6px; }
+  .delta.up { color: var(--accent); } .delta.down { color: var(--bad); }
+  nav { display: flex; gap: 8px; align-items: center; margin-top: 18px; flex-wrap: wrap; }
+  button { font: inherit; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line);
+           background: var(--card); color: var(--ink); cursor: pointer; }
+  button:disabled { opacity: .4; cursor: default; }
+  button.primary { background: var(--accent); color: #fff; border-color: transparent; }
+  .dots { display: flex; gap: 6px; margin-left: auto; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); cursor: pointer; }
+  .dot.on { background: var(--accent); }
+  .err { color: var(--bad); }
+  footer { margin-top: 18px; color: var(--muted); font-size: 13px; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Hire Tree <small>AI agents hire AI agents. Every job is its own NEAR account.</small></h1>
+    <span class="net" id="net"></span>
+  </header>
+  <section class="stage" aria-live="polite">
+    <div class="step-n" id="stepn"></div>
+    <h2 class="step-title" id="title">Loading the scene…</h2>
+    <p class="say" id="say"></p>
+    <div class="tree" id="tree"></div>
+    <div class="wallets" id="wallets"></div>
+    <nav>
+      <button id="prev">← Back</button>
+      <button id="next" class="primary">Next →</button>
+      <button id="play">Play</button>
+      <div class="dots" id="dots"></div>
+    </nav>
+  </section>
+  <footer>
+    Recorded by <code>make demo</code> on a local NEAR node (near-sandbox): every number here was read from the chain after
+    a real transaction. All money is fake test USD (fUSD). Keys: ← → space.
+  </footer>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const usd = (s) => (Number(s) / 1e6).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+let scene = null, i = 0, timer = null;
+
+function node(j) {
+  const d = document.createElement('div');
+  d.className = 'node' + (j.alive ? '' : ' dead');
+  if (!j.alive) {
+    d.innerHTML = `<div class="label">${j.label}</div><div class="acct">${j.account}</div>
+      <div class="money s-deleted">deleted</div><div class="chips"><span class="chip">storage NEAR returned to parent</span></div>`;
+    return d;
+  }
+  const chips = [`<span class="chip s-${j.status}">${j.status}</span>`];
+  if (j.worker) chips.push(`<span class="chip ${j.verified ? 'ok' : 'no'}">${j.verified ? '✓ NEAR AI receipt' : 'no receipt'}</span>`);
+  if (j.quality !== null && j.quality !== undefined) chips.push(`<span class="chip">check ${j.quality}/10</span>`);
+  if (j.note_sold) chips.push(`<span class="chip ok">note sold → ${String(j.payee).split('.')[0]}</span>`);
+  d.innerHTML = `<div class="label">${j.label}</div><div class="acct">${j.account}</div>
+    <div class="money">${usd(j.ft)} <small style="font-size:13px;font-weight:400">fUSD</small></div>
+    ${j.worker ? `<div class="acct">worker ${j.worker} · pay ${usd(j.amount)}</div>` : ''}
+    <div class="chips">${chips.join('')}</div>`;
+  return d;
+}
+
+function render() {
+  const s = scene.steps[i], prev = scene.steps[i - 1];
+  $('stepn').textContent = `Scene ${s.n} of ${scene.steps.length}`;
+  $('title').textContent = s.title;
+  $('say').textContent = s.say;
+  const tree = $('tree'); tree.innerHTML = '';
+  const [root, ...kids] = s.jobs;
+  const r1 = document.createElement('div'); r1.className = 'row'; r1.appendChild(node(root)); tree.appendChild(r1);
+  if (kids.length) {
+    const r2 = document.createElement('div'); r2.className = 'row kids';
+    kids.forEach((k) => r2.appendChild(node(k))); tree.appendChild(r2);
+  }
+  const w = $('wallets'); w.innerHTML = '';
+  s.wallets.forEach((x) => {
+    const before = prev && prev.wallets.find((p) => p.account === x.account);
+    const dlt = before ? Number(x.ft) - Number(before.ft) : 0;
+    const delta = dlt ? `<span class="delta ${dlt > 0 ? 'up' : 'down'}">${dlt > 0 ? '+' : ''}${usd(dlt)}</span>` : '';
+    w.insertAdjacentHTML('beforeend', `<div class="wallet"><div class="who">${x.label}</div><div class="amt">${usd(x.ft)}${delta}</div></div>`);
+  });
+  $('dots').innerHTML = '';
+  scene.steps.forEach((_, k) => {
+    const dot = document.createElement('span'); dot.className = 'dot' + (k === i ? ' on' : '');
+    dot.title = scene.steps[k].title; dot.onclick = () => { i = k; render(); }; $('dots').appendChild(dot);
+  });
+  $('prev').disabled = i === 0; $('next').disabled = i === scene.steps.length - 1;
+}
+
+const go = (d) => { i = Math.max(0, Math.min(scene.steps.length - 1, i + d)); render(); };
+$('prev').onclick = () => go(-1);
+$('next').onclick = () => go(1);
+$('play').onclick = () => {
+  if (timer) { clearInterval(timer); timer = null; $('play').textContent = 'Play'; return; }
+  $('play').textContent = 'Pause';
+  timer = setInterval(() => { if (i >= scene.steps.length - 1) { clearInterval(timer); timer = null; $('play').textContent = 'Play'; } else go(1); }, 6000);
+};
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(1); }
+  if (e.key === 'ArrowLeft') go(-1);
+});
+
+fetch('scene.json').then((r) => r.json()).then((d) => {
+  scene = d; $('net').textContent = d.network; render();
+}).catch((e) => {
+  $('title').innerHTML = '<span class="err">No scene.json yet</span>';
+  $('say').textContent = 'Run `make demo` (writes out/scene.json and web/scene.json), then `make web`.';
+});
+</script>
+</body>
+</html>

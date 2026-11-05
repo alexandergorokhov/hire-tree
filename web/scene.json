@@ -1,0 +1,772 @@
+{
+  "network": "near-sandbox (local node)",
+  "schema": "hiretree-scene.v1",
+  "steps": [
+    {
+      "jobs": [
+        {
+          "account": "job-1.hub.sandbox",
+          "alive": true,
+          "amount": "0",
+          "ft": "100000000",
+          "label": "job-1",
+          "note_sold": false,
+          "parent": "hub.sandbox",
+          "payee": null,
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.05000 NEAR",
+          "verified": false,
+          "worker": null
+        }
+      ],
+      "n": 1,
+      "say": "One ft_transfer_call to the factory creates job-1 from the global contract and funds it with 100 fUSD. Nobody holds the money: the job account does.",
+      "title": "The client posts a job",
+      "wallets": [
+        {
+          "account": "client.sandbox",
+          "ft": "0",
+          "label": "client"
+        },
+        {
+          "account": "lead.sandbox",
+          "ft": "0",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.sandbox",
+          "ft": "50000000",
+          "label": "treasury"
+        },
+        {
+          "account": "researcher.sandbox",
+          "ft": "0",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.sandbox",
+          "ft": "0",
+          "label": "translator"
+        },
+        {
+          "account": "junk.sandbox",
+          "ft": "0",
+          "label": "junk"
+        }
+      ]
+    },
+    {
+      "jobs": [
+        {
+          "account": "job-1.hub.sandbox",
+          "alive": true,
+          "amount": "0",
+          "ft": "40000000",
+          "label": "job-1",
+          "note_sold": false,
+          "parent": "hub.sandbox",
+          "payee": null,
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.04625 NEAR",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "t1.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "30000000",
+          "ft": "30000000",
+          "label": "t1 researcher",
+          "note_sold": false,
+          "parent": "job-1.hub.sandbox",
+          "payee": "researcher.sandbox",
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.03000 NEAR",
+          "verified": false,
+          "worker": "researcher.sandbox"
+        },
+        {
+          "account": "t2.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "20000000",
+          "ft": "20000000",
+          "label": "t2 translator",
+          "note_sold": false,
+          "parent": "job-1.hub.sandbox",
+          "payee": "translator.sandbox",
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.03000 NEAR",
+          "verified": false,
+          "worker": "translator.sandbox"
+        },
+        {
+          "account": "t3.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "10000000",
+          "label": "t3 junk",
+          "note_sold": false,
+          "parent": "job-1.hub.sandbox",
+          "payee": "junk.sandbox",
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.03000 NEAR",
+          "verified": false,
+          "worker": "junk.sandbox"
+        }
+      ],
+      "n": 2,
+      "say": "Each hire creates a sub-account (t1, t2, t3) running the same code by hash and moves that job's pay into it: 30, 20 and 10 fUSD.",
+      "title": "The lead agent hires three workers",
+      "wallets": [
+        {
+          "account": "client.sandbox",
+          "ft": "0",
+          "label": "client"
+        },
+        {
+          "account": "lead.sandbox",
+          "ft": "0",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.sandbox",
+          "ft": "50000000",
+          "label": "treasury"
+        },
+        {
+          "account": "researcher.sandbox",
+          "ft": "0",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.sandbox",
+          "ft": "0",
+          "label": "translator"
+        },
+        {
+          "account": "junk.sandbox",
+          "ft": "0",
+          "label": "junk"
+        }
+      ]
+    },
+    {
+      "jobs": [
+        {
+          "account": "job-1.hub.sandbox",
+          "alive": true,
+          "amount": "0",
+          "ft": "40000000",
+          "label": "job-1",
+          "note_sold": false,
+          "parent": "hub.sandbox",
+          "payee": null,
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.04625 NEAR",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "t1.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "30000000",
+          "ft": "30000000",
+          "label": "t1 researcher",
+          "note_sold": false,
+          "parent": "job-1.hub.sandbox",
+          "payee": "researcher.sandbox",
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.03000 NEAR",
+          "verified": false,
+          "worker": "researcher.sandbox"
+        },
+        {
+          "account": "t2.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "20000000",
+          "ft": "20000000",
+          "label": "t2 translator",
+          "note_sold": false,
+          "parent": "job-1.hub.sandbox",
+          "payee": "translator.sandbox",
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.03000 NEAR",
+          "verified": false,
+          "worker": "translator.sandbox"
+        },
+        {
+          "account": "t3.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "10000000",
+          "label": "t3 junk",
+          "note_sold": false,
+          "parent": "job-1.hub.sandbox",
+          "payee": "junk.sandbox",
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.03000 NEAR",
+          "verified": false,
+          "worker": "junk.sandbox"
+        }
+      ],
+      "n": 3,
+      "say": "The translator submits the researcher's genuine NEAR AI receipt on its own job. The contract refuses: Smart contract panicked: receipt: binding tag HT1:t1.job-1.hub.sandbox:abababababababababababababababababababababababababababababababab:1 is not this task",
+      "title": "A cheater copies a real AI receipt",
+      "wallets": [
+        {
+          "account": "client.sandbox",
+          "ft": "0",
+          "label": "client"
+        },
+        {
+          "account": "lead.sandbox",
+          "ft": "0",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.sandbox",
+          "ft": "50000000",
+          "label": "treasury"
+        },
+        {
+          "account": "researcher.sandbox",
+          "ft": "0",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.sandbox",
+          "ft": "0",
+          "label": "translator"
+        },
+        {
+          "account": "junk.sandbox",
+          "ft": "0",
+          "label": "junk"
+        }
+      ]
+    },
+    {
+      "jobs": [
+        {
+          "account": "job-1.hub.sandbox",
+          "alive": true,
+          "amount": "0",
+          "ft": "40000000",
+          "label": "job-1",
+          "note_sold": false,
+          "parent": "hub.sandbox",
+          "payee": null,
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.04625 NEAR",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "t1.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "30000000",
+          "ft": "30000000",
+          "label": "t1 researcher",
+          "note_sold": false,
+          "parent": "job-1.hub.sandbox",
+          "payee": "researcher.sandbox",
+          "quality": 8,
+          "status": "Checked",
+          "storage_near": "0.03000 NEAR",
+          "verified": true,
+          "worker": "researcher.sandbox"
+        },
+        {
+          "account": "t2.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "20000000",
+          "ft": "20000000",
+          "label": "t2 translator",
+          "note_sold": false,
+          "parent": "job-1.hub.sandbox",
+          "payee": "translator.sandbox",
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.03000 NEAR",
+          "verified": false,
+          "worker": "translator.sandbox"
+        },
+        {
+          "account": "t3.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "10000000",
+          "label": "t3 junk",
+          "note_sold": false,
+          "parent": "job-1.hub.sandbox",
+          "payee": "junk.sandbox",
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.03000 NEAR",
+          "verified": false,
+          "worker": "junk.sandbox"
+        }
+      ],
+      "n": 4,
+      "say": "The contract recomputes sha256(request), checks the HT1 tag binds it to t1 and delivery 1, and ecrecovers the NEAR AI Cloud signature. Then it starts one quality check itself: 8/10.",
+      "title": "The researcher proves its work came from NEAR AI",
+      "wallets": [
+        {
+          "account": "client.sandbox",
+          "ft": "0",
+          "label": "client"
+        },
+        {
+          "account": "lead.sandbox",
+          "ft": "0",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.sandbox",
+          "ft": "50000000",
+          "label": "treasury"
+        },
+        {
+          "account": "researcher.sandbox",
+          "ft": "0",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.sandbox",
+          "ft": "0",
+          "label": "translator"
+        },
+        {
+          "account": "junk.sandbox",
+          "ft": "0",
+          "label": "junk"
+        }
+      ]
+    },
+    {
+      "jobs": [
+        {
+          "account": "job-1.hub.sandbox",
+          "alive": true,
+          "amount": "0",
+          "ft": "40000000",
+          "label": "job-1",
+          "note_sold": false,
+          "parent": "hub.sandbox",
+          "payee": null,
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.04625 NEAR",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "t1.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "30000000",
+          "ft": "30000000",
+          "label": "t1 researcher",
+          "note_sold": true,
+          "parent": "job-1.hub.sandbox",
+          "payee": "treasury.sandbox",
+          "quality": 8,
+          "status": "Checked",
+          "storage_near": "0.02875 NEAR",
+          "verified": true,
+          "worker": "researcher.sandbox"
+        },
+        {
+          "account": "t2.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "20000000",
+          "ft": "20000000",
+          "label": "t2 translator",
+          "note_sold": false,
+          "parent": "job-1.hub.sandbox",
+          "payee": "translator.sandbox",
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.03000 NEAR",
+          "verified": false,
+          "worker": "translator.sandbox"
+        },
+        {
+          "account": "t3.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "10000000",
+          "label": "t3 junk",
+          "note_sold": false,
+          "parent": "job-1.hub.sandbox",
+          "payee": "junk.sandbox",
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.03000 NEAR",
+          "verified": false,
+          "worker": "junk.sandbox"
+        }
+      ],
+      "n": 5,
+      "say": "The lead's treasury buys the researcher's Job Note for 29.70 (1% off). The researcher is paid in the same transaction; the treasury now collects the 30 at settle.",
+      "title": "Paid now, not in 72 hours",
+      "wallets": [
+        {
+          "account": "client.sandbox",
+          "ft": "0",
+          "label": "client"
+        },
+        {
+          "account": "lead.sandbox",
+          "ft": "0",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.sandbox",
+          "ft": "20300000",
+          "label": "treasury"
+        },
+        {
+          "account": "researcher.sandbox",
+          "ft": "29700000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.sandbox",
+          "ft": "0",
+          "label": "translator"
+        },
+        {
+          "account": "junk.sandbox",
+          "ft": "0",
+          "label": "junk"
+        }
+      ]
+    },
+    {
+      "jobs": [
+        {
+          "account": "job-1.hub.sandbox",
+          "alive": true,
+          "amount": "0",
+          "ft": "40000000",
+          "label": "job-1",
+          "note_sold": false,
+          "parent": "hub.sandbox",
+          "payee": null,
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.04625 NEAR",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "t1.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "30000000",
+          "ft": "30000000",
+          "label": "t1 researcher",
+          "note_sold": true,
+          "parent": "job-1.hub.sandbox",
+          "payee": "treasury.sandbox",
+          "quality": 8,
+          "status": "Checked",
+          "storage_near": "0.02875 NEAR",
+          "verified": true,
+          "worker": "researcher.sandbox"
+        },
+        {
+          "account": "t2.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "20000000",
+          "ft": "20000000",
+          "label": "t2 translator",
+          "note_sold": false,
+          "parent": "job-1.hub.sandbox",
+          "payee": "translator.sandbox",
+          "quality": 8,
+          "status": "Checked",
+          "storage_near": "0.03000 NEAR",
+          "verified": false,
+          "worker": "translator.sandbox"
+        },
+        {
+          "account": "t3.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "10000000",
+          "label": "t3 junk",
+          "note_sold": false,
+          "parent": "job-1.hub.sandbox",
+          "payee": "junk.sandbox",
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.03000 NEAR",
+          "verified": false,
+          "worker": "junk.sandbox"
+        }
+      ],
+      "n": 6,
+      "say": "The translator delivers without a NEAR AI receipt. It will be paid at settle, but its note is not sellable.",
+      "title": "No receipt, no early pay",
+      "wallets": [
+        {
+          "account": "client.sandbox",
+          "ft": "0",
+          "label": "client"
+        },
+        {
+          "account": "lead.sandbox",
+          "ft": "0",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.sandbox",
+          "ft": "20300000",
+          "label": "treasury"
+        },
+        {
+          "account": "researcher.sandbox",
+          "ft": "29700000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.sandbox",
+          "ft": "0",
+          "label": "translator"
+        },
+        {
+          "account": "junk.sandbox",
+          "ft": "0",
+          "label": "junk"
+        }
+      ]
+    },
+    {
+      "jobs": [
+        {
+          "account": "job-1.hub.sandbox",
+          "alive": true,
+          "amount": "0",
+          "ft": "40000000",
+          "label": "job-1",
+          "note_sold": false,
+          "parent": "hub.sandbox",
+          "payee": null,
+          "quality": null,
+          "status": "Open",
+          "storage_near": "0.04625 NEAR",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "t1.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "30000000",
+          "ft": "30000000",
+          "label": "t1 researcher",
+          "note_sold": true,
+          "parent": "job-1.hub.sandbox",
+          "payee": "treasury.sandbox",
+          "quality": 8,
+          "status": "Checked",
+          "storage_near": "0.02875 NEAR",
+          "verified": true,
+          "worker": "researcher.sandbox"
+        },
+        {
+          "account": "t2.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "20000000",
+          "ft": "20000000",
+          "label": "t2 translator",
+          "note_sold": false,
+          "parent": "job-1.hub.sandbox",
+          "payee": "translator.sandbox",
+          "quality": 8,
+          "status": "Checked",
+          "storage_near": "0.03000 NEAR",
+          "verified": false,
+          "worker": "translator.sandbox"
+        },
+        {
+          "account": "t3.job-1.hub.sandbox",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "10000000",
+          "label": "t3 junk",
+          "note_sold": false,
+          "parent": "job-1.hub.sandbox",
+          "payee": "junk.sandbox",
+          "quality": 7,
+          "status": "Refunded",
+          "storage_near": "0.03000 NEAR",
+          "verified": false,
+          "worker": "junk.sandbox"
+        }
+      ],
+      "n": 7,
+      "say": "The junk passed one check (7/10). The lead disputes: two more checks with fresh seeds say 1 and 2. Two of three votes say junk, so t3's pay goes back up the tree.",
+      "title": "Junk is disputed",
+      "wallets": [
+        {
+          "account": "client.sandbox",
+          "ft": "0",
+          "label": "client"
+        },
+        {
+          "account": "lead.sandbox",
+          "ft": "0",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.sandbox",
+          "ft": "20300000",
+          "label": "treasury"
+        },
+        {
+          "account": "researcher.sandbox",
+          "ft": "29700000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.sandbox",
+          "ft": "0",
+          "label": "translator"
+        },
+        {
+          "account": "junk.sandbox",
+          "ft": "0",
+          "label": "junk"
+        }
+      ]
+    },
+    {
+      "jobs": [
+        {
+          "account": "job-1.hub.sandbox",
+          "alive": false,
+          "label": "job-1"
+        },
+        {
+          "account": "t1.job-1.hub.sandbox",
+          "alive": false,
+          "label": "t1 researcher"
+        },
+        {
+          "account": "t2.job-1.hub.sandbox",
+          "alive": false,
+          "label": "t2 translator"
+        },
+        {
+          "account": "t3.job-1.hub.sandbox",
+          "alive": false,
+          "label": "t3 junk"
+        }
+      ],
+      "n": 8,
+      "say": "Settle runs bottom-up: each account pays its note holder, returns the rest to its parent, proves its token balance is zero, and deletes itself. Storage NEAR flows back up.",
+      "title": "The tree folds",
+      "wallets": [
+        {
+          "account": "client.sandbox",
+          "ft": "0",
+          "label": "client"
+        },
+        {
+          "account": "lead.sandbox",
+          "ft": "50000000",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.sandbox",
+          "ft": "50300000",
+          "label": "treasury"
+        },
+        {
+          "account": "researcher.sandbox",
+          "ft": "29700000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.sandbox",
+          "ft": "20000000",
+          "label": "translator"
+        },
+        {
+          "account": "junk.sandbox",
+          "ft": "0",
+          "label": "junk"
+        }
+      ]
+    },
+    {
+      "jobs": [
+        {
+          "account": "job-1.hub.sandbox",
+          "alive": false,
+          "label": "job-1"
+        },
+        {
+          "account": "t1.job-1.hub.sandbox",
+          "alive": false,
+          "label": "t1 researcher"
+        },
+        {
+          "account": "t2.job-1.hub.sandbox",
+          "alive": false,
+          "label": "t2 translator"
+        },
+        {
+          "account": "t3.job-1.hub.sandbox",
+          "alive": false,
+          "label": "t3 junk"
+        }
+      ],
+      "n": 9,
+      "say": "researcher 29.70 + treasury fee 0.30 + translator 20 + junk 0 + lead 50 (unspent 40 + refunded 10) = 100 fUSD. No account is left holding anything.",
+      "title": "100 in, 100 out",
+      "wallets": [
+        {
+          "account": "client.sandbox",
+          "ft": "0",
+          "label": "client"
+        },
+        {
+          "account": "lead.sandbox",
+          "ft": "50000000",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.sandbox",
+          "ft": "50300000",
+          "label": "treasury"
+        },
+        {
+          "account": "researcher.sandbox",
+          "ft": "29700000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.sandbox",
+          "ft": "20000000",
+          "label": "translator"
+        },
+        {
+          "account": "junk.sandbox",
+          "ft": "0",
+          "label": "junk"
+        }
+      ]
+    }
+  ]
+}

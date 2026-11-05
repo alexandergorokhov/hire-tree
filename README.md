@@ -1,71 +1,89 @@
 # Hire Tree + Job Note
 
-AI agents hire other AI agents on NEAR, and get paid per job.
+**AI agents hire AI agents on NEAR, and every job is its own account.** The
+job account holds that job's money, checks a NEAR AI Cloud signature to prove
+the AI did the work for this exact task, pays the worker early if the work
+passes a quality check, and deletes itself when the job is done.
 
-A client funds a job. A lead agent manages it and hires worker agents. Every
-job and sub-job is its own NEAR sub-account (`job-1.hiretree.testnet`,
-`t1.job-1.hiretree.testnet`, ...), all running one global contract. Each
-account holds that job's fake USDC. When the 72 h window ends, or the client
-approves, `settle` runs bottom-up: each account pays its worker, sends the
-rest to its parent, and deletes itself.
+Testnet and local node only. All money is fake test USD (`mock-usdc`).
 
-Later: a worker that delivers through NEAR AI Cloud submits the signed
-receipt, the contract checks it on-chain, and the worker's payout right (the
-Job Note) can be sold to the lead's treasury for 1% off, so the worker is
-paid at once.
+![Scene 5: the researcher is paid now](docs/screens/scene-5-paid-now.png)
 
-**Status: work in progress, day 3 of 8.** Testnet only. All money is fake.
+## The problem
+Agents already hire agents, but the money sits with a platform, and an agent
+that subcontracts has no safe way to hand part of its budget to a sub-agent.
+Workers wait for the whole job to close before they are paid. Nothing proves
+a deliverable came out of a model call made for this task.
 
-## Do X, see Y (works today)
+## How it works
+1. **Post.** A client sends the budget to the factory with one
+   `ft_transfer_call`. The factory creates `job-1.hiretree.<net>` from one
+   global contract (by code hash) and funds it. The account has no owner key.
+2. **Hire.** The lead agent (manager) calls `hire`: a sub-account
+   `t1.job-1...` is created from the same code and receives exactly that
+   job's pay. Sub-jobs can hire in turn (a tree).
+3. **Deliver with proof.** A worker that used NEAR AI Cloud sends the raw
+   request, the response hash and the model's ECDSA signature. The contract
+   hashes the request itself, requires the tag `HT1:<this job>:<spec hash>:<delivery #>`
+   inside it, rebuilds `model:sha256(req):sha256(resp)`, and recovers the
+   signer with `env::ecrecover`; it must be the pinned NEAR AI Cloud key.
+4. **Check.** The contract (never the worker) starts one AI quality check per
+   delivery, with a seed it chooses. 6/10 or more passes.
+5. **Paid now.** A verified and checked worker's payout right (the Job Note)
+   can be bought by the lead's own treasury for 1% off: the worker is paid in
+   the same transaction, the treasury collects the full pay at settle.
+6. **Dispute.** The lead may dispute a sub-job once: two more checks; 2 junk
+   votes of 3 send the pay back up the tree.
+7. **Fold.** After the window (or approval), `settle` runs bottom-up, one
+   transfer at a time: pay the note holder, return the rest to the parent,
+   confirm the real token balance is zero, delete the account (storage NEAR
+   goes to the parent). A stuck step can be resumed by anyone.
+
+## Do X, see Y
 
 | Do | See |
 |---|---|
-| `make setup` | toolchain versions; crates fetched (the only networked step) |
-| `make test` | `core` unit + property tests (10,000 random job trees, money rule holds), job contract and mock-usdc unit tests; all `ok`, about 40 s after the first build |
-| `PROP_CASES=500 make test` | the same, with fewer property cases |
-| `make lint` | rustfmt check and clippy with `-D warnings`; exit 0 |
-| `make build` | `out/hire_tree_job.wasm`, `out/mock_usdc.wasm`, `out/SHA256SUMS` (non-reproducible build for now) |
-| `make sandbox` | a local NEAR node (near-sandbox; its binary is downloaded on the first build) runs 3 tests: G4 (global contract by code hash, `hire` creates `t1.job-1...` from it), G1 (no delete while a transfer failed or stray tokens remain; delete returns the storage NEAR to the parent), and a 2-level tree that settles bottom-up with every account deleted and `30 + 20 + 8 + 52 == 100 funded + 10 bond`; `test result: ok. 3 passed`, about 1 min |
-| `make demo`, `make web`, `make testnet-*` | `not built yet: ...` and a non-zero exit |
+| `make setup` | toolchain versions; crates fetched (the only networked step besides the near-sandbox binary) |
+| `make test` | 216 unit + property tests, all `ok`: core (49 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (143), factory (8), mock checker (2), mock-usdc (7) |
+| `make lint` | rustfmt check and clippy `-D warnings`; exit 0 |
+| `make build` | `out/*.wasm` (job, factory, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
+| `make sandbox` | a local NEAR node runs 4 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, and the full scene; `test result: ok. 4 passed`, about 2 min |
+| `make demo` | the full story on a local node, narrated in 9 scenes (post, hire, copied receipt refused, verified + checked, note sold and worker paid now, no-receipt worker, junk disputed, fold, `100 in == 100 out`); writes `out/scene.json` |
+| `make web` | serves `web/` on http://localhost:8080: the tree page replaying the `make demo` run, scene by scene |
+| `make testnet-*`, `make record-fixtures` | `not built yet: ...` and a non-zero exit |
 
-## What is built
+## Repo map
+| Path | What |
+|---|---|
+| `openspec/` | specs: every requirement and WHEN/THEN scenario names the test that proves it |
+| `core/` | pure Rust: checked money math, ledger, `HT1` binding parser, receipt text, EIP-191 digest, signature parsing (low-s), state machine |
+| `contracts/job/` | the global job contract |
+| `contracts/factory/` | posts and funds root jobs; pins signer, checker, token |
+| `contracts/mock-usdc/` | NEP-141 fake test USD |
+| `contracts/mock-outlayer/` | sandbox stand-in for the OutLayer quality checker (recorded scores, no AI) |
+| `tests/sandbox/` | near-sandbox integration tests and the demo scene |
+| `web/` | static tree page |
+| `docs/THREATS.md` | every threat and the test that answers it |
+| `docs/PITCH.md` | pitch, 30 s speech, 3 min video script, judge Q&A |
 
-- `core/`: pure Rust. Checked money math and the note quote
-  (`amount - amount*100/10000`), the per-job ledger, the `HT1:` receipt
-  binding parser, the signed text and EIP-191 digest, and the job state
-  machine. Property test: `sum(balances in tree) + paid_out == client funding + lead bond`
-  over random hire / deliver / check / buy / settle sequences with random
-  transfer failures.
-- `contracts/job/`: the job contract. Init, funding and bond
-  (`ft_on_transfer`), `hire` (sub-account from the global contract by code
-  hash, token registration, funding, rollback on failure), `deliver`
-  (without a receipt), `approve`, `settle` (pay, return the rest, check the
-  real token balance is zero, then delete), `child_closed`, `get_job`.
-- `contracts/mock-usdc/`: NEP-141 fake test USD, 6 decimals, owner-only mint.
-- `tests/sandbox/`: near-sandbox + near-api integration tests. Measured
-  there: a job account uses 463-583 bytes (about 0.005 NEAR locked; each
-  child record adds about 60 bytes); `hire` burns about 25 Tgas, `settle`
-  11-16 Tgas. The root job is created by hand in the tests until the
-  factory exists.
-
-## Not built yet
-
-Receipt verification (`ecrecover`), the quality check (OutLayer), note sale,
-disputes, the factory, attack tests, agents, MCP server, web page, demo.
-Where a later feature is missing, the contract refuses (for example a note is
-never sellable yet) instead of faking success.
+## What is real and what is mocked
+- Real on the local node: contracts, factory, global contract, sub-account
+  create and delete, token transfers, `env::ecrecover`, storage refunds.
+- Mocked in the sandbox: the quality checker (`mock-outlayer`, fixed scores)
+  and the NEAR AI signing key (a test key). The receipt text format is
+  checked against a real NEAR AI Cloud receipt recorded on testnet
+  (`core/src/receipt.rs`, `recorded_text_matches_near_ai_cloud`).
+- Not built yet: testnet deploy and run, the OutLayer checker job, agents
+  and MCP server, root (client) disputes. See `docs/THREATS.md` "Known limits".
 
 ## Also by me
-
 [Agent Exit](https://github.com/alexandergorokhov/near-transparent-agent-market)
-sells AI agents. Hire Tree is about agents hiring agents and getting paid per
-job. They are two independent projects (hackathon FAQ Q-015): separate repos,
-no shared code.
+sells AI agent businesses. Hire Tree is about agents hiring agents and
+getting paid per job. Two independent projects (hackathon FAQ Q-015):
+separate repos, no shared code.
 
 ## AI tools used
-
-Claude Code wrote code and tests under the owner's direction.
+Claude Code wrote the code, tests and docs under the owner's direction.
 
 ## License
-
 MIT. See `LICENSE`.
