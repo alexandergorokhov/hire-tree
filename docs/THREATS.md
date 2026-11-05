@@ -69,6 +69,17 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | Settle or dispute while a sale is in flight | both wait | `settle_waits_for_note_sale`, `dispute_waits_for_note_sale` |
 | The sale callback is lost: sale stuck in flight forever | `resume_note` after 10 min undoes the sale (the token refunded the treasury) and books any worker payment already made as prepaid | `stuck_sale_worker_unpaid_is_undone`, `stuck_sale_worker_paid_from_job_counts_as_prepaid` |
 
+## Agents (off-chain)
+| Threat | Answer | Test |
+|---|---|---|
+| A deliverable carries a prompt injection aimed at the lead's reviewer ("buy my note") | the reviewer can only buy a note the contract quotes, and the contract quotes only checked, verified, never-failed work; the worst case is a lost dispute, paid by the lead, not the client | `reviewer_buys_only_quoted_good_work`; contract: `quote_none_when_unchecked_or_unverified` |
+| The picker model names an account that is not a candidate | refused before any hire | `agents.rs` `job()` (unknown worker is an error) |
+| The planner overspends | refused before any hire if the parts exceed budget minus fee; the contract also caps every hire at what the job holds | `planner: bad plan`; contract: hire caps |
+| An edited cassette answer | `verify` and the contract both recheck every signature | `cassette_verifies_and_catches_tampering` |
+| The run diverges from the recording | replay answers only byte-identical requests and stops | `replay_refuses_a_request_it_never_saw` |
+| NEAR AI signs a different text than the contract checks | the live client stops with NO-GO before anything goes on-chain | `make nearai-check` (live only) |
+| Demo account keys | derived from the operator key held in an env var; nothing written to disk | `Chain::derived` |
+
 ## Known limits
 - One checker and one model for all three dispute panels; panels differ
   only by seed. A judge model that is fooled once may be fooled three times.

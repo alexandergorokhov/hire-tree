@@ -132,6 +132,9 @@ impl NearAi {
     /// The model's signing address from NEAR AI's attestation report (no
     /// tokens spent). The report itself is what proves the key lives in a TEE.
     pub async fn signing_address(&self) -> Result<String, String> {
+        if let Ok(a) = std::env::var("HT_SIGNER") {
+            return Ok(a.trim_start_matches("0x").to_lowercase());
+        }
         let v: Value = self
             .http
             .get(format!("{}/v1/attestation/report", self.base))
@@ -203,17 +206,27 @@ impl NearAi {
             .ok()
             .and_then(|v| v["id"].as_str().map(String::from))
             .ok_or("chat: no id in response")?;
-        let s: Value = self
-            .http
-            .get(format!("{}/v1/signature/{id}", self.base))
-            .query(&[("model", self.model.as_str()), ("signing_algo", "ecdsa")])
-            .bearer_auth(&self.key)
-            .send()
-            .await
-            .map_err(|e| format!("signature: {e}"))?
-            .json()
-            .await
-            .map_err(|e| format!("signature json: {e}"))?;
+        // The signature can lag the answer by a moment: retry briefly.
+        let mut s = Value::Null;
+        for attempt in 0..5 {
+            let r = self
+                .http
+                .get(format!("{}/v1/signature/{id}", self.base))
+                .query(&[("model", self.model.as_str()), ("signing_algo", "ecdsa")])
+                .bearer_auth(&self.key)
+                .send()
+                .await
+                .map_err(|e| format!("signature: {e}"))?;
+            if r.status().is_success() {
+                s = r.json().await.map_err(|e| format!("signature json: {e}"))?;
+                if s["signature"].is_string() {
+                    break;
+                }
+            } else if attempt == 4 {
+                return Err(format!("signature: HTTP {} for chat {id}", r.status()));
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(800 * (attempt + 1))).await;
+        }
         let text = s["text"].as_str().unwrap_or_default();
         let want = signed_text(&self.model, body, &resp);
         if text != want {

@@ -557,11 +557,14 @@ pub async fn story<'a>(c: &'a Chain, llm: &'a Llm) -> Result<Run<'a>, String> {
         people,
         ..Default::default()
     };
-    let window_secs = if c.sbx.is_some() {
-        JOB_WINDOW_SECS
-    } else {
-        1200
-    };
+    let window_secs = std::env::var("HT_WINDOW_SECS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(if c.sbx.is_some() {
+            JOB_WINDOW_SECS
+        } else {
+            1200
+        });
     let mut run = Run {
         chain: c,
         llm,

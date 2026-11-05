@@ -128,7 +128,7 @@ async fn nearai_check() {
             match attested {
                 Ok(a) if a == addr => println!("GO: NEAR AI signs model:sha256(request):sha256(response) with the attested key"),
                 Ok(a) => die(format!("NO-GO: signature by {addr}, attestation says {a}")),
-                Err(_) => println!("GO (signature format), but pin the signer by hand: {addr}"),
+                Err(_) => println!("GO (signature format); the attestation lookup failed, so export HT_SIGNER={addr}"),
             }
         }
         Err(e) => die(e),

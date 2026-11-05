@@ -117,3 +117,40 @@ async fn agents_story_replays_from_a_cassette() {
     let run = story(&c, &replay).await.unwrap();
     check_outcome(&c, &run).await;
 }
+
+/// The testnet code path (derived keys, tight funding, reuse on rerun,
+/// wall-clock waits) against a local node standing in for testnet RPC.
+/// Slow (real 5-minute check windows): `make testnet-dryrun`.
+#[tokio::test]
+#[ignore]
+async fn testnet_path_dry_run_on_a_local_node() {
+    use near_sandbox::config::{DEFAULT_GENESIS_ACCOUNT, DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY};
+    let sbx = near_sandbox::Sandbox::start_sandbox().await.unwrap();
+    std::env::set_var("HT_RPC", &sbx.rpc_addr);
+    std::env::set_var("HT_OPERATOR", DEFAULT_GENESIS_ACCOUNT.as_str());
+    std::env::set_var("HT_OPERATOR_KEY", DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY);
+    std::env::set_var("HT_WINDOW_SECS", "900");
+    let llm = Llm::Mock(mock());
+    let signer = llm.signer().unwrap();
+    let probe = Chain::testnet_connect().unwrap();
+    let start = probe.near_of(&probe.funder.id).await;
+    let c = Chain::testnet(&signer, Some(MODEL)).await.unwrap();
+    let deployed = probe.near_of(&probe.funder.id).await;
+    // A rerun finds everything and deploys nothing.
+    let c2 = Chain::testnet(&signer, Some(MODEL)).await.unwrap();
+    assert_eq!(c2.hub, c.hub);
+    assert!(
+        start - probe.near_of(&probe.funder.id).await < start - deployed + 10u128.pow(23),
+        "rerun must not redeploy"
+    );
+    let t0 = std::time::Instant::now();
+    let run = story(&c, &llm).await.unwrap();
+    check_outcome(&c, &run).await;
+    let spent = start - probe.near_of(&probe.funder.id).await;
+    println!(
+        "operator spent {:.2} NEAR to deploy, {:.2} NEAR in total; story took {:?}",
+        (start - deployed) as f64 / 1e24,
+        spent as f64 / 1e24,
+        t0.elapsed()
+    );
+}

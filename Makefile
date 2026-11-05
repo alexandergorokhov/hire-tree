@@ -50,6 +50,10 @@ build: ## Build the contract wasm into out/ with SHA256SUMS (non-reproducible fo
 	  echo "cargo-near not installed: plain cargo wasm build (no ABI, no wasm-opt)" >&2; \
 	  RUSTFLAGS='--cfg near' cargo build --offline --locked --release --target wasm32-unknown-unknown -p hire-tree-job -p hire-tree-factory -p mock-usdc -p mock-outlayer; \
 	  for w in hire_tree_job hire_tree_factory mock_usdc mock_outlayer; do cp target/wasm32-unknown-unknown/release/$$w.wasm $(OUT)/; done; \
+	  if command -v wasm-opt >/dev/null; then for w in $(OUT)/*.wasm; do \
+	    wasm-opt -Oz --strip-debug --strip-producers --enable-bulk-memory --enable-sign-ext --enable-mutable-globals \
+	      --enable-nontrapping-float-to-int $$w -o $$w; done; \
+	  else echo "wasm-opt not found: the job code stays ~500 KB (a global deploy burns ~51 NEAR; ~27 after wasm-opt)" >&2; fi; \
 	fi
 	cd $(OUT) && sha256sum *.wasm | tee SHA256SUMS
 	@echo "build: non-reproducible wasm in $(OUT)/ (the Docker reproducible build is not built yet)" >&2
@@ -111,6 +115,10 @@ record-cassette: build ## [NEAR AI key] run the story on a local node with real 
 .PHONY: verify-cassette
 verify-cassette: ## Re-check every NEAR AI signature in the cassette (offline)
 	@cd agents && $(HT) verify-cassette $(CASSETTE)
+
+.PHONY: testnet-dryrun
+testnet-dryrun: build ## The testnet code path (derived keys, tight funding, rerun reuse, real 5-min waits) against a local node; prints NEAR spent (~25 min)
+	@$(SBX) cargo test --locked --test agents testnet_path_dry_run_on_a_local_node -- --ignored --nocapture 2>&1 | grep -E "global job code|operator spent|test result|panicked|error"
 
 .PHONY: testnet-all
 testnet-all: build ## [testnet: HT_OPERATOR, HT_OPERATOR_KEY, NEARAI_API_KEY] deploy (or reuse) and run the agent story with live NEAR AI; rerun resumes
