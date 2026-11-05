@@ -1,6 +1,7 @@
 {
   "network": "near-sandbox (local node)",
   "run": {
+    "answers": "a scripted test model signing with a test key (not NEAR AI)",
     "explorer": null,
     "factory": "hub.sandbox",
     "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
@@ -11,343 +12,343 @@
       {
         "method": "set_settings",
         "on": "hub.sandbox",
-        "tx": "93smMu8Xy2PfVWM47sBSycqEYrXcTWAGnTahjT19MXeP",
+        "tx": "A96TPrACwsWiaC3rsZF12ad8JCG9Vtm32e2Bimvgb8zG",
         "who": "hub.sandbox"
       },
       {
         "method": "storage_deposit",
         "on": "usdc.sandbox",
-        "tx": "EPqirc7TzoCs5vUsQ5xpsa9WMemprxAU7vkbL9eLy6KN",
+        "tx": "2WZfTpcWom3BHaUpRTaaKRzbyUD1xdREsrGkkZuoqG5s",
         "who": "hub.sandbox"
       },
       {
         "method": "storage_deposit",
         "on": "usdc.sandbox",
-        "tx": "6eyHLTZMpt5CHBzzRxrBkVD5hTUT9UzYY5u3k1EBgkrc",
+        "tx": "G1vYcLDzDLP7Po6HY84E8qHbRqBAbCxKQx7Nkn3N6HTG",
         "who": "client.sandbox"
       },
       {
         "method": "storage_deposit",
         "on": "usdc.sandbox",
-        "tx": "2VJa7pW57RaCfe5pykZyjWrQoRKpeuzD1dN4xB7uLpT2",
+        "tx": "3emqLDSda7e4fPTXKBH43NGBnnNmLdNsvhdpkovv8pWP",
         "who": "lead.sandbox"
       },
       {
         "method": "storage_deposit",
         "on": "usdc.sandbox",
-        "tx": "A1EeeY5QvaFADrK2bkHcaDZ9PcDnszGmBWyGdFXKTJ1h",
+        "tx": "EU4vNRTbw12fH7oiwpGsGHmw8mPWwBpZUxetLZ6VHQuK",
         "who": "treasury.sandbox"
       },
       {
         "method": "storage_deposit",
         "on": "usdc.sandbox",
-        "tx": "Coe9wFbTBR177rPbeEwSTuYW4uCKmnsHmFCXZ9SGAV2o",
+        "tx": "GJW8KCEkrgvDh79KDBjzWA7BvDFoq8RzwttwPS2qmNzi",
         "who": "researcher.sandbox"
       },
       {
         "method": "storage_deposit",
         "on": "usdc.sandbox",
-        "tx": "4ooeEK8cHZXjJraLUxh2MrXxZUFuixE4dVfdGBSuaUSn",
+        "tx": "HfDiFVZtT1qnDfxKU2PMi1gEvSW3zRZmidxPHPDTezY2",
         "who": "translator.sandbox"
       },
       {
         "method": "storage_deposit",
         "on": "usdc.sandbox",
-        "tx": "4Y83f66kcay9uEegBvq5AbRgaXnp62qoiQ4R2SJytciL",
+        "tx": "57o7y2uYCvBk87Yy7fUESBLFGFUzqqKnVXVi15Wnqubq",
         "who": "cheapbot.sandbox"
       },
       {
         "method": "mint",
         "on": "usdc.sandbox",
-        "tx": "CEWKueXjyRzisfx7ezJts1T21ThRsc5nQc97f4LHJboM",
+        "tx": "12a7cVkm3xP1byswGrGCnGWWFuxPhBBR6ce7qsHUGEja",
         "who": "usdc.sandbox"
       },
       {
         "method": "mint",
         "on": "usdc.sandbox",
-        "tx": "AnhoZEe4BZXm5EEUahWou7BjJuRfGRUURfVNQStQppN7",
+        "tx": "8M774sZ6Y1gB1ZpktsGzYQeK3YVyFg7omZiBa3nbA9vM",
         "who": "usdc.sandbox"
       },
       {
         "method": "prepay_post",
         "on": "hub.sandbox",
-        "tx": "6Lw6abSE3QaWF7kjoeUkYGSt3igy9syY8g8rsRhpDE82",
+        "tx": "HYn3C5pUU5phmTYfxnhAqM39LA8TsfgaULb1PNRuyjM3",
         "who": "client.sandbox"
       },
       {
         "method": "ft_transfer_call",
         "on": "usdc.sandbox",
-        "tx": "i4kDNb5DhatYV24sbVZGdXCReRptQHRAmVofjE3Stk3",
+        "tx": "FaoC2fS9rD5VECkHd7Z5vHNzQxsc9zWgHuoardH6oJnW",
         "who": "client.sandbox"
       },
       {
         "method": "hire",
         "on": "job-1.hub.sandbox",
-        "tx": "67uc6rB7UqkvWJEVonXc2ABx1g4wZPvaCkhyNqDa25Bh",
+        "tx": "CYJZmZU7GWqnZSpFtYARcjQbu3VS1yyiTCV5QX2ZTFwJ",
         "who": "lead.sandbox"
       },
       {
         "method": "hire",
         "on": "job-1.hub.sandbox",
-        "tx": "GzGpbiPGNeWKWNHbbN1t2bZfgD8mnni9Gyvw25hwsN1F",
+        "tx": "GzRHgbKihMSpsoba14MkTR7degFkdQM5RX28BSp2YF1E",
         "who": "lead.sandbox"
       },
       {
         "method": "hire",
         "on": "job-1.hub.sandbox",
-        "tx": "JECt42kiEBcnV5tCwuQVyDgdGxN4dJPLTga5Ape3h228",
+        "tx": "ApiDHCPpUBHhyGytyJb3zCrPhYR7JySLbSJRhZu2erpF",
         "who": "lead.sandbox"
       },
       {
         "method": "deliver",
         "on": "t1.job-1.hub.sandbox",
-        "tx": "FBFwVm9ndHbTA8fSmyXAFQgwjEo86F5hd9YwJcy9GyuB",
+        "tx": "C5QQeUQooDTzDs9co4e4W4w4UivGJ8fy1ycvzYSKxZ22",
         "who": "researcher.sandbox"
       },
       {
         "method": "deliver",
         "on": "t2.job-1.hub.sandbox",
-        "tx": "2SrYDQVsi8QypRxig6ZizrpdfnbCxk1LJxGaHgGX6Rwb",
+        "tx": "CnRDcpA8WjmKQvMbKEACVu8dx9wdHwTjnN4Y3eKj1SNE",
         "who": "cheapbot.sandbox"
       },
       {
         "method": "deliver",
         "on": "t3.job-1.hub.sandbox",
-        "tx": "3ahrFUAciyLGWEnRjex9DDsLcsRup38BhEUQJ7TJSpLd",
+        "tx": "BDujgaFsPECrg4FojhhBHGK45EpgSpMFqpqXEG912kRQ",
         "who": "cheapbot.sandbox"
       },
       {
         "method": "submit_check",
         "on": "t1.job-1.hub.sandbox",
-        "tx": "BBrR2Bai1qduE5uz3FPCvc1zh1A7nYsRk1CuJvy68MpZ",
+        "tx": "A1CpSCStSBzD2Lf4uvyPL9tsoFbMsWRv7MW842Sn5t4k",
         "who": "keeper.sandbox"
       },
       {
         "method": "submit_check",
         "on": "t2.job-1.hub.sandbox",
-        "tx": "2bD13izyQPTQYGosxvPKfkrHLwMggNcdAK1jxUncJPLx",
+        "tx": "5P1uEHoT6VZ8b4RsruxfuUHXjmam37Wy9653K7Sv7VAt",
         "who": "keeper.sandbox"
       },
       {
         "method": "submit_check",
         "on": "t3.job-1.hub.sandbox",
-        "tx": "A6ikfcXsowUyBoCt3B88ifgHTYnZGkLaPNCfxCN4giqQ",
+        "tx": "HuqGDTKn7tnxuf43yVHiMECfAUVwCHEpX4ZFSwJmSC9r",
         "who": "keeper.sandbox"
       },
       {
         "method": "finalize_check",
         "on": "t1.job-1.hub.sandbox",
-        "tx": "2Um2Ycq3MPxNFwtwjQek3A8dNyUPn9DqenVtw4KCshgC",
+        "tx": "C3qbTsJ69MmMUwx8DiT75WacEQM9Simn32WHzZMWx1bV",
         "who": "keeper.sandbox"
       },
       {
         "method": "finalize_check",
         "on": "t2.job-1.hub.sandbox",
-        "tx": "5D4a6GW5yD4aVZ3QU1Zcr3Ni3A8TvmNjRRmXEHeRXTT4",
+        "tx": "CUuJky1SSVj198ZVo2yDW2Ke8dQaXPsCZaMLh9Sfg46j",
         "who": "keeper.sandbox"
       },
       {
         "method": "finalize_check",
         "on": "t3.job-1.hub.sandbox",
-        "tx": "zwTUJzVQhyCQGkWpkyGehJkGb9QjHUaAZSqznUspkAJ",
+        "tx": "3NRBDPuSqHBfEJxzgCvPmbjQReoPMmkta4ejReNrqEay",
         "who": "keeper.sandbox"
       },
       {
         "method": "ft_transfer_call",
         "on": "usdc.sandbox",
-        "tx": "8TW5Lb7wDQg87AfXuL77RtgXAejFgGreX79szRajRF3d",
+        "tx": "6KVbL6VNpxLkWBNBzshEirET74WBDqVA831iFPmWZYvz",
         "who": "treasury.sandbox"
       },
       {
         "method": "approve",
         "on": "t1.job-1.hub.sandbox",
-        "tx": "2Z7NzQosiNx7V2e5yX31SkhjCDmDLQanqLYKU3E7y9Ai",
+        "tx": "5uR9nREBeKU92ciqCGRWwPgt6EzupKDNee9thhHKLHeZ",
         "who": "lead.sandbox"
       },
       {
         "method": "approve",
         "on": "t2.job-1.hub.sandbox",
-        "tx": "3JijX7ymRbmPmhyDb5uMRwcuGbBZf3TNyy7j67nD7mM4",
+        "tx": "9ZWqokdA54RG9FhVG1h92kJq6X6BgGF8ZSSXftu9FeiZ",
         "who": "lead.sandbox"
       },
       {
         "method": "approve",
         "on": "t3.job-1.hub.sandbox",
-        "tx": "FDQy4TSvHZ5bNTeY9vnshkyLFbUY4ZsJZ9uxC6FpCex",
+        "tx": "DRfWSYN4rbpz7BskLy5qbbjisRHxLhq1BtHwBANnusor",
         "who": "lead.sandbox"
       },
       {
         "method": "settle",
         "on": "t1.job-1.hub.sandbox",
-        "tx": "8EtvGg5qjPa8fifgLZ2vSFRCKgfeUPvS4FmYtiGF5UsB",
+        "tx": "4MJU4TnGc8n7L2vY7RoKgH8zfc1VSBQ9RSN9FHT38fMc",
         "who": "keeper.sandbox"
       },
       {
         "method": "settle",
         "on": "t2.job-1.hub.sandbox",
-        "tx": "J7sGHMPkiA9VX2biWPjSfmG8d1wrXiUkPLsqKtS4zVk7",
+        "tx": "8t1JTtemt8QtUj5UfyN9PxoL2YuaCxG3SUaPt25tuGf2",
         "who": "keeper.sandbox"
       },
       {
         "method": "settle",
         "on": "t3.job-1.hub.sandbox",
-        "tx": "4XhVP5tDd2gnbqjb7ujAPpfRjNh1kSi59c4nVJVPLUNB",
+        "tx": "9Qpn9TbxtdqxqCgPyCd1FuzDs16cHDER6CmCQKn5Tp5h",
         "who": "keeper.sandbox"
       },
       {
         "method": "approve",
         "on": "job-1.hub.sandbox",
-        "tx": "3CSSKzAkFTJBBgHyrNrLQtanAJcx9Ngw8mgcSsgTayxZ",
+        "tx": "4UTQT7FS4qcUxXaPMivkXDVpM9ji22NaymAZzqUmmaZx",
         "who": "client.sandbox"
       },
       {
         "method": "settle",
         "on": "job-1.hub.sandbox",
-        "tx": "6QrPzK3dHLQ2BrAFxeDKVFvmiTnFxqDF5cDaYoRtCfRH",
+        "tx": "3ie7EEMfRGrhktsHHdUgNsTBLguSZumRSrcovLzkKUAN",
         "who": "keeper.sandbox"
       },
       {
         "method": "ft_transfer_call",
         "on": "usdc.sandbox",
-        "tx": "6bi1BTZTrBh9k1Y8hMVaknoCuuNcWt7oCW12H4pN8k1F",
+        "tx": "HKXm5RrjSF83omcF5S95V8eEDUusgCnSxrPL5hi51oh9",
         "who": "client.sandbox"
       },
       {
         "method": "hire",
         "on": "job-2.hub.sandbox",
-        "tx": "A28yVXpcQBVGJxUHVADP7AuGxAgU2jdrQL3oPQehx7Nq",
+        "tx": "8h9Grfa7m975ryMaQs7acW92Sc49SsAZhQLMnubH7rx6",
         "who": "lead.sandbox"
       },
       {
         "method": "hire",
         "on": "job-2.hub.sandbox",
-        "tx": "8hkVqi8ZYMFoXtRCrZiYu2HTnGnP4YFokztGSTUsSeGH",
+        "tx": "ASssEQLf34T8xUEfPnoWeMP7LdoJvv5uu5bRSom7C8Nw",
         "who": "lead.sandbox"
       },
       {
         "method": "hire",
         "on": "job-2.hub.sandbox",
-        "tx": "61BxujGe6iLA99Gbmw88upUbVmpyC6wKsbttZW5WiCic",
+        "tx": "8GEU52CUkug7Un3fmxHmerbgz3iZ5gcxRsZptqGNE8hZ",
         "who": "lead.sandbox"
       },
       {
         "method": "deliver",
         "on": "t1.job-2.hub.sandbox",
-        "tx": "54dBpH4hzoasE9SKw7srr4PvXZL2V3sbYAku4VfDrL15",
+        "tx": "CnECYS9SjDMbsChq3PmhtW2gJzyCpx5DdNvECCqiZxuJ",
         "who": "researcher.sandbox"
       },
       {
         "method": "deliver",
         "on": "t2.job-2.hub.sandbox",
-        "tx": "x7cAf85bHL7YKUFwaBNUQAFkecUXZmCEvYxszAyiVT1",
+        "tx": "8zjSgGnAunx5uuYRrhuoaoL8pJpxfnGCYj1Q2bF3WYxC",
         "who": "translator.sandbox"
       },
       {
         "method": "deliver",
         "on": "t3.job-2.hub.sandbox",
-        "tx": "Brum6TF31YfgNAEuP8f2XCRKKrWfRff1wJcFmwZfMYGe",
+        "tx": "21F9yfYYcGsr8GjLkVeFGabscQrzFDoHmqTqweMcQttF",
         "who": "researcher.sandbox"
       },
       {
         "method": "submit_check",
         "on": "t1.job-2.hub.sandbox",
-        "tx": "FjzeeYQyrRhNzgNKxurcvutqZGdR7oZKk5eS4Dgzep6g",
+        "tx": "BFJK5ZZ3nzdrXUrDiRy21mqZK5z31drKhp1DDai7Mudi",
         "who": "keeper.sandbox"
       },
       {
         "method": "submit_check",
         "on": "t2.job-2.hub.sandbox",
-        "tx": "5UnjZym6cdJBHHDEQG9JcWuiFMBUp6x1aNnEzpkiNXEw",
+        "tx": "8tvw6N3QcQ57DAoSdzVwcYrSLC22xb9FygiUFdYSsPDh",
         "who": "keeper.sandbox"
       },
       {
         "method": "submit_check",
         "on": "t3.job-2.hub.sandbox",
-        "tx": "9VXeR9LDfZyZ5XQEV9hkJYSFTW8BT4YFcTUb9gC5oecU",
+        "tx": "3LBVE5shniTBj2cMTv8AqrWG2AwUihNwUyiMxXG3T1cY",
         "who": "keeper.sandbox"
       },
       {
         "method": "finalize_check",
         "on": "t1.job-2.hub.sandbox",
-        "tx": "Gv89wKeqSbXpxLSuofRmgdQQpa2pY8kkGrHMGNF2MAJK",
+        "tx": "DLuWaC7mCJdbFmvoiUkJXCkvYH7qskZ6mHnQhJzEf2r4",
         "who": "keeper.sandbox"
       },
       {
         "method": "finalize_check",
         "on": "t2.job-2.hub.sandbox",
-        "tx": "Bs61jKLaaxJUTw5KA4ZjQz6Z1voyx4JzxRJyxtDKRCtm",
+        "tx": "2zWhhg6mRGq9ZG993K3d6rSTNxoqejcsY5adG25hBaQR",
         "who": "keeper.sandbox"
       },
       {
         "method": "finalize_check",
         "on": "t3.job-2.hub.sandbox",
-        "tx": "EJMKnTzsSNLjYpKiMJBJPXBxe3aLAQ1u2wbDq3uHtCAc",
+        "tx": "6ZTCxfUqhUFMCnj83RB9XsVsedAAsoaSCcqh61fFbH4i",
         "who": "keeper.sandbox"
       },
       {
         "method": "ft_transfer_call",
         "on": "usdc.sandbox",
-        "tx": "3hkGTessZ5dsRZAc8WMvhkF8rx3SpWQGK6a4BKEpkCn5",
+        "tx": "3V1DQPPTRAPHVfEEHVJXrC14zkf3xaKZL9sdSzatjyvY",
         "who": "treasury.sandbox"
       },
       {
         "method": "ft_transfer_call",
         "on": "usdc.sandbox",
-        "tx": "4S28AUrRBpSwoGVJ2D6Dbo8iTa62JiGSePy7K1mgLe6h",
+        "tx": "GZDR3YTGbZXCDGGgsPiyLrkGMydk3oY1Y7PDoxdG5eV",
         "who": "treasury.sandbox"
       },
       {
         "method": "ft_transfer_call",
         "on": "usdc.sandbox",
-        "tx": "62pa2RaM3en84TfzVJGifkTya6HKUcLXLwSVUEy4cXj5",
+        "tx": "BXubAT7YQT2USieyyz9NKRvUrDrrvUo7iWT5krwCwYvW",
         "who": "treasury.sandbox"
       },
       {
         "method": "approve",
         "on": "t1.job-2.hub.sandbox",
-        "tx": "7S2iPu1HaAcH6smMrJnM1UmZFDWNHWWp7YnLy6FZ1y3k",
+        "tx": "5iNGat5gyHEvzxyDzH6MoXwvSu4JXVQcKATS5Mf8smzc",
         "who": "lead.sandbox"
       },
       {
         "method": "approve",
         "on": "t2.job-2.hub.sandbox",
-        "tx": "68ajCoZqJY7WQp6Grz3ZvwBm8V5v2cDk3GMVuvoQNiMa",
+        "tx": "6v1oVFKqppxRneQdoseJc2Mc28FgxM8Q2d3P7AWdJjvc",
         "who": "lead.sandbox"
       },
       {
         "method": "approve",
         "on": "t3.job-2.hub.sandbox",
-        "tx": "AYpjc1GMCTSvqSFMys7NosinjBAjs7BfveDKn1SRyT5b",
+        "tx": "9Zu39QMoq89FySmpXtnmZpxKSmvn1JitozVqzzCCMBtM",
         "who": "lead.sandbox"
       },
       {
         "method": "settle",
         "on": "t1.job-2.hub.sandbox",
-        "tx": "3ZeyyuogbWmKTa64HgyZjMSyoiaGJRdze6UbdLvLY68f",
+        "tx": "3KqC5hd2Azuk9j5XmGp1mXKocpFXgJmbewLGPMDQ8ysi",
         "who": "keeper.sandbox"
       },
       {
         "method": "settle",
         "on": "t2.job-2.hub.sandbox",
-        "tx": "2hup9fo2w64HwNu9Q1LtuLMBrH9w1vVjejARi72FLxL1",
+        "tx": "FigAUX8HtuQyCpQXCExPsmfG5gxLAR5knrVcLv6jfk6G",
         "who": "keeper.sandbox"
       },
       {
         "method": "settle",
         "on": "t3.job-2.hub.sandbox",
-        "tx": "6R89jsCTatb8pqPwM6q4ASgC977HU2rnCmpWsa8kfkXs",
+        "tx": "EYEk19bGgSrNHFRZWQ1M82UrYvKheXo3Xnq2QmWCwwqR",
         "who": "keeper.sandbox"
       },
       {
         "method": "approve",
         "on": "job-2.hub.sandbox",
-        "tx": "FDsaryiihEMt4zVMFsKVmAM9EETCxtuB1VjQ1FSLDjTy",
+        "tx": "DVNpY3n9VHWK2EJap2ZmdLb7V2qLHwTvKNkJEHZxhLW3",
         "who": "client.sandbox"
       },
       {
         "method": "settle",
         "on": "job-2.hub.sandbox",
-        "tx": "7sjiHj5hYAKBpzwU47Mt2uUVdsbSt6pQUmRoct3cuPcY",
+        "tx": "4hrDnp72jpngKK447qTHoiZzAf69Prig5B3d3C29aobV",
         "who": "keeper.sandbox"
       }
     ]
@@ -373,7 +374,7 @@
         }
       ],
       "n": 1,
-      "say": "\"Write a short explainer of NEAR global contracts in English and Spanish, plus a one-line summary.\" One transfer of 100 fUSD to the factory creates job-1 from the global contract; the lead's fee is 10. The rest comes back to the client at the end.",
+      "say": "\"Write a short explainer of NEAR global contracts in English and Spanish, plus a one-line summary.\" One transfer of 100 fUSD to the factory creates job-1.hub.sandbox from the global contract; the lead's fee is 10. The rest comes back to the client at the end.",
       "title": "Job 1: the client posts",
       "wallets": [
         {
@@ -950,7 +951,7 @@
         }
       ],
       "n": 7,
-      "say": "\"Write a short explainer of NEAR global contracts in English and Spanish, plus a one-line summary.\" One transfer of 100 fUSD to the factory creates job-2 from the global contract; the lead's fee is 10. The rest comes back to the client at the end.",
+      "say": "\"Write a short explainer of NEAR global contracts in English and Spanish, plus a one-line summary.\" One transfer of 100 fUSD to the factory creates job-2.hub.sandbox from the global contract; the lead's fee is 10. The rest comes back to the client at the end.",
       "title": "Job 2: the client posts",
       "wallets": [
         {
