@@ -8,11 +8,10 @@
 //! payee, send the rest to the parent (root: to the manager), confirm the
 //! real token balance is zero, then delete the account (beneficiary: parent).
 //!
-//! Built so far (days S and S+1): init, funding, bond, hire, deliver without
-//! a receipt, approve, settle, delete, child_closed, views.
+//! Built: init, funding, bond, hire, deliver (with or without a NEAR AI
+//! Cloud receipt, verified by `env::ecrecover`), approve, settle in legs,
+//! stuck-settle recovery, delete, child_closed, views.
 //! Not built yet, and refused rather than faked:
-//! - receipt verification (`env::ecrecover`, day S+2): `deliver` with a
-//!   receipt panics; `verified` stays false;
 //! - the quality check (OutLayer, day S+3): nothing reaches `Checked`;
 //! - note sale and disputes (day S+4): `buy_note` is refunded in full.
 //!
@@ -20,7 +19,8 @@
 //! callback handles failure, no unwrap on promise results, callbacks are
 //! `#[private]` and also assert the caller, checked math everywhere.
 
-use ht_core::binding::{parse_addr20_hex, parse_hash32_hex};
+use ht_core::binding::{check_binding, parse_addr20_hex, parse_hash32_hex};
+use ht_core::receipt::{parse_signature, signed_text_from_hashes, MAX_MODEL_LEN};
 use ht_core::{transition, Event, Ledger, Split, Status};
 use near_sdk::json_types::{Base58CryptoHash, Base64VecU8, U128, U64};
 use near_sdk::serde_json::{self, json};
@@ -60,7 +60,11 @@ const GAS_CHILD_CLOSED: Gas = Gas::from_tgas(10);
 const GAS_ON_CHILD_FUNDED: Gas = Gas::from_tgas(25);
 const GAS_ON_CHILD_CREATED: Gas = Gas::from_tgas(100);
 const GAS_ON_BALANCE_CHECKED: Gas = Gas::from_tgas(30);
-const GAS_ON_PAID: Gas = Gas::from_tgas(50);
+const GAS_ON_PAID: Gas = Gas::from_tgas(60);
+const GAS_ON_RESUME: Gas = Gas::from_tgas(60);
+/// A settle leg with no callback after this long counts as stuck and anyone
+/// may `resume_settle` it.
+pub const RESUME_AFTER_SECS: u64 = 600;
 /// Least prepaid gas `hire` accepts (create + callbacks + own work).
 pub const GAS_HIRE_MIN: Gas = Gas::from_tgas(150);
 /// Least prepaid gas `settle` accepts.
@@ -94,6 +98,25 @@ pub struct Child {
     pub state: ChildState,
 }
 
+/// The one settle transfer (or balance check) in flight.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Leg {
+    Payee,
+    Rest,
+    Balance,
+}
+
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Payout {
+    pub leg: Leg,
+    pub to_payee: U128,
+    pub to_rest: U128,
+    pub attempt: u32,
+    pub since_ns: u64,
+}
+
 #[near(serializers = [json])]
 pub struct JobView {
     pub account: AccountId,
@@ -124,6 +147,7 @@ pub struct JobView {
     pub children: Vec<Child>,
     pub children_open: u32,
     pub children_pending: u32,
+    pub payout: Option<Payout>,
 }
 
 #[near(contract_state)]
@@ -157,6 +181,11 @@ pub struct Job {
     ledger: Ledger,
     /// Tokens sent to the parent so far; reported in `child_closed`.
     returned_to_parent: u128,
+    /// The settle leg in flight, if any.
+    payout: Option<Payout>,
+    /// Bumped on every settle leg; callbacks carry it so a superseded one
+    /// cannot act.
+    settle_attempt: u32,
 }
 
 fn emit(event: &str, data: serde_json::Value) {
@@ -259,6 +288,8 @@ impl Job {
             children_pending: 0,
             ledger: Ledger::new(amount.0),
             returned_to_parent: 0,
+            payout: None,
+            settle_attempt: 0,
         };
         emit(
             "job_created",
@@ -566,8 +597,11 @@ impl Job {
     /// Worker only, while the window is open. Stores the deliverable hash
     /// (`sha256(response)`, 64 hex) and increments `seq`.
     ///
-    /// Receipt verification is not built yet (day S+2): passing `req`, `sig`
-    /// or `model` is refused. A delivery without a receipt waits for settle.
+    /// With a NEAR AI Cloud receipt (`req`, `sig`, `model` together) the
+    /// contract proves the deliverable came from a model call made for this
+    /// task and this delivery (see `verify_receipt`) and sets `verified`.
+    /// Without one, the delivery is unverified: paid at settle, note not
+    /// sellable.
     pub fn deliver(
         &mut self,
         resp_hash: String,
@@ -579,26 +613,56 @@ impl Job {
             self.worker.as_ref() == Some(&env::predecessor_account_id()),
             "only the worker can deliver"
         );
-        // TODO(day S+2): rebuild the signed text, EIP-191 digest, ecrecover,
-        // pinned signer, HT1 binding tag (ht_core::binding), used seq.
-        require!(
-            req.is_none() && sig.is_none() && model.is_none(),
-            "receipt verification is not built yet: deliver with resp_hash only"
-        );
         require!(self.window_open(), "window is closed");
         let hash = parse_hash32_hex(&resp_hash)
             .unwrap_or_else(|| env::panic_str("resp_hash must be 64 hex chars"));
-        self.status = transition(self.status, Event::Deliver).unwrap_or_else(|e| fail(e));
-        self.seq = self
+        let next_status = transition(self.status, Event::Deliver).unwrap_or_else(|e| fail(e));
+        let seq = self
             .seq
             .checked_add(1)
             .unwrap_or_else(|| env::panic_str("seq overflow"));
+        let verified = match (req, sig, model) {
+            (None, None, None) => false,
+            (Some(req), Some(sig), Some(model)) => {
+                self.verify_receipt(&req.0, &sig, &model, &hash, seq);
+                true
+            }
+            _ => env::panic_str("receipt needs req, sig and model together"),
+        };
+        self.status = next_status;
+        self.seq = seq;
         self.deliverable_hash = Some(hash);
-        self.verified = false;
+        self.verified = verified;
         // TODO(day S+3): start the one quality check per delivery here.
         emit(
             "delivered",
-            json!({ "seq": self.seq, "deliverable_hash": hex_of(&hash), "verified": false }),
+            json!({ "seq": seq, "deliverable_hash": hex_of(&hash), "verified": verified }),
+        );
+    }
+
+    /// Panics unless the receipt is valid for this task and delivery:
+    /// 1. `req` carries exactly one tag `HT1:<this account>:<spec>:<seq>`;
+    /// 2. the text `model:sha256(req):resp_hash` (EIP-191) recovers, with
+    ///    low-s enforced, to the pinned NEAR AI Cloud signing address.
+    fn verify_receipt(&self, req: &[u8], sig: &str, model: &str, resp_hash: &[u8; 32], seq: u32) {
+        require!(
+            !model.is_empty() && model.len() <= MAX_MODEL_LEN,
+            "receipt: model name must be 1-128 bytes"
+        );
+        let me = env::current_account_id();
+        if let Err(e) = check_binding(req, me.as_str(), &self.spec_hash, seq) {
+            env::panic_str(&format!("receipt: {e}"));
+        }
+        let sig = parse_signature(sig).unwrap_or_else(|e| fail(e));
+        let req_hash: [u8; 32] = env::sha256_array(req);
+        let text = signed_text_from_hashes(model, &req_hash, resp_hash);
+        let digest = eip191_digest_env(text.as_bytes());
+        let pk = env::ecrecover(&digest, &sig.rs, sig.v, true)
+            .unwrap_or_else(|| env::panic_str("receipt: bad signature (no key recovered)"));
+        let addr = env::keccak256_array(pk);
+        require!(
+            addr[12..] == self.signer[..],
+            "receipt: signer is not the pinned NEAR AI Cloud key"
         );
     }
 
@@ -640,11 +704,18 @@ impl Job {
     // ------------------------------------------------------------ settle
 
     /// Anyone, after the window or approval, once every child is closed.
-    /// Pays the payee its amount (only if the work was delivered), sends the
-    /// rest to the parent (root: to the manager). Deletion happens later, in
-    /// a callback, only after every transfer succeeded and the token reports
-    /// a zero balance.
-    pub fn settle(&mut self) -> Promise {
+    ///
+    /// Runs in legs, one transfer at a time, so a stuck settle can always be
+    /// resolved from the real token balance alone (see `resume_settle`):
+    /// 1. payee leg: register the payee on the token (a no-op refund if it
+    ///    already is), then pay it `amount` (only if the work was delivered);
+    /// 2. rest leg: send the rest to the parent (root: to the manager);
+    /// 3. balance leg: ask the token for the real balance; delete only at zero.
+    ///
+    /// A failed transfer keeps its tokens here, the job goes back to its
+    /// status before settle, and settle can run again without paying anyone
+    /// twice.
+    pub fn settle(&mut self) -> PromiseOrValue<bool> {
         require!(
             env::prepaid_gas() >= GAS_SETTLE_MIN,
             "not enough gas for settle (attach at least 100 Tgas)"
@@ -664,45 +735,99 @@ impl Job {
             .ledger
             .settle_split(pay_payee)
             .unwrap_or_else(|e| fail(e));
-        if let Err(e) = self.ledger.begin_payout(split) {
-            fail(e);
-        }
         self.status = settling;
         self.status_before_settle = Some(prev);
         emit(
             "settle_started",
             json!({ "to_payee": U128(split.to_payee), "to_rest": U128(split.to_rest) }),
         );
-
-        let mut transfers: Option<Promise> = None;
         if split.to_payee > 0 {
-            let payee = self
-                .payee
-                .clone()
-                .unwrap_or_else(|| env::panic_str("no payee"));
-            transfers = Some(self.ft_transfer(payee, split.to_payee));
+            PromiseOrValue::Promise(self.start_payee_leg(split))
+        } else {
+            self.start_rest_leg(split)
         }
-        if split.to_rest > 0 {
-            let dest = if self.root {
-                self.manager.clone()
-            } else {
-                self.parent.clone()
-            };
-            let t = self.ft_transfer(dest, split.to_rest);
-            transfers = Some(match transfers {
-                Some(p) => p.and(t),
-                None => t,
-            });
+    }
+
+    fn next_attempt(&mut self, leg: Leg, split: Split) -> u32 {
+        self.settle_attempt = self
+            .settle_attempt
+            .checked_add(1)
+            .unwrap_or_else(|| env::panic_str("attempt overflow"));
+        self.payout = Some(Payout {
+            leg,
+            to_payee: U128(split.to_payee),
+            to_rest: U128(split.to_rest),
+            attempt: self.settle_attempt,
+            since_ns: env::block_timestamp(),
+        });
+        self.settle_attempt
+    }
+
+    fn start_payee_leg(&mut self, split: Split) -> Promise {
+        let payee = self
+            .payee
+            .clone()
+            .unwrap_or_else(|| env::panic_str("no payee"));
+        if let Err(e) = self.ledger.begin_payout(Split {
+            to_payee: split.to_payee,
+            to_rest: 0,
+        }) {
+            fail(e);
         }
-        match transfers {
-            Some(p) => p.then(
+        let attempt = self.next_attempt(Leg::Payee, split);
+        // An unregistered payee would block the transfer forever, so the job
+        // registers it (NEP-145 refunds the deposit if already registered).
+        Promise::new(self.token.clone())
+            .function_call(
+                "storage_deposit",
+                json!({ "account_id": payee, "registration_only": true })
+                    .to_string()
+                    .into_bytes(),
+                TOKEN_STORAGE_NEAR,
+                GAS_STORAGE_DEPOSIT,
+            )
+            .then(self.ft_transfer(payee, split.to_payee))
+            .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(GAS_ON_PAID)
-                    .on_paid(U128(split.to_payee), U128(split.to_rest)),
-            ),
-            // Nothing to send: go straight to the balance check.
-            None => self.check_balance_then_delete(),
+                    .on_payee_paid(attempt),
+            )
+    }
+
+    fn start_rest_leg(&mut self, split: Split) -> PromiseOrValue<bool> {
+        if split.to_rest == 0 {
+            return self.after_transfers(split);
         }
+        if let Err(e) = self.ledger.begin_payout(Split {
+            to_payee: 0,
+            to_rest: split.to_rest,
+        }) {
+            fail(e);
+        }
+        let attempt = self.next_attempt(Leg::Rest, split);
+        let dest = if self.root {
+            self.manager.clone()
+        } else {
+            self.parent.clone()
+        };
+        PromiseOrValue::Promise(
+            self.ft_transfer(dest, split.to_rest).then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_ON_PAID)
+                    .on_rest_paid(attempt),
+            ),
+        )
+    }
+
+    /// Both legs done: anything left means a transfer failed, so stop and
+    /// let settle run again; otherwise check the real balance.
+    fn after_transfers(&mut self, split: Split) -> PromiseOrValue<bool> {
+        if self.ledger.ft_balance != 0 {
+            self.settle_failed("transfer failed");
+            return PromiseOrValue::Value(false);
+        }
+        let attempt = self.next_attempt(Leg::Balance, split);
+        PromiseOrValue::Promise(self.check_balance(attempt))
     }
 
     fn ft_transfer(&self, to: AccountId, amount: u128) -> Promise {
@@ -716,7 +841,7 @@ impl Job {
         )
     }
 
-    fn check_balance_then_delete(&self) -> Promise {
+    fn check_balance(&self, attempt: u32) -> Promise {
         Promise::new(self.token.clone())
             .function_call(
                 "ft_balance_of",
@@ -729,7 +854,7 @@ impl Job {
             .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(GAS_ON_BALANCE_CHECKED)
-                    .on_balance_checked(),
+                    .on_balance_checked(attempt),
             )
     }
 
@@ -740,71 +865,102 @@ impl Job {
             .unwrap_or_else(|| env::panic_str("no status to restore"));
         self.status =
             transition(self.status, Event::SettleFailed(prev)).unwrap_or_else(|e| fail(e));
+        self.payout = None;
         emit(
             "settle_failed",
             json!({ "why": why, "status": self.status.as_str() }),
         );
     }
 
-    /// After the settle transfers. A failed transfer's tokens stay here and
-    /// the job goes back to its status before settle; settle can run again.
-    #[private]
-    pub fn on_paid(&mut self, to_payee: U128, to_rest: U128) -> PromiseOrValue<bool> {
-        assert_self();
+    /// The payout in flight, if `leg` and `attempt` match it. A stale
+    /// callback (superseded by `resume_settle`) panics without changing state.
+    fn current_payout(&self, leg: Leg, attempt: u32) -> Payout {
         require!(self.status == Status::Settling, "not settling");
-        let split = Split {
-            to_payee: to_payee.0,
-            to_rest: to_rest.0,
+        let p = self
+            .payout
+            .clone()
+            .unwrap_or_else(|| env::panic_str("no payout in flight"));
+        require!(
+            p.leg == leg && p.attempt == attempt,
+            "stale settle callback"
+        );
+        p
+    }
+
+    fn resolve_payee(&mut self, p: &Payout, ok: bool) {
+        let s = Split {
+            to_payee: p.to_payee.0,
+            to_rest: 0,
         };
-        let expected = u64::from(split.to_payee > 0) + u64::from(split.to_rest > 0);
-        let (payee_ok, rest_ok) = if env::promise_results_count() != expected {
-            // Not the shape we scheduled: treat every transfer as failed.
-            (split.to_payee == 0, split.to_rest == 0)
-        } else {
-            let mut idx = 0;
-            let payee_ok = if split.to_payee > 0 {
-                idx += 1;
-                result_ok(idx - 1)
-            } else {
-                true
-            };
-            let rest_ok = if split.to_rest > 0 {
-                result_ok(idx)
-            } else {
-                true
-            };
-            (payee_ok, rest_ok)
-        };
-        if let Err(e) = self.ledger.payout_result(split, payee_ok, rest_ok) {
+        if let Err(e) = self.ledger.payout_result(s, ok, true) {
             fail(e);
         }
-        if rest_ok && split.to_rest > 0 && !self.root {
+        emit(
+            "paid",
+            json!({ "leg": "payee", "ok": ok, "to": self.payee, "amount": p.to_payee }),
+        );
+    }
+
+    fn resolve_rest(&mut self, p: &Payout, ok: bool) {
+        let s = Split {
+            to_payee: 0,
+            to_rest: p.to_rest.0,
+        };
+        if let Err(e) = self.ledger.payout_result(s, true, ok) {
+            fail(e);
+        }
+        if ok && !self.root {
             self.returned_to_parent = self
                 .returned_to_parent
-                .checked_add(split.to_rest)
+                .checked_add(p.to_rest.0)
                 .unwrap_or_else(|| env::panic_str("overflow"));
         }
         emit(
             "paid",
-            json!({ "payee_ok": payee_ok, "rest_ok": rest_ok, "to_payee": to_payee, "to_rest": to_rest }),
+            json!({ "leg": "rest", "ok": ok, "amount": p.to_rest }),
         );
-        if self.ledger.ft_balance != 0 {
-            self.settle_failed("transfer failed");
-            return PromiseOrValue::Value(false);
+    }
+
+    fn split_of(p: &Payout) -> Split {
+        Split {
+            to_payee: p.to_payee.0,
+            to_rest: p.to_rest.0,
         }
-        PromiseOrValue::Promise(self.check_balance_then_delete())
+    }
+
+    /// After the payee transfer. On failure the payee's tokens stay here;
+    /// the rest leg still runs, so the parent is never held up by the payee.
+    #[private]
+    pub fn on_payee_paid(&mut self, attempt: u32) -> PromiseOrValue<bool> {
+        assert_self();
+        let p = self.current_payout(Leg::Payee, attempt);
+        self.resolve_payee(&p, result_ok(0));
+        self.start_rest_leg(Self::split_of(&p))
+    }
+
+    /// After the rest transfer.
+    #[private]
+    pub fn on_rest_paid(&mut self, attempt: u32) -> PromiseOrValue<bool> {
+        assert_self();
+        let p = self.current_payout(Leg::Rest, attempt);
+        self.resolve_rest(&p, result_ok(0));
+        self.after_transfers(Self::split_of(&p))
     }
 
     /// After `ft_balance_of(self)`. Deletes the account only if the token
     /// reports zero. Stray tokens (sent without `ft_transfer_call`) are
     /// added to the ledger and go to the parent on the next settle.
     #[private]
-    pub fn on_balance_checked(&mut self) -> PromiseOrValue<bool> {
+    pub fn on_balance_checked(&mut self, attempt: u32) -> PromiseOrValue<bool> {
         assert_self();
-        require!(self.status == Status::Settling, "not settling");
+        self.current_payout(Leg::Balance, attempt);
         let real = env::promise_result_checked(0, MAX_RESULT_LEN)
             .ok()
             .and_then(|b| serde_json::from_slice::<U128>(&b).ok());
+        self.apply_real_balance(real)
+    }
+
+    fn apply_real_balance(&mut self, real: Option<U128>) -> PromiseOrValue<bool> {
         match real {
             None => {
                 self.settle_failed("balance check failed");
@@ -821,9 +977,106 @@ impl Job {
         }
     }
 
+    // ------------------------------------------------------------ recovery
+
+    /// Anyone, when a settle has been stuck in one leg for `RESUME_AFTER_SECS`
+    /// (its callback ran out of gas or panicked). Asks the token for the real
+    /// balance and works out from it alone whether the leg's transfer
+    /// happened, then carries on. Bumps the attempt number first, so a late
+    /// original callback can no longer act.
+    pub fn resume_settle(&mut self) -> Promise {
+        require!(self.status == Status::Settling, "not settling");
+        require!(
+            env::prepaid_gas() >= GAS_SETTLE_MIN,
+            "not enough gas for resume_settle (attach at least 100 Tgas)"
+        );
+        let p = self
+            .payout
+            .clone()
+            .unwrap_or_else(|| env::panic_str("no payout in flight"));
+        let ready = p.since_ns.saturating_add(RESUME_AFTER_SECS * NS_PER_SEC);
+        require!(
+            env::block_timestamp() >= ready,
+            "settle is not stuck yet; wait RESUME_AFTER_SECS"
+        );
+        let attempt = self.next_attempt(p.leg, Self::split_of(&p));
+        emit(
+            "settle_resumed",
+            json!({ "leg": p.leg, "attempt": attempt }),
+        );
+        Promise::new(self.token.clone())
+            .function_call(
+                "ft_balance_of",
+                json!({ "account_id": env::current_account_id() })
+                    .to_string()
+                    .into_bytes(),
+                NO_DEPOSIT,
+                GAS_FT_BALANCE_OF,
+            )
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_ON_RESUME)
+                    .on_resume_balance(attempt),
+            )
+    }
+
+    /// The real balance after a stuck leg. `base` is what the ledger expects
+    /// if the leg's transfer happened. Only one transfer is ever in flight,
+    /// so the answer is never ambiguous: at least `base + leg amount` means
+    /// it did not happen; anything above that is stray tokens (which only
+    /// ever add, so they can never make a paid leg look unpaid at someone
+    /// else's cost: the stray sender funds any extra payment).
+    #[private]
+    pub fn on_resume_balance(&mut self, attempt: u32) -> PromiseOrValue<bool> {
+        assert_self();
+        require!(self.status == Status::Settling, "not settling");
+        let p = self
+            .payout
+            .clone()
+            .unwrap_or_else(|| env::panic_str("no payout in flight"));
+        require!(p.attempt == attempt, "stale settle callback");
+        let Some(U128(real)) = env::promise_result_checked(0, MAX_RESULT_LEN)
+            .ok()
+            .and_then(|b| serde_json::from_slice::<U128>(&b).ok())
+        else {
+            // Token did not answer: stay stuck; anyone may resume again later.
+            emit("settle_resume_failed", json!({ "leg": p.leg }));
+            return PromiseOrValue::Value(false);
+        };
+        let base = self.ledger.ft_balance;
+        let leg_amount = match p.leg {
+            Leg::Payee => p.to_payee.0,
+            Leg::Rest => p.to_rest.0,
+            Leg::Balance => 0,
+        };
+        let failed_at = base
+            .checked_add(leg_amount)
+            .unwrap_or_else(|| env::panic_str("overflow"));
+        let (happened, stray) = if real >= failed_at && leg_amount > 0 {
+            (false, real - failed_at)
+        } else {
+            (true, real.saturating_sub(base))
+        };
+        match p.leg {
+            Leg::Payee => self.resolve_payee(&p, happened),
+            Leg::Rest => self.resolve_rest(&p, happened),
+            Leg::Balance => return self.apply_real_balance(Some(U128(real.saturating_sub(base)))),
+        }
+        if stray > 0 {
+            if let Err(e) = self.ledger.credit(stray) {
+                fail(e);
+            }
+        }
+        match p.leg {
+            Leg::Payee => self.start_rest_leg(Self::split_of(&p)),
+            _ => self.after_transfers(Self::split_of(&p)),
+        }
+    }
+
     fn finalize(&mut self) -> Promise {
         self.status = transition(self.status, Event::SettleOk).unwrap_or_else(|e| fail(e));
         self.status_before_settle = None;
+        self.payout = None;
         let me = env::current_account_id();
         emit(
             "settled",
@@ -903,8 +1156,19 @@ impl Job {
             children: self.children.clone(),
             children_open: self.children_open,
             children_pending: self.children_pending,
+            payout: self.payout.clone(),
         }
     }
+}
+
+/// EIP-191 personal-message digest with the host's keccak (cheaper in wasm
+/// than core's pure-Rust one; the core version is the tested reference).
+fn eip191_digest_env(msg: &[u8]) -> [u8; 32] {
+    let mut buf = Vec::with_capacity(msg.len() + 32);
+    buf.extend_from_slice(b"\x19Ethereum Signed Message:\n");
+    buf.extend_from_slice(msg.len().to_string().as_bytes());
+    buf.extend_from_slice(msg);
+    env::keccak256_array(&buf)
 }
 
 fn hex_of(bytes: &[u8]) -> String {

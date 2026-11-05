@@ -35,6 +35,8 @@ lint: ## rustfmt check + clippy -D warnings
 	cd tests/sandbox && cargo fmt -- --check
 	cargo clippy --workspace --all-targets --locked --offline -- -D warnings
 
+# Plain cargo needs --cfg near (what cargo-near sets). Without it near-sdk's
+# panic_str aborts and every on-chain error reads only "unreachable".
 .PHONY: build
 build: ## Build the contract wasm into out/ with SHA256SUMS (non-reproducible for now)
 	@mkdir -p $(OUT)
@@ -44,7 +46,7 @@ build: ## Build the contract wasm into out/ with SHA256SUMS (non-reproducible fo
 	  done; \
 	else \
 	  echo "cargo-near not installed: plain cargo wasm build (no ABI, no wasm-opt)" >&2; \
-	  cargo build --offline --locked --release --target wasm32-unknown-unknown -p hire-tree-job -p mock-usdc; \
+	  RUSTFLAGS='--cfg near' cargo build --offline --locked --release --target wasm32-unknown-unknown -p hire-tree-job -p mock-usdc; \
 	  cp target/wasm32-unknown-unknown/release/hire_tree_job.wasm target/wasm32-unknown-unknown/release/mock_usdc.wasm $(OUT)/; \
 	fi
 	cd $(OUT) && sha256sum *.wasm | tee SHA256SUMS

@@ -2,7 +2,8 @@
 //!
 //! - G4: the job wasm is registered once as a global contract (by code hash);
 //!   the root job and every sub-job created by `hire` run it by hash.
-//! - G1: a job deletes itself only after its settle transfers succeeded and
+//! - G1: settle registers an unregistered payee and pays it; a job deletes
+//!   itself only after its settle transfers succeeded and
 //!   the token reports a zero balance; the storage NEAR goes to the parent.
 //! - Fold: a 2-level tree (root -> t1 -> t1.t1, root -> t2) settles bottom-up,
 //!   every account is deleted, and the money rule holds.
@@ -414,26 +415,12 @@ async fn g1_delete_only_after_confirmed_transfer_and_zero_balance() {
     .await;
     w.ok(&lead, &t1, "approve", json!({})).await;
 
-    // 1. The worker cannot receive tokens: the payee transfer fails, the
-    //    rest (5) reaches the parent, and the account is NOT deleted.
-    w.ok(&lead, &t1, "settle", json!({})).await;
-    assert!(
-        w.account_state(&t1).await.is_some(),
-        "kept after a failed transfer"
-    );
-    let j = w.job(&t1).await;
-    assert_eq!(j["status"], "Delivered");
-    assert_eq!(j["payee_paid"], false);
-    assert_eq!(num(&j["ft_balance"]), 30 * USD);
-    assert_eq!(num(&j["returned_to_parent"]), 5 * USD);
-    assert_eq!(w.ft(&t1).await, 30 * USD);
-
-    // 2. Someone sends 1 unit straight to the job (no ft_transfer_call).
+    // 1. Someone sends 1 unit straight to the job (no ft_transfer_call).
     w.send(&client, &t1, 1, None).await;
 
-    // 3. The worker registers; settle pays it, but the real balance is 1:
-    //    still no delete, the stray unit goes on the books.
-    w.register(&worker).await;
+    // 2. Settle: the job registers the (unregistered) worker on the token and
+    //    pays it 30, the rest (5) reaches the parent, but the real balance is
+    //    1: the account is NOT deleted and the stray unit goes on the books.
     w.ok(&lead, &t1, "settle", json!({})).await;
     assert_eq!(w.ft(&worker.id).await, 30 * USD);
     assert!(
@@ -441,9 +428,14 @@ async fn g1_delete_only_after_confirmed_transfer_and_zero_balance() {
         "kept while real balance is 1"
     );
     let j = w.job(&t1).await;
+    assert_eq!(j["status"], "Delivered");
     assert_eq!(j["payee_paid"], true);
     assert_eq!(num(&j["ft_balance"]), 1);
+    assert_eq!(num(&j["returned_to_parent"]), 5 * USD);
+    assert_eq!(w.ft(&t1).await, 1);
 
+    // 3. Paying twice is impossible: a stray-only settle sends nothing to the
+    //    worker (checked below by the worker's unchanged balance).
     // 4. Settle again: the 1 unit goes to the parent; balance 0; deleted.
     let (t1_near, _, _) = w.account_state(&t1).await.unwrap();
     let (root_near_before, _, _) = w.account_state(&root).await.unwrap();
@@ -463,6 +455,7 @@ async fn g1_delete_only_after_confirmed_transfer_and_zero_balance() {
     let r = w.job(&root).await;
     assert_eq!(r["children_open"], 0);
     assert_eq!(r["children"][0]["state"], "Closed");
+    assert_eq!(w.ft(&worker.id).await, 30 * USD, "worker paid once");
     // 100 funded - 35 hired + 5 returned at the first settle + the stray 1.
     assert_eq!(num(&r["ft_balance"]), 65 * USD + 5 * USD + 1);
     assert_eq!(w.ft(&root).await, num(&r["ft_balance"]));

@@ -759,14 +759,6 @@ fn callbacks_reject_outside_callers() {
 }
 
 #[test]
-#[should_panic(expected = "callback: caller must be this contract")]
-fn on_paid_rejects_outside_callers() {
-    let mut j = funded_root(100 * USD);
-    Ctx::new(ROOT, EVE).results(vec![ok(b"")]).set();
-    j.on_paid(U128(0), U128(1));
-}
-
-#[test]
 fn close_unfunded_deletes_to_parent() {
     let mut j = new_sub(USD);
     Ctx::new(T1, ROOT).set();
@@ -843,17 +835,242 @@ fn second_delivery_refused_while_delivered() {
     j.deliver("ef".repeat(32), None, None, None);
 }
 
-#[test]
-#[should_panic(expected = "receipt verification is not built yet")]
-fn deliver_with_receipt_is_refused_not_faked() {
-    let mut j = funded_sub(USD, USD);
-    Ctx::new(T1, WORKER).set();
-    j.deliver(
-        "cd".repeat(32),
-        Some(Base64VecU8(b"HT1:...".to_vec())),
-        Some("00".repeat(65)),
-        Some("model".into()),
-    );
+// ================================================================ receipts
+
+mod receipt_tests {
+    use super::*;
+    use ht_core::receipt::{eip191_digest, eth_address, sha256, sha256_hex};
+    use secp256k1::{Message, Secp256k1, SecretKey};
+
+    pub const MODEL: &str = "deepseek-ai/DeepSeek-V4.1-Flash-1017";
+
+    pub fn key(n: u8) -> SecretKey {
+        SecretKey::from_slice(&[n; 32]).unwrap()
+    }
+
+    pub fn addr_hex(k: &SecretKey) -> String {
+        let pk = k.public_key(&Secp256k1::new()).serialize_uncompressed();
+        let pk: [u8; 64] = pk[1..].try_into().unwrap();
+        hex::encode(eth_address(&pk))
+    }
+
+    /// r || s || v (v = 27 + recovery id), hex: the NEAR AI Cloud shape.
+    pub fn sign(k: &SecretKey, text: &str) -> String {
+        let d = eip191_digest(text.as_bytes());
+        let (rid, rs) = Secp256k1::new()
+            .sign_ecdsa_recoverable(&Message::from_slice(&d).unwrap(), k)
+            .serialize_compact();
+        let mut out = rs.to_vec();
+        out.push(27 + rid.to_i32() as u8);
+        hex::encode(out)
+    }
+
+    pub fn request(task: &str, seq: u32) -> Vec<u8> {
+        format!(
+            "{{\"model\":\"{MODEL}\",\"messages\":[{{\"role\":\"user\",\"content\":\"HT1:{task}:{}:{seq} Translate: hello\"}}]}}",
+            spec()
+        )
+        .into_bytes()
+    }
+
+    pub const RESPONSE: &[u8] = b"{\"choices\":[{\"message\":{\"content\":\"hola\"}}]}";
+
+    /// A receipt for `req`/`RESPONSE` signed by `k`.
+    pub fn receipt(k: &SecretKey, req: &[u8]) -> (String, Base64VecU8, String, String) {
+        let text = format!("{MODEL}:{}:{}", sha256_hex(req), sha256_hex(RESPONSE));
+        (
+            hex::encode(sha256(RESPONSE)),
+            Base64VecU8(req.to_vec()),
+            sign(k, &text),
+            MODEL.to_string(),
+        )
+    }
+
+    /// A funded sub-job whose pinned signer is key(1).
+    pub fn pinned_sub(pay: u128) -> Job {
+        Ctx::new(T1, ROOT).set();
+        let mut j = Job::new(
+            None,
+            acc(LEAD),
+            Some(acc(WORKER)),
+            acc(TOKEN),
+            U128(pay),
+            spec(),
+            WINDOW,
+            addr_hex(&key(1)),
+            code_hash(),
+        );
+        Ctx::new(T1, TOKEN).set();
+        j.ft_on_transfer(acc(ROOT), U128(pay), "fund".into());
+        j
+    }
+
+    pub fn deliver_r(j: &mut Job, r: (String, Base64VecU8, String, String)) {
+        Ctx::new(T1, WORKER).set();
+        j.deliver(r.0, Some(r.1), Some(r.2), Some(r.3));
+    }
+
+    #[test]
+    fn valid_receipt_marks_delivery_verified() {
+        let mut j = pinned_sub(USD);
+        deliver_r(&mut j, receipt(&key(1), &request(T1, 1)));
+        let v = j.get_job();
+        assert_eq!(v.status, "Delivered");
+        assert!(v.verified);
+        assert_eq!(v.deliverable_hash, Some(hex::encode(sha256(RESPONSE))));
+        assert_eq!(events("delivered")[0]["verified"], true);
+    }
+
+    #[test]
+    fn v_as_0_or_1_also_accepted() {
+        let mut j = pinned_sub(USD);
+        let mut r = receipt(&key(1), &request(T1, 1));
+        let mut sig = hex::decode(&r.2).unwrap();
+        sig[64] -= 27;
+        r.2 = format!("0x{}", hex::encode(sig));
+        deliver_r(&mut j, r);
+        assert!(j.get_job().verified);
+    }
+
+    #[test]
+    #[should_panic(expected = "receipt: signer is not the pinned NEAR AI Cloud key")]
+    fn receipt_from_other_key_rejected() {
+        let mut j = pinned_sub(USD);
+        deliver_r(&mut j, receipt(&key(2), &request(T1, 1)));
+    }
+
+    #[test]
+    #[should_panic(expected = "receipt: signer is not the pinned NEAR AI Cloud key")]
+    fn receipt_with_swapped_response_rejected() {
+        let mut j = pinned_sub(USD);
+        let mut r = receipt(&key(1), &request(T1, 1));
+        r.0 = hex::encode(sha256(b"junk the worker wants paid for"));
+        deliver_r(&mut j, r);
+    }
+
+    #[test]
+    #[should_panic(expected = "receipt: signer is not the pinned NEAR AI Cloud key")]
+    fn receipt_with_swapped_model_rejected() {
+        let mut j = pinned_sub(USD);
+        let mut r = receipt(&key(1), &request(T1, 1));
+        r.3 = "some-other-model".into();
+        deliver_r(&mut j, r);
+    }
+
+    #[test]
+    #[should_panic(expected = "is not this task")]
+    fn receipt_copied_from_other_task_rejected() {
+        let mut j = pinned_sub(USD);
+        // A genuine receipt, made for t2's task.
+        deliver_r(&mut j, receipt(&key(1), &request(T2, 1)));
+    }
+
+    #[test]
+    #[should_panic(expected = "request has no HT1 binding tag")]
+    fn receipt_without_binding_tag_rejected() {
+        let mut j = pinned_sub(USD);
+        deliver_r(&mut j, receipt(&key(1), b"{\"messages\":[\"hello\"]}"));
+    }
+
+    #[test]
+    #[should_panic(expected = "is not this task")]
+    fn receipt_replayed_on_redelivery_rejected() {
+        let mut j = pinned_sub(USD);
+        let r = receipt(&key(1), &request(T1, 1));
+        deliver_r(&mut j, r.clone());
+        // The check sends it back to Open; the worker replays receipt #1.
+        j.status = Status::Open;
+        deliver_r(&mut j, r);
+    }
+
+    #[test]
+    fn fresh_receipt_on_redelivery_accepted() {
+        let mut j = pinned_sub(USD);
+        deliver_r(&mut j, receipt(&key(1), &request(T1, 1)));
+        j.status = Status::Open;
+        deliver_r(&mut j, receipt(&key(1), &request(T1, 2)));
+        assert_eq!(j.get_job().seq, 2);
+        assert!(j.get_job().verified);
+    }
+
+    #[test]
+    #[should_panic(expected = "receipt: bad signature")]
+    fn malformed_signature_rejected() {
+        let mut j = pinned_sub(USD);
+        let mut r = receipt(&key(1), &request(T1, 1));
+        r.2 = "00".repeat(64);
+        deliver_r(&mut j, r);
+    }
+
+    #[test]
+    #[should_panic(expected = "receipt: bad signature")]
+    fn bad_v_rejected() {
+        let mut j = pinned_sub(USD);
+        let mut r = receipt(&key(1), &request(T1, 1));
+        let mut sig = hex::decode(&r.2).unwrap();
+        sig[64] = 29;
+        r.2 = hex::encode(sig);
+        deliver_r(&mut j, r);
+    }
+
+    #[test]
+    #[should_panic(expected = "receipt: bad signature")]
+    fn high_s_signature_rejected() {
+        // s' = n - s with v flipped verifies under plain ECDSA; it must not here.
+        let mut j = pinned_sub(USD);
+        let mut r = receipt(&key(1), &request(T1, 1));
+        let sig = hex::decode(&r.2).unwrap();
+        let n = hex::decode("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141")
+            .unwrap();
+        let mut s_hi = [0u8; 32];
+        let mut borrow = 0i16;
+        for i in (0..32).rev() {
+            let d = n[i] as i16 - sig[32 + i] as i16 - borrow;
+            borrow = if d < 0 { 1 } else { 0 };
+            s_hi[i] = (d + 256 * borrow) as u8;
+        }
+        let mut bad = sig[..32].to_vec();
+        bad.extend_from_slice(&s_hi);
+        bad.push(if sig[64] == 27 { 28 } else { 27 });
+        r.2 = hex::encode(bad);
+        deliver_r(&mut j, r);
+    }
+
+    #[test]
+    #[should_panic(expected = "receipt needs req, sig and model together")]
+    fn partial_receipt_rejected() {
+        let mut j = pinned_sub(USD);
+        let r = receipt(&key(1), &request(T1, 1));
+        Ctx::new(T1, WORKER).set();
+        j.deliver(r.0, Some(r.1), None, Some(r.3));
+    }
+
+    #[test]
+    #[should_panic(expected = "bytes, max 8192")]
+    fn oversized_request_rejected() {
+        let mut j = pinned_sub(USD);
+        let mut req = request(T1, 1);
+        req.extend(std::iter::repeat_n(b' ', 9000));
+        deliver_r(&mut j, receipt(&key(1), &req));
+    }
+
+    #[test]
+    #[should_panic(expected = "model name must be 1-128 bytes")]
+    fn oversized_model_rejected() {
+        let mut j = pinned_sub(USD);
+        let mut r = receipt(&key(1), &request(T1, 1));
+        r.3 = "m".repeat(129);
+        deliver_r(&mut j, r);
+    }
+
+    #[test]
+    #[should_panic(expected = "only the worker can deliver")]
+    fn stranger_cannot_deliver_a_stolen_receipt() {
+        let mut j = pinned_sub(USD);
+        let r = receipt(&key(1), &request(T1, 1));
+        Ctx::new(T1, EVE).set();
+        j.deliver(r.0, Some(r.1), Some(r.2), Some(r.3));
+    }
 }
 
 #[test]
@@ -951,12 +1168,8 @@ fn settle_with_low_gas_refused() {
     j.settle();
 }
 
-#[test]
-fn settle_delivered_sub_pays_worker_and_returns_rest() {
-    let mut j = delivered_sub(30 * USD, 35 * USD);
-    Ctx::new(T1, EVE).at(AFTER).set();
-    j.settle();
-    let mut transfers: Vec<(String, String)> = vec![];
+fn transfers() -> Vec<(String, String)> {
+    let mut out = vec![];
     for r in get_created_receipts() {
         for a in r.actions {
             if let MockAction::FunctionCallWeight {
@@ -965,7 +1178,7 @@ fn settle_delivered_sub_pays_worker_and_returns_rest() {
             {
                 if method_name == b"ft_transfer" {
                     let v: serde_json::Value = serde_json::from_slice(&args).unwrap();
-                    transfers.push((
+                    out.push((
                         v["receiver_id"].as_str().unwrap().into(),
                         v["amount"].as_str().unwrap().into(),
                     ));
@@ -973,17 +1186,77 @@ fn settle_delivered_sub_pays_worker_and_returns_rest() {
             }
         }
     }
-    assert_eq!(
-        transfers,
-        vec![
-            (WORKER.into(), (30 * USD).to_string()),
-            (ROOT.into(), (5 * USD).to_string())
-        ]
-    );
-    assert!(calls().contains(&(T1.into(), "on_paid".into())));
+    out
+}
+
+fn attempt(j: &Job) -> u32 {
+    j.payout.as_ref().expect("payout in flight").attempt
+}
+
+fn res(ok_: bool) -> PromiseResult {
+    if ok_ {
+        ok(b"")
+    } else {
+        PromiseResult::Failed
+    }
+}
+
+/// Run the payee-leg callback with the given transfer outcome.
+fn payee_cb(j: &mut Job, cur: &str, ok_: bool) -> PromiseOrValue<bool> {
+    let a = attempt(j);
+    Ctx::new(cur, cur).at(AFTER).results(vec![res(ok_)]).set();
+    j.on_payee_paid(a)
+}
+
+fn rest_cb(j: &mut Job, cur: &str, ok_: bool) -> PromiseOrValue<bool> {
+    let a = attempt(j);
+    Ctx::new(cur, cur).at(AFTER).results(vec![res(ok_)]).set();
+    j.on_rest_paid(a)
+}
+
+fn balance_cb(j: &mut Job, cur: &str, r: PromiseResult) -> PromiseOrValue<bool> {
+    let a = attempt(j);
+    Ctx::new(cur, cur).at(AFTER).results(vec![r]).set();
+    j.on_balance_checked(a)
+}
+
+fn deleted() -> bool {
+    get_created_receipts()
+        .iter()
+        .flat_map(|r| r.actions.iter())
+        .any(|a| matches!(a, MockAction::DeleteAccount { .. }))
+}
+
+#[test]
+fn settle_delivered_sub_registers_then_pays_worker_first() {
+    let mut j = delivered_sub(30 * USD, 35 * USD);
+    Ctx::new(T1, EVE).at(AFTER).set();
+    j.settle();
+    // One transfer at a time: only the payee leg is in flight.
+    assert_eq!(transfers(), vec![(WORKER.into(), (30 * USD).to_string())]);
+    let reg = call_args("storage_deposit");
+    assert_eq!(reg["account_id"], WORKER);
+    assert_eq!(reg["registration_only"], true);
+    assert!(calls().contains(&(T1.into(), "on_payee_paid".into())));
     let v = j.get_job();
     assert_eq!(v.status, "Settling");
+    assert_eq!(v.ft_balance.0, 5 * USD);
+    assert_eq!(v.payout.unwrap().leg, Leg::Payee);
+}
+
+#[test]
+fn payee_paid_then_rest_leg_returns_to_parent() {
+    let mut j = settling_sub();
+    assert!(matches!(
+        payee_cb(&mut j, T1, true),
+        PromiseOrValue::Promise(_)
+    ));
+    assert_eq!(transfers(), vec![(ROOT.into(), (5 * USD).to_string())]);
+    assert!(calls().contains(&(T1.into(), "on_rest_paid".into())));
+    let v = j.get_job();
+    assert!(v.payee_paid);
     assert_eq!(v.ft_balance.0, 0);
+    assert_eq!(v.payout.unwrap().leg, Leg::Rest);
 }
 
 #[test]
@@ -991,10 +1264,8 @@ fn settle_undelivered_sub_returns_everything_to_parent() {
     let mut j = funded_sub(30 * USD, 30 * USD);
     Ctx::new(T1, EVE).at(AFTER).set();
     j.settle();
-    let args = call_args("ft_transfer");
-    assert_eq!(args["receiver_id"], ROOT);
-    assert_eq!(args["amount"], (30 * USD).to_string());
-    assert_eq!(calls().iter().filter(|c| c.1 == "ft_transfer").count(), 1);
+    assert_eq!(transfers(), vec![(ROOT.into(), (30 * USD).to_string())]);
+    assert!(!calls().iter().any(|c| c.1 == "storage_deposit"));
 }
 
 #[test]
@@ -1039,24 +1310,17 @@ fn settling_sub() -> Job {
 }
 
 #[test]
-fn on_paid_success_checks_real_balance_before_delete() {
+fn both_legs_ok_check_real_balance_before_delete() {
     let mut j = settling_sub();
-    Ctx::new(T1, T1)
-        .at(AFTER)
-        .results(vec![ok(b""), ok(b"")])
-        .set();
+    payee_cb(&mut j, T1, true);
     assert!(matches!(
-        j.on_paid(U128(30 * USD), U128(5 * USD)),
+        rest_cb(&mut j, T1, true),
         PromiseOrValue::Promise(_)
     ));
     let c = calls();
     assert!(c.contains(&(TOKEN.into(), "ft_balance_of".into())));
     assert!(c.contains(&(T1.into(), "on_balance_checked".into())));
-    // Nothing is deleted yet.
-    assert!(!get_created_receipts()
-        .iter()
-        .flat_map(|r| r.actions.iter())
-        .any(|a| matches!(a, MockAction::DeleteAccount { .. })));
+    assert!(!deleted(), "nothing is deleted yet");
     let v = j.get_job();
     assert!(v.payee_paid);
     assert_eq!(v.returned_to_parent.0, 5 * USD);
@@ -1064,88 +1328,87 @@ fn on_paid_success_checks_real_balance_before_delete() {
 }
 
 #[test]
-fn on_paid_payee_failure_restores_and_resettle_pays_only_payee() {
+fn payee_failure_still_returns_rest_then_resettle_pays_only_payee() {
     let mut j = settling_sub();
-    Ctx::new(T1, T1)
-        .at(AFTER)
-        .results(vec![PromiseResult::Failed, ok(b"")])
-        .set();
+    payee_cb(&mut j, T1, false);
+    // The parent is not held up by the payee.
+    assert_eq!(transfers(), vec![(ROOT.into(), (5 * USD).to_string())]);
     assert!(matches!(
-        j.on_paid(U128(30 * USD), U128(5 * USD)),
+        rest_cb(&mut j, T1, true),
         PromiseOrValue::Value(false)
     ));
     let v = j.get_job();
     assert_eq!(v.status, "Delivered");
     assert_eq!(v.ft_balance.0, 30 * USD);
     assert!(!v.payee_paid);
+    assert!(v.payout.is_none());
     assert_eq!(v.returned_to_parent.0, 5 * USD);
     assert_eq!(events("settle_failed").len(), 1);
     // Settle again: only the payee transfer is left.
     Ctx::new(T1, EVE).at(AFTER).set();
     j.settle();
-    let args = call_args("ft_transfer");
-    assert_eq!(args["receiver_id"], WORKER);
-    assert_eq!(calls().iter().filter(|c| c.1 == "ft_transfer").count(), 1);
+    assert_eq!(transfers(), vec![(WORKER.into(), (30 * USD).to_string())]);
+    payee_cb(&mut j, T1, true);
+    assert!(transfers().is_empty(), "no rest left to send");
+    assert!(calls().contains(&(TOKEN.into(), "ft_balance_of".into())));
 }
 
 #[test]
-fn on_paid_rest_failure_never_pays_payee_twice() {
+fn rest_failure_never_pays_payee_twice() {
     let mut j = settling_sub();
-    Ctx::new(T1, T1)
-        .at(AFTER)
-        .results(vec![ok(b""), PromiseResult::Failed])
-        .set();
-    j.on_paid(U128(30 * USD), U128(5 * USD));
+    payee_cb(&mut j, T1, true);
+    rest_cb(&mut j, T1, false);
     let v = j.get_job();
     assert_eq!(v.status, "Delivered");
     assert!(v.payee_paid);
     assert_eq!(v.ft_balance.0, 5 * USD);
     Ctx::new(T1, EVE).at(AFTER).set();
     j.settle();
-    let args = call_args("ft_transfer");
-    assert_eq!(args["receiver_id"], ROOT);
-    assert_eq!(args["amount"], (5 * USD).to_string());
-    assert_eq!(calls().iter().filter(|c| c.1 == "ft_transfer").count(), 1);
-}
-
-#[test]
-fn on_paid_with_unexpected_result_count_counts_as_failure() {
-    let mut j = settling_sub();
-    Ctx::new(T1, T1).at(AFTER).results(vec![ok(b"")]).set();
-    j.on_paid(U128(30 * USD), U128(5 * USD));
-    let v = j.get_job();
-    assert_eq!(v.status, "Delivered");
-    assert_eq!(v.ft_balance.0, 35 * USD);
-    assert!(!v.payee_paid);
+    assert_eq!(transfers(), vec![(ROOT.into(), (5 * USD).to_string())]);
 }
 
 #[test]
 #[should_panic(expected = "not settling")]
-fn on_paid_outside_settle_refused() {
+fn payee_callback_outside_settle_refused() {
     let mut j = delivered_sub(USD, USD);
     Ctx::new(T1, T1).results(vec![ok(b"")]).set();
-    j.on_paid(U128(USD), U128(0));
+    j.on_payee_paid(1);
+}
+
+#[test]
+#[should_panic(expected = "stale settle callback")]
+fn wrong_leg_callback_refused() {
+    let mut j = settling_sub();
+    let a = attempt(&j);
+    Ctx::new(T1, T1).at(AFTER).results(vec![ok(b"")]).set();
+    j.on_rest_paid(a);
+}
+
+#[test]
+#[should_panic(expected = "callback: caller must be this contract")]
+fn leg_callbacks_reject_outside_callers() {
+    let mut j = settling_sub();
+    let a = attempt(&j);
+    Ctx::new(T1, EVE).at(AFTER).results(vec![ok(b"")]).set();
+    j.on_payee_paid(a);
 }
 
 fn paid_sub() -> Job {
     let mut j = settling_sub();
-    Ctx::new(T1, T1)
-        .at(AFTER)
-        .results(vec![ok(b""), ok(b"")])
-        .set();
-    j.on_paid(U128(30 * USD), U128(5 * USD));
+    payee_cb(&mut j, T1, true);
+    rest_cb(&mut j, T1, true);
     j
 }
 
 #[test]
 fn zero_real_balance_deletes_and_notifies_parent() {
     let mut j = paid_sub();
-    Ctx::new(T1, T1)
-        .at(AFTER)
-        .results(vec![ok(&u128_json(0))])
-        .set();
-    assert!(matches!(j.on_balance_checked(), PromiseOrValue::Promise(_)));
+    assert!(matches!(
+        balance_cb(&mut j, T1, ok(&u128_json(0))),
+        PromiseOrValue::Promise(_)
+    ));
     assert_eq!(j.get_job().status, "Settled");
+    assert!(j.get_job().payout.is_none());
     let receipts = get_created_receipts();
     let del = receipts
         .iter()
@@ -1168,10 +1431,8 @@ fn root_delete_goes_to_factory_without_child_closed() {
     j.approve();
     Ctx::new(ROOT, EVE).set();
     j.settle();
-    Ctx::new(ROOT, ROOT).results(vec![ok(b"")]).set();
-    j.on_paid(U128(0), U128(10 * USD));
-    Ctx::new(ROOT, ROOT).results(vec![ok(&u128_json(0))]).set();
-    j.on_balance_checked();
+    rest_cb(&mut j, ROOT, true);
+    balance_cb(&mut j, ROOT, ok(&u128_json(0)));
     assert_eq!(j.get_job().status, "Settled");
     assert!(!calls().iter().any(|c| c.1 == "child_closed"));
     let del = get_created_receipts()
@@ -1187,36 +1448,25 @@ fn root_delete_goes_to_factory_without_child_closed() {
 #[test]
 fn stray_tokens_block_delete_and_are_settled_next() {
     let mut j = paid_sub();
-    Ctx::new(T1, T1)
-        .at(AFTER)
-        .results(vec![ok(&u128_json(7))])
-        .set();
     assert!(matches!(
-        j.on_balance_checked(),
+        balance_cb(&mut j, T1, ok(&u128_json(7))),
         PromiseOrValue::Value(false)
     ));
     let v = j.get_job();
     assert_eq!(v.status, "Delivered");
     assert_eq!(v.ft_balance.0, 7);
-    assert!(calls().is_empty());
     assert!(get_created_receipts().is_empty(), "no delete");
     // Next settle sends the stray 7 to the parent; the payee is not paid twice.
     Ctx::new(T1, EVE).at(AFTER).set();
     j.settle();
-    let args = call_args("ft_transfer");
-    assert_eq!(args["receiver_id"], ROOT);
-    assert_eq!(args["amount"], "7");
+    assert_eq!(transfers(), vec![(ROOT.into(), "7".into())]);
 }
 
 #[test]
 fn failed_balance_check_blocks_delete() {
     let mut j = paid_sub();
-    Ctx::new(T1, T1)
-        .at(AFTER)
-        .results(vec![PromiseResult::Failed])
-        .set();
     assert!(matches!(
-        j.on_balance_checked(),
+        balance_cb(&mut j, T1, PromiseResult::Failed),
         PromiseOrValue::Value(false)
     ));
     assert_eq!(j.get_job().status, "Delivered");
@@ -1228,7 +1478,119 @@ fn failed_balance_check_blocks_delete() {
 fn balance_check_outside_settle_refused() {
     let mut j = delivered_sub(USD, USD);
     Ctx::new(T1, T1).results(vec![ok(&u128_json(0))]).set();
-    j.on_balance_checked();
+    j.on_balance_checked(1);
+}
+
+// ================================================================ resume_settle
+
+const STUCK: u64 = AFTER + (RESUME_AFTER_SECS + 1) * NS_PER_SEC;
+
+/// Resume a stuck settle and answer the balance query with `real`.
+fn resume(j: &mut Job, cur: &str, real: PromiseResult) -> PromiseOrValue<bool> {
+    let now = STUCK.max(j.payout.as_ref().unwrap().since_ns + (RESUME_AFTER_SECS + 1) * NS_PER_SEC);
+    Ctx::new(cur, EVE).at(now).set();
+    j.resume_settle();
+    assert!(calls().contains(&(TOKEN.into(), "ft_balance_of".into())));
+    let a = attempt(j);
+    Ctx::new(cur, cur).at(now).results(vec![real]).set();
+    j.on_resume_balance(a)
+}
+
+#[test]
+#[should_panic(expected = "not stuck yet")]
+fn resume_before_timeout_refused() {
+    let mut j = settling_sub();
+    Ctx::new(T1, EVE).at(AFTER + NS_PER_SEC).set();
+    j.resume_settle();
+}
+
+#[test]
+#[should_panic(expected = "not settling")]
+fn resume_outside_settle_refused() {
+    let mut j = delivered_sub(USD, USD);
+    Ctx::new(T1, EVE).at(STUCK).set();
+    j.resume_settle();
+}
+
+#[test]
+fn resume_payee_leg_that_happened_moves_on_without_paying_twice() {
+    let mut j = settling_sub();
+    // The payee callback never ran. Real balance 5 = ledger base: it was paid.
+    assert!(matches!(
+        resume(&mut j, T1, ok(&u128_json(5 * USD))),
+        PromiseOrValue::Promise(_)
+    ));
+    let v = j.get_job();
+    assert!(v.payee_paid);
+    assert_eq!(transfers(), vec![(ROOT.into(), (5 * USD).to_string())]);
+    assert_eq!(v.payout.unwrap().leg, Leg::Rest);
+}
+
+#[test]
+fn resume_payee_leg_that_failed_keeps_payee_tokens() {
+    let mut j = settling_sub();
+    resume(&mut j, T1, ok(&u128_json(35 * USD)));
+    let v = j.get_job();
+    assert!(!v.payee_paid);
+    assert_eq!(
+        v.ft_balance.0,
+        30 * USD,
+        "the payee's 30 stay here; the rest leg is in flight"
+    );
+    // Rest leg still runs; afterwards the payee's 30 make settle fail and rerun.
+    rest_cb(&mut j, T1, true);
+    let v = j.get_job();
+    assert_eq!(v.status, "Delivered");
+    assert_eq!(v.ft_balance.0, 30 * USD);
+}
+
+#[test]
+fn resume_counts_extra_tokens_as_stray() {
+    let mut j = settling_sub();
+    // 35 + 7 stray: the payee leg did not happen and 7 stray arrived.
+    resume(&mut j, T1, ok(&u128_json(42 * USD)));
+    rest_cb(&mut j, T1, true);
+    let v = j.get_job();
+    assert!(!v.payee_paid);
+    assert_eq!(v.ft_balance.0, 37 * USD);
+}
+
+#[test]
+#[should_panic(expected = "stale settle callback")]
+fn late_original_callback_cannot_act_after_resume() {
+    let mut j = settling_sub();
+    let old = attempt(&j);
+    resume(&mut j, T1, ok(&u128_json(5 * USD)));
+    Ctx::new(T1, T1).at(STUCK).results(vec![ok(b"")]).set();
+    j.on_payee_paid(old);
+}
+
+#[test]
+fn resume_rest_leg_then_balance_leg_deletes() {
+    let mut j = settling_sub();
+    payee_cb(&mut j, T1, true);
+    // Rest callback lost; real balance 0 means the rest went out.
+    resume(&mut j, T1, ok(&u128_json(0)));
+    assert_eq!(j.get_job().returned_to_parent.0, 5 * USD);
+    assert_eq!(j.get_job().payout.unwrap().leg, Leg::Balance);
+    // Balance callback lost too; resume finishes the delete.
+    assert!(matches!(
+        resume(&mut j, T1, ok(&u128_json(0))),
+        PromiseOrValue::Promise(_)
+    ));
+    assert_eq!(j.get_job().status, "Settled");
+    assert!(deleted());
+}
+
+#[test]
+fn resume_with_no_token_answer_stays_stuck_and_can_retry() {
+    let mut j = settling_sub();
+    assert!(matches!(
+        resume(&mut j, T1, PromiseResult::Failed),
+        PromiseOrValue::Value(false)
+    ));
+    assert_eq!(j.get_job().status, "Settling");
+    assert_eq!(events("settle_resume_failed").len(), 1);
 }
 
 // ================================================================ child_closed
@@ -1324,13 +1686,8 @@ fn two_level_tree_folds_bottom_up() {
     gc.deliver("01".repeat(32), None, None, None);
     Ctx::new(GC, EVE).at(AFTER).set();
     gc.settle();
-    Ctx::new(GC, GC).at(AFTER).results(vec![ok(b"")]).set();
-    gc.on_paid(U128(8 * USD), U128(0));
-    Ctx::new(GC, GC)
-        .at(AFTER)
-        .results(vec![ok(&u128_json(0))])
-        .set();
-    gc.on_balance_checked();
+    payee_cb(&mut gc, GC, true);
+    balance_cb(&mut gc, GC, ok(&u128_json(0)));
     assert_eq!(gc.get_job().status, "Settled");
     Ctx::new(T1, GC).at(AFTER).set();
     t1.child_closed(U128(0));
@@ -1340,17 +1697,10 @@ fn two_level_tree_folds_bottom_up() {
     t1.deliver("02".repeat(32), None, None, None);
     Ctx::new(T1, EVE).at(AFTER).set();
     t1.settle();
-    assert_eq!(t1.get_job().ft_balance.0, 0);
-    Ctx::new(T1, T1)
-        .at(AFTER)
-        .results(vec![ok(b""), ok(b"")])
-        .set();
-    t1.on_paid(U128(30 * USD), U128(2 * USD));
-    Ctx::new(T1, T1)
-        .at(AFTER)
-        .results(vec![ok(&u128_json(0))])
-        .set();
-    t1.on_balance_checked();
+    assert_eq!(t1.get_job().ft_balance.0, 2 * USD);
+    payee_cb(&mut t1, T1, true);
+    rest_cb(&mut t1, T1, true);
+    balance_cb(&mut t1, T1, ok(&u128_json(0)));
     assert_eq!(t1.get_job().status, "Settled");
     Ctx::new(ROOT, T1).at(AFTER).set();
     root.child_closed(U128(2 * USD));

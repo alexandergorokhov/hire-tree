@@ -10,8 +10,12 @@ repository.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-near-sdk.workspace = true
+# `unstable` exposes env::ecrecover (receipt verification).
+near-sdk = { workspace = true, features = ["unstable"] }
 hire-tree-core = { path = "../../core" }
 
 [dev-dependencies]
-near-sdk = { workspace = true, features = ["unit-testing"] }
+near-sdk = { workspace = true, features = ["unit-testing", "unstable"] }
+# Test-only signer for NEAR AI Cloud-style receipts (never in the wasm).
+secp256k1 = { version = "0.27", features = ["recovery"] }
+hex.workspace = true

@@ -983,8 +983,10 @@ dependencies = [
 name = "hire-tree-job"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "hire-tree-core",
  "near-sdk",
+ "secp256k1",
 ]
 
 [[package]]
