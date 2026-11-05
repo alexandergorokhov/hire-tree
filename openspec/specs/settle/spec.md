@@ -62,21 +62,24 @@ reports zero; the beneficiary is the parent; the parent is told via
 - THEN the account is deleted to the parent and `child_closed` reports what came back
 - unit: `zero_real_balance_deletes_and_notifies_parent`; sandbox: G1
 
-#### Scenario: Stray tokens
-- WHEN tokens arrived without `ft_transfer_call`
-- THEN delete is refused, the stray amount is booked and goes to the parent next settle
-- unit: `stray_tokens_block_delete_and_are_settled_next`; sandbox: G1
+#### Scenario: Tokens above the ledger
+- WHEN the balance check reads more than the ledger holds (stray tokens, or a refused `ft_transfer_call` that the token will refund a block later)
+- THEN the surplus is never booked; a sweep leg sends it up the tree, it counts only if that transfer succeeds, then the balance is checked again
+- unit: `stray_tokens_are_swept_up_then_the_job_deletes`, `phantom_surplus_from_a_refunded_transfer_call_cannot_lock_settle`; sandbox: G1
 
 ### Requirement: Stuck settle recovery
-If a leg's callback never ran (out of gas, panic), anyone SHALL be able to
-call `resume_settle` after `RESUME_AFTER_SECS` (600 s). It bumps the attempt
+If a leg's callback never ran (out of gas, panic), the manager SHALL be able
+to call `resume_settle` after `RESUME_AFTER_SECS` (600 s), and anyone after
+`RESUME_ANYONE_SECS` (1 day). It bumps the attempt
 (so the late original callback is refused), reads the real balance and
 decides from it alone whether the leg's transfer happened. Because only one
-transfer is ever in flight, the answer is unambiguous; extra tokens are
-stray and can only be funded by their sender.
+transfer is ever in flight, the answer is unambiguous; tokens above the
+ledger are never booked here. Known limit: a refused `ft_transfer_call` in
+flight at the moment of the read can make a paid leg look unpaid; that is why
+the payee cannot choose the moment during the first day.
 
 #### Scenario: Too early
-- unit: `resume_before_timeout_refused`, `resume_outside_settle_refused`
+- unit: `resume_before_timeout_refused`, `resume_outside_settle_refused`, `stranger_cannot_resume_in_the_first_day`, `anyone_can_resume_after_a_day`
 
 #### Scenario: Leg happened
 - WHEN real balance equals the ledger's expected balance
@@ -84,7 +87,7 @@ stray and can only be funded by their sender.
 - unit: `resume_payee_leg_that_happened_moves_on_without_paying_twice`, `resume_rest_leg_then_balance_leg_deletes`
 
 #### Scenario: Leg did not happen
-- unit: `resume_payee_leg_that_failed_keeps_payee_tokens`, `resume_counts_extra_tokens_as_stray`
+- unit: `resume_payee_leg_that_failed_keeps_payee_tokens`, `resume_never_books_extra_tokens`, `resume_of_a_lost_sweep_restarts_settle`
 
 #### Scenario: Late original callback
 - WHEN the original callback arrives after a resume

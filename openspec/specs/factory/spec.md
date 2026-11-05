@@ -12,8 +12,14 @@ pinned signer, checker and token.
 `{"manager", "spec_hash", "window_secs", "treasury"?}` SHALL create
 `job-<n>.<factory>` with `use_global_contract(code_hash)`, init it with
 `client = sender` and the factory's pinned signer/checker, register it on the
-token and forward the budget with `fund`. The factory pays the account's
-NEAR (refunded when the root job is deleted to the factory).
+token and forward the budget with `fund`. The client SHALL first prepay
+`POST_NEAR` (0.06 NEAR) with `prepay_post`; each post uses one credit (the
+root's storage and registration), so posting spam costs the spammer. The
+budget SHALL be at least 1 fUSD. A failed post gives the credit back.
+
+#### Scenario: No prepaid NEAR, or dust budget
+- THEN refunded in full, no account created
+- unit: `post_without_prepaid_near_refunded`, `one_credit_one_post`, `dust_budget_refunded`, `failed_post_gives_the_credit_back`
 
 #### Scenario: Post
 - unit: `post_job_creates_and_funds_root`; sandbox: `scene_full_tree_on_local_node`
@@ -25,6 +31,10 @@ NEAR (refunded when the root job is deleted to the factory).
 #### Scenario: Create or fund fails
 - THEN `on_posted` returns the whole budget as unused (token refunds the client) and marks the job failed
 - unit: `failed_post_refunds_client`
+
+#### Scenario: Unreadable token answer
+- THEN counted as all used (never refund from other clients' tokens)
+- unit: `unreadable_token_answer_counts_as_all_used`
 
 ### Requirement: Pinned settings
 Only the owner sets signer, checker and code hash; jobs created later use

@@ -10,8 +10,19 @@ a fixed rubric; in tests and the sandbox it is `mock-outlayer`.
 
 ### Requirement: The contract starts exactly one check per delivery
 When the job has a pinned `checker`, `deliver` SHALL call
-`checker.check({job, spec_hash, deliverable_hash, seq, seed, panel: 0})` and
-handle the answer in `on_check(seq)`. The seed is `sha256(random_seed || seq)`.
+`checker.check({job, spec_hash, deliverable_hash, seq, seed, panel: 0,
+deliverable})` and handle the answer in `on_check(seq)`. The seed is
+`sha256(random_seed || seq)`. `deliverable` is the response bytes: with a
+checker pinned, `deliver` SHALL require `resp` (<= 16 KB) with
+`sha256(resp) == resp_hash`, so the checker reads what was actually delivered.
+
+#### Scenario: Content goes to the checker
+- unit: `checker_needs_the_content`, `content_must_match_hash`
+
+#### Scenario: Same bytes cannot be re-rolled
+- WHEN a worker redelivers bytes it delivered before
+- THEN refused: "same deliverable as before"
+- unit: `same_bytes_cannot_be_rerolled`
 
 #### Scenario: Check passes
 - WHEN the checker answers a score >= 6 (of 10)
@@ -23,10 +34,23 @@ handle the answer in `on_check(seq)`. The seed is `sha256(random_seed || seq)`.
 - THEN the job goes back to Open; the worker may redeliver while the window is open, at most `MAX_DELIVERIES` (3) times in all
 - unit: `check_fail_reopens_for_redelivery`, `deliveries_are_capped`
 
-#### Scenario: Checker down or nonsense answer
+#### Scenario: Checker down or nonsense answer (fail closed)
 - WHEN the check call fails or returns something other than 0..=10
-- THEN the job stays Delivered (paid at settle, note not sellable) and an event says so
-- unit: `check_failure_leaves_delivered`, `out_of_range_score_counts_as_no_answer`
+- THEN the job stays Delivered and unscored: not paid at settle unless the manager approves it, note not sellable
+- unit: `check_failure_leaves_delivered`, `out_of_range_score_counts_as_no_answer`, `unscored_delivery_is_not_paid_without_approval`, `unscored_delivery_is_paid_when_the_manager_approves`
+
+#### Scenario: Settle or approve while a check is pending
+- THEN refused "check pending"; a late junk delivery cannot be paid before its score lands
+- unit: `settle_waits_for_a_pending_check`, `approve_waits_for_a_pending_check`
+
+#### Scenario: Check answer lost
+- WHEN `on_check` never ran
+- THEN anyone may `resume_check` after `RESUME_AFTER_SECS`; the delivery stays Delivered, unscored
+- unit: `lost_check_answer_can_be_cleared_after_timeout`, `resume_check_too_early`
+
+#### Scenario: A failed check stays on record
+- THEN a later passing delivery is paid but its note is not sellable
+- unit: `a_failed_check_makes_the_note_unsellable`
 
 #### Scenario: Stale or spoofed check answer
 - WHEN `on_check` runs for an old seq, outside Delivered, or from another caller
@@ -45,4 +69,4 @@ straight to Checked (quality unknown); one without stays Delivered.
 ### Requirement: Mock checker for the sandbox
 `mock-outlayer` returns a score from a table the test sets per deliverable
 hash (default 8), and counts calls.
-- sandbox: `note_sale_and_dispute_on_local_node` (planned)
+- sandbox: `scene_full_tree_on_local_node`

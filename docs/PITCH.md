@@ -59,9 +59,10 @@ not throughout.
 | Why NEAR? | Named sub-accounts that a contract can create and delete, global contracts (one code hash for every job), NEAR AI Cloud's TEE-signed receipts, and `ecrecover` on-chain. The design is the account tree; elsewhere it would be a mapping inside one contract. |
 | How is this different from market.near.ai? | That market holds funds itself and does not nest. Here each job is its own keyless account, sub-jobs nest, and pay can go out early against an on-chain AI proof. |
 | What is real and what is mocked? | Real: contracts, factory, global contract, sub-account create/delete, token transfers, ecrecover, all on a local NEAR node. Mocked in the sandbox: the quality checker (fixed scores) and the NEAR AI signing key (a test key; the text format matches a real NEAR AI Cloud receipt recorded on testnet). On testnet the signer is pinned to NEAR AI Cloud's address. |
-| Can the lead self-deal with the note? | Only the lead's own treasury may buy, and only the lead may dispute a sub-job; an upheld dispute only costs the treasury. There is no outside buyer to cheat. |
+| Can the lead self-deal with the note? | Only the lead's own treasury may buy, and only the lead may dispute a sub-job. The worker already has its money; an upheld dispute moves the face value from the treasury back up the tree, so the lead at best breaks even. There is no outside buyer to cheat. |
+| What if the checker is down? | Fail closed: the delivery stays unscored, is not paid unless the lead approves it, and its note is never sellable. A lost answer can be cleared after 10 minutes. Settle waits while a check is pending, so junk delivered in the last second is not paid before its score lands. |
 | What if the AI checker is fooled? | Then the lead, who paid early, loses; not the client. Disputes add two more checks with seeds the worker cannot choose. |
-| What if a transaction fails half-way? | Settle sends one transfer at a time; a stuck step can be resumed by anyone and is decided from the real token balance. 10,000 random trees with random failures keep the money rule. |
+| What if a transaction fails half-way? | Settle sends one transfer at a time; every stuck step (hire, check, note sale, settle, dispute) has a resume path decided from the real token balance. Tokens above the books are never booked, only swept up the tree, so a refunded transfer cannot lock a job. 10,000 random trees with random failures keep the money rule. |
 
 ## Tracks
 `swarms` (agents hiring agents in a tree) and `realworld` (escrow and early

@@ -37,14 +37,14 @@ a deliverable came out of a model call made for this task.
 7. **Fold.** After the window (or approval), `settle` runs bottom-up, one
    transfer at a time: pay the note holder, return the rest to the parent,
    confirm the real token balance is zero, delete the account (storage NEAR
-   goes to the parent). A stuck step can be resumed by anyone.
+   goes to the parent). Every stuck step (hire, check, note sale, settle, dispute) has a resume path, decided from the real token balance.
 
 ## Do X, see Y
 
 | Do | See |
 |---|---|
 | `make setup` | toolchain versions; crates fetched (the only networked step besides the near-sandbox binary) |
-| `make test` | 216 unit + property tests, all `ok`: core (49 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (143), factory (8), mock checker (2), mock-usdc (7) |
+| `make test` | 247 unit + property tests, all `ok`: core (50 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (170), factory (13), mock checker (2), mock-usdc (7) |
 | `make lint` | rustfmt check and clippy `-D warnings`; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make sandbox` | a local NEAR node runs 4 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, and the full scene; `test result: ok. 4 passed`, about 2 min |

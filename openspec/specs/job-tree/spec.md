@@ -21,7 +21,12 @@ funding are refunded in full with no state change.
 
 ### Requirement: Hire
 Manager only, Open, window open, <= 16 children, amount > 0, within the
-unallocated budget (never the bond), >= 150 Tgas. State before promises;
-create or fund failure rolls back and closes an unfunded child.
-- unit: `hire_creates_child_from_global_contract`, `non_manager_cannot_hire`, `hire_over_budget_refused`, `bond_cannot_be_hired_with`, `create_failure_rolls_back`, `fund_failure_rolls_back_and_closes_child`, `partial_funding_keeps_books_right`, `funding_callback_cannot_run_twice`
+unallocated budget (never the bond), >= 150 Tgas, >= 0.035 NEAR attached.
+The job keeps `HIRE_KEEP_NEAR` (5 mNEAR: the child's token registration and
+its own child record) and sends the rest to the child, so a job never pays
+for hires from its own storage. State before promises; a create failure
+rolls back. A failed fund call is ambiguous, so the hire stays in flight
+until `resume_hire` (anyone, after `RESUME_AFTER_SECS`) reads the child's
+real balance: full -> Open, zero -> rolled back and the child closed.
+- unit: `hire_creates_child_from_global_contract`, `non_manager_cannot_hire`, `hire_over_budget_refused`, `bond_cannot_be_hired_with`, `create_failure_rolls_back`, `fund_failure_waits_then_resume_rolls_back_and_closes_child`, `lost_hire_callback_with_funded_child_opens_it`, `lost_hire_callback_with_empty_child_rolls_back`, `unknown_child_balance_keeps_waiting`, `resume_hire_too_early`, `late_create_callback_after_resume_refused`, `partial_funding_keeps_books_right`, `funding_callback_cannot_run_twice`
 - sandbox: `g4_global_contract_and_hire_create_sub_accounts`
