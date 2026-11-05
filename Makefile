@@ -102,15 +102,16 @@ web: ## Serve the tree page on http://localhost:8080 (reads web/scene.json)
 	cd web && python3 -m http.server 8080
 
 .PHONY: nearai-check
-nearai-check: ## [NEAR AI key] one tiny signed call: GO if NEAR AI signs what the contract checks (< $$0.001)
+nearai-check: ## [NEAR AI key] three small signed calls: receipt format, judge score, planner JSON; GO or NO-GO
 	@cd agents && $(HT) nearai-check
 
 .PHONY: record-cassette
 record-cassette: build ## [NEAR AI key] run the story on a local node with real NEAR AI and save every signed answer (~24 calls, ~$$0.01)
 	@mkdir -p $(dir $(CASSETTE))
-	@rm -f $(CASSETTE)
-	@$(SBX) $(HT) demo --llm record:$(CASSETTE) --scene $(CURDIR)/web/scene.json
-	@cd agents && $(HT) verify-cassette $(CASSETTE)
+	@rm -f $(CASSETTE).new
+	@$(SBX) $(HT) demo --llm record:$(CASSETTE).new --scene $(CURDIR)/web/scene.json
+	@cd agents && $(HT) verify-cassette $(CASSETTE).new
+	@mv $(CASSETTE).new $(CASSETTE) && echo "cassette saved: $(CASSETTE); check it replays with make demo-replay"
 
 .PHONY: verify-cassette
 verify-cassette: ## Re-check every NEAR AI signature in the cassette (offline)

@@ -52,6 +52,19 @@ impl Tools<'_> {
     /// Run tool `name` as account `who`.
     pub async fn call(&self, who: &Acc, name: &str, a: &Value) -> Result<Value, String> {
         let c = self.chain;
+        // Job ids must be jobs of this factory: the tools never send money
+        // or NEAR to an arbitrary contract.
+        if a.get("job").is_some() {
+            let j = s(a, "job")?;
+            if !j.ends_with(&format!(".{}", c.hub))
+                || !j
+                    .split('.')
+                    .next()
+                    .is_some_and(|p| p.starts_with("job-") || p.starts_with('t'))
+            {
+                return Err(format!("{j} is not a job of {}", c.hub));
+            }
+        }
         let zero = NearToken::from_yoctonear(0);
         match name {
             "post_job" => {
@@ -120,6 +133,10 @@ impl Tools<'_> {
             "quote_note" => c.view(&id(a, "job")?, "quote_note", json!({})).await,
             "buy_note" => {
                 let price: u128 = s(a, "price")?.parse().map_err(|_| "price")?;
+                let quote = crate::chain::num(&c.view(&id(a, "job")?, "quote_note", json!({})).await?);
+                if quote == 0 || price != quote {
+                    return Err(format!("price must equal the current quote ({quote})"));
+                }
                 c.send(who, &id(a, "job")?, price, Some("buy_note")).await
             }
             "dispute" => {

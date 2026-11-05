@@ -103,17 +103,17 @@ function node(j) {
   const d = document.createElement('div');
   d.className = 'node' + (j.alive ? '' : ' dead');
   if (!j.alive) {
-    d.innerHTML = `<div class="label">${j.label}</div><div class="acct">${j.account}</div>
+    d.innerHTML = `<div class="label">${esc(j.label)}</div><div class="acct">${esc(j.account)}</div>
       <div class="money s-deleted">deleted</div><div class="chips"><span class="chip">storage NEAR returned to parent</span></div>`;
     return d;
   }
-  const chips = [`<span class="chip s-${j.status}">${j.status}</span>`];
+  const chips = [`<span class="chip s-${esc(j.status)}">${esc(j.status)}</span>`];
   if (j.worker) chips.push(`<span class="chip ${j.verified ? 'ok' : 'no'}">${j.verified ? (testKey ? '✓ receipt (test key)' : '✓ NEAR AI receipt') : 'no receipt'}</span>`);
-  if (j.quality !== null && j.quality !== undefined) chips.push(`<span class="chip">check ${j.quality}/10</span>`);
-  if (j.note_sold) chips.push(`<span class="chip ok">note sold → ${String(j.payee).split('.')[0]}</span>`);
-  d.innerHTML = `<div class="label">${j.label}</div><div class="acct">${j.account}</div>
+  if (j.quality !== null && j.quality !== undefined) chips.push(`<span class="chip">check ${esc(j.quality)}/10</span>`);
+  if (j.note_sold) chips.push(`<span class="chip ok">note sold → ${esc(String(j.payee).split('.')[0])}</span>`);
+  d.innerHTML = `<div class="label">${esc(j.label)}</div><div class="acct">${esc(j.account)}</div>
     <div class="money">${usd(j.ft)} <small style="font-size:13px;font-weight:400">fUSD</small></div>
-    ${j.worker ? `<div class="acct">worker ${j.worker} · pay ${usd(j.amount)}</div>` : ''}
+    ${j.worker ? `<div class="acct">worker ${esc(j.worker)} · pay ${usd(j.amount)}</div>` : ''}
     <div class="chips">${chips.join('')}</div>`;
   return d;
 }
@@ -137,7 +137,7 @@ function render() {
     const before = prev && prev.wallets.find((p) => p.account === x.account);
     const dlt = before ? Number(x.ft) - Number(before.ft) : 0;
     const delta = dlt ? `<span class="delta ${dlt > 0 ? 'up' : 'down'}">${dlt > 0 ? '+' : ''}${usd(dlt)}</span>` : '';
-    w.insertAdjacentHTML('beforeend', `<div class="wallet"><div class="who">${x.label}</div><div class="amt">${usd(x.ft)}${delta}</div></div>`);
+    w.insertAdjacentHTML('beforeend', `<div class="wallet"><div class="who">${esc(x.label)}</div><div class="amt">${usd(x.ft)}${delta}</div></div>`);
   });
   $('dots').innerHTML = '';
   scene.steps.forEach((_, k) => {
@@ -163,19 +163,22 @@ document.addEventListener('keydown', (e) => {
 function runInfo(r) {
   if (!r) return;
   const tx = (r.transactions || []);
-  const link = (t) => r.explorer ? `<a href="${esc(r.explorer + t.tx)}" target="_blank" rel="noopener">${esc(t.tx.slice(0, 10))}…</a>` : `<code>${esc(t.tx.slice(0, 10))}…</code>`;
+  const safeExplorer = /^https:\/\/[a-z0-9.-]+\//i.test(r.explorer || '');
+  const link = (t) => safeExplorer ? `<a href="${esc(r.explorer + t.tx)}" target="_blank" rel="noopener">${esc(t.tx.slice(0, 10))}…</a>` : `<code>${esc(t.tx.slice(0, 10))}…</code>`;
   $('run').innerHTML = `Model answers: ${esc(r.answers)}. Model <code>${esc(r.model)}</code>, signer <code>${esc(r.signer)}</code>, ${esc(r.model_calls)} signed model calls,
     factory <code>${esc(r.factory)}</code>.
     <details><summary>${tx.length} transactions</summary><ol>${tx.map((t) =>
-      `<li>${esc(t.who)} → <code>${esc(t.method)}</code> on ${esc(t.on)}: ${link(t)}</li>`).join('')}</ol></details>`;
+      `<li>${esc(t.who)} → <code>${esc(t.method)}</code> on ${esc(t.on)}: ${link(t)}${t.ok === false ? ' <span class="err">refused</span>' : ''}</li>`).join('')}</ol></details>`;
 }
 
-const sceneFile = new URLSearchParams(location.search).get('scene') || 'scene.json';
+// Only scene files next to this page (no other origins, no paths).
+const asked = new URLSearchParams(location.search).get('scene') || '';
+const sceneFile = /^[\w-]+\.json$/.test(asked) ? asked : 'scene.json';
 fetch(sceneFile).then((r) => r.json()).then((d) => {
   scene = d; testKey = /test key/.test((d.run || {}).answers || ''); $('net').textContent = d.network; runInfo(d.run); render();
 }).catch((e) => {
   $('title').innerHTML = '<span class="err">No scene.json yet</span>';
-  $('say').textContent = 'Run `make demo` (writes out/scene.json and web/scene.json), then `make web`.';
+  $('say').textContent = 'Run `make demo` (writes web/scene.json), then `make web`.';
 });
 </script>
 </body>

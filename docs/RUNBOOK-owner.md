@@ -11,15 +11,16 @@ export NEARAI_API_KEY=...                 # NEAR AI Cloud key
 export HT_MODEL=deepseek-ai/DeepSeek-V4.1-Flash-1017   # or the cheapest model nearai-check lists
 ```
 
-## 1. Format check (< $0.001)
+## 1. Format check (3 small calls, < $0.002)
 ```bash
 make nearai-check
 ```
 | You see | Do |
 |---|---|
-| `GO: NEAR AI signs model:sha256(request):sha256(response) with the attested key` | go on |
-| `GO (signature format); ... export HT_SIGNER=<addr>` | run that export, go on |
-| `NO-GO: ...` | stop; send the output to the build thread |
+| last line `GO` | go on |
+| `ok (format); the attestation lookup failed, so export HT_SIGNER=<addr>` | run that export; it ends with `GO` too |
+| `NO-GO: ... (try another HT_MODEL)` | pick another model from the `models served` line, export `HT_MODEL`, rerun |
+| any other `NO-GO` | stop; send the output to the build thread |
 
 ## 2. Record the cassette (local node, ~24 small calls, about $0.01)
 ```bash
@@ -27,7 +28,9 @@ make record-cassette        # writes demo/cassette.json, then verifies every sig
 git add demo/cassette.json && git commit -m "Real NEAR AI cassette" && git push
 ```
 Anyone can now run `make demo-replay`: the same story with NEAR AI's own
-answers and signatures, offline and free.
+answers and signatures, offline and free. Run it once before committing:
+it proves the recording replays. The plan, picks and scores are the
+model's own, so they may differ from the scripted `make demo`.
 
 ## 3. Testnet (needs ~45 testnet NEAR; about 25 minutes)
 The global job code burns ~27.5 NEAR (10x storage price), the factory and

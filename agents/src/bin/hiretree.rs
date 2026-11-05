@@ -46,7 +46,7 @@ async fn llm_from(spec: &str) -> Llm {
                 "replaying {n} signed answers from {f} (signer {})",
                 c.signer
             );
-            Llm::Replay(c)
+            Llm::replay(c)
         }
         Some(("record", f)) => {
             let n = NearAi::from_env(&model()).unwrap_or_else(|e| die(e));
@@ -54,10 +54,14 @@ async fn llm_from(spec: &str) -> Llm {
             let c = Cassette {
                 model: n.model.clone(),
                 signer,
-                signer_source: format!(
-                    "{}/v1/attestation/report?model={}&signing_algo=ecdsa",
-                    n.base, n.model
-                ),
+                signer_source: if std::env::var("HT_SIGNER").is_ok() {
+                    "HT_SIGNER (set by the owner after make nearai-check)".into()
+                } else {
+                    format!(
+                        "{}/v1/attestation/report?model={}&signing_algo=ecdsa (address read from the report; the TEE quote is not verified here)",
+                        n.base, n.model
+                    )
+                },
                 entries: vec![],
             };
             Llm::Record(Source::Live(n), Mutex::new(c), f.into())
@@ -74,7 +78,7 @@ async fn demo(args: &[String]) {
         Llm::Mock(_) => "a scripted test model signing with a test key (not NEAR AI)".to_string(),
         Llm::Live(_) => "NEAR AI Cloud, live".to_string(),
         Llm::Record(..) => "NEAR AI Cloud, live, recorded to a cassette".to_string(),
-        Llm::Replay(c) => format!(
+        Llm::Replay(c, _) => format!(
             "NEAR AI Cloud answers replayed from a cassette, signatures as NEAR AI made them ({})",
             c.signer_source
         ),
@@ -86,6 +90,7 @@ async fn demo(args: &[String]) {
             _ => unreachable!(),
         },
     };
+    llm.expect_signer(&signer);
     let model = llm.model();
     let c = match net.as_str() {
         "sandbox" => Chain::sandbox(&signer, Some(&model)).await,
@@ -114,33 +119,86 @@ async fn nearai_check() {
     }
     let attested = n.signing_address().await;
     println!("attestation signing address for {}: {attested:?}", n.model);
+    // 1. The receipt format, on a tagged worker-style request.
     let body = chat_body(
         &n.model,
         "Reply with one word.",
         "HT1:check.testnet:00:1 Say OK.",
         4,
     );
-    match n.chat(&body).await {
-        Ok(r) => {
-            let addr = recover(&n.model, &body, &r.body, &r.sig).unwrap_or_else(|e| die(e));
-            println!("reply: {:?}", r.content());
-            println!("signature recovers to {addr}");
-            match attested {
-                Ok(a) if a == addr => println!("GO: NEAR AI signs model:sha256(request):sha256(response) with the attested key"),
-                Ok(a) => die(format!("NO-GO: signature by {addr}, attestation says {a}")),
-                Err(_) => println!("GO (signature format); the attestation lookup failed, so export HT_SIGNER={addr}"),
-            }
-        }
-        Err(e) => die(e),
+    let r = n.chat(&body).await.unwrap_or_else(|e| die(e));
+    let addr = recover(&n.model, &body, &r.body, &r.sig).unwrap_or_else(|e| die(e));
+    println!("reply: {:?}", r.content());
+    println!("signature recovers to {addr}");
+    match &attested {
+        Ok(a) if *a == addr => println!("ok: NEAR AI signs model:sha256(request):sha256(response) with the address in its attestation report (the TEE quote itself is not verified here)"),
+        Ok(a) => die(format!("NO-GO: signature by {addr}, attestation report says {a}")),
+        Err(_) => println!("ok (format); the attestation lookup failed, so export HT_SIGNER={addr}"),
     }
+    // 2. The judge: the contract's exact request must give a score it can read.
+    let req = ht_core::check::request_bytes(
+        &n.model,
+        "t1.job-1.hub.check.testnet",
+        1,
+        0,
+        "Explain NEAR global contracts in 3 sentences.",
+        "Global contracts let many accounts share one deployed code by hash.",
+    );
+    let j = n.chat(&req).await.unwrap_or_else(|e| die(e));
+    match ht_core::check::parse_score(&j.content()) {
+        Some(sc) => println!("judge: {:?} -> score {sc}", j.content()),
+        None => die(format!(
+            "NO-GO: the judge reply {:?} has no score the contract can read (try another HT_MODEL)",
+            j.content()
+        )),
+    }
+    // 3. The planner: JSON within the token budget.
+    let p = chat_body(&n.model, &hire_tree_agents::agents::PLANNER.replace("BUDGET", "90"),
+        "Write a short explainer of NEAR global contracts in English and Spanish, plus a one-line summary.", 400);
+    let pr = n.chat(&p).await.unwrap_or_else(|e| die(e));
+    match hire_tree_agents::agents::json_of(&pr.content()) {
+        Some(v) if v["subtasks"].is_array() => println!(
+            "planner: {} subtasks",
+            v["subtasks"].as_array().unwrap().len()
+        ),
+        _ => die(format!(
+            "NO-GO: planner reply is not the JSON the lead needs: {:?} (try another HT_MODEL)",
+            pr.content()
+        )),
+    }
+    println!("GO");
 }
 
 async fn mcp(args: &[String]) {
-    let name = arg(args, "--as").unwrap_or_else(|| die("--as NAME (e.g. lead)"));
     let c = Chain::testnet_connect().unwrap_or_else(|e| die(e));
-    let who = Acc {
-        id: format!("{name}.{}", c.funder.id).parse().unwrap(),
-        signer: c.derived(&name),
+    // An outside agent brings its own account and key; demo roles may use
+    // keys derived from the operator key, but never the factory or token.
+    let who = match (
+        std::env::var("HT_AGENT_ACCOUNT"),
+        std::env::var("HT_AGENT_KEY"),
+    ) {
+        (Ok(id), Ok(key)) => Acc {
+            id: id
+                .parse()
+                .unwrap_or_else(|e| die(format!("HT_AGENT_ACCOUNT: {e}"))),
+            signer: near_api::Signer::from_secret_key(
+                key.parse()
+                    .unwrap_or_else(|e| die(format!("HT_AGENT_KEY: {e:?}"))),
+            )
+            .unwrap_or_else(|e| die(format!("{e:?}"))),
+        },
+        _ => {
+            let name = arg(args, "--as").unwrap_or_else(|| {
+                die("--as NAME (e.g. lead), or HT_AGENT_ACCOUNT + HT_AGENT_KEY")
+            });
+            if name == "hub" || name == "usdc" || name.starts_with('g') && name.len() == 13 {
+                die("refusing to sign as the factory, the token or a probe account");
+            }
+            Acc {
+                id: format!("{name}.{}", c.funder.id).parse().unwrap(),
+                signer: c.derived(&name),
+            }
+        }
     };
     hire_tree_agents::mcp::serve(Tools { chain: &c }, who).await;
 }

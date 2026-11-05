@@ -92,7 +92,7 @@ again on every replay; `make verify-cassette` checks them offline.
 | `make sandbox` | a local NEAR node runs 6 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model, and the same story replayed from a cassette; about 15 min |
 | `make demo` | the agent story on a local node in 12 scenes, with every agent decision and its reason; writes `web/scene.json` |
 | `make web` | serves `web/` on http://localhost:8080: the tree page, scene by scene, with the agents' decisions and every transaction |
-| `make nearai-check` | needs `NEARAI_API_KEY`: one tiny signed call; GO if NEAR AI signs exactly what the contract checks, with the attested key |
+| `make nearai-check` | needs `NEARAI_API_KEY`: three small signed calls (receipt format, the contract's judge question, the planner's JSON); GO or NO-GO |
 | `make record-cassette` | needs `NEARAI_API_KEY`: the story with live NEAR AI on a local node (about 24 small calls); saves `demo/cassette.json` |
 | `make demo-replay`, `make verify-cassette` | the story replayed from the cassette (free, offline); every signature re-checked |
 | `make testnet-all` | needs `HT_OPERATOR`, `HT_OPERATOR_KEY`, `NEARAI_API_KEY`: deploys (or reuses) on testnet and runs the story with live NEAR AI; writes `web/scene-testnet.json` with explorer links |
@@ -115,11 +115,13 @@ again on every replay; `make verify-cassette` checks them offline.
 - Real on the local node: contracts, factory, global contract, sub-account
   create and delete, token transfers, `env::ecrecover`, storage refunds,
   the agents' tool calls.
-- In `make demo` and the tests the model is scripted and signs with a test
-  key; the page says so. The signed text follows NEAR AI Cloud's format
+- In `make demo` and the tests the model is a scripted stand-in (simple
+  rules) that signs with a test key; the page says so. With NEAR AI the
+  decisions are the model's own and can differ run to run. The signed text follows NEAR AI Cloud's format
   (`model:sha256(request):sha256(response)`); `make nearai-check` confirms it
   against the live service, and a recorded cassette replays real NEAR AI
-  answers and signatures.
+  answers and signatures. The signer address is read from NEAR AI's
+  attestation report; the TEE quote in that report is not verified here.
 - Tested depth: a 2-level tree on the local node; the 10,000-tree property
   test runs on the pure-Rust ledger model in `core/`, not on the contract.
 - Not run yet: testnet (needs the owner's funded account), root (client)

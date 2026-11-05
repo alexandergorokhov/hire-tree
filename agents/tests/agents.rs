@@ -112,7 +112,7 @@ async fn agents_story_replays_from_a_cassette() {
     }
     let cas = Cassette::load(&path).unwrap();
     assert!(cas.verify().unwrap() > 10);
-    let replay = Llm::Replay(cas);
+    let replay = Llm::replay(cas);
     let c = Chain::sandbox(&signer, Some(MODEL)).await;
     let run = story(&c, &replay).await.unwrap();
     check_outcome(&c, &run).await;

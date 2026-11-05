@@ -53,6 +53,21 @@ pub fn short_error(dump: &str) -> String {
     }
 }
 
+/// Rate limits, timeouts, dropped connections: worth retrying.
+fn transient(e: &str) -> bool {
+    let e = e.to_lowercase();
+    !(e.contains("unknownaccount")
+        || e.contains("unknown_account")
+        || e.contains("does not exist")
+        || e.contains("methodnotfound")
+        || e.contains("contractcodenotfound")
+        || e.contains("no_contract_code")
+        || e.contains("functioncallerror")
+        || e.contains("execution error")
+        || e.contains("wasm execution failed")
+        || e.contains("smart contract panicked"))
+}
+
 pub fn num(v: &Value) -> u128 {
     v.as_str().and_then(|s| s.parse().ok()).unwrap_or(0)
 }
@@ -198,19 +213,9 @@ impl Chain {
             .await;
         let code_hash: [u8; 32] = Sha256::digest(&code).into();
         let hash_s = near_api::types::CryptoHash(code_hash).to_string();
+        self.ensure_global(&hub, code, code_hash, global_milli)
+            .await?;
         if !self.has_code(&hub.id).await {
-            let before = self.near_of(&hub.id).await;
-            Contract::deploy_global_contract_code(code)
-                .as_hash()
-                .with_signer(hub.id.clone(), hub.signer.clone())
-                .send_to(&self.net)
-                .await
-                .map_err(|e| format!("deploy global code: {e:?}"))?
-                .assert_success();
-            eprintln!(
-                "  global job code {hash_s}: cost {:.2} NEAR",
-                (before - self.near_of(&hub.id).await) as f64 / 1e24
-            );
             Contract::deploy(hub.id.clone())
                 .use_code(wasm("FACTORY_WASM", "hire_tree_factory.wasm"))
                 .with_init_call(
@@ -231,6 +236,86 @@ impl Chain {
             .await;
         self.register(&hub).await;
         Ok(())
+    }
+
+    /// Make sure the job code is a global contract, deploying it only when
+    /// it is missing. A small probe account `g<hash>.<hub>` that uses the
+    /// code by hash proves it exists (there is no RPC view for global code),
+    /// so an interrupted run never pays the ~27 NEAR deploy twice, and a
+    /// rebuilt wasm with a new hash is deployed before the factory points at it.
+    async fn ensure_global(
+        &self,
+        hub: &Acc,
+        code: Vec<u8>,
+        hash: [u8; 32],
+        milli: u128,
+    ) -> Result<(), String> {
+        let tag = hex::encode(&hash[..6]);
+        let probe_id: AccountId = format!("g{tag}.{}", hub.id).parse().unwrap();
+        if self.has_code(&probe_id).await {
+            return Ok(());
+        }
+        let probe = Acc {
+            id: probe_id.clone(),
+            signer: self.derived(&format!("probe-{tag}")),
+        };
+        if !self.alive(&probe_id).await {
+            Account::create_account(probe_id.clone())
+                .fund_myself(hub.id.clone(), NearToken::from_millinear(50))
+                .with_public_key(probe.signer.get_public_key().await.unwrap())
+                .with_signer(hub.signer.clone())
+                .send_to(&self.net)
+                .await
+                .map_err(|e| format!("create probe: {e:?}"))?
+                .into_result()
+                .map_err(|e| format!("create probe: {e:?}"))?;
+        }
+        let use_global = || async {
+            Contract::deploy(probe_id.clone())
+                .use_global_hash(near_api::types::CryptoHash(hash))
+                .without_init_call()
+                .with_signer(probe.signer.clone())
+                .send_to(&self.net)
+                .await
+                .map_err(|e| format!("{e:?}"))?
+                .into_result()
+                .map(|_| ())
+                .map_err(|e| format!("{e:?}"))
+        };
+        if use_global().await.is_ok() {
+            return Ok(());
+        }
+        // Missing: top up the hub if needed, deploy, then prove it.
+        let need = milli * 10u128.pow(21) + 10u128.pow(24);
+        let have = self.near_of(&hub.id).await;
+        if self.is_testnet() && have < need {
+            near_api::Tokens::account(self.funder.id.clone())
+                .send_to(hub.id.clone())
+                .near(NearToken::from_yoctonear(need - have))
+                .with_signer(self.funder.signer.clone())
+                .send_to(&self.net)
+                .await
+                .map_err(|e| format!("top up hub: {e:?}"))?
+                .into_result()
+                .map_err(|e| format!("top up hub: {e:?}"))?;
+        }
+        let before = self.near_of(&hub.id).await;
+        Contract::deploy_global_contract_code(code)
+            .as_hash()
+            .with_signer(hub.id.clone(), hub.signer.clone())
+            .send_to(&self.net)
+            .await
+            .map_err(|e| format!("deploy global code: {e:?}"))?
+            .into_result()
+            .map_err(|e| format!("deploy global code: {e:?}"))?;
+        eprintln!(
+            "  global job code {}: cost {:.2} NEAR",
+            near_api::types::CryptoHash(hash),
+            (before - self.near_of(&hub.id).await) as f64 / 1e24
+        );
+        use_global()
+            .await
+            .map_err(|e| format!("global code still missing after deploy: {e}"))
     }
 
     pub async fn near_of(&self, id: &AccountId) -> u128 {
@@ -274,6 +359,13 @@ impl Chain {
                 .await
                 .unwrap()
                 .assert_success();
+        } else if self.is_testnet() && self.near_of(&id).await < amount.as_yoctonear() / 2 {
+            let _ = near_api::Tokens::account(self.funder.id.clone())
+                .send_to(id.clone())
+                .near(NearToken::from_yoctonear(amount.as_yoctonear() / 2))
+                .with_signer(self.funder.signer.clone())
+                .send_to(&self.net)
+                .await;
         }
         Acc { id, signer }
     }
@@ -297,11 +389,11 @@ impl Chain {
             .map_err(|e| format!("{e:?}"))?;
         let full = r.into_full().ok_or("transaction still pending")?;
         let tx = full.outcome().transaction_hash.to_string();
-        self.txs
-            .lock()
-            .unwrap()
-            .push(json!({ "who": who.id, "method": method, "on": contract, "tx": tx }));
-        match full.into_result() {
+        let res = full.into_result();
+        self.txs.lock().unwrap().push(
+            json!({ "who": who.id, "method": method, "on": contract, "tx": tx, "ok": res.is_ok() }),
+        );
+        match res {
             Ok(ok) => {
                 eprintln!("  {method} on {contract}: ok (tx {tx})");
                 Ok(ok.json::<Value>().unwrap_or(Value::Null))
@@ -316,34 +408,59 @@ impl Chain {
             .unwrap_or_else(|e| panic!("{method}: {e}"))
     }
 
+    /// A view call; transport errors (rate limits, timeouts) are retried, so
+    /// a snapshot never shows a guess.
     pub async fn view(
         &self,
         contract: &AccountId,
         method: &str,
         args: Value,
     ) -> Result<Value, String> {
-        Contract(contract.clone())
-            .call_function(method, args)
-            .read_only::<Value>()
-            .fetch_from(&self.net)
-            .await
-            .map(|r| r.data)
-            .map_err(|e| format!("{e:?}"))
+        let mut last = String::new();
+        for attempt in 0..6u64 {
+            match Contract(contract.clone())
+                .call_function(method, args.clone())
+                .read_only::<Value>()
+                .fetch_from(&self.net)
+                .await
+            {
+                Ok(r) => return Ok(r.data),
+                Err(e) => {
+                    last = format!("{e:?}");
+                    if !transient(&last) {
+                        return Err(last);
+                    }
+                }
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(500 << attempt)).await;
+        }
+        Err(last)
     }
 
+    /// Does the account exist? Only "unknown account" means no; transport
+    /// errors are retried and then fail loudly.
     pub async fn alive(&self, id: &AccountId) -> bool {
-        Account(id.clone())
-            .view()
-            .fetch_from(&self.net)
-            .await
-            .is_ok()
+        for attempt in 0..6u64 {
+            match Account(id.clone()).view().fetch_from(&self.net).await {
+                Ok(_) => return true,
+                Err(e) => {
+                    let e = format!("{e:?}");
+                    if !transient(&e) {
+                        return false;
+                    }
+                }
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(500 << attempt)).await;
+        }
+        panic!("RPC unreachable while checking {id}; set HT_RPC to another testnet RPC");
     }
 
     pub async fn ft(&self, id: &AccountId) -> u128 {
-        self.view(&self.usdc, "ft_balance_of", json!({ "account_id": id }))
+        let v = self
+            .view(&self.usdc, "ft_balance_of", json!({ "account_id": id }))
             .await
-            .map(|v| num(&v))
-            .unwrap_or(0)
+            .unwrap_or_else(|e| panic!("ft_balance_of {id}: {e}"));
+        num(&v)
     }
 
     pub async fn mint(&self, to: &AccountId, amount: u128) {
@@ -424,14 +541,17 @@ impl Chain {
         if self.sbx.is_some() {
             return self.fast_forward(secs_hint).await;
         }
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos() as u64;
+        // Chain time, not the PC clock.
+        let now = self.block_time_ns().await;
         if end_ns > now {
-            let secs = (end_ns - now) / 1_000_000_000;
-            eprintln!("  waiting {secs}s for the job window to close");
-            self.fast_forward(secs + 10).await;
+            eprintln!(
+                "  waiting {}s for the job window to close",
+                (end_ns - now) / 1_000_000_000
+            );
+            tokio::time::sleep(std::time::Duration::from_nanos(end_ns - now)).await;
+        }
+        while self.block_time_ns().await <= end_ns {
+            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
         }
     }
 }

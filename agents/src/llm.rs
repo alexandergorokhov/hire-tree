@@ -115,6 +115,8 @@ pub struct NearAi {
     pub base: String,
     pub key: String,
     pub model: String,
+    /// The signer the contracts pin; every answer must recover to it.
+    pub expect: Mutex<Option<String>>,
     http: reqwest::Client,
 }
 
@@ -125,7 +127,11 @@ impl NearAi {
             base: std::env::var("NEARAI_BASE").unwrap_or_else(|_| NEARAI_BASE.into()),
             key,
             model: model.into(),
-            http: reqwest::Client::new(),
+            expect: Mutex::new(None),
+            http: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(120))
+                .build()
+                .map_err(|e| e.to_string())?,
         })
     }
 
@@ -206,9 +212,9 @@ impl NearAi {
             .ok()
             .and_then(|v| v["id"].as_str().map(String::from))
             .ok_or("chat: no id in response")?;
-        // The signature can lag the answer by a moment: retry briefly.
+        // The signature can lag the answer: poll for up to about a minute.
         let mut s = Value::Null;
-        for attempt in 0..5 {
+        for attempt in 0..12u64 {
             let r = self
                 .http
                 .get(format!("{}/v1/signature/{id}", self.base))
@@ -222,10 +228,15 @@ impl NearAi {
                 if s["signature"].is_string() {
                     break;
                 }
-            } else if attempt == 4 {
+            } else if attempt == 11 {
                 return Err(format!("signature: HTTP {} for chat {id}", r.status()));
             }
-            tokio::time::sleep(std::time::Duration::from_millis(800 * (attempt + 1))).await;
+            tokio::time::sleep(std::time::Duration::from_secs(1 + attempt)).await;
+        }
+        if !s["signature"].is_string() {
+            return Err(format!(
+                "signature not available for chat {id} after ~70 s (not a format problem; try again)"
+            ));
         }
         let text = s["text"].as_str().unwrap_or_default();
         let want = signed_text(&self.model, body, &resp);
@@ -250,6 +261,13 @@ impl NearAi {
             return Err(format!(
                 "NO-GO: signature recovers to {addr}, NEAR AI says {claimed}"
             ));
+        }
+        if let Some(pinned) = self.expect.lock().unwrap().as_ref() {
+            if !addr.eq_ignore_ascii_case(pinned) {
+                return Err(format!(
+                    "signed by {addr}, but the contracts pin {pinned}: NEAR AI answered from another key (several TEE nodes?). Pin it with HT_SIGNER or rerun."
+                ));
+            }
         }
         Ok(Reply { body: resp, sig })
     }
@@ -312,16 +330,32 @@ pub enum Llm {
     Mock(Mock),
     Live(NearAi),
     Record(Source, Mutex<Cassette>, String),
-    Replay(Cassette),
+    /// A cassette and which entries were already used (answers are taken
+    /// in recorded order, so two identical requests get their own answers).
+    Replay(Cassette, Mutex<Vec<bool>>),
 }
 
 impl Llm {
+    pub fn replay(c: Cassette) -> Llm {
+        let n = c.entries.len();
+        Llm::Replay(c, Mutex::new(vec![false; n]))
+    }
+
+    /// Pin the signer the live client must see on every answer.
+    pub fn expect_signer(&self, signer: &str) {
+        let n = match self {
+            Llm::Live(n) | Llm::Record(Source::Live(n), _, _) => n,
+            _ => return,
+        };
+        *n.expect.lock().unwrap() = Some(signer.trim_start_matches("0x").to_lowercase());
+    }
+
     pub fn model(&self) -> String {
         match self {
             Llm::Mock(m) => m.model.clone(),
             Llm::Live(n) => n.model.clone(),
             Llm::Record(src, _, _) => src.model(),
-            Llm::Replay(c) => c.model.clone(),
+            Llm::Replay(c, _) => c.model.clone(),
         }
     }
 
@@ -329,7 +363,7 @@ impl Llm {
     pub fn signer(&self) -> Option<String> {
         match self {
             Llm::Mock(m) => Some(addr_of(&m.key)),
-            Llm::Replay(c) => Some(c.signer.clone()),
+            Llm::Replay(c, _) => Some(c.signer.clone()),
             Llm::Record(_, c, _) => {
                 let s = c.lock().unwrap().signer.clone();
                 (!s.is_empty()).then_some(s)
@@ -356,14 +390,19 @@ impl Llm {
                 c.save(path)?;
                 Ok(r)
             }
-            Llm::Replay(c) => {
+            Llm::Replay(c, used) => {
                 let want = String::from_utf8_lossy(body);
+                let mut used = used.lock().unwrap();
                 c.entries
                     .iter()
-                    .find(|e| e.req == want)
-                    .map(|e| Reply {
-                        body: e.resp.clone().into_bytes(),
-                        sig: e.sig.clone(),
+                    .enumerate()
+                    .find(|(i, e)| !used[*i] && e.req == want)
+                    .map(|(i, e)| {
+                        used[i] = true;
+                        Reply {
+                            body: e.resp.clone().into_bytes(),
+                            sig: e.sig.clone(),
+                        }
                     })
                     .ok_or_else(|| {
                         format!(
@@ -411,7 +450,7 @@ mod tests {
 
     #[tokio::test]
     async fn replay_refuses_a_request_it_never_saw() {
-        let c = Llm::Replay(Cassette {
+        let c = Llm::replay(Cassette {
             model: "m".into(),
             ..Default::default()
         });

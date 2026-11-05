@@ -16,7 +16,7 @@ than being copied or made up.
 | Piece | NEAR feature | What it gives |
 |---|---|---|
 | Every job is an account (`t1.job-1.hiretree`) | sub-accounts + one global contract by code hash + `delete_account` | escrow with no owner key; sub-jobs nest (tested to 2 levels); folds and refunds its storage when done |
-| Proof of AI work | NEAR AI Cloud TEE receipt + `env::ecrecover` | the contract checks the model's signature and that the request carries `HT1:<this job>:<spec>:<delivery>`; a copied receipt fails |
+| Proof of AI work | NEAR AI Cloud signed receipt (key published in its attestation report) + `env::ecrecover` | the contract checks the model's signature and that the request carries `HT1:<this job>:<spec>:<delivery>`; a copied receipt fails |
 | Paid now | Job Note sold to the lead's own treasury for 1% | a verified, checked worker is paid in the same transaction; only the lead carries the risk |
 | Quality | the contract writes the judge question; anyone submits NEAR AI's signed answer; `ecrecover` checks it | a score nobody can fake, from a model nobody can swap; junk reopens the job; 2-of-3 disputes |
 | Track records | each sub-job reports its worker's outcome to the factory when it deletes | the lead agent reads `get_record` before it hires, so a junk bot loses work |
@@ -44,13 +44,18 @@ reason under the scene title: point at them.
 | 0 | 0:00-0:12 | Title | "Agents hire agents. Who holds the money, and who decides the work was good? This is Hire Tree, on NEAR." |
 | 1 | 0:12-0:30 | Scene 1: job-1 appears | "A client posts a job with one token transfer. The factory creates a job account from a global contract. The account has no owner key: no company holds this money." |
 | 2 | 0:30-0:55 | Scene 2: plan and picks listed; t1, t2, t3 appear | "The lead agent's model splits the task and the budget, then reads each worker's track record from the chain. Nobody has a record yet, so the cheap bot wins two parts. Each hire is a new sub-account holding exactly that pay." |
-| 3 | 0:55-1:15 | Scene 3: deliveries | "The researcher works through NEAR AI and delivers the raw response with NEAR AI's signature; the contract checks it was made for this job. The cheap bot sends filler." |
-| 4 | 1:15-1:40 | Scene 4: 8/10, 2/10, 2/10 | "Now the contract asks its own question: the rubric, the task, the deliverable. A keeper sends exactly that to NEAR AI and submits the signed answer. The contract verifies the signature and reads the score: eight for the research, two for the filler. Junk reopens." |
+| 3 | 0:55-1:25 | Scene 3: deliveries and judge answers | "The researcher works through NEAR AI and delivers the raw response with NEAR AI's signature; the contract checks it was made for this job. The cheap bot sends filler. Then the contract asks its own question: the rubric, the task, the deliverable. A keeper sends exactly that to NEAR AI and submits the signed answer." |
+| 4 | 1:25-1:40 | Scene 4: 8/10, 2/10, 2/10 | "The contract verified each signature and read the score: eight for the research, two for the filler. Junk reopens." |
 | 5 | 1:40-1:55 | Scene 5: researcher +29.70 | "The lead's treasury buys the researcher's payout for one percent: paid now, not at the end." |
 | 6 | 1:55-2:10 | Scene 6: accounts grey out; records line | "The tree folds. Each account pays out, proves it is empty and deletes itself, and reports its worker's outcome to the factory. The bot: two jobs, zero paid." |
 | 7 | 2:10-2:35 | Scene 8: picks with "avoided cheapbot on its on-chain record" | "Second job, same task. This time the lead reads the bot's record and hires the translator and the researcher instead. Nobody told it to: the record is on-chain." |
 | 8 | 2:35-2:50 | Scenes 10-12: three notes bought, tree folds | "Everyone checks out, everyone is paid now, and the tree folds again. The client paid the fee and the work that passed, nothing else." |
 | 9 | 2:50-3:00 | Footer: transactions list; terminal `make demo` | "Every number on this page was read from the chain after a real transaction. Open source: make demo. Hire Tree." |
+
+The numbers above are from the scripted run. With NEAR AI the plan, the
+picks and the scores are the model's own: read the voice-over from the
+page's decision lines, not from this table. Record from the cassette
+(`make demo-replay`) or testnet if they exist.
 
 Recording tips: browser at 1280x800, page zoom 110%. Arrow keys between
 scenes. Say "test key" honestly if recording from `make demo`; from a
@@ -59,10 +64,10 @@ cassette or testnet the answers are NEAR AI's own.
 ## If a judge asks
 | Question | Answer |
 |---|---|
-| Why NEAR? | Named sub-accounts that a contract can create and delete, global contracts (one code hash for every job), NEAR AI Cloud's TEE-signed receipts, and `ecrecover` on-chain. The design is the account tree; elsewhere it would be a mapping inside one contract. |
+| Why NEAR? | Named sub-accounts that a contract can create and delete, global contracts (one code hash for every job), NEAR AI Cloud's signed receipts, and `ecrecover` on-chain. The design is the account tree; elsewhere it would be a mapping inside one contract. |
 | How is this different from market.near.ai? | That market holds funds itself and does not nest. Here each job is its own keyless account, sub-jobs nest, and pay can go out early against an on-chain AI proof. |
 | What is real and what is mocked? | Real: contracts, factory, global contract, sub-account create/delete, token transfers, ecrecover, the agents and their tool calls. In `make demo` the model is scripted and signs with a test key (the page says so). A cassette replays real NEAR AI answers with their original signatures, and the contract verifies them again. The factory pins the signer and the judge model. |
-| Are the agents real? | Yes: every decision (plan, pick, review, deliver, judge) is a model call, and every action is a tool call from one list that `hiretree mcp` also serves to any MCP agent. |
+| Are the agents real? | With NEAR AI (cassette replay or testnet) every decision (plan, pick, review, deliver, judge) is a model call. In `make demo` a scripted stand-in answers the same prompts (simple rules, signed with a test key), and the page says so. Every action is a tool call from one list that `hiretree mcp` also serves to an MCP agent, limited to this factory's jobs. |
 | Can the lead self-deal with the note? | Only the lead's own treasury may buy, and only the lead may dispute a sub-job. The worker already has its money; an upheld dispute moves the face value from the treasury back up the tree, so the lead at best breaks even. There is no outside buyer to cheat. |
 | What if nobody answers the check? | The round closes after 5 minutes unscored: not paid early, the note is never sellable, and the lead decides at settle. Settle waits while a round is open. |
 | Can a worker pick a friendly answer? | The model and signer are pinned, the question is built by the contract at temperature 0, the deliverable is wrapped as data, and the lowest answer counts; answers 3 or more apart make the check unclear. Disputes add two more rounds. If the judge is fooled, the lead who paid early loses, not the client. |
