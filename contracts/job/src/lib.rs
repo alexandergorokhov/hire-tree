@@ -11,9 +11,10 @@
 //! Built: init, funding, bond, hire, deliver (with or without a NEAR AI
 //! Cloud receipt, verified by `env::ecrecover`), approve, settle in legs,
 //! stuck-settle recovery, delete, child_closed, views.
+//! Also built: the quality check (one per delivery, started here), the Job
+//! Note sale to the lead's treasury, and sub-job disputes (2 of 3 checks).
 //! Not built yet, and refused rather than faked:
-//! - the quality check (OutLayer, day S+3): nothing reaches `Checked`;
-//! - note sale and disputes (day S+4): `buy_note` is refunded in full.
+//! - root (client) disputes: `dispute` on a root job panics (cut order 4).
 //!
 //! Security rules (plan section 10): state changes before promises, every
 //! callback handles failure, no unwrap on promise results, callbacks are
@@ -69,6 +70,21 @@ pub const RESUME_AFTER_SECS: u64 = 600;
 pub const GAS_HIRE_MIN: Gas = Gas::from_tgas(150);
 /// Least prepaid gas `settle` accepts.
 pub const GAS_SETTLE_MIN: Gas = Gas::from_tgas(100);
+
+/// Most deliveries (and so quality checks) one job accepts.
+pub const MAX_DELIVERIES: u32 = 3;
+/// A check score at or above this passes (scores are 0..=10).
+pub const PASS_SCORE: u8 = 6;
+pub const MAX_SCORE: u8 = 10;
+const GAS_CHECK: Gas = Gas::from_tgas(30);
+const GAS_ON_CHECK: Gas = Gas::from_tgas(15);
+const GAS_ON_DISPUTE: Gas = Gas::from_tgas(25);
+const GAS_ON_NOTE_PAID: Gas = Gas::from_tgas(20);
+/// Least prepaid gas for `deliver` when a check will be scheduled.
+pub const GAS_DELIVER_MIN: Gas = Gas::from_tgas(60);
+pub const GAS_DISPUTE_MIN: Gas = Gas::from_tgas(100);
+/// Least gas `ft_on_transfer(buy_note)` must have left to run the sale.
+pub const GAS_BUY_MIN: Gas = Gas::from_tgas(50);
 
 /// Largest promise result we read (a U128 JSON string is ~42 bytes).
 const MAX_RESULT_LEN: usize = 128;
@@ -148,6 +164,10 @@ pub struct JobView {
     pub children_open: u32,
     pub children_pending: u32,
     pub payout: Option<Payout>,
+    pub checker: Option<AccountId>,
+    pub treasury: Option<AccountId>,
+    pub note_pending: bool,
+    pub disputed: bool,
 }
 
 #[near(contract_state)]
@@ -186,6 +206,18 @@ pub struct Job {
     /// Bumped on every settle leg; callbacks carry it so a superseded one
     /// cannot act.
     settle_attempt: u32,
+    /// Pinned quality checker (OutLayer job runner; `mock-outlayer` in
+    /// tests). None = receipt-only mode.
+    checker: Option<AccountId>,
+    /// The lead's treasury: the only account that may buy this job's note.
+    treasury: Option<AccountId>,
+    /// A note sale's worker payment is in flight.
+    note_pending: bool,
+    /// A dispute was raised (one per job).
+    disputed: bool,
+    dispute_attempt: u32,
+    /// When the dispute in flight started.
+    dispute_since_ns: Option<u64>,
 }
 
 fn emit(event: &str, data: serde_json::Value) {
@@ -231,6 +263,8 @@ impl Job {
         window_secs: u64,
         signer: String,
         code_hash: Base58CryptoHash,
+        checker: Option<AccountId>,
+        treasury: Option<AccountId>,
     ) -> Self {
         let parent = env::predecessor_account_id();
         let me = env::current_account_id();
@@ -290,6 +324,12 @@ impl Job {
             returned_to_parent: 0,
             payout: None,
             settle_attempt: 0,
+            checker,
+            treasury,
+            note_pending: false,
+            disputed: false,
+            dispute_attempt: 0,
+            dispute_since_ns: None,
         };
         emit(
             "job_created",
@@ -317,13 +357,7 @@ impl Job {
         match msg.as_str() {
             "fund" => self.receive_fund(sender_id, amount),
             "bond" => self.receive_bond(sender_id, amount),
-            // TODO(day S+4): note sale to the lead's pinned treasury. Until
-            // receipts (S+2) and the quality check (S+3) exist, no note is
-            // sellable, so refuse instead of faking a sale.
-            "buy_note" => self.refund(
-                amount,
-                "note not sellable: needs a verified receipt and a passed check (not built yet)",
-            ),
+            "buy_note" => self.receive_buy_note(sender_id, amount),
             _ => self.refund(amount, "unknown msg"),
         }
     }
@@ -354,6 +388,76 @@ impl Job {
         }
         emit("funded", json!({ "from": sender, "amount": amount }));
         PromiseOrValue::Value(U128(0))
+    }
+
+    /// The lead's treasury buys the worker's payout right at the quote. The
+    /// worker is registered and paid in the same call chain; if that fails,
+    /// `on_note_paid` undoes the sale and the token refunds the treasury.
+    fn receive_buy_note(&mut self, sender: AccountId, amount: U128) -> PromiseOrValue<U128> {
+        if self.treasury.as_ref() != Some(&sender) {
+            return self.refund(amount, "buy_note: only the lead's treasury may buy");
+        }
+        let Some(quote) = self.quote_note() else {
+            return self.refund(amount, "buy_note: note is not sellable now");
+        };
+        if amount != quote {
+            return self.refund(amount, "buy_note: amount must equal quote_note");
+        }
+        if env::prepaid_gas().saturating_sub(env::used_gas()) < GAS_BUY_MIN {
+            return self.refund(amount, "buy_note: not enough gas (attach 100 Tgas)");
+        }
+        let worker = self
+            .worker
+            .clone()
+            .unwrap_or_else(|| env::panic_str("no worker"));
+        // State before promises.
+        self.note_pending = true;
+        self.note_sold = true;
+        self.payee = Some(sender.clone());
+        emit(
+            "note_sale_started",
+            json!({ "buyer": sender, "worker": worker, "price": amount, "face": U128(self.ledger.amount) }),
+        );
+        let pay = Promise::new(self.token.clone())
+            .function_call(
+                "storage_deposit",
+                json!({ "account_id": worker, "registration_only": true })
+                    .to_string()
+                    .into_bytes(),
+                TOKEN_STORAGE_NEAR,
+                GAS_STORAGE_DEPOSIT,
+            )
+            .then(self.ft_transfer(worker.clone(), amount.0))
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_ON_NOTE_PAID)
+                    .on_note_paid(worker, amount),
+            );
+        PromiseOrValue::Promise(pay)
+    }
+
+    /// After paying the worker its note price. Returns the unused amount to
+    /// the token: 0 on success, the whole price (refund) on failure.
+    #[private]
+    pub fn on_note_paid(&mut self, worker: AccountId, price: U128) -> U128 {
+        assert_self();
+        require!(self.note_pending, "no note sale in flight");
+        self.note_pending = false;
+        if result_ok(0) {
+            emit(
+                "note_sold",
+                json!({ "buyer": self.payee, "worker": worker, "price": price }),
+            );
+            U128(0)
+        } else {
+            self.note_sold = false;
+            self.payee = Some(worker.clone());
+            emit(
+                "note_sale_failed",
+                json!({ "worker": worker, "refund": price }),
+            );
+            price
+        }
     }
 
     fn receive_bond(&mut self, sender: AccountId, amount: U128) -> PromiseOrValue<U128> {
@@ -434,6 +538,8 @@ impl Job {
             "window_secs": remaining_secs.max(1),
             "signer": hex_of(&self.signer),
             "code_hash": Base58CryptoHash::from(self.code_hash),
+            "checker": self.checker,
+            "treasury": self.treasury,
         });
         let child_near = CHILD_BASE_NEAR
             .checked_add(env::attached_deposit())
@@ -608,7 +714,7 @@ impl Job {
         req: Option<Base64VecU8>,
         sig: Option<String>,
         model: Option<String>,
-    ) {
+    ) -> PromiseOrValue<bool> {
         require!(
             self.worker.as_ref() == Some(&env::predecessor_account_id()),
             "only the worker can deliver"
@@ -617,10 +723,14 @@ impl Job {
         let hash = parse_hash32_hex(&resp_hash)
             .unwrap_or_else(|| env::panic_str("resp_hash must be 64 hex chars"));
         let next_status = transition(self.status, Event::Deliver).unwrap_or_else(|e| fail(e));
-        let seq = self
-            .seq
-            .checked_add(1)
-            .unwrap_or_else(|| env::panic_str("seq overflow"));
+        require!(self.seq < MAX_DELIVERIES, "delivery limit reached");
+        if self.checker.is_some() {
+            require!(
+                env::prepaid_gas() >= GAS_DELIVER_MIN,
+                "not enough gas for deliver (attach at least 60 Tgas)"
+            );
+        }
+        let seq = self.seq + 1;
         let verified = match (req, sig, model) {
             (None, None, None) => false,
             (Some(req), Some(sig), Some(model)) => {
@@ -633,11 +743,188 @@ impl Job {
         self.seq = seq;
         self.deliverable_hash = Some(hash);
         self.verified = verified;
-        // TODO(day S+3): start the one quality check per delivery here.
+        self.quality = None;
         emit(
             "delivered",
             json!({ "seq": seq, "deliverable_hash": hex_of(&hash), "verified": verified }),
         );
+        match self.checker.clone() {
+            Some(checker) => PromiseOrValue::Promise(
+                self.check_call(&checker, 0).then(
+                    Self::ext(env::current_account_id())
+                        .with_static_gas(GAS_ON_CHECK)
+                        .on_check(seq),
+                ),
+            ),
+            None => {
+                // Receipt-only mode: a verified receipt is the check.
+                if verified {
+                    self.status =
+                        transition(self.status, Event::CheckPassed).unwrap_or_else(|e| fail(e));
+                    emit(
+                        "checked",
+                        json!({ "seq": seq, "score": null, "mode": "receipt-only" }),
+                    );
+                }
+                PromiseOrValue::Value(verified)
+            }
+        }
+    }
+
+    /// One call to the pinned checker for the current delivery. The seed is
+    /// chosen here (block randomness + seq + panel), never by the worker.
+    fn check_call(&self, checker: &AccountId, panel: u8) -> Promise {
+        let mut seed_in = env::random_seed();
+        seed_in.extend_from_slice(&self.seq.to_le_bytes());
+        seed_in.push(panel);
+        let seed = env::sha256_array(&seed_in);
+        let hash = self
+            .deliverable_hash
+            .unwrap_or_else(|| env::panic_str("nothing delivered"));
+        Promise::new(checker.clone()).function_call(
+            "check",
+            json!({
+                "job": env::current_account_id(),
+                "spec_hash": hex_of(&self.spec_hash),
+                "deliverable_hash": hex_of(&hash),
+                "seq": self.seq,
+                "seed": hex_of(&seed),
+                "panel": panel,
+            })
+            .to_string()
+            .into_bytes(),
+            NO_DEPOSIT,
+            GAS_CHECK,
+        )
+    }
+
+    /// A score from promise result `idx`, if it is a number in 0..=10.
+    fn score_at(idx: u64) -> Option<u8> {
+        env::promise_result_checked(idx, MAX_RESULT_LEN)
+            .ok()
+            .and_then(|b| serde_json::from_slice::<u8>(&b).ok())
+            .filter(|s| *s <= MAX_SCORE)
+    }
+
+    /// The checker's answer for delivery `seq`.
+    #[private]
+    pub fn on_check(&mut self, seq: u32) -> bool {
+        assert_self();
+        require!(
+            self.status == Status::Delivered && seq == self.seq,
+            "stale check answer"
+        );
+        match Self::score_at(0) {
+            None => {
+                emit("check_unavailable", json!({ "seq": seq }));
+                false
+            }
+            Some(score) => {
+                self.quality = Some(score);
+                let pass = score >= PASS_SCORE;
+                let ev = if pass {
+                    Event::CheckPassed
+                } else {
+                    Event::CheckFailed
+                };
+                self.status = transition(self.status, ev).unwrap_or_else(|e| fail(e));
+                emit(
+                    if pass { "checked" } else { "check_failed" },
+                    json!({ "seq": seq, "score": score }),
+                );
+                pass
+            }
+        }
+    }
+
+    // ------------------------------------------------------------ dispute
+
+    /// Manager only, on a sub-job, inside the window, once. Two more checks
+    /// (panels 1 and 2) run; with the original score, 2 junk votes of 3
+    /// uphold the dispute and the pay goes back to the parent at settle.
+    pub fn dispute(&mut self) -> Promise {
+        require!(
+            !self.root,
+            "root disputes are not built (cut, plan section 11)"
+        );
+        require!(
+            env::predecessor_account_id() == self.manager,
+            "only the manager can dispute"
+        );
+        require!(self.window_open(), "window is closed");
+        require!(!self.disputed, "already disputed");
+        require!(!self.note_pending, "note sale in flight");
+        require!(
+            env::prepaid_gas() >= GAS_DISPUTE_MIN,
+            "not enough gas for dispute (attach at least 100 Tgas)"
+        );
+        let checker = self
+            .checker
+            .clone()
+            .unwrap_or_else(|| env::panic_str("no checker pinned: disputes need one"));
+        self.status = transition(self.status, Event::Dispute).unwrap_or_else(|e| fail(e));
+        self.disputed = true;
+        self.dispute_attempt += 1;
+        self.dispute_since_ns = Some(env::block_timestamp());
+        emit("disputed", json!({ "by": self.manager, "seq": self.seq }));
+        self.check_call(&checker, 1)
+            .and(self.check_call(&checker, 2))
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_ON_DISPUTE)
+                    .on_dispute(self.dispute_attempt),
+            )
+    }
+
+    #[private]
+    pub fn on_dispute(&mut self, attempt: u32) -> bool {
+        assert_self();
+        require!(
+            self.status == Status::Disputed
+                && attempt == self.dispute_attempt
+                && self.dispute_since_ns.is_some(),
+            "stale dispute answer"
+        );
+        let mut votes = vec![self.quality];
+        if env::promise_results_count() == 2 {
+            votes.push(Self::score_at(0));
+            votes.push(Self::score_at(1));
+        }
+        let junk = votes
+            .iter()
+            .filter(|v| matches!(v, Some(s) if *s < PASS_SCORE))
+            .count();
+        let upheld = junk >= 2;
+        self.decide_dispute(upheld, &votes)
+    }
+
+    /// Anyone, if the dispute answer never came: counts as rejected.
+    pub fn resume_dispute(&mut self) -> bool {
+        require!(self.status == Status::Disputed, "not disputed");
+        let since = self
+            .dispute_since_ns
+            .unwrap_or_else(|| env::panic_str("no dispute in flight"));
+        require!(
+            env::block_timestamp() >= since.saturating_add(RESUME_AFTER_SECS * NS_PER_SEC),
+            "dispute is not stuck yet; wait RESUME_AFTER_SECS"
+        );
+        self.dispute_attempt += 1;
+        self.decide_dispute(false, &[])
+    }
+
+    fn decide_dispute(&mut self, upheld: bool, votes: &[Option<u8>]) -> bool {
+        let ev = if upheld {
+            Event::DisputeUpheld
+        } else {
+            Event::DisputeRejected
+        };
+        self.status = transition(self.status, ev).unwrap_or_else(|e| fail(e));
+        self.dispute_since_ns = None;
+        emit(
+            "dispute_decided",
+            json!({ "upheld": upheld, "votes": votes, "status": self.status.as_str() }),
+        );
+        upheld
     }
 
     /// Panics unless the receipt is valid for this task and delivery:
@@ -667,8 +954,12 @@ impl Job {
     }
 
     /// Price of this job's note for the lead's treasury, if sellable now.
-    /// Always `null` until receipts and the quality check are built.
+    /// Needs: Checked, verified receipt, unsold, payee unpaid, a treasury
+    /// pinned, no sale in flight. Price: amount minus 1% (fee rounds down).
     pub fn quote_note(&self) -> Option<U128> {
+        if self.note_pending || self.treasury.is_none() {
+            return None;
+        }
         self.ledger
             .sellable_quote(self.status, self.verified, self.note_sold)
             .map(U128)
@@ -730,6 +1021,7 @@ impl Job {
             self.children_open == 0 && self.children_pending == 0,
             "children still open"
         );
+        require!(!self.note_pending, "note sale in flight");
         let pay_payee = matches!(prev, Status::Delivered | Status::Checked);
         let split = self
             .ledger
@@ -1157,6 +1449,10 @@ impl Job {
             children_open: self.children_open,
             children_pending: self.children_pending,
             payout: self.payout.clone(),
+            checker: self.checker.clone(),
+            treasury: self.treasury.clone(),
+            note_pending: self.note_pending,
+            disputed: self.disputed,
         }
     }
 }

@@ -169,6 +169,8 @@ fn new_root() -> Job {
         WINDOW,
         signer(),
         code_hash(),
+        None,
+        None,
     )
 }
 
@@ -194,6 +196,8 @@ fn new_sub(pay: u128) -> Job {
         WINDOW,
         signer(),
         code_hash(),
+        None,
+        None,
     )
 }
 
@@ -277,6 +281,8 @@ fn init_must_be_called_by_parent_account() {
         WINDOW,
         signer(),
         code_hash(),
+        None,
+        None,
     );
 }
 
@@ -294,6 +300,8 @@ fn root_with_amount_refused() {
         WINDOW,
         signer(),
         code_hash(),
+        None,
+        None,
     );
 }
 
@@ -317,6 +325,8 @@ fn client_and_worker_both_refused() {
         WINDOW,
         signer(),
         code_hash(),
+        None,
+        None,
     );
 }
 
@@ -334,6 +344,8 @@ fn bad_spec_hash_refused() {
         WINDOW,
         signer(),
         code_hash(),
+        None,
+        None,
     );
 }
 
@@ -351,6 +363,8 @@ fn bad_signer_refused() {
         WINDOW,
         "1234".into(),
         code_hash(),
+        None,
+        None,
     );
 }
 
@@ -368,6 +382,8 @@ fn window_too_long_refused() {
         MAX_WINDOW_SECS + 1,
         signer(),
         code_hash(),
+        None,
+        None,
     );
 }
 
@@ -454,7 +470,7 @@ fn bond_by_stranger_or_on_sub_is_refunded() {
 }
 
 #[test]
-fn buy_note_is_refused_until_receipts_and_checks_exist() {
+fn buy_note_without_a_treasury_or_check_is_refunded() {
     let mut j = delivered_sub(30 * USD, 30 * USD);
     Ctx::new(T1, TOKEN).set();
     assert_eq!(
@@ -467,7 +483,7 @@ fn buy_note_is_refused_until_receipts_and_checks_exist() {
     assert!(events("refund")[0]["reason"]
         .as_str()
         .unwrap()
-        .contains("not sellable"));
+        .contains("only the lead's treasury"));
 }
 
 #[test]
@@ -899,6 +915,8 @@ mod receipt_tests {
             WINDOW,
             addr_hex(&key(1)),
             code_hash(),
+            None,
+            None,
         );
         Ctx::new(T1, TOKEN).set();
         j.ft_on_transfer(acc(ROOT), U128(pay), "fund".into());
@@ -915,7 +933,8 @@ mod receipt_tests {
         let mut j = pinned_sub(USD);
         deliver_r(&mut j, receipt(&key(1), &request(T1, 1)));
         let v = j.get_job();
-        assert_eq!(v.status, "Delivered");
+        // No checker pinned here: receipt-only mode, the receipt is the check.
+        assert_eq!(v.status, "Checked");
         assert!(v.verified);
         assert_eq!(v.deliverable_hash, Some(hex::encode(sha256(RESPONSE))));
         assert_eq!(events("delivered")[0]["verified"], true);
@@ -1679,6 +1698,8 @@ fn two_level_tree_folds_bottom_up() {
         WINDOW,
         signer(),
         code_hash(),
+        None,
+        None,
     );
     Ctx::new(GC, TOKEN).set();
     gc.ft_on_transfer(acc(T1), U128(8 * USD), "fund".into());
@@ -1713,4 +1734,471 @@ fn two_level_tree_folds_bottom_up() {
     assert_eq!(args["receiver_id"], LEAD);
     assert_eq!(args["amount"], (62 * USD).to_string());
     // Money rule: 8 (worker2) + 30 (worker) + 62 (lead) == 100 funded.
+}
+
+// ================================================================ checks, notes, disputes
+
+mod check_note_dispute {
+    use super::receipt_tests::{addr_hex, deliver_r, key, receipt, request};
+    use super::*;
+
+    pub const CHECKER: &str = "checker.test";
+    pub const TREASURY: &str = "treasury.lead.test";
+    const PAY: u128 = 30 * USD;
+    const QUOTE: u128 = 29_700_000; // 30 USD - 1%
+
+    /// A funded sub-job with a pinned signer (key 1), checker and treasury.
+    pub fn sub_full(checker: bool) -> Job {
+        Ctx::new(T1, ROOT).set();
+        let mut j = Job::new(
+            None,
+            acc(LEAD),
+            Some(acc(WORKER)),
+            acc(TOKEN),
+            U128(PAY),
+            spec(),
+            WINDOW,
+            addr_hex(&key(1)),
+            code_hash(),
+            checker.then(|| acc(CHECKER)),
+            Some(acc(TREASURY)),
+        );
+        Ctx::new(T1, TOKEN).set();
+        j.ft_on_transfer(acc(ROOT), U128(PAY), "fund".into());
+        j
+    }
+
+    fn score(j: &mut Job, seq: u32, r: PromiseResult) {
+        Ctx::new(T1, T1).results(vec![r]).set();
+        j.on_check(seq);
+    }
+
+    fn num(n: u8) -> PromiseResult {
+        ok(n.to_string().as_bytes())
+    }
+
+    /// Verified delivery, check passed with 8.
+    pub fn checked() -> Job {
+        let mut j = sub_full(true);
+        deliver_r(&mut j, receipt(&key(1), &request(T1, 1)));
+        score(&mut j, 1, num(8));
+        assert_eq!(j.get_job().status, "Checked");
+        j
+    }
+
+    fn buy(j: &mut Job, from: &str, amount: u128) -> PromiseOrValue<U128> {
+        Ctx::new(T1, TOKEN).set();
+        j.ft_on_transfer(acc(from), U128(amount), "buy_note".into())
+    }
+
+    fn note_paid(j: &mut Job, r: PromiseResult) -> U128 {
+        Ctx::new(T1, T1).results(vec![r]).set();
+        j.on_note_paid(acc(WORKER), U128(QUOTE))
+    }
+
+    // ------------------------------------------------ quality check
+
+    #[test]
+    fn deliver_schedules_exactly_one_check() {
+        let mut j = sub_full(true);
+        Ctx::new(T1, WORKER).set();
+        j.deliver("cd".repeat(32), None, None, None);
+        let c = calls();
+        assert_eq!(c.iter().filter(|x| x.1 == "check").count(), 1);
+        assert!(c.contains(&(CHECKER.into(), "check".into())));
+        assert!(c.contains(&(T1.into(), "on_check".into())));
+        let a = call_args("check");
+        assert_eq!(a["job"], T1);
+        assert_eq!(a["seq"], 1);
+        assert_eq!(a["panel"], 0);
+        assert_eq!(a["deliverable_hash"], "cd".repeat(32));
+        assert_eq!(a["spec_hash"], spec());
+        assert_eq!(a["seed"].as_str().unwrap().len(), 64);
+        assert_eq!(j.get_job().status, "Delivered");
+    }
+
+    #[test]
+    fn check_pass_marks_checked() {
+        let j = checked();
+        assert_eq!(j.get_job().quality, Some(8));
+        assert_eq!(events("checked")[0]["score"], 8);
+    }
+
+    #[test]
+    fn check_fail_reopens_for_redelivery() {
+        let mut j = sub_full(true);
+        deliver_r(&mut j, receipt(&key(1), &request(T1, 1)));
+        score(&mut j, 1, num(3));
+        let v = j.get_job();
+        assert_eq!(v.status, "Open");
+        assert_eq!(v.quality, Some(3));
+        deliver_r(&mut j, receipt(&key(1), &request(T1, 2)));
+        assert_eq!(j.get_job().seq, 2);
+    }
+
+    #[test]
+    #[should_panic(expected = "delivery limit reached")]
+    fn deliveries_are_capped() {
+        let mut j = sub_full(true);
+        for seq in 1..=MAX_DELIVERIES {
+            Ctx::new(T1, WORKER).set();
+            j.deliver("cd".repeat(32), None, None, None);
+            score(&mut j, seq, num(1));
+        }
+        Ctx::new(T1, WORKER).set();
+        j.deliver("cd".repeat(32), None, None, None);
+    }
+
+    #[test]
+    fn check_failure_leaves_delivered() {
+        let mut j = sub_full(true);
+        deliver_r(&mut j, receipt(&key(1), &request(T1, 1)));
+        score(&mut j, 1, PromiseResult::Failed);
+        let v = j.get_job();
+        assert_eq!(v.status, "Delivered");
+        assert_eq!(v.quality, None);
+        assert_eq!(events("check_unavailable").len(), 1);
+        assert_eq!(j.quote_note(), None);
+    }
+
+    #[test]
+    fn out_of_range_score_counts_as_no_answer() {
+        let mut j = sub_full(true);
+        deliver_r(&mut j, receipt(&key(1), &request(T1, 1)));
+        score(&mut j, 1, num(11));
+        assert_eq!(j.get_job().status, "Delivered");
+        assert_eq!(j.get_job().quality, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "stale check")]
+    fn stale_check_answer_refused() {
+        let mut j = sub_full(true);
+        deliver_r(&mut j, receipt(&key(1), &request(T1, 1)));
+        score(&mut j, 2, num(9));
+    }
+
+    #[test]
+    #[should_panic(expected = "callback: caller must be this contract")]
+    fn check_callback_rejects_outside_callers() {
+        let mut j = sub_full(true);
+        deliver_r(&mut j, receipt(&key(1), &request(T1, 1)));
+        Ctx::new(T1, WORKER).results(vec![num(10)]).set();
+        j.on_check(1);
+    }
+
+    #[test]
+    fn no_checker_verified_delivery_is_checked() {
+        let mut j = sub_full(false);
+        deliver_r(&mut j, receipt(&key(1), &request(T1, 1)));
+        let v = j.get_job();
+        assert_eq!(v.status, "Checked");
+        assert_eq!(v.quality, None);
+        assert!(!calls().iter().any(|c| c.1 == "check"));
+    }
+
+    #[test]
+    fn no_checker_unverified_stays_delivered() {
+        let mut j = sub_full(false);
+        Ctx::new(T1, WORKER).set();
+        j.deliver("cd".repeat(32), None, None, None);
+        assert_eq!(j.get_job().status, "Delivered");
+    }
+
+    // ------------------------------------------------ job note
+
+    #[test]
+    fn quote_after_verified_and_checked() {
+        assert_eq!(checked().quote_note(), Some(U128(QUOTE)));
+    }
+
+    #[test]
+    fn quote_none_when_unchecked_or_unverified() {
+        let mut j = sub_full(true);
+        Ctx::new(T1, WORKER).set();
+        j.deliver("cd".repeat(32), None, None, None);
+        score(&mut j, 1, num(9));
+        assert_eq!(j.get_job().status, "Checked");
+        assert_eq!(j.quote_note(), None, "unverified");
+        let mut j = sub_full(true);
+        deliver_r(&mut j, receipt(&key(1), &request(T1, 1)));
+        assert_eq!(j.quote_note(), None, "unchecked");
+    }
+
+    #[test]
+    fn treasury_buys_note_and_worker_is_paid_now() {
+        let mut j = checked();
+        assert!(matches!(
+            buy(&mut j, TREASURY, QUOTE),
+            PromiseOrValue::Promise(_)
+        ));
+        let v = j.get_job();
+        assert_eq!(v.payee, Some(acc(TREASURY)));
+        assert!(v.note_sold);
+        assert!(v.note_pending);
+        assert_eq!(call_args("storage_deposit")["account_id"], WORKER);
+        assert_eq!(transfers(), vec![(WORKER.into(), QUOTE.to_string())]);
+        assert!(calls().contains(&(T1.into(), "on_note_paid".into())));
+        assert_eq!(note_paid(&mut j, ok(b"")), U128(0));
+        let v = j.get_job();
+        assert!(!v.note_pending);
+        assert_eq!(v.ft_balance.0, PAY, "tokens in == tokens out");
+        assert_eq!(j.quote_note(), None);
+        assert_eq!(events("note_sold").len(), 1);
+    }
+
+    #[test]
+    fn bought_note_pays_treasury_at_settle() {
+        let mut j = checked();
+        buy(&mut j, TREASURY, QUOTE);
+        note_paid(&mut j, ok(b""));
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+        assert_eq!(transfers(), vec![(TREASURY.into(), PAY.to_string())]);
+    }
+
+    #[test]
+    fn stranger_cannot_buy_note() {
+        let mut j = checked();
+        assert_eq!(value(buy(&mut j, EVE, QUOTE)), QUOTE);
+        assert!(!j.get_job().note_sold);
+        assert_eq!(j.get_job().payee, Some(acc(WORKER)));
+    }
+
+    #[test]
+    fn lead_itself_cannot_buy_only_its_treasury() {
+        let mut j = checked();
+        assert_eq!(value(buy(&mut j, LEAD, QUOTE)), QUOTE);
+    }
+
+    #[test]
+    fn wrong_price_refunded() {
+        let mut j = checked();
+        assert_eq!(value(buy(&mut j, TREASURY, QUOTE - 1)), QUOTE - 1);
+        assert_eq!(value(buy(&mut j, TREASURY, PAY)), PAY);
+        assert!(!j.get_job().note_sold);
+    }
+
+    #[test]
+    fn unchecked_note_refused() {
+        let mut j = sub_full(true);
+        deliver_r(&mut j, receipt(&key(1), &request(T1, 1)));
+        assert_eq!(value(buy(&mut j, TREASURY, QUOTE)), QUOTE);
+    }
+
+    #[test]
+    fn unverified_note_refused() {
+        let mut j = sub_full(true);
+        Ctx::new(T1, WORKER).set();
+        j.deliver("cd".repeat(32), None, None, None);
+        score(&mut j, 1, num(9));
+        assert_eq!(value(buy(&mut j, TREASURY, QUOTE)), QUOTE);
+    }
+
+    #[test]
+    fn failed_worker_payment_undoes_sale() {
+        let mut j = checked();
+        buy(&mut j, TREASURY, QUOTE);
+        assert_eq!(note_paid(&mut j, PromiseResult::Failed), U128(QUOTE));
+        let v = j.get_job();
+        assert!(!v.note_sold);
+        assert!(!v.note_pending);
+        assert_eq!(v.payee, Some(acc(WORKER)));
+        assert_eq!(j.quote_note(), Some(U128(QUOTE)), "sellable again");
+    }
+
+    #[test]
+    fn second_sale_refused() {
+        let mut j = checked();
+        buy(&mut j, TREASURY, QUOTE);
+        assert_eq!(value(buy(&mut j, TREASURY, QUOTE)), QUOTE, "in flight");
+        note_paid(&mut j, ok(b""));
+        assert_eq!(value(buy(&mut j, TREASURY, QUOTE)), QUOTE, "sold");
+    }
+
+    #[test]
+    #[should_panic(expected = "note sale in flight")]
+    fn settle_waits_for_note_sale() {
+        let mut j = checked();
+        buy(&mut j, TREASURY, QUOTE);
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+    }
+
+    #[test]
+    #[should_panic(expected = "callback: caller must be this contract")]
+    fn note_callback_rejects_outside_callers() {
+        let mut j = checked();
+        buy(&mut j, TREASURY, QUOTE);
+        Ctx::new(T1, EVE).results(vec![ok(b"")]).set();
+        j.on_note_paid(acc(WORKER), U128(QUOTE));
+    }
+
+    // ------------------------------------------------ dispute
+
+    fn disputed() -> Job {
+        let mut j = checked();
+        Ctx::new(T1, LEAD).set();
+        j.dispute();
+        j
+    }
+
+    fn verdict(j: &mut Job, a: PromiseResult, b: PromiseResult) {
+        let attempt = j.dispute_attempt;
+        Ctx::new(T1, T1).results(vec![a, b]).set();
+        j.on_dispute(attempt);
+    }
+
+    #[test]
+    fn manager_disputes_sub_job() {
+        let j = disputed();
+        assert_eq!(j.get_job().status, "Disputed");
+        let panels: Vec<u64> = get_created_receipts()
+            .into_iter()
+            .flat_map(|r| r.actions)
+            .filter_map(|a| match a {
+                MockAction::FunctionCallWeight {
+                    method_name, args, ..
+                } if method_name == b"check" => {
+                    let v: serde_json::Value = serde_json::from_slice(&args).unwrap();
+                    v["panel"].as_u64()
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(panels, vec![1, 2]);
+        assert!(calls().contains(&(T1.into(), "on_dispute".into())));
+    }
+
+    #[test]
+    #[should_panic(expected = "only the manager can dispute")]
+    fn stranger_cannot_dispute() {
+        let mut j = checked();
+        Ctx::new(T1, EVE).set();
+        j.dispute();
+    }
+
+    #[test]
+    #[should_panic(expected = "window is closed")]
+    fn dispute_after_window_refused() {
+        let mut j = checked();
+        Ctx::new(T1, LEAD).at(AFTER).set();
+        j.dispute();
+    }
+
+    #[test]
+    #[should_panic(expected = "already disputed")]
+    fn second_dispute_refused() {
+        let mut j = disputed();
+        verdict(&mut j, num(9), num(9));
+        Ctx::new(T1, LEAD).set();
+        j.dispute();
+    }
+
+    #[test]
+    #[should_panic(expected = "root disputes are not built")]
+    fn root_dispute_not_built() {
+        let mut j = funded_root(USD);
+        Ctx::new(ROOT, CLIENT).set();
+        j.dispute();
+    }
+
+    #[test]
+    fn dispute_upheld_refunds_parent_at_settle() {
+        let mut j = disputed();
+        verdict(&mut j, num(2), num(4));
+        assert_eq!(j.get_job().status, "Refunded");
+        assert_eq!(events("dispute_decided")[0]["upheld"], true);
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+        assert_eq!(transfers(), vec![(ROOT.into(), PAY.to_string())]);
+    }
+
+    #[test]
+    fn dispute_rejected_back_to_checked() {
+        let mut j = disputed();
+        verdict(&mut j, num(2), num(9));
+        assert_eq!(j.get_job().status, "Checked");
+        assert_eq!(events("dispute_decided")[0]["upheld"], false);
+    }
+
+    #[test]
+    fn missing_votes_never_uphold() {
+        let mut j = disputed();
+        verdict(&mut j, PromiseResult::Failed, num(1));
+        assert_eq!(j.get_job().status, "Checked");
+    }
+
+    #[test]
+    fn dispute_after_own_note_purchase_only_hurts_treasury() {
+        let mut j = checked();
+        buy(&mut j, TREASURY, QUOTE);
+        note_paid(&mut j, ok(b""));
+        Ctx::new(T1, LEAD).set();
+        j.dispute();
+        verdict(&mut j, num(0), num(0));
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+        // The worker keeps the 29.7 it was paid; the treasury gets nothing;
+        // the pay returns up the tree.
+        assert_eq!(transfers(), vec![(ROOT.into(), PAY.to_string())]);
+    }
+
+    #[test]
+    #[should_panic(expected = "note sale in flight")]
+    fn dispute_waits_for_note_sale() {
+        let mut j = checked();
+        buy(&mut j, TREASURY, QUOTE);
+        Ctx::new(T1, LEAD).set();
+        j.dispute();
+    }
+
+    #[test]
+    fn stuck_dispute_resumes_as_rejected() {
+        let mut j = disputed();
+        let old = j.dispute_attempt;
+        Ctx::new(T1, EVE)
+            .at(T0 + (RESUME_AFTER_SECS + 1) * NS_PER_SEC)
+            .set();
+        j.resume_dispute();
+        assert_eq!(j.get_job().status, "Checked");
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            Ctx::new(T1, T1).results(vec![num(0), num(0)]).set();
+            j.on_dispute(old);
+        }));
+        assert!(r.is_err(), "late verdict refused");
+    }
+
+    #[test]
+    #[should_panic(expected = "dispute is not stuck yet")]
+    fn resume_dispute_too_early() {
+        let mut j = disputed();
+        Ctx::new(T1, EVE).set();
+        j.resume_dispute();
+    }
+
+    #[test]
+    fn hire_passes_checker_and_treasury_down() {
+        Ctx::new(ROOT, FACTORY).set();
+        let mut r = Job::new(
+            Some(acc(CLIENT)),
+            acc(LEAD),
+            None,
+            acc(TOKEN),
+            U128(0),
+            spec(),
+            WINDOW,
+            signer(),
+            code_hash(),
+            Some(acc(CHECKER)),
+            Some(acc(TREASURY)),
+        );
+        Ctx::new(ROOT, TOKEN).set();
+        r.ft_on_transfer(acc(CLIENT), U128(100 * USD), "fund".into());
+        Ctx::new(ROOT, LEAD).set();
+        r.hire(acc(WORKER), U128(USD), spec(), None);
+        let a = call_args("new");
+        assert_eq!(a["checker"], CHECKER);
+        assert_eq!(a["treasury"], TREASURY);
+    }
 }
