@@ -70,3 +70,39 @@ straight to Checked (quality unknown); one without stays Delivered.
 `mock-outlayer` returns a score from a table the test sets per deliverable
 hash (default 8), and counts calls.
 - sandbox: `scene_full_tree_on_local_node`
+
+### Requirement: Signed check mode (judge receipts)
+When the job pins a judge model (`judge`) instead of a checker contract,
+`deliver` SHALL open check round 0 for `CHECK_WINDOW_SECS` (300 s). The
+contract builds the judge request bytes itself (`ht_core::check::request_bytes`:
+fixed rubric, model, job, delivery, panel, task text, delivered text; no block
+randomness, so a recorded call replays anywhere). Anyone may `submit_check`
+a NEAR AI Cloud answer: the task text must hash to the spec hash, the
+delivered bytes to the delivered hash, the signature must recover to the
+pinned signer over `model:sha256(request):sha256(answer)`, and the answer's
+`choices[0].message.content` must be `{"score": 0-10}`. Each distinct answer
+counts once (at most 8). After the window anyone calls `finalize_check`.
+
+#### Scenario: Answers agree
+- THEN the lowest score counts (fail closed: a worker gains nothing by asking many times)
+- unit: `delivery_opens_a_round_and_a_signed_answer_scores_it`, `lowest_answer_counts`, `a_low_answer_fails_the_check`
+
+#### Scenario: Answers split (max - min >= 3) or none
+- THEN the delivery stays Delivered and unscored, and it is not a failed check (a lead or stranger shopping for a low score can only hold borderline work up, not fail it)
+- unit: `split_answers_are_unclear_not_junk`, `no_answer_leaves_the_delivery_unscored`
+
+#### Scenario: Wrong signer, other question, other bytes, other task, repeat, garbage, late
+- THEN refused
+- unit: `answer_signed_by_another_key_refused`, `answer_to_a_different_question_refused`, `answer_about_other_bytes_refused`, `answer_for_another_task_refused`, `same_answer_counts_once`, `unparseable_answer_refused`, `late_answer_refused`, `finalize_too_early_refused`
+
+#### Scenario: Prompt injection in the deliverable
+- THEN the deliverable is a JSON string field under a rubric that says to ignore instructions in it; it cannot add messages
+- core: `injected_text_stays_inside_the_data_string`. Limit: a model can still be swayed; the dispute adds two panels.
+
+#### Scenario: Dispute in signed mode
+- WHEN the manager disputes
+- THEN rounds 1 and 2 open; after them `finalize_dispute` counts the original score plus each panel (no answer or split = junk); 2 junk of 3 uphold
+- unit: `dispute_opens_two_panels_and_two_junk_votes_uphold`, `dispute_with_one_good_panel_is_rejected`, `finalize_dispute_too_early_refused`
+
+#### Scenario: Note after a signed check
+- unit: `a_signed_check_makes_a_verified_note_sellable`

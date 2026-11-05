@@ -21,6 +21,7 @@
 //! `#[private]` and also assert the caller, checked math everywhere.
 
 use ht_core::binding::{check_binding, parse_addr20_hex, parse_hash32_hex};
+use ht_core::check::{self as judgecheck, Outcome, Tally, MAX_ANSWERS, MAX_TASK_BYTES};
 use ht_core::receipt::{parse_signature, signed_text_from_hashes, MAX_MODEL_LEN};
 use ht_core::{transition, Event, Ledger, Split, Status};
 use near_sdk::json_types::{Base58CryptoHash, Base64VecU8, U128, U64};
@@ -105,6 +106,51 @@ pub const GAS_DISPUTE_MIN: Gas = Gas::from_tgas(130);
 pub const GAS_BUY_MIN: Gas = Gas::from_tgas(60);
 /// Largest response a delivery may carry to the checker.
 pub const MAX_RESPONSE_BYTES: usize = 16 * 1024;
+/// How long a signed check round takes answers (then `finalize_check`).
+pub const CHECK_WINDOW_SECS: u64 = 300;
+
+/// One signed-check round: panel 0 checks a delivery, panels 1 and 2 are a
+/// dispute's extra votes.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CheckRound {
+    pub panel: u8,
+    pub seq: u32,
+    pub since_ns: U64,
+    pub min: u8,
+    pub max: u8,
+    pub count: u8,
+    /// sha256 of each counted answer, so one answer counts once.
+    pub seen: Vec<String>,
+}
+
+impl CheckRound {
+    fn new(panel: u8, seq: u32) -> Self {
+        Self {
+            panel,
+            seq,
+            since_ns: U64(env::block_timestamp()),
+            min: 0,
+            max: 0,
+            count: 0,
+            seen: Vec::new(),
+        }
+    }
+    fn tally(&self) -> Tally {
+        Tally {
+            min: self.min,
+            max: self.max,
+            count: self.count,
+        }
+    }
+    fn closed(&self) -> bool {
+        env::block_timestamp()
+            >= self
+                .since_ns
+                .0
+                .saturating_add(CHECK_WINDOW_SECS * NS_PER_SEC)
+    }
+}
 
 /// Largest promise result we read (a U128 JSON string is ~42 bytes).
 const MAX_RESULT_LEN: usize = 128;
@@ -196,6 +242,8 @@ pub struct JobView {
     pub disputed: bool,
     pub check_pending: bool,
     pub failed_checks: u32,
+    pub judge: Option<String>,
+    pub rounds: Vec<CheckRound>,
 }
 
 #[near(contract_state)]
@@ -255,6 +303,11 @@ pub struct Job {
     delivered: Vec<[u8; 32]>,
     note_since_ns: u64,
     note_price: u128,
+    /// Signed-check mode: the pinned judge model. Checks are NEAR AI
+    /// receipts for a request this contract builds (see `submit_check`).
+    judge: Option<String>,
+    /// Open signed-check rounds.
+    rounds: Vec<CheckRound>,
 }
 
 fn emit(event: &str, data: serde_json::Value) {
@@ -307,7 +360,18 @@ impl Job {
         code_hash: Base58CryptoHash,
         checker: Option<AccountId>,
         treasury: Option<AccountId>,
+        judge: Option<String>,
     ) -> Self {
+        require!(
+            !(checker.is_some() && judge.is_some()),
+            "pin a checker contract or a judge model, not both"
+        );
+        if let Some(m) = &judge {
+            require!(
+                !m.is_empty() && m.len() <= MAX_MODEL_LEN,
+                "judge model name must be 1-128 bytes"
+            );
+        }
         let parent = env::predecessor_account_id();
         let me = env::current_account_id();
         require!(
@@ -381,6 +445,8 @@ impl Job {
             delivered: Vec::new(),
             note_since_ns: 0,
             note_price: 0,
+            judge,
+            rounds: Vec::new(),
         };
         emit(
             "job_created",
@@ -664,6 +730,7 @@ impl Job {
             "code_hash": Base58CryptoHash::from(self.code_hash),
             "checker": self.checker,
             "treasury": self.treasury,
+            "judge": self.judge,
         });
         // The job keeps HIRE_KEEP_NEAR (child's token registration + its own
         // child record); the rest is the child's storage.
@@ -987,6 +1054,14 @@ impl Job {
                             .on_check(seq),
                     ),
             ),
+            None if self.judge.is_some() => {
+                // Signed-check mode: open round 0; anyone submits answers.
+                self.check_pending = true;
+                self.check_since_ns = env::block_timestamp();
+                self.rounds = vec![CheckRound::new(0, seq)];
+                emit("check_open", json!({ "seq": seq, "panel": 0 }));
+                PromiseOrValue::Value(verified)
+            }
             None => {
                 // Receipt-only mode: a verified receipt is the check.
                 if verified {
@@ -1054,7 +1129,11 @@ impl Job {
             "stale check answer"
         );
         self.check_pending = false;
-        match Self::score_at(0) {
+        self.apply_score(seq, Self::score_at(0))
+    }
+
+    fn apply_score(&mut self, seq: u32, score: Option<u8>) -> bool {
+        match score {
             None => {
                 emit("check_unavailable", json!({ "seq": seq }));
                 false
@@ -1086,6 +1165,10 @@ impl Job {
     pub fn resume_check(&mut self) -> bool {
         require!(self.check_pending, "no check pending");
         require!(
+            self.judge.is_none(),
+            "signed checks finish with finalize_check"
+        );
+        require!(
             env::block_timestamp()
                 >= self
                     .check_since_ns
@@ -1105,7 +1188,7 @@ impl Job {
     /// Manager only, on a sub-job, inside the window, once. Two more checks
     /// (panels 1 and 2) run; with the original score, 2 junk votes of 3
     /// uphold the dispute and the pay goes back to the parent at settle.
-    pub fn dispute(&mut self, resp: Base64VecU8) -> Promise {
+    pub fn dispute(&mut self, resp: Base64VecU8) -> PromiseOrValue<bool> {
         require!(
             !self.root,
             "root disputes are not built (cut, plan section 11)"
@@ -1126,22 +1209,29 @@ impl Job {
             env::prepaid_gas() >= GAS_DISPUTE_MIN,
             "not enough gas for dispute (attach at least 130 Tgas)"
         );
-        let checker = self
-            .checker
-            .clone()
-            .unwrap_or_else(|| env::panic_str("no checker pinned: disputes need one"));
+        require!(
+            self.checker.is_some() || self.judge.is_some(),
+            "no checker pinned: disputes need one"
+        );
         self.status = transition(self.status, Event::Dispute).unwrap_or_else(|e| fail(e));
         self.disputed = true;
         self.dispute_attempt += 1;
         self.dispute_since_ns = Some(env::block_timestamp());
         emit("disputed", json!({ "by": self.manager, "seq": self.seq }));
-        self.check_call(&checker, 1, &resp.0)
-            .and(self.check_call(&checker, 2, &resp.0))
-            .then(
-                Self::ext(env::current_account_id())
-                    .with_static_gas(GAS_ON_DISPUTE)
-                    .on_dispute(self.dispute_attempt),
-            )
+        let Some(checker) = self.checker.clone() else {
+            // Signed-check mode: two more rounds; `finalize_dispute` decides.
+            self.rounds = vec![CheckRound::new(1, self.seq), CheckRound::new(2, self.seq)];
+            return PromiseOrValue::Value(true);
+        };
+        PromiseOrValue::Promise(
+            self.check_call(&checker, 1, &resp.0)
+                .and(self.check_call(&checker, 2, &resp.0))
+                .then(
+                    Self::ext(env::current_account_id())
+                        .with_static_gas(GAS_ON_DISPUTE)
+                        .on_dispute(self.dispute_attempt),
+                ),
+        )
     }
 
     #[private]
@@ -1175,6 +1265,10 @@ impl Job {
     /// closed: the worker gains nothing by stalling the checker).
     pub fn resume_dispute(&mut self) -> bool {
         require!(self.status == Status::Disputed, "not disputed");
+        require!(
+            self.judge.is_none(),
+            "signed disputes finish with finalize_dispute"
+        );
         let since = self
             .dispute_since_ns
             .unwrap_or_else(|| env::panic_str("no dispute in flight"));
@@ -1184,6 +1278,167 @@ impl Job {
         );
         self.dispute_attempt += 1;
         self.decide_dispute(true, &[self.quality, None, None])
+    }
+
+    // ------------------------------------------------------------ signed check
+
+    /// The exact request body a judge call for `panel` must send to NEAR AI
+    /// Cloud. `task` is the task text (its sha256 is the spec hash) and
+    /// `deliverable` the delivered bytes. Anyone may call this view.
+    pub fn check_request(&self, panel: u8, task: String, deliverable: Base64VecU8) -> Base64VecU8 {
+        Base64VecU8(self.build_check_request(panel, &task, &deliverable.0))
+    }
+
+    fn build_check_request(&self, panel: u8, task: &str, deliverable: &[u8]) -> Vec<u8> {
+        let model = self
+            .judge
+            .as_ref()
+            .unwrap_or_else(|| env::panic_str("no judge model pinned"));
+        require!(
+            task.len() <= MAX_TASK_BYTES,
+            "task text is larger than 4 KB"
+        );
+        require!(
+            env::sha256_array(task.as_bytes()) == self.spec_hash,
+            "task text does not match the spec hash"
+        );
+        require!(
+            deliverable.len() <= MAX_RESPONSE_BYTES,
+            "deliverable is larger than 16 KB"
+        );
+        require!(
+            self.deliverable_hash == Some(env::sha256_array(deliverable)),
+            "deliverable does not match the delivered hash"
+        );
+        let text = std::str::from_utf8(deliverable)
+            .unwrap_or_else(|_| env::panic_str("deliverable is not UTF-8 text"));
+        judgecheck::request_bytes(
+            model,
+            env::current_account_id().as_str(),
+            self.seq,
+            panel,
+            task,
+            text,
+        )
+    }
+
+    /// Anyone, while a round is open: a NEAR AI Cloud answer to the request
+    /// from `check_request`. The contract rebuilds the request bytes itself,
+    /// checks the signature over `model:sha256(request):sha256(answer)`
+    /// against the pinned signer, and counts the score once per distinct
+    /// answer. Returns the score counted.
+    pub fn submit_check(
+        &mut self,
+        panel: u8,
+        task: String,
+        deliverable: Base64VecU8,
+        answer: Base64VecU8,
+        sig: String,
+    ) -> u8 {
+        let i = self
+            .rounds
+            .iter()
+            .position(|r| r.panel == panel && r.seq == self.seq)
+            .unwrap_or_else(|| env::panic_str("no open check round for this panel"));
+        require!(!self.rounds[i].closed(), "check round is closed");
+        require!(
+            (self.rounds[i].count as usize) < MAX_ANSWERS as usize,
+            "check round is full"
+        );
+        require!(answer.0.len() <= 4 * 1024, "answer is larger than 4 KB");
+        let req = self.build_check_request(panel, &task, &deliverable.0);
+        let ans_hash = env::sha256_array(&answer.0);
+        let key = hex_of(&ans_hash);
+        require!(
+            !self.rounds[i].seen.contains(&key),
+            "this answer was already counted"
+        );
+        let model = self.judge.clone().unwrap_or_default();
+        self.verify_signed(&req, &ans_hash, &sig, &model);
+        let content = serde_json::from_slice::<serde_json::Value>(&answer.0)
+            .ok()
+            .and_then(|v| {
+                v["choices"][0]["message"]["content"]
+                    .as_str()
+                    .map(String::from)
+            })
+            .unwrap_or_else(|| env::panic_str("answer has no choices[0].message.content"));
+        let score = judgecheck::parse_score(&content)
+            .unwrap_or_else(|| env::panic_str("answer is not {\"score\": 0-10}"));
+        let r = &mut self.rounds[i];
+        let mut t = r.tally();
+        t.add(score);
+        r.min = t.min;
+        r.max = t.max;
+        r.count = t.count;
+        r.seen.push(key);
+        emit(
+            "check_answer",
+            json!({ "panel": panel, "seq": self.seq, "score": score, "by": env::predecessor_account_id() }),
+        );
+        score
+    }
+
+    fn round_outcome(&self, panel: u8) -> Outcome {
+        self.rounds
+            .iter()
+            .find(|r| r.panel == panel && r.seq == self.seq)
+            .map(|r| r.tally().outcome())
+            .unwrap_or(Outcome::NoAnswer)
+    }
+
+    /// Anyone, after the delivery's round closed. Lowest answer counts;
+    /// answers 3+ apart, or none, leave the delivery unscored (paid only if
+    /// the manager approves; not counted as a failed check).
+    pub fn finalize_check(&mut self) -> bool {
+        require!(self.judge.is_some(), "not in signed-check mode");
+        require!(self.check_pending, "no check pending");
+        let r = self
+            .rounds
+            .iter()
+            .find(|r| r.panel == 0 && r.seq == self.seq)
+            .unwrap_or_else(|| env::panic_str("no open check round"));
+        require!(r.closed(), "check round is still open");
+        let outcome = r.tally().outcome();
+        self.check_pending = false;
+        self.rounds.clear();
+        let seq = self.seq;
+        match outcome {
+            Outcome::Score(s) => self.apply_score(seq, Some(s)),
+            Outcome::Unclear => {
+                emit("check_unclear", json!({ "seq": seq }));
+                false
+            }
+            Outcome::NoAnswer => self.apply_score(seq, None),
+        }
+    }
+
+    /// Anyone, after the dispute rounds closed. Votes: the original score
+    /// and panels 1 and 2; a panel with no answer or split answers counts as
+    /// junk (fail closed). Two junk votes of three uphold the dispute.
+    pub fn finalize_dispute(&mut self) -> bool {
+        require!(self.judge.is_some(), "not in signed-check mode");
+        require!(self.status == Status::Disputed, "not disputed");
+        require!(
+            self.rounds.iter().all(|r| r.closed()),
+            "dispute rounds are still open"
+        );
+        let vote = |o: Outcome| match o {
+            Outcome::Score(s) => Some(s),
+            _ => None,
+        };
+        let votes = vec![
+            self.quality,
+            vote(self.round_outcome(1)),
+            vote(self.round_outcome(2)),
+        ];
+        let junk = votes
+            .iter()
+            .filter(|v| !matches!(v, Some(s) if *s >= PASS_SCORE))
+            .count();
+        self.rounds.clear();
+        self.dispute_attempt += 1;
+        self.decide_dispute(junk >= 2, &votes)
     }
 
     fn decide_dispute(&mut self, upheld: bool, votes: &[Option<u8>]) -> bool {
@@ -1214,6 +1469,12 @@ impl Job {
         if let Err(e) = check_binding(req, me.as_str(), &self.spec_hash, seq) {
             env::panic_str(&format!("receipt: {e}"));
         }
+        self.verify_signed(req, resp_hash, sig, model);
+    }
+
+    /// Panics unless `sig` signs `model:sha256(req):resp_hash` (EIP-191,
+    /// low-s) with the pinned NEAR AI Cloud key.
+    fn verify_signed(&self, req: &[u8], resp_hash: &[u8; 32], sig: &str, model: &str) {
         let sig = parse_signature(sig).unwrap_or_else(|e| fail(e));
         let req_hash: [u8; 32] = env::sha256_array(req);
         let text = signed_text_from_hashes(model, &req_hash, resp_hash);
@@ -1235,7 +1496,7 @@ impl Job {
         // clean record: no failed check on any delivery of this job.
         if self.note_pending
             || self.treasury.is_none()
-            || self.checker.is_none()
+            || (self.checker.is_none() && self.judge.is_none())
             || self.failed_checks > 0
         {
             return None;
@@ -1811,6 +2072,8 @@ impl Job {
             disputed: self.disputed,
             check_pending: self.check_pending,
             failed_checks: self.failed_checks,
+            judge: self.judge.clone(),
+            rounds: self.rounds.clone(),
         }
     }
 }

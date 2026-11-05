@@ -171,6 +171,7 @@ fn new_root() -> Job {
         code_hash(),
         None,
         None,
+        None,
     )
 }
 
@@ -196,6 +197,7 @@ fn new_sub(pay: u128) -> Job {
         WINDOW,
         signer(),
         code_hash(),
+        None,
         None,
         None,
     )
@@ -283,6 +285,7 @@ fn init_must_be_called_by_parent_account() {
         code_hash(),
         None,
         None,
+        None,
     );
 }
 
@@ -298,6 +301,7 @@ fn root_with_fee(fee: u128) -> Job {
         WINDOW,
         signer(),
         code_hash(),
+        None,
         None,
         None,
     )
@@ -353,6 +357,7 @@ fn client_and_worker_both_refused() {
         code_hash(),
         None,
         None,
+        None,
     );
 }
 
@@ -370,6 +375,7 @@ fn bad_spec_hash_refused() {
         WINDOW,
         signer(),
         code_hash(),
+        None,
         None,
         None,
     );
@@ -391,6 +397,7 @@ fn bad_signer_refused() {
         code_hash(),
         None,
         None,
+        None,
     );
 }
 
@@ -408,6 +415,7 @@ fn window_too_long_refused() {
         MAX_WINDOW_SECS + 1,
         signer(),
         code_hash(),
+        None,
         None,
         None,
     );
@@ -971,6 +979,7 @@ mod receipt_tests {
             WINDOW,
             addr_hex(&key(1)),
             code_hash(),
+            None,
             None,
             None,
         );
@@ -1868,6 +1877,7 @@ fn two_level_tree_folds_bottom_up() {
         code_hash(),
         None,
         None,
+        None,
     );
     Ctx::new(GC, TOKEN).set();
     gc.ft_on_transfer(acc(T1), U128(8 * USD), "fund".into());
@@ -1930,6 +1940,7 @@ mod check_note_dispute {
             code_hash(),
             checker.then(|| acc(CHECKER)),
             Some(acc(TREASURY)),
+            None,
         );
         Ctx::new(T1, TOKEN).set();
         j.ft_on_transfer(acc(ROOT), U128(PAY), "fund".into());
@@ -2360,6 +2371,7 @@ mod check_note_dispute {
             code_hash(),
             Some(acc(CHECKER)),
             Some(acc(TREASURY)),
+            None,
         );
         Ctx::new(ROOT, TOKEN).set();
         r.ft_on_transfer(acc(CLIENT), U128(100 * USD), "fund".into());
@@ -2692,5 +2704,369 @@ mod stuck_hire {
                     + GAS_ON_NOTE_PAID.as_gas()
                     + Gas::from_tgas(10).as_gas()
         );
+    }
+}
+
+// ================================================================ signed check
+
+mod signed_check {
+    use super::check_note_dispute::{CHECKER, TREASURY};
+    use super::receipt_tests::{addr_hex, key, sign, MODEL};
+    use super::*;
+    use ht_core::check::request_bytes;
+    use ht_core::receipt::{sha256, sha256_hex};
+
+    pub const TASK: &str = "Translate to Spanish: global contracts are deployed once";
+    const DELIVERED: &[u8] = b"los contratos globales se despliegan una vez";
+    const PAY: u128 = 30 * USD;
+    const CHECK_DONE: u64 = T0 + (CHECK_WINDOW_SECS + 1) * NS_PER_SEC;
+
+    fn task_spec() -> String {
+        hex::encode(sha256(TASK.as_bytes()))
+    }
+
+    /// A funded sub-job in signed-check mode; signer = key(1).
+    pub fn judged_sub() -> Job {
+        Ctx::new(T1, ROOT).set();
+        let mut j = Job::new(
+            None,
+            acc(LEAD),
+            Some(acc(WORKER)),
+            acc(TOKEN),
+            U128(PAY),
+            task_spec(),
+            WINDOW,
+            addr_hex(&key(1)),
+            code_hash(),
+            None,
+            Some(acc(TREASURY)),
+            Some(MODEL.into()),
+        );
+        Ctx::new(T1, TOKEN).set();
+        j.ft_on_transfer(acc(ROOT), U128(PAY), "fund".into());
+        j
+    }
+
+    fn deliver(j: &mut Job, bytes: &[u8]) {
+        Ctx::new(T1, WORKER).set();
+        j.deliver(hex::encode(sha256(bytes)), None, None, None, None);
+    }
+
+    /// A NEAR AI answer `{"score": n}` (plus `salt` to make it distinct),
+    /// signed by `k` over the request the contract builds.
+    fn answer(
+        k: u8,
+        j: &Job,
+        panel: u8,
+        bytes: &[u8],
+        score: &str,
+        salt: &str,
+    ) -> (Base64VecU8, String) {
+        let req = request_bytes(
+            MODEL,
+            T1,
+            j.seq,
+            panel,
+            TASK,
+            std::str::from_utf8(bytes).unwrap(),
+        );
+        let ans = format!(
+            "{{\"id\":\"{salt}\",\"choices\":[{{\"message\":{{\"content\":\"{score}\"}}}}]}}"
+        )
+        .into_bytes();
+        let text = format!("{MODEL}:{}:{}", sha256_hex(&req), sha256_hex(&ans));
+        (Base64VecU8(ans), sign(&key(k), &text))
+    }
+
+    fn submit(j: &mut Job, who: &str, panel: u8, bytes: &[u8], a: (Base64VecU8, String)) -> u8 {
+        Ctx::new(T1, who).set();
+        j.submit_check(panel, TASK.into(), Base64VecU8(bytes.to_vec()), a.0, a.1)
+    }
+
+    fn finalize(j: &mut Job) -> bool {
+        Ctx::new(T1, EVE).at(CHECK_DONE).set();
+        j.finalize_check()
+    }
+
+    #[test]
+    fn delivery_opens_a_round_and_a_signed_answer_scores_it() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        assert!(j.get_job().check_pending);
+        let a = answer(1, &j, 0, DELIVERED, "{\\\"score\\\": 8}", "a");
+        assert_eq!(submit(&mut j, EVE, 0, DELIVERED, a), 8);
+        assert!(finalize(&mut j));
+        let v = j.get_job();
+        assert_eq!(v.status, "Checked");
+        assert_eq!(v.quality, Some(8));
+        assert!(!v.check_pending);
+    }
+
+    #[test]
+    fn view_returns_the_exact_request_to_send() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        let r = j.check_request(0, TASK.into(), Base64VecU8(DELIVERED.to_vec()));
+        assert_eq!(
+            r.0,
+            request_bytes(
+                MODEL,
+                T1,
+                1,
+                0,
+                TASK,
+                std::str::from_utf8(DELIVERED).unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn lowest_answer_counts() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        let a = answer(1, &j, 0, DELIVERED, "8", "a");
+        submit(&mut j, WORKER, 0, DELIVERED, a);
+        let b = answer(1, &j, 0, DELIVERED, "7", "b");
+        submit(&mut j, LEAD, 0, DELIVERED, b);
+        finalize(&mut j);
+        assert_eq!(j.get_job().quality, Some(7));
+    }
+
+    #[test]
+    fn split_answers_are_unclear_not_junk() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        let a = answer(1, &j, 0, DELIVERED, "8", "a");
+        submit(&mut j, WORKER, 0, DELIVERED, a);
+        let b = answer(1, &j, 0, DELIVERED, "2", "b");
+        submit(&mut j, LEAD, 0, DELIVERED, b);
+        assert!(!finalize(&mut j));
+        let v = j.get_job();
+        assert_eq!(v.status, "Delivered", "unscored");
+        assert_eq!(v.quality, None);
+        assert_eq!(v.failed_checks, 0, "an unclear check is not a failed one");
+    }
+
+    #[test]
+    fn a_low_answer_fails_the_check() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        let a = answer(1, &j, 0, DELIVERED, "3", "a");
+        submit(&mut j, EVE, 0, DELIVERED, a);
+        finalize(&mut j);
+        let v = j.get_job();
+        assert_eq!(v.status, "Open");
+        assert_eq!(v.failed_checks, 1);
+    }
+
+    #[test]
+    fn no_answer_leaves_the_delivery_unscored() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        assert!(!finalize(&mut j));
+        assert_eq!(j.get_job().status, "Delivered");
+    }
+
+    #[test]
+    #[should_panic(expected = "receipt: signer is not the pinned NEAR AI Cloud key")]
+    fn answer_signed_by_another_key_refused() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        let a = answer(2, &j, 0, DELIVERED, "9", "a");
+        submit(&mut j, WORKER, 0, DELIVERED, a);
+    }
+
+    #[test]
+    #[should_panic(expected = "receipt: signer is not the pinned NEAR AI Cloud key")]
+    fn answer_to_a_different_question_refused() {
+        // Signed for panel 1's request, submitted as panel 0.
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        let a = answer(1, &j, 1, DELIVERED, "9", "a");
+        submit(&mut j, WORKER, 0, DELIVERED, a);
+    }
+
+    #[test]
+    #[should_panic(expected = "deliverable does not match the delivered hash")]
+    fn answer_about_other_bytes_refused() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        let a = answer(1, &j, 0, b"something better", "9", "a");
+        submit(&mut j, WORKER, 0, b"something better", a);
+    }
+
+    #[test]
+    #[should_panic(expected = "task text does not match the spec hash")]
+    fn answer_for_another_task_refused() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        Ctx::new(T1, WORKER).set();
+        j.submit_check(
+            0,
+            "an easier task".into(),
+            Base64VecU8(DELIVERED.to_vec()),
+            Base64VecU8(b"{}".to_vec()),
+            "00".repeat(65),
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "this answer was already counted")]
+    fn same_answer_counts_once() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        let a = answer(1, &j, 0, DELIVERED, "3", "a");
+        submit(&mut j, LEAD, 0, DELIVERED, a.clone());
+        submit(&mut j, LEAD, 0, DELIVERED, a);
+    }
+
+    #[test]
+    #[should_panic(expected = "answer is not")]
+    fn unparseable_answer_refused() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        let a = answer(1, &j, 0, DELIVERED, "great work, 10/10", "a");
+        submit(&mut j, WORKER, 0, DELIVERED, a);
+    }
+
+    #[test]
+    #[should_panic(expected = "check round is closed")]
+    fn late_answer_refused() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        let a = answer(1, &j, 0, DELIVERED, "9", "a");
+        Ctx::new(T1, WORKER).at(CHECK_DONE).set();
+        j.submit_check(0, TASK.into(), Base64VecU8(DELIVERED.to_vec()), a.0, a.1);
+    }
+
+    #[test]
+    #[should_panic(expected = "check round is still open")]
+    fn finalize_too_early_refused() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        Ctx::new(T1, EVE).set();
+        j.finalize_check();
+    }
+
+    #[test]
+    #[should_panic(expected = "check pending")]
+    fn settle_waits_for_the_round() {
+        let mut j = judged_sub();
+        Ctx::new(T1, WORKER).at(AFTER - 10 * NS_PER_SEC).set();
+        j.deliver(hex::encode(sha256(DELIVERED)), None, None, None, None);
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+    }
+
+    #[test]
+    #[should_panic(expected = "signed checks finish with finalize_check")]
+    fn resume_check_is_not_for_signed_mode() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        Ctx::new(T1, EVE)
+            .at(T0 + (RESUME_AFTER_SECS + 1) * NS_PER_SEC)
+            .set();
+        j.resume_check();
+    }
+
+    #[test]
+    #[should_panic(expected = "pin a checker contract or a judge model, not both")]
+    fn checker_and_judge_together_refused() {
+        Ctx::new(T1, ROOT).set();
+        Job::new(
+            None,
+            acc(LEAD),
+            Some(acc(WORKER)),
+            acc(TOKEN),
+            U128(PAY),
+            task_spec(),
+            WINDOW,
+            addr_hex(&key(1)),
+            code_hash(),
+            Some(acc(CHECKER)),
+            None,
+            Some(MODEL.into()),
+        );
+    }
+
+    fn checked_judged() -> Job {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        let a = answer(1, &j, 0, DELIVERED, "7", "a");
+        submit(&mut j, EVE, 0, DELIVERED, a);
+        finalize(&mut j);
+        assert_eq!(j.get_job().status, "Checked");
+        j
+    }
+
+    fn dispute_done(j: &mut Job) -> bool {
+        Ctx::new(T1, EVE)
+            .at(T0 + (2 * CHECK_WINDOW_SECS + 2) * NS_PER_SEC)
+            .set();
+        j.finalize_dispute()
+    }
+
+    #[test]
+    fn dispute_opens_two_panels_and_two_junk_votes_uphold() {
+        let mut j = checked_judged();
+        Ctx::new(T1, LEAD).at(CHECK_DONE).set();
+        j.dispute(Base64VecU8(DELIVERED.to_vec()));
+        assert_eq!(j.get_job().rounds.len(), 2);
+        for (p, s) in [(1u8, "2"), (2, "3")] {
+            let a = answer(1, &j, p, DELIVERED, s, "x");
+            Ctx::new(T1, LEAD).at(CHECK_DONE).set();
+            j.submit_check(p, TASK.into(), Base64VecU8(DELIVERED.to_vec()), a.0, a.1);
+        }
+        assert!(dispute_done(&mut j));
+        assert_eq!(j.get_job().status, "Refunded");
+    }
+
+    #[test]
+    fn dispute_with_one_good_panel_is_rejected() {
+        let mut j = checked_judged();
+        Ctx::new(T1, LEAD).at(CHECK_DONE).set();
+        j.dispute(Base64VecU8(DELIVERED.to_vec()));
+        let a = answer(1, &j, 1, DELIVERED, "8", "x");
+        Ctx::new(T1, WORKER).at(CHECK_DONE).set();
+        j.submit_check(1, TASK.into(), Base64VecU8(DELIVERED.to_vec()), a.0, a.1);
+        // Panel 2 gets no answer: junk. Votes 7, 8, junk: rejected.
+        assert!(!dispute_done(&mut j));
+        assert_eq!(j.get_job().status, "Checked");
+    }
+
+    #[test]
+    #[should_panic(expected = "dispute rounds are still open")]
+    fn finalize_dispute_too_early_refused() {
+        let mut j = checked_judged();
+        Ctx::new(T1, LEAD).at(CHECK_DONE).set();
+        j.dispute(Base64VecU8(DELIVERED.to_vec()));
+        Ctx::new(T1, EVE).at(CHECK_DONE + NS_PER_SEC).set();
+        j.finalize_dispute();
+    }
+
+    #[test]
+    fn a_signed_check_makes_a_verified_note_sellable() {
+        // Receipt from the worker's own NEAR AI call (bound to t1, delivery 1),
+        // then a passing signed check: the note has a quote.
+        let mut j = judged_sub();
+        let resp = DELIVERED;
+        let req = format!(
+            "{{\"model\":\"{MODEL}\",\"messages\":[{{\"role\":\"user\",\"content\":\"HT1:{T1}:{}:1 {TASK}\"}}]}}",
+            task_spec()
+        )
+        .into_bytes();
+        let text = format!("{MODEL}:{}:{}", sha256_hex(&req), sha256_hex(resp));
+        Ctx::new(T1, WORKER).set();
+        j.deliver(
+            hex::encode(sha256(resp)),
+            Some(Base64VecU8(req)),
+            Some(sign(&key(1), &text)),
+            Some(MODEL.into()),
+            None,
+        );
+        let a = answer(1, &j, 0, DELIVERED, "8", "a");
+        submit(&mut j, EVE, 0, DELIVERED, a);
+        finalize(&mut j);
+        assert_eq!(j.quote_note(), Some(U128(PAY - PAY / 100)));
     }
 }

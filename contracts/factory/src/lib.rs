@@ -68,6 +68,9 @@ pub struct Factory {
     code_hash: [u8; 32],
     signer: String,
     checker: Option<AccountId>,
+    /// Signed-check mode: the judge model new jobs pin (instead of a
+    /// checker contract).
+    judge: Option<String>,
     next: u32,
     jobs: LookupMap<u32, Posted>,
     /// Prepaid NEAR per client, in yocto.
@@ -100,6 +103,7 @@ impl Factory {
             code_hash: code_hash.into(),
             signer,
             checker,
+            judge: None,
             next: 1,
             jobs: LookupMap::new(b"j"),
             credits: LookupMap::new(b"c"),
@@ -113,6 +117,8 @@ impl Factory {
         signer: Option<String>,
         checker: Option<AccountId>,
         clear_checker: Option<bool>,
+        judge: Option<String>,
+        clear_judge: Option<bool>,
     ) {
         require!(env::predecessor_account_id() == self.owner, "owner only");
         if let Some(h) = code_hash {
@@ -131,9 +137,19 @@ impl Factory {
         if clear_checker == Some(true) {
             self.checker = None;
         }
+        if judge.is_some() {
+            self.judge = judge;
+        }
+        if clear_judge == Some(true) {
+            self.judge = None;
+        }
+        require!(
+            !(self.checker.is_some() && self.judge.is_some()),
+            "pin a checker contract or a judge model, not both"
+        );
         emit(
             "settings",
-            json!({ "signer": self.signer, "checker": self.checker }),
+            json!({ "signer": self.signer, "checker": self.checker, "judge": self.judge }),
         );
     }
 
@@ -218,7 +234,7 @@ impl Factory {
             "token": self.token, "amount": U128(lead_fee), "spec_hash": m.spec_hash,
             "window_secs": m.window_secs, "signer": self.signer,
             "code_hash": Base58CryptoHash::from(self.code_hash),
-            "checker": self.checker, "treasury": m.treasury,
+            "checker": self.checker, "treasury": m.treasury, "judge": self.judge,
         });
         emit(
             "post_started",
@@ -313,7 +329,8 @@ impl Factory {
         json!({
             "owner": self.owner, "token": self.token,
             "code_hash": Base58CryptoHash::from(self.code_hash),
-            "signer": self.signer, "checker": self.checker, "next": self.next,
+            "signer": self.signer, "checker": self.checker, "judge": self.judge,
+            "next": self.next,
         })
     }
 }
@@ -603,16 +620,55 @@ mod tests {
     fn only_owner_changes_settings() {
         let mut f = factory();
         ctx("eve.test", vec![]);
-        f.set_settings(None, Some("22".repeat(20)), None, None);
+        f.set_settings(None, Some("22".repeat(20)), None, None, None, None);
     }
 
     #[test]
     fn owner_changes_settings_for_new_jobs() {
         let mut f = factory();
         ctx("owner.test", vec![]);
-        f.set_settings(None, Some("22".repeat(20)), None, Some(true));
+        f.set_settings(None, Some("22".repeat(20)), None, Some(true), None, None);
         assert_eq!(f.get_settings()["signer"], "22".repeat(20));
         assert!(f.get_settings()["checker"].is_null());
+    }
+
+    #[test]
+    fn judge_mode_replaces_the_checker_and_reaches_new_jobs() {
+        let mut f = factory();
+        ctx("owner.test", vec![]);
+        f.set_settings(
+            None,
+            None,
+            None,
+            Some(true),
+            Some("judge-model".into()),
+            None,
+        );
+        assert_eq!(f.get_settings()["judge"], "judge-model");
+        ctx(TOKEN, vec![]);
+        f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
+        let init = get_created_receipts()
+            .into_iter()
+            .flat_map(|r| r.actions)
+            .find_map(|a| match a {
+                MockAction::FunctionCallWeight {
+                    method_name, args, ..
+                } if method_name == b"new" => {
+                    Some(serde_json::from_slice::<serde_json::Value>(&args).unwrap())
+                }
+                _ => None,
+            })
+            .unwrap();
+        assert_eq!(init["judge"], "judge-model");
+        assert!(init["checker"].is_null());
+    }
+
+    #[test]
+    #[should_panic(expected = "not both")]
+    fn checker_and_judge_together_refused() {
+        let mut f = factory();
+        ctx("owner.test", vec![]);
+        f.set_settings(None, None, None, None, Some("judge-model".into()), None);
     }
 
     #[test]
