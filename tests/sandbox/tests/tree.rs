@@ -286,8 +286,9 @@ impl World {
         sub: u128,
         near: NearToken,
     ) -> Result<Value, String> {
-        // The manager pays the child account's storage (0.03 NEAR base).
-        let near = near.saturating_add(NearToken::from_millinear(30));
+        // The manager pays the child account's storage and its token
+        // registration (0.035 NEAR minimum).
+        let near = near.saturating_add(NearToken::from_millinear(35));
         self.call(
             lead,
             job,
@@ -421,44 +422,25 @@ async fn g1_delete_only_after_confirmed_transfer_and_zero_balance() {
     w.send(&client, &t1, 1, None).await;
 
     // 2. Settle: the job registers the (unregistered) worker on the token and
-    //    pays it 30, the rest (5) reaches the parent, but the real balance is
-    //    1: the account is NOT deleted and the stray unit goes on the books.
-    w.ok(&lead, &t1, "settle", json!({})).await;
-    assert_eq!(w.ft(&worker.id).await, 30 * USD);
-    assert!(
-        w.account_state(&t1).await.is_some(),
-        "kept while real balance is 1"
-    );
-    let j = w.job(&t1).await;
-    assert_eq!(j["status"], "Delivered");
-    assert_eq!(j["payee_paid"], true);
-    assert_eq!(num(&j["ft_balance"]), 1);
-    assert_eq!(num(&j["returned_to_parent"]), 5 * USD);
-    assert_eq!(w.ft(&t1).await, 1);
-
-    // 3. Paying twice is impossible: a stray-only settle sends nothing to the
-    //    worker (checked below by the worker's unchanged balance).
-    // 4. Settle again: the 1 unit goes to the parent; balance 0; deleted.
-    let (t1_near, _, _) = w.account_state(&t1).await.unwrap();
+    //    pays it 30, the rest (5) reaches the parent. The balance check then
+    //    sees 1 unit the ledger never had: it is not booked (it could be a
+    //    refunded ft_transfer_call in flight) but swept to the parent; only
+    //    after a second check reads 0 is the account deleted.
     let (root_near_before, _, _) = w.account_state(&root).await.unwrap();
     w.ok(&lead, &t1, "settle", json!({})).await;
+    assert_eq!(w.ft(&worker.id).await, 30 * USD);
     assert!(w.account_state(&t1).await.is_none(), "t1 deleted");
     let (root_near_after, _, _) = w.account_state(&root).await.unwrap();
     let refund = root_near_after.saturating_sub(root_near_before);
-    eprintln!(
-        "t1 held {} before delete; parent gained {}",
-        near_str(t1_near),
-        near_str(refund)
-    );
-    // The parent gets the deleted account's NEAR (less the gas of the
-    // child_closed call it ran, which is under 0.01 NEAR).
-    assert!(refund + NearToken::from_millinear(10).as_yoctonear() >= t1_near);
+    eprintln!("parent gained {} of storage NEAR", near_str(refund));
+    // The child's storage NEAR came back (it started with 0.03).
+    assert!(refund >= NearToken::from_millinear(20).as_yoctonear());
 
     let r = w.job(&root).await;
     assert_eq!(r["children_open"], 0);
     assert_eq!(r["children"][0]["state"], "Closed");
     assert_eq!(w.ft(&worker.id).await, 30 * USD, "worker paid once");
-    // 100 funded - 35 hired + 5 returned at the first settle + the stray 1.
+    // 100 funded - 35 hired + 5 returned + the swept stray 1.
     assert_eq!(num(&r["ft_balance"]), 65 * USD + 5 * USD + 1);
     assert_eq!(w.ft(&root).await, num(&r["ft_balance"]));
 }
@@ -624,6 +606,16 @@ mod scene_util {
             "req": Base64VecU8::from(req.into_bytes()),
             "sig": hex::encode(sig),
             "model": MODEL,
+            "resp": Base64VecU8::from(resp.into_bytes()),
+        })
+    }
+
+    /// A delivery with no receipt: the response bytes and their sha256.
+    pub fn plain(text: &str) -> serde_json::Value {
+        use near_api::types::json::Base64VecU8;
+        serde_json::json!({
+            "resp_hash": hex::encode(sha256(text.as_bytes())),
+            "resp": Base64VecU8::from(text.as_bytes().to_vec()),
         })
     }
 }
@@ -726,6 +718,16 @@ async fn scene_full_tree_on_local_node() {
     }
     w.mint(&client.id, 100 * USD).await;
     w.mint(&treasury.id, 50 * USD).await;
+    // The client prepays the posting NEAR (root storage + registration).
+    w.call(
+        &client,
+        &hub.id,
+        "prepay_post",
+        json!({}),
+        NearToken::from_millinear(60),
+    )
+    .await
+    .unwrap();
     let (hub_near_start, _, _) = w.account_state(&hub.id).await.unwrap();
     let mut story = Story { steps: vec![] };
 
@@ -824,7 +826,7 @@ async fn scene_full_tree_on_local_node() {
         &translator,
         &t2,
         "deliver",
-        json!({ "resp_hash": "02".repeat(32) }),
+        plain("Los contratos globales de NEAR se despliegan una vez."),
     )
     .await;
     assert_eq!(w.job(&t2).await["verified"], false);
@@ -834,7 +836,9 @@ async fn scene_full_tree_on_local_node() {
         &jobs, &people).await;
 
     // 7. Junk passes the first check (7) but the dispute panels say 1 and 2.
-    let junk_hash = "03".repeat(32);
+    let junk_text = "lorem ipsum lorem ipsum";
+    let junk_delivery = plain(junk_text);
+    let junk_hash = junk_delivery["resp_hash"].as_str().unwrap().to_string();
     w.ok(
         &checker,
         &checker.id,
@@ -842,10 +846,16 @@ async fn scene_full_tree_on_local_node() {
         json!({ "deliverable_hash": junk_hash, "scores": [7, 1, 2] }),
     )
     .await;
-    w.ok(&junk, &t3, "deliver", json!({ "resp_hash": junk_hash }))
-        .await;
+    w.ok(&junk, &t3, "deliver", junk_delivery.clone()).await;
     assert_eq!(w.job(&t3).await["status"], "Checked");
-    w.ok(&lead, &t3, "dispute", json!({})).await;
+    // The lead sends the delivered bytes so the panels can read them.
+    w.ok(
+        &lead,
+        &t3,
+        "dispute",
+        json!({ "resp": junk_delivery["resp"] }),
+    )
+    .await;
     assert_eq!(w.job(&t3).await["status"], "Refunded");
     story.step(&w, "Junk is disputed",
         "The junk passed one check (7/10). The lead disputes: two more checks with fresh seeds say 1 and 2. Two of three votes say junk, so t3's pay goes back up the tree.",

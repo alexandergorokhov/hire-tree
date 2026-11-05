@@ -109,6 +109,17 @@ impl Ledger {
         Ok(())
     }
 
+    /// The worker was already paid `x` out of this job's own tokens (a note
+    /// sale whose callback was lost): it is owed `x` less, and the job holds
+    /// `x` less. The money rule is unchanged.
+    pub fn prepay(&mut self, x: u128) -> Result<(), MoneyError> {
+        let amount = sub(self.amount, x)?;
+        let bal = sub(self.ft_balance, x)?;
+        self.amount = amount;
+        self.ft_balance = bal;
+        Ok(())
+    }
+
     /// Tokens a closed child sent back.
     pub fn credit(&mut self, x: u128) -> Result<(), MoneyError> {
         self.ft_balance = add(self.ft_balance, x)?;
@@ -185,6 +196,15 @@ mod tests {
         let mut l = Ledger::new(amount);
         l.fund(funding).unwrap();
         l
+    }
+
+    #[test]
+    fn prepay_reduces_pay_and_balance_together() {
+        let mut l = funded(30, 30);
+        l.prepay(29).unwrap();
+        assert_eq!((l.amount, l.ft_balance), (1, 1));
+        assert!(l.prepay(2).is_err());
+        assert_eq!((l.amount, l.ft_balance), (1, 1), "no partial change");
     }
 
     #[test]

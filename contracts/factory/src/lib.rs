@@ -24,6 +24,12 @@ const GAS_ON_POSTED: Gas = Gas::from_tgas(15);
 /// Least gas `ft_on_transfer` must have left to post a job.
 pub const GAS_POST_MIN: Gas = Gas::from_tgas(110);
 pub const MAX_WINDOW_SECS: u64 = 30 * 24 * 3600;
+/// NEAR a client prepays per post (`prepay_post`): the root's storage plus
+/// its token registration, with headroom. Without it, anyone could make the
+/// factory lock 51 mNEAR per post for the cost of gas.
+pub const POST_NEAR: NearToken = NearToken::from_millinear(60);
+/// Smallest budget a post accepts (1 fUSD at 6 decimals).
+pub const MIN_BUDGET: u128 = 1_000_000;
 
 #[derive(Deserialize)]
 #[serde(crate = "near_sdk::serde", deny_unknown_fields)]
@@ -62,6 +68,8 @@ pub struct Factory {
     checker: Option<AccountId>,
     next: u32,
     jobs: LookupMap<u32, Posted>,
+    /// Prepaid NEAR per client, in yocto.
+    credits: LookupMap<AccountId, u128>,
 }
 
 fn emit(event: &str, data: serde_json::Value) {
@@ -92,6 +100,7 @@ impl Factory {
             checker,
             next: 1,
             jobs: LookupMap::new(b"j"),
+            credits: LookupMap::new(b"c"),
         }
     }
 
@@ -126,6 +135,24 @@ impl Factory {
         );
     }
 
+    /// A client prepays NEAR for its posts: each post uses `POST_NEAR`
+    /// (0.06 NEAR). The root's storage comes back to the factory when the
+    /// root deletes; it is the posting fee.
+    #[payable]
+    pub fn prepay_post(&mut self, account_id: Option<AccountId>) -> U128 {
+        let who = account_id.unwrap_or_else(env::predecessor_account_id);
+        let add = env::attached_deposit().as_yoctonear();
+        require!(add > 0, "attach NEAR");
+        let now = self.credits.get(&who).copied().unwrap_or(0) + add;
+        self.credits.insert(who.clone(), now);
+        emit("prepaid", json!({ "account": who, "credit": U128(now) }));
+        U128(now)
+    }
+
+    pub fn get_credit(&self, account_id: AccountId) -> U128 {
+        U128(self.credits.get(&account_id).copied().unwrap_or(0))
+    }
+
     fn refund(&self, amount: U128, reason: &str) -> PromiseOrValue<U128> {
         emit("refund", json!({ "amount": amount, "reason": reason }));
         PromiseOrValue::Value(amount)
@@ -141,8 +168,8 @@ impl Factory {
         if env::predecessor_account_id() != self.token {
             return self.refund(amount, "wrong token");
         }
-        if amount.0 == 0 {
-            return self.refund(amount, "zero amount");
+        if amount.0 < MIN_BUDGET {
+            return self.refund(amount, "budget below the minimum (1 fUSD)");
         }
         let Ok(m) = serde_json::from_str::<PostMsg>(&msg) else {
             return self.refund(
@@ -159,6 +186,12 @@ impl Factory {
         if env::prepaid_gas().saturating_sub(env::used_gas()) < GAS_POST_MIN {
             return self.refund(amount, "not enough gas to post (attach 200 Tgas)");
         }
+        let credit = self.credits.get(&sender_id).copied().unwrap_or(0);
+        if credit < POST_NEAR.as_yoctonear() {
+            return self.refund(amount, "prepay 0.06 NEAR with prepay_post first");
+        }
+        self.credits
+            .insert(sender_id.clone(), credit - POST_NEAR.as_yoctonear());
         let n = self.next;
         self.next += 1;
         let job: AccountId = format!("job-{n}.{}", env::current_account_id())
@@ -234,9 +267,11 @@ impl Factory {
             "post is not pending"
         );
         let used = match env::promise_result_checked(0, 128) {
+            // Unreadable answer: assume the tokens left, so the factory never
+            // refunds the client from other clients' tokens.
             Ok(b) => serde_json::from_slice::<U128>(&b)
                 .map(|u| u.0.min(amount.0))
-                .unwrap_or(0),
+                .unwrap_or(amount.0),
             Err(_) => 0,
         };
         let mut p = self
@@ -249,6 +284,13 @@ impl Factory {
         } else {
             PostState::Failed
         };
+        if p.state == PostState::Failed {
+            // Give the posting NEAR back as credit (a failed create is
+            // refunded to the factory by the runtime).
+            let c = self.credits.get(&p.client).copied().unwrap_or(0);
+            self.credits
+                .insert(p.client.clone(), c + POST_NEAR.as_yoctonear());
+        }
         emit(
             "posted",
             json!({ "n": n, "job": p.job, "state": p.state, "used": U128(used) }),
@@ -280,6 +322,7 @@ mod tests {
 
     const F: &str = "hiretree.test";
     const TOKEN: &str = "usdc.test";
+    const BUDGET: u128 = 100 * MIN_BUDGET;
 
     fn acc(s: &str) -> AccountId {
         s.parse().unwrap()
@@ -302,13 +345,24 @@ mod tests {
 
     fn factory() -> Factory {
         ctx("owner.test", vec![]);
-        Factory::new(
+        let mut f = Factory::new(
             acc("owner.test"),
             acc(TOKEN),
             [7u8; 32].into(),
             "11".repeat(20),
             Some(acc("checker.test")),
-        )
+        );
+        prepay(&mut f, "client.test", 1);
+        f
+    }
+
+    fn prepay(f: &mut Factory, who: &str, posts: u128) {
+        testing_env!(VMContextBuilder::new()
+            .current_account_id(acc(F))
+            .predecessor_account_id(acc(who))
+            .attached_deposit(NearToken::from_yoctonear(POST_NEAR.as_yoctonear() * posts))
+            .build());
+        f.prepay_post(None);
     }
 
     fn msg() -> String {
@@ -329,7 +383,7 @@ mod tests {
         let mut f = factory();
         ctx(TOKEN, vec![]);
         assert!(matches!(
-            f.ft_on_transfer(acc("client.test"), U128(100), msg()),
+            f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg()),
             PromiseOrValue::Promise(_)
         ));
         let receipts = get_created_receipts();
@@ -373,8 +427,13 @@ mod tests {
         }
         assert_eq!(f.get_job(1).unwrap().state, PostState::Pending);
         // The job kept everything: nothing to refund.
-        ctx(F, vec![PromiseResult::Successful(b"\"100\"".to_vec())]);
-        assert_eq!(f.on_posted(1, U128(100)), U128(0));
+        ctx(
+            F,
+            vec![PromiseResult::Successful(
+                format!("\"{BUDGET}\"").into_bytes(),
+            )],
+        );
+        assert_eq!(f.on_posted(1, U128(BUDGET)), U128(0));
         assert_eq!(f.get_job(1).unwrap().state, PostState::Posted);
     }
 
@@ -383,23 +442,29 @@ mod tests {
         let mut f = factory();
         ctx(TOKEN, vec![]);
         assert_eq!(
-            value(f.ft_on_transfer(acc("c.test"), U128(5), "fund".into())),
-            5
+            value(f.ft_on_transfer(acc("c.test"), U128(BUDGET), "fund".into())),
+            BUDGET
         );
         let bad_hash =
             json!({ "manager": "l.test", "spec_hash": "zz", "window_secs": 60 }).to_string();
-        assert_eq!(value(f.ft_on_transfer(acc("c.test"), U128(5), bad_hash)), 5);
+        assert_eq!(
+            value(f.ft_on_transfer(acc("c.test"), U128(BUDGET), bad_hash)),
+            BUDGET
+        );
         let bad_window =
             json!({ "manager": "l.test", "spec_hash": "ab".repeat(32), "window_secs": 0 })
                 .to_string();
         assert_eq!(
-            value(f.ft_on_transfer(acc("c.test"), U128(5), bad_window)),
-            5
+            value(f.ft_on_transfer(acc("c.test"), U128(BUDGET), bad_window)),
+            BUDGET
         );
         let extra =
             json!({ "manager": "l.test", "spec_hash": "ab".repeat(32), "window_secs": 60, "x": 1 })
                 .to_string();
-        assert_eq!(value(f.ft_on_transfer(acc("c.test"), U128(5), extra)), 5);
+        assert_eq!(
+            value(f.ft_on_transfer(acc("c.test"), U128(BUDGET), extra)),
+            BUDGET
+        );
         assert!(get_created_receipts().is_empty());
         assert!(f.get_job(1).is_none());
     }
@@ -418,15 +483,72 @@ mod tests {
     fn failed_post_refunds_client() {
         let mut f = factory();
         ctx(TOKEN, vec![]);
-        f.ft_on_transfer(acc("client.test"), U128(100), msg());
+        f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
         ctx(F, vec![PromiseResult::Failed]);
-        assert_eq!(f.on_posted(1, U128(100)), U128(100));
+        assert_eq!(f.on_posted(1, U128(BUDGET)), U128(BUDGET));
         assert_eq!(f.get_job(1).unwrap().state, PostState::Failed);
         // A partial answer refunds the rest.
         ctx(TOKEN, vec![]);
-        f.ft_on_transfer(acc("client.test"), U128(100), msg());
+        f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
         ctx(F, vec![PromiseResult::Successful(b"\"0\"".to_vec())]);
-        assert_eq!(f.on_posted(2, U128(100)), U128(100));
+        assert_eq!(f.on_posted(2, U128(BUDGET)), U128(BUDGET));
+    }
+
+    #[test]
+    fn post_without_prepaid_near_refunded() {
+        let mut f = factory();
+        ctx(TOKEN, vec![]);
+        assert_eq!(
+            value(f.ft_on_transfer(acc("eve.test"), U128(BUDGET), msg())),
+            BUDGET
+        );
+        assert!(get_created_receipts().is_empty());
+    }
+
+    #[test]
+    fn one_credit_one_post() {
+        let mut f = factory();
+        ctx(TOKEN, vec![]);
+        assert!(matches!(
+            f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg()),
+            PromiseOrValue::Promise(_)
+        ));
+        assert_eq!(f.get_credit(acc("client.test")).0, 0);
+        ctx(TOKEN, vec![]);
+        assert_eq!(
+            value(f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg())),
+            BUDGET
+        );
+    }
+
+    #[test]
+    fn dust_budget_refunded() {
+        let mut f = factory();
+        ctx(TOKEN, vec![]);
+        assert_eq!(
+            value(f.ft_on_transfer(acc("client.test"), U128(MIN_BUDGET - 1), msg())),
+            MIN_BUDGET - 1
+        );
+        assert_eq!(f.get_credit(acc("client.test")).0, POST_NEAR.as_yoctonear());
+    }
+
+    #[test]
+    fn failed_post_gives_the_credit_back() {
+        let mut f = factory();
+        ctx(TOKEN, vec![]);
+        f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
+        ctx(F, vec![PromiseResult::Failed]);
+        f.on_posted(1, U128(BUDGET));
+        assert_eq!(f.get_credit(acc("client.test")).0, POST_NEAR.as_yoctonear());
+    }
+
+    #[test]
+    fn unreadable_token_answer_counts_as_all_used() {
+        let mut f = factory();
+        ctx(TOKEN, vec![]);
+        f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
+        ctx(F, vec![PromiseResult::Successful(b"garbage".to_vec())]);
+        assert_eq!(f.on_posted(1, U128(BUDGET)), U128(0));
     }
 
     #[test]
@@ -434,10 +556,10 @@ mod tests {
     fn on_posted_cannot_run_twice() {
         let mut f = factory();
         ctx(TOKEN, vec![]);
-        f.ft_on_transfer(acc("client.test"), U128(100), msg());
+        f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
         ctx(F, vec![PromiseResult::Failed]);
-        f.on_posted(1, U128(100));
-        f.on_posted(1, U128(100));
+        f.on_posted(1, U128(BUDGET));
+        f.on_posted(1, U128(BUDGET));
     }
 
     #[test]
@@ -462,6 +584,6 @@ mod tests {
     fn on_posted_is_private() {
         let mut f = factory();
         ctx("eve.test", vec![PromiseResult::Failed]);
-        f.on_posted(1, U128(100));
+        f.on_posted(1, U128(BUDGET));
     }
 }

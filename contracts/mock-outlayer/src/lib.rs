@@ -16,6 +16,7 @@ pub struct MockOutlayer {
     calls: u64,
 }
 
+#[allow(clippy::too_many_arguments)]
 #[near]
 impl MockOutlayer {
     #[init]
@@ -38,6 +39,7 @@ impl MockOutlayer {
 
     /// Same interface the job contract calls on the real checker.
     #[allow(unused_variables)]
+    #[allow(clippy::too_many_arguments)]
     pub fn check(
         &mut self,
         job: AccountId,
@@ -46,7 +48,11 @@ impl MockOutlayer {
         seq: u32,
         seed: String,
         panel: u8,
+        // The response bytes (as text) the job sends; a real checker reads
+        // them. The mock scores by hash only.
+        deliverable: Option<String>,
     ) -> u8 {
+        let _ = deliverable;
         self.calls += 1;
         let score = self
             .scores
@@ -79,7 +85,7 @@ mod tests {
         ctx(accounts(0));
         let mut m = MockOutlayer::new(accounts(0), 8);
         let c = |m: &mut MockOutlayer, h: &str, p| {
-            m.check(accounts(1), "s".into(), h.into(), 1, "x".into(), p)
+            m.check(accounts(1), "s".into(), h.into(), 1, "x".into(), p, None)
         };
         assert_eq!(c(&mut m, "aa", 0), 8);
         m.set_scores("bb".into(), vec![9, 2, 3]);
