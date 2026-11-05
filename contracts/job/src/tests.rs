@@ -2767,7 +2767,13 @@ mod signed_check {
 
     fn deliver(j: &mut Job, bytes: &[u8]) {
         Ctx::new(T1, WORKER).set();
-        j.deliver(hex::encode(sha256(bytes)), None, None, None, None);
+        j.deliver(
+            hex::encode(sha256(bytes)),
+            None,
+            None,
+            None,
+            Some(Base64VecU8(bytes.to_vec())),
+        );
     }
 
     /// A NEAR AI answer `{"score": n}` (plus `salt` to make it distinct),
@@ -2878,6 +2884,24 @@ mod signed_check {
     }
 
     #[test]
+    #[should_panic(expected = "send the response bytes")]
+    fn hash_only_delivery_refused_when_a_judge_is_pinned() {
+        let mut j = judged_sub();
+        Ctx::new(T1, WORKER).set();
+        j.deliver(hex::encode(sha256(DELIVERED)), None, None, None, None);
+    }
+
+    #[test]
+    fn unscored_judged_delivery_is_not_paid_without_approval() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        assert!(!finalize(&mut j));
+        Ctx::new(T1, WORKER).at(T0 + (WINDOW + 10) * NS_PER_SEC).set();
+        j.settle();
+        assert_eq!(transfers(), vec![(ROOT.into(), PAY.to_string())]);
+    }
+
+    #[test]
     fn no_answer_leaves_the_delivery_unscored() {
         let mut j = judged_sub();
         deliver(&mut j, DELIVERED);
@@ -2971,7 +2995,13 @@ mod signed_check {
     fn settle_waits_for_the_round() {
         let mut j = judged_sub();
         Ctx::new(T1, WORKER).at(AFTER - 10 * NS_PER_SEC).set();
-        j.deliver(hex::encode(sha256(DELIVERED)), None, None, None, None);
+        j.deliver(
+            hex::encode(sha256(DELIVERED)),
+            None,
+            None,
+            None,
+            Some(Base64VecU8(DELIVERED.to_vec())),
+        );
         Ctx::new(T1, EVE).at(AFTER).set();
         j.settle();
     }
@@ -3081,7 +3111,7 @@ mod signed_check {
             Some(Base64VecU8(req)),
             Some(sign(&key(1), &text)),
             Some(MODEL.into()),
-            None,
+            Some(Base64VecU8(resp.to_vec())),
         );
         let a = answer(1, &j, 0, DELIVERED, "8", "a");
         submit(&mut j, EVE, 0, DELIVERED, a);

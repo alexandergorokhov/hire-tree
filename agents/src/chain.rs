@@ -330,7 +330,17 @@ impl Chain {
     /// A funded sub-account of the funder (sandbox: `near` NEAR; testnet:
     /// 1 NEAR). Reused if it already exists.
     pub async fn account(&self, name: &str, near: u128) -> Acc {
-        self.account_with(name, self.near_for(near, 1000)).await
+        let a = self.account_with(name, self.near_for(near, 1000)).await;
+        // Reruns spend prepaid storage and hire deposits: keep 0.3 NEAR liquid.
+        if self.is_testnet() && self.near_of(&a.id).await < 300 * 10u128.pow(21) {
+            let _ = near_api::Tokens::account(self.funder.id.clone())
+                .send_to(a.id.clone())
+                .near(NearToken::from_millinear(700))
+                .with_signer(self.funder.signer.clone())
+                .send_to(&self.net)
+                .await;
+        }
+        a
     }
 
     /// The key for `name` is derived from the operator key: reruns find it.
@@ -359,13 +369,6 @@ impl Chain {
                 .await
                 .unwrap()
                 .assert_success();
-        } else if self.is_testnet() && self.near_of(&id).await < amount.as_yoctonear() / 2 {
-            let _ = near_api::Tokens::account(self.funder.id.clone())
-                .send_to(id.clone())
-                .near(NearToken::from_yoctonear(amount.as_yoctonear() / 2))
-                .with_signer(self.funder.signer.clone())
-                .send_to(&self.net)
-                .await;
         }
         Acc { id, signer }
     }

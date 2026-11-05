@@ -1023,10 +1023,10 @@ impl Job {
                 "resp_hash is not sha256(resp)"
             );
         }
-        if self.checker.is_some() {
+        if self.checker.is_some() || self.judge.is_some() {
             require!(
                 resp.is_some(),
-                "a checker is pinned: send the response bytes (resp) so it can read them"
+                "a checker or judge is pinned: send the response bytes (resp) so it can read them"
             );
         }
         if self.checker.is_some() {
@@ -1587,7 +1587,9 @@ impl Job {
         // paid by default (fail closed).
         let pay_payee = match prev {
             Status::Checked => true,
-            Status::Delivered => self.checker.is_none() || (!self.root && self.approved),
+            Status::Delivered => {
+                (self.checker.is_none() && self.judge.is_none()) || (!self.root && self.approved)
+            }
             _ => false,
         };
         // Root: fee + bond to the manager, the rest back to the client.

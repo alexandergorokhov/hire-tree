@@ -86,7 +86,7 @@ again on every replay; `make verify-cassette` checks them offline.
 | Do | See |
 |---|---|
 | `make setup` | toolchain versions; crates fetched (the only networked step besides the near-sandbox binary) |
-| `make test` | 289 unit + property tests, all `ok`: core (56 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (195), factory (18), mock checker (2), mock-usdc (7), agents (6) |
+| `make test` | 291 unit + property tests, all `ok`: core (56 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (197), factory (18), mock checker (2), mock-usdc (7), agents (6) |
 | `make lint` | rustfmt check and clippy `-D warnings`; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make sandbox` | a local NEAR node runs 6 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model, and the same story replayed from a cassette; about 15 min |

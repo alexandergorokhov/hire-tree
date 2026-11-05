@@ -13,399 +13,385 @@
         "method": "set_settings",
         "ok": true,
         "on": "hub.sandbox",
-        "tx": "FfLSkwXSgCrEWPfV3Rv2CU9evzsg3UxtCKVQPTrPNQWY",
+        "tx": "cPNdUCTfrrKdhcLdP6sAyC4zd8UH18vd8JcUpsAZo4c",
         "who": "hub.sandbox"
       },
       {
         "method": "storage_deposit",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "4n2WuTWHdBs9vmJKZyzxsqTSYcfVmQxBQu4bc2Gv1B5o",
+        "tx": "2VtfGe3nZxU5n9orZzy4sgA9L7ToPeE9CKNANcJ89yPX",
         "who": "hub.sandbox"
       },
       {
         "method": "storage_deposit",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "HaRf2GUV6Vdg4D4FLMqpDpZPRFvzk2o3dZ2gCFNYop51",
+        "tx": "ArUx7QWT8iQ9RNbPJfSFmqr9s5NfvLDJRFiETKMzTEPL",
         "who": "client.sandbox"
       },
       {
         "method": "storage_deposit",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "3kPtZk4Ck6Jo2jtR9cmiGrwQ2GoXRkmDpjRQnsq5gEMR",
+        "tx": "5yhQtbonDR5zFjPkqqTfUEiFsvZwv4wahkvTR2cmgYzA",
         "who": "lead.sandbox"
       },
       {
         "method": "storage_deposit",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "93udEkA3z6ozGydbK5K2C7oZaCvabwsitZ3vTebC4nAU",
+        "tx": "CGNUD9PFxwbxfRCJrjm6LuzsMGGjKJtWg1s9qeLKL4YF",
         "who": "treasury.sandbox"
       },
       {
         "method": "storage_deposit",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "JAkUpdN1JQmXS1ympbhJ7B93BaFLXA1q5rs6BBgngtdD",
+        "tx": "kghEKnL6iDyZiWxBsmuWJyRJa8NcxDgEkQ4i2yE7UGp",
         "who": "researcher.sandbox"
       },
       {
         "method": "storage_deposit",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "Gob6TWbfX8Bs7qrya98K9iC3fp9W2EdeRw5SqAppJ7Kj",
+        "tx": "uzhUB92Hf7QAEjN6DousbeMpBG1EK2QG8q8A124dXiz",
         "who": "translator.sandbox"
       },
       {
         "method": "storage_deposit",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "9ERjc9p4JtyWSzcEjA8jqhgVmNggYYvJxCVoAV9vQgh1",
+        "tx": "5hDfrBQKUj5RWTr4P6zQsoMf4wdHQZXqoH3kxdALEU54",
         "who": "cheapbot.sandbox"
       },
       {
         "method": "mint",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "73B6i48V44yd3EeTNSEwJWAJq2UvL1BoYAnLuSStoxgf",
+        "tx": "4HqhekAQDRwnBMV59xQmLcwBbRBX9dGDKnC7isa3UT2M",
         "who": "usdc.sandbox"
       },
       {
         "method": "mint",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "7aFhtqkT1GqTtvZkGRG9WEWahb4NPq5ZKhda3he7gFWM",
+        "tx": "C58zntJ2ypnq336ZavgoMJUDdMtpU1y4wKD5yjKrEiVd",
         "who": "usdc.sandbox"
       },
       {
         "method": "prepay_post",
         "ok": true,
         "on": "hub.sandbox",
-        "tx": "939fVvVaYwW7VY2UdisHA2xp4XKTZS8tpSQE6y1w1Fyx",
+        "tx": "2LAJ2UxHH8SqSFw7w8JntU3QM5dgr37cjXbGikuN6RJ2",
         "who": "client.sandbox"
       },
       {
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "BoocLFkivQwYE3h1DK8EGvYbKvHiHBxfiTEPsDwzfaRu",
+        "tx": "D8PGb42NXsJDpmDA4WQRRTPKFcrpyq37CT4sb89q2ds8",
         "who": "client.sandbox"
       },
       {
         "method": "hire",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "EuJ83GS5zkMnTdw2uVJsYP2kv1swBndCexEvsbPMpz9e",
+        "tx": "Gq5Xz9aoREpfLMLhrac2cqQtbXVqC5aUdPYHgY2oq15W",
         "who": "lead.sandbox"
       },
       {
         "method": "hire",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "FQ3FiuFKhWs7U31d8pGq3mWCXdWqzVzikMChRrTnZA93",
+        "tx": "BFfMPg2ViXUMbqqNhGcXNciiNKrbwym4qLgCUw9vXt2q",
         "who": "lead.sandbox"
       },
       {
         "method": "hire",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "4khC9Y96ghzSuhW5BmEpoYSQDRLAf5TcGKer6unYKB57",
+        "tx": "D4Hg3Ch1WYeuyaWPWAM8ZjEd8HXuUBAVy9kfMrhdavUW",
         "who": "lead.sandbox"
       },
       {
         "method": "deliver",
         "ok": true,
         "on": "t1.job-1.hub.sandbox",
-        "tx": "6rYJXbpmU9Wv7W3Bvg3LhD3b8EMh7rjpSRWXQmaxpWDa",
+        "tx": "556gbzRgnWGmgHTTb2Dcmu9vtE8n5F4BXZah7Fh3bAqw",
         "who": "researcher.sandbox"
       },
       {
-        "method": "deliver",
-        "ok": true,
-        "on": "t2.job-1.hub.sandbox",
-        "tx": "3wnRN5DQbWSuyMxqrsGHhV6dyr4BWaMXeDWam7FBtobL",
-        "who": "cheapbot.sandbox"
-      },
-      {
-        "method": "deliver",
-        "ok": true,
-        "on": "t3.job-1.hub.sandbox",
-        "tx": "6RDzz2XAsQohdjZF674QmBHFVDu2bETqyXLgjx4WirTT",
-        "who": "cheapbot.sandbox"
-      },
-      {
         "method": "submit_check",
         "ok": true,
         "on": "t1.job-1.hub.sandbox",
-        "tx": "JDwvXmm8n6Yjhaytds1XnzzV2vdTkyuNkuLdSsnrxdt7",
+        "tx": "GmyThhJVSF3Sj7HVdNFYCFqhjKf7BbXGigooSLYSn446",
         "who": "keeper.sandbox"
+      },
+      {
+        "method": "deliver",
+        "ok": true,
+        "on": "t2.job-1.hub.sandbox",
+        "tx": "3TrELySikdfonvUVBJrByHMtm5V9wyWsRu9cBYisF8Tf",
+        "who": "cheapbot.sandbox"
       },
       {
         "method": "submit_check",
         "ok": true,
         "on": "t2.job-1.hub.sandbox",
-        "tx": "5n2huVtXjVXo4wJndEvrV4nNaKoCKnWdRzdUBEVahRon",
+        "tx": "EqWh9TQk3HTjA4vrA6fwuu5MF1rkkQpaNSJ8H2iaSCvG",
         "who": "keeper.sandbox"
+      },
+      {
+        "method": "deliver",
+        "ok": true,
+        "on": "t3.job-1.hub.sandbox",
+        "tx": "BG57ikCy44uUpHzNTk894aW32pqQtWjoy1i9DAVVpHah",
+        "who": "cheapbot.sandbox"
       },
       {
         "method": "submit_check",
         "ok": true,
         "on": "t3.job-1.hub.sandbox",
-        "tx": "59cFfNbhPZCfjTfQPTr9xkQ5B5CzTJHje2HLYmFYiC1T",
+        "tx": "HdaYEwjGNUEkzw9wa43kAuNDVidz3n5vfV9gnNdVLQEW",
         "who": "keeper.sandbox"
       },
       {
         "method": "finalize_check",
         "ok": true,
         "on": "t1.job-1.hub.sandbox",
-        "tx": "9pXWRmgBfUgGdWLsToYdJy4BRkBgMYYrFQkwMycnBSbN",
+        "tx": "HBBashvXJHF14W9F1oJuRy6RMy8nHUzSBH1pDZd6sbY3",
         "who": "keeper.sandbox"
       },
       {
         "method": "finalize_check",
         "ok": true,
         "on": "t2.job-1.hub.sandbox",
-        "tx": "3xxWJmfYRDUeKtw37dnscw5fND6k9wB9Fm677Fh7M2pv",
+        "tx": "FXg6fCF3RqPcabwn12SYe4h3KcmnomS1vGAVKiWAusjy",
         "who": "keeper.sandbox"
       },
       {
         "method": "finalize_check",
         "ok": true,
         "on": "t3.job-1.hub.sandbox",
-        "tx": "EYShFSmkzVw8MPJ6obg1ky9WNT9ed4uCPVwkQyc97rS2",
+        "tx": "54Buca7u7c8dZuaos5ZBuRkXQpkKYNaqpZxddgWrGLbe",
         "who": "keeper.sandbox"
       },
       {
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "923vv8iTVXSWbHstxtYhgkDhBza8hw7LkaETkm4Ph8tX",
+        "tx": "FZD8A4vcn9yh2yZA716WPAeuDqDbVMigbwpTq4G7Ja95",
         "who": "treasury.sandbox"
       },
       {
         "method": "approve",
         "ok": true,
         "on": "t1.job-1.hub.sandbox",
-        "tx": "C6kqmfSbt6sDSajZ1R3L1eb5BDWaHaV4uMZLD3YjDjor",
-        "who": "lead.sandbox"
-      },
-      {
-        "method": "approve",
-        "ok": false,
-        "on": "t2.job-1.hub.sandbox",
-        "tx": "42UohYhKsR1FfxQu3GKqvEfKhtTi81kWjrgj2zR1PXrg",
-        "who": "lead.sandbox"
-      },
-      {
-        "method": "approve",
-        "ok": false,
-        "on": "t3.job-1.hub.sandbox",
-        "tx": "DVXWrdKsgQv1mBm2dmcrAEnM8b1sLHm183m5TM4ybwhG",
+        "tx": "EeaXRfgJse1WWjBg6XDn2EzLfRV28NRL7mggCuwH2oMY",
         "who": "lead.sandbox"
       },
       {
         "method": "settle",
         "ok": true,
         "on": "t1.job-1.hub.sandbox",
-        "tx": "2eRHGQ8snrb1QJeryHL38iZ3QDnHnCCJJXH23XVytGZM",
+        "tx": "4jdS26kQqunVTkup6fGsy5S5DknJVuGpuRDRnMygswou",
         "who": "keeper.sandbox"
       },
       {
         "method": "settle",
         "ok": true,
         "on": "t2.job-1.hub.sandbox",
-        "tx": "2NBuzzfRSfK5y15QUwiq7MCfphK28Jx2r4WqVgVKq2dK",
+        "tx": "H3K4BmoybqDTg1DRV4FhYFbWomTPebNLoYoqC4p2CTND",
         "who": "keeper.sandbox"
       },
       {
         "method": "settle",
         "ok": true,
         "on": "t3.job-1.hub.sandbox",
-        "tx": "2u4FSLRHooxjAevFiKw3zxpGfD7wc45wpsK6KjP4tyzi",
+        "tx": "EbyeQpyxuvakzBEf3sSeUuryrrBzo8dpzHYz4zbxM6TX",
         "who": "keeper.sandbox"
       },
       {
         "method": "approve",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "7RS2YXJsnZAqxo8HvbVvenLV38iRe8emGarHyucy6mHU",
+        "tx": "97MCTK4AxQ1MJyQjpPmMBBkkoKLRcyczxkckPHnB7AA",
         "who": "client.sandbox"
       },
       {
         "method": "settle",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "YzHYJrWmAPJ2xyDH22gWP8D3ZGdFDLXKM4ZWkxi3vuj",
+        "tx": "HiBphbwyJhhYr37YKGKHUCKUkg1e9z47eyBf2Z4pk7XT",
         "who": "keeper.sandbox"
       },
       {
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "BQ6arn59yu5DWyVoDRUUqSDeeU4vdgnnHfojUR63U1Yi",
+        "tx": "GfwdhaqmtWj2kkhARYHvmad2acSVxKBvQZq7gAWfDvPL",
         "who": "client.sandbox"
       },
       {
         "method": "hire",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "C16NEwAwQnuB1syjGQQGiDNXwKJ3GUGXPgDcyh5kaFbx",
+        "tx": "4kFf59dhTpHmuW5C33yD8QpMQ1KUJvNSA2xtJ8hbMnD7",
         "who": "lead.sandbox"
       },
       {
         "method": "hire",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "Ceif3CuRba9rzdHNTkCLJ3K8rULT8ya6TZFZGLVfjPSe",
+        "tx": "FS2HNuGQDdkWSSmxRX6NrKB8xDbqjaiSRbMH6iNvFvsz",
         "who": "lead.sandbox"
       },
       {
         "method": "hire",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "7JpRsL7bcF3zC6gTgHinQFKpR2u2nCUbXLXM19XU8soB",
+        "tx": "FfRZzSyoecgURk5Jg3bZvoxVe6p1JwFMgJuCjHvMTuyf",
         "who": "lead.sandbox"
       },
       {
         "method": "deliver",
         "ok": true,
         "on": "t1.job-2.hub.sandbox",
-        "tx": "7DDcvTKJsjabAMMPUwZJTyKLPz7pnw2C7kR1RzapSMGW",
+        "tx": "BgAgJeiyWK7n7gfmfzz6C5ryBE3KZvR5F4D1cf4HiiFX",
         "who": "researcher.sandbox"
+      },
+      {
+        "method": "submit_check",
+        "ok": true,
+        "on": "t1.job-2.hub.sandbox",
+        "tx": "3SNm1e2tLYChrmAXuFPfNLJCGMv2gvSrv74rY32oyLoF",
+        "who": "keeper.sandbox"
       },
       {
         "method": "deliver",
         "ok": true,
         "on": "t2.job-2.hub.sandbox",
-        "tx": "7H4U64vBNVZYqo9hFFyG3aPW9AqsJnuBmcVDcQ4njWH7",
+        "tx": "8FZ6mHe48Xutito2FpiJyhwzohaChmHZahoQG7Uthrf1",
         "who": "translator.sandbox"
       },
       {
+        "method": "submit_check",
+        "ok": true,
+        "on": "t2.job-2.hub.sandbox",
+        "tx": "4ivxmz4FLuFcZc3KLL4K7ZUAPCug2pu6hRkFQxDrQt6T",
+        "who": "keeper.sandbox"
+      },
+      {
         "method": "deliver",
         "ok": true,
         "on": "t3.job-2.hub.sandbox",
-        "tx": "693N1YKEZDxFju1act4NP2gkF6r34PCYtsKhnLRWvQwa",
+        "tx": "GeFP1pei4QUxKHEuA98pB6UVcZ6DAURSV1f5jkxtxZ24",
         "who": "researcher.sandbox"
       },
       {
         "method": "submit_check",
         "ok": true,
-        "on": "t1.job-2.hub.sandbox",
-        "tx": "FPsoj7V3CCTYtFHeiRBgfGKw5YxgKUgshrtXaQqk2Hph",
-        "who": "keeper.sandbox"
-      },
-      {
-        "method": "submit_check",
-        "ok": true,
-        "on": "t2.job-2.hub.sandbox",
-        "tx": "AVMhQHegAJJS1tjnyEVDQrwYzVubxD5G49ZmXrytJQN7",
-        "who": "keeper.sandbox"
-      },
-      {
-        "method": "submit_check",
-        "ok": true,
         "on": "t3.job-2.hub.sandbox",
-        "tx": "ExfG39Qq9yx5je1mH764GYWJbtfQ44RZkaG521DEtfFs",
+        "tx": "Aapb3TQBjeW9vnD2dC62TqBeyqKPJU2q7N3kqDUUNmau",
         "who": "keeper.sandbox"
       },
       {
         "method": "finalize_check",
         "ok": true,
         "on": "t1.job-2.hub.sandbox",
-        "tx": "6dAipWNCDnBLwRbdj6cfyV5sMkqUugj1Xb3AgzboczmG",
+        "tx": "7VzAd27m9DEHHKkzFKhSZ7fuVsaZQ5j7bJJQ5bxGagR8",
         "who": "keeper.sandbox"
       },
       {
         "method": "finalize_check",
         "ok": true,
         "on": "t2.job-2.hub.sandbox",
-        "tx": "HjBZUyEztT4Vy62HAJKZST9WSwAJpBwU7vMNkJ7au2ga",
+        "tx": "AjDnVRd7FoLguTjG7TXACqYnrSfpRgG6MgfevzoC5ZQ",
         "who": "keeper.sandbox"
       },
       {
         "method": "finalize_check",
         "ok": true,
         "on": "t3.job-2.hub.sandbox",
-        "tx": "5aJ4mogHBZCVTbSjyAvPYUQnZuy9gPwmRWPdzWVNcD6Y",
+        "tx": "3BkU2UbuTKKTWKXhxCMq6RJSh1VC3v4nimQnhLtTteZc",
         "who": "keeper.sandbox"
       },
       {
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "DR73vvEhxy8Muu7npPM4ikmqPM5a5q9sZNPAZ6Wrovp9",
+        "tx": "tMt6EWxcoEXaoUyRUUdCt9gUWiUM6bR4CbsL1tERr4p",
         "who": "treasury.sandbox"
       },
       {
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "gEj6pA6XByancvDUxVxvxwtxZKZrnYspXHESXf97Wws",
+        "tx": "EQgNv1irjbuDVDDXmmWKFCv93cQSMjUzzVgypcsDTPvP",
         "who": "treasury.sandbox"
       },
       {
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "6KmXVZCZEtW9iSNrKVxALG7ifV4YyxQANok68VTRhMFt",
+        "tx": "8bVTqSVQgjodEyJyr9dJPG9yZRUT9oxJ3P4VAqNt8SW8",
         "who": "treasury.sandbox"
       },
       {
         "method": "approve",
         "ok": true,
         "on": "t1.job-2.hub.sandbox",
-        "tx": "FyxQugkFbV1vrbjC1Yd62GjBvcsJkyY3SEfudE1G8xVi",
+        "tx": "JDUTyJPP3WEWCiMhUoYYpGcz2y4UntssunRVthNacfyk",
         "who": "lead.sandbox"
       },
       {
         "method": "approve",
         "ok": true,
         "on": "t2.job-2.hub.sandbox",
-        "tx": "4iNDrNA1msvh7Fzf9KLCqViWAKtaQze5BYGHXtfJLjXi",
+        "tx": "GTsgAX6En7QhMJc28vtpNnZrsVixWVGusSEdf5VqP4HG",
         "who": "lead.sandbox"
       },
       {
         "method": "approve",
         "ok": true,
         "on": "t3.job-2.hub.sandbox",
-        "tx": "5CXTKdhqQx8UB9suYFvBsHnoxg1ASjKy5GQLHR7ZMaM9",
+        "tx": "3gRD7tm73SL1RoFQZaepU2WUPoNhJmtLToYYfhnbBieA",
         "who": "lead.sandbox"
       },
       {
         "method": "settle",
         "ok": true,
         "on": "t1.job-2.hub.sandbox",
-        "tx": "9SwmCCP7GCwNSoZxncmuuwK1f9gyVNYbkUD24Gik72yu",
+        "tx": "8LzDMXFU4n4BpGSRFM1fFy53vo88UTFrTrc1YUKmpnDK",
         "who": "keeper.sandbox"
       },
       {
         "method": "settle",
         "ok": true,
         "on": "t2.job-2.hub.sandbox",
-        "tx": "HdbR8mwYKBN14sqn5UXvAvce3fKFZrSncBTnSBbDjKbZ",
+        "tx": "FaxJ3pJCBtfMCNTzQ5YXnmv4qJWt2LPou7AKH8Q4srFU",
         "who": "keeper.sandbox"
       },
       {
         "method": "settle",
         "ok": true,
         "on": "t3.job-2.hub.sandbox",
-        "tx": "CXhwc1PCgKENMu6gKWp2XBFCEHuvD3MouL67AFuBWCSk",
+        "tx": "3UnnwcXAqGV6QB3MraQdMEhoSuQi6hcQuyLSX4Hc7j9R",
         "who": "keeper.sandbox"
       },
       {
         "method": "approve",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "3dTmvdxNg6Bpww47UMXKJQQedHUsrupcs5Wmuda5oX9A",
+        "tx": "H3X4xvNNDEdJFksBUx7Ltjmyp7LzrjsxeU81W9h3paB9",
         "who": "client.sandbox"
       },
       {
         "method": "settle",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "qYk8RaUw583zpH6cE9wtFyBQb2fAmAYTF6ciRcD4ksi",
+        "tx": "EgSGFB4KG5oaBUgpKW9Ytpk73STYgm94baTz1qh7UujM",
         "who": "keeper.sandbox"
       }
     ]
@@ -601,14 +587,29 @@
           "who": "researcher"
         },
         {
-          "reason": "filler text, no model call, no receipt",
-          "what": "deliver",
-          "who": "cheapbot"
+          "reason": "signed NEAR AI answer, verified on-chain",
+          "what": "judge says 8/10 for research (panel 0)",
+          "who": "keeper"
         },
         {
           "reason": "filler text, no model call, no receipt",
           "what": "deliver",
           "who": "cheapbot"
+        },
+        {
+          "reason": "signed NEAR AI answer, verified on-chain",
+          "what": "judge says 2/10 for translate (panel 0)",
+          "who": "keeper"
+        },
+        {
+          "reason": "filler text, no model call, no receipt",
+          "what": "deliver",
+          "who": "cheapbot"
+        },
+        {
+          "reason": "signed NEAR AI answer, verified on-chain",
+          "what": "judge says 2/10 for summary (panel 0)",
+          "who": "keeper"
         }
       ],
       "jobs": [
@@ -670,8 +671,8 @@
         }
       ],
       "n": 3,
-      "say": "Workers that used NEAR AI deliver the raw response with its signature: the contract checks that the request carries this job's HT1 tag and that NEAR AI signed it. Each delivery opens a 5-minute check round.",
-      "title": "Workers deliver",
+      "say": "Workers that used NEAR AI deliver the raw response with its signature: the contract checks that the request carries this job's HT1 tag and that NEAR AI signed it. Each delivery opens a 5-minute check round, and a keeper sends the contract's own question to NEAR AI and submits the signed answer.",
+      "title": "Workers deliver; the judge answers",
       "wallets": [
         {
           "account": "client.sandbox",
@@ -706,23 +707,7 @@
       ]
     },
     {
-      "decisions": [
-        {
-          "reason": "signed NEAR AI answer, verified on-chain",
-          "what": "judge says 8/10 for research (panel 0)",
-          "who": "keeper"
-        },
-        {
-          "reason": "signed NEAR AI answer, verified on-chain",
-          "what": "judge says 2/10 for translate (panel 0)",
-          "who": "keeper"
-        },
-        {
-          "reason": "signed NEAR AI answer, verified on-chain",
-          "what": "judge says 2/10 for summary (panel 0)",
-          "who": "keeper"
-        }
-      ],
+      "decisions": [],
       "jobs": [
         {
           "account": "job-1.hub.sandbox",
@@ -782,8 +767,8 @@
         }
       ],
       "n": 4,
-      "say": "For each delivery the contract builds the judge question itself. A keeper asks NEAR AI exactly that and submits the signed answer; the contract verifies the signature and reads the score. Low scores reopen the job.",
-      "title": "The contract's check, answered by NEAR AI",
+      "say": "The contract built each judge question itself, verified NEAR AI's signature on the answer and read the score. The lowest answer counts; a low score reopens the job.",
+      "title": "The check rounds close",
       "wallets": [
         {
           "account": "client.sandbox",
@@ -1178,14 +1163,29 @@
           "who": "researcher"
         },
         {
+          "reason": "signed NEAR AI answer, verified on-chain",
+          "what": "judge says 8/10 for research (panel 0)",
+          "who": "keeper"
+        },
+        {
           "reason": "Deliverable: Translate the explanation into Spanish.",
           "what": "deliver with NEAR AI receipt",
           "who": "translator"
         },
         {
+          "reason": "signed NEAR AI answer, verified on-chain",
+          "what": "judge says 8/10 for translate (panel 0)",
+          "who": "keeper"
+        },
+        {
           "reason": "Deliverable: Write a one-line summary.",
           "what": "deliver with NEAR AI receipt",
           "who": "researcher"
+        },
+        {
+          "reason": "signed NEAR AI answer, verified on-chain",
+          "what": "judge says 8/10 for summary (panel 0)",
+          "who": "keeper"
         }
       ],
       "jobs": [
@@ -1247,8 +1247,8 @@
         }
       ],
       "n": 9,
-      "say": "Workers that used NEAR AI deliver the raw response with its signature: the contract checks that the request carries this job's HT1 tag and that NEAR AI signed it. Each delivery opens a 5-minute check round.",
-      "title": "Workers deliver",
+      "say": "Workers that used NEAR AI deliver the raw response with its signature: the contract checks that the request carries this job's HT1 tag and that NEAR AI signed it. Each delivery opens a 5-minute check round, and a keeper sends the contract's own question to NEAR AI and submits the signed answer.",
+      "title": "Workers deliver; the judge answers",
       "wallets": [
         {
           "account": "client.sandbox",
@@ -1283,23 +1283,7 @@
       ]
     },
     {
-      "decisions": [
-        {
-          "reason": "signed NEAR AI answer, verified on-chain",
-          "what": "judge says 8/10 for research (panel 0)",
-          "who": "keeper"
-        },
-        {
-          "reason": "signed NEAR AI answer, verified on-chain",
-          "what": "judge says 8/10 for translate (panel 0)",
-          "who": "keeper"
-        },
-        {
-          "reason": "signed NEAR AI answer, verified on-chain",
-          "what": "judge says 8/10 for summary (panel 0)",
-          "who": "keeper"
-        }
-      ],
+      "decisions": [],
       "jobs": [
         {
           "account": "job-2.hub.sandbox",
@@ -1359,8 +1343,8 @@
         }
       ],
       "n": 10,
-      "say": "For each delivery the contract builds the judge question itself. A keeper asks NEAR AI exactly that and submits the signed answer; the contract verifies the signature and reads the score. Low scores reopen the job.",
-      "title": "The contract's check, answered by NEAR AI",
+      "say": "The contract built each judge question itself, verified NEAR AI's signature on the answer and read the score. The lowest answer counts; a low score reopens the job.",
+      "title": "The check rounds close",
       "wallets": [
         {
           "account": "client.sandbox",

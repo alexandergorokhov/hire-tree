@@ -53,6 +53,7 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | Deliver junk in the last second, settle before the score lands | settle and approve wait while a check is pending | `settle_waits_for_a_pending_check`, `approve_waits_for_a_pending_check` |
 | The checker judges something other than what was delivered | with a checker pinned, `deliver` must carry the bytes (<= 16 KB) and their sha256 must equal the delivered hash; the job hands those bytes to the checker and to dispute panels | `checker_needs_the_content`, `content_must_match_hash` |
 | Forge a check answer | `on_check` is private, checks the caller and the seq | `check_callback_rejects_outside_callers`, `stale_check_answer_refused` |
+| Judged delivery sent as a hash only, so no one can ask the judge | refused: with a judge pinned, `deliver` needs the bytes; unscored work is paid only on approval | `hash_only_delivery_refused_when_a_judge_is_pinned`, `unscored_judged_delivery_is_not_paid_without_approval` |
 | Checker down, or its answer is lost | fail closed: the job stays Delivered and unscored; it is paid only if the manager approves it; `resume_check` clears a lost answer after 10 min | `check_failure_leaves_delivered`, `unscored_delivery_is_not_paid_without_approval`, `lost_check_answer_can_be_cleared_after_timeout` |
 | Nonsense score | anything outside 0..=10 counts as no answer | `out_of_range_score_counts_as_no_answer` |
 | Prompt injection in the deliverable aimed at the AI checker | the checker sees the deliverable as data inside a fixed rubric; the dispute adds two more panels with fresh seeds, 2 of 3 decide; a missing vote counts as junk, and a stuck dispute resumes as upheld (never in the worker's favour). Limit: the AI judge can still be fooled; the lead (who pays early) carries that risk, not the client | `dispute_*` |
@@ -84,8 +85,15 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 - One checker and one model for all three dispute panels; panels differ
   only by seed. A judge model that is fooled once may be fooled three times.
   The lead, who pays early, carries that risk, not the client.
-- OutLayer's per-call deposit and latency on testnet are not measured yet;
-  the sandbox uses `mock-outlayer`.
+- Track records are per-account counts, not weighted by money: a junk bot
+  can start over with a new account, and a lead can hire itself to build a
+  record. Records help a lead avoid repeat junk; they are not reputation.
+- In signed mode anyone may submit an answer and the lowest counts; a
+  client or rival who samples NEAR AI until it gets a low score can only
+  pull it within 2 points of the others (3 apart is unclear, not failed),
+  and a check nobody answers leaves the work unpaid unless the lead approves.
+- The demo agents run as one process taking turns; each role only uses its
+  own key and the shared tool list. Outside agents join through `hiretree mcp`.
 - `child_closed` and `close_unfunded` are fire-and-forget; if one ever
   failed, the parent would need a manual fix (not seen in tests).
 - NEAR from a failed create goes back to the job, not the manager (a few

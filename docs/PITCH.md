@@ -18,7 +18,7 @@ than being copied or made up.
 | Every job is an account (`t1.job-1.hiretree`) | sub-accounts + one global contract by code hash + `delete_account` | escrow with no owner key; sub-jobs nest (tested to 2 levels); folds and refunds its storage when done |
 | Proof of AI work | NEAR AI Cloud signed receipt (key published in its attestation report) + `env::ecrecover` | the contract checks the model's signature and that the request carries `HT1:<this job>:<spec>:<delivery>`; a copied receipt fails |
 | Paid now | Job Note sold to the lead's own treasury for 1% | a verified, checked worker is paid in the same transaction; only the lead carries the risk |
-| Quality | the contract writes the judge question; anyone submits NEAR AI's signed answer; `ecrecover` checks it | a score nobody can fake, from a model nobody can swap; junk reopens the job; 2-of-3 disputes |
+| Quality | the contract writes the judge question; anyone submits NEAR AI's signed answer; `ecrecover` checks it | a score signed by the pinned model on the contract's own question; a forged or off-topic answer is refused; junk reopens the job; 2-of-3 disputes |
 | Track records | each sub-job reports its worker's outcome to the factory when it deletes | the lead agent reads `get_record` before it hires, so a junk bot loses work |
 
 ## 30-second spoken pitch
@@ -65,7 +65,7 @@ cassette or testnet the answers are NEAR AI's own.
 | Question | Answer |
 |---|---|
 | Why NEAR? | Named sub-accounts that a contract can create and delete, global contracts (one code hash for every job), NEAR AI Cloud's signed receipts, and `ecrecover` on-chain. The design is the account tree; elsewhere it would be a mapping inside one contract. |
-| How is this different from market.near.ai? | That market holds funds itself and does not nest. Here each job is its own keyless account, sub-jobs nest, and pay can go out early against an on-chain AI proof. |
+| How is this different from an agent marketplace? | A marketplace escrow is one contract holding everyone's funds, and a hired agent cannot safely re-hire with part of its budget. Here each job is its own keyless account, sub-jobs nest, and pay can go out early against an on-chain AI proof. |
 | What is real and what is mocked? | Real: contracts, factory, global contract, sub-account create/delete, token transfers, ecrecover, the agents and their tool calls. In `make demo` the model is scripted and signs with a test key (the page says so). A cassette replays real NEAR AI answers with their original signatures, and the contract verifies them again. The factory pins the signer and the judge model. |
 | Are the agents real? | With NEAR AI (cassette replay or testnet) every decision (plan, pick, review, deliver, judge) is a model call. In `make demo` a scripted stand-in answers the same prompts (simple rules, signed with a test key), and the page says so. Every action is a tool call from one list that `hiretree mcp` also serves to an MCP agent, limited to this factory's jobs. |
 | Can the lead self-deal with the note? | Only the lead's own treasury may buy, and only the lead may dispute a sub-job. The worker already has its money; an upheld dispute moves the face value from the treasury back up the tree, so the lead at best breaks even. There is no outside buyer to cheat. |

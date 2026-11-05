@@ -3,10 +3,18 @@
 ## Purpose
 One AI quality check per delivery, started by the contract (never by the
 worker), with a seed the contract picks, so junk cannot be re-rolled until it
-passes. On testnet the checker is an OutLayer job calling NEAR AI Cloud with
-a fixed rubric; in tests and the sandbox it is `mock-outlayer`.
+passes. Two modes: the signed mode (a pinned `judge` model; the contract
+builds the question, anyone submits NEAR AI's signed answer), which the
+agents and the demo use; and the older checker-contract mode, kept for
+tests with `mock-outlayer`. In both, a delivery must include the response
+bytes, and unscored work is paid only if the manager approves it.
 
 ## Requirements
+
+### Requirement: Unscored judged work is not paid by default
+With a pinned judge, `deliver` SHALL require `resp`, and `settle` SHALL pay
+a still-unscored (Delivered) sub-job only if the manager approved it.
+- unit: `hash_only_delivery_refused_when_a_judge_is_pinned`, `unscored_judged_delivery_is_not_paid_without_approval`
 
 ### Requirement: The contract starts exactly one check per delivery
 When the job has a pinned `checker`, `deliver` SHALL call

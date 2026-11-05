@@ -35,7 +35,7 @@ fn die(msg: impl std::fmt::Display) -> ! {
 
 async fn llm_from(spec: &str) -> Llm {
     match spec.split_once(':') {
-        _ if spec == "mock" => Llm::Mock(Mock::new(&model(), Box::new(mock_script))),
+        _ if spec == "mock" => Llm::Mock(Mock::new("scripted-test-model", Box::new(mock_script))),
         _ if spec == "live" => Llm::Live(NearAi::from_env(&model()).unwrap_or_else(|e| die(e))),
         Some(("replay", f)) => {
             let c = Cassette::load(f).unwrap_or_else(|e| die(e));
