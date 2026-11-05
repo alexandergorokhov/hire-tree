@@ -172,6 +172,7 @@ fn new_root() -> Job {
         None,
         None,
         None,
+        None,
     )
 }
 
@@ -197,6 +198,7 @@ fn new_sub(pay: u128) -> Job {
         WINDOW,
         signer(),
         code_hash(),
+        None,
         None,
         None,
         None,
@@ -286,6 +288,7 @@ fn init_must_be_called_by_parent_account() {
         None,
         None,
         None,
+        None,
     );
 }
 
@@ -301,6 +304,7 @@ fn root_with_fee(fee: u128) -> Job {
         WINDOW,
         signer(),
         code_hash(),
+        None,
         None,
         None,
         None,
@@ -358,6 +362,7 @@ fn client_and_worker_both_refused() {
         None,
         None,
         None,
+        None,
     );
 }
 
@@ -375,6 +380,7 @@ fn bad_spec_hash_refused() {
         WINDOW,
         signer(),
         code_hash(),
+        None,
         None,
         None,
         None,
@@ -398,6 +404,7 @@ fn bad_signer_refused() {
         None,
         None,
         None,
+        None,
     );
 }
 
@@ -415,6 +422,7 @@ fn window_too_long_refused() {
         MAX_WINDOW_SECS + 1,
         signer(),
         code_hash(),
+        None,
         None,
         None,
         None,
@@ -979,6 +987,7 @@ mod receipt_tests {
             WINDOW,
             addr_hex(&key(1)),
             code_hash(),
+            None,
             None,
             None,
             None,
@@ -1878,6 +1887,7 @@ fn two_level_tree_folds_bottom_up() {
         None,
         None,
         None,
+        None,
     );
     Ctx::new(GC, TOKEN).set();
     gc.ft_on_transfer(acc(T1), U128(8 * USD), "fund".into());
@@ -1940,6 +1950,7 @@ mod check_note_dispute {
             code_hash(),
             checker.then(|| acc(CHECKER)),
             Some(acc(TREASURY)),
+            None,
             None,
         );
         Ctx::new(T1, TOKEN).set();
@@ -2372,6 +2383,7 @@ mod check_note_dispute {
             Some(acc(CHECKER)),
             Some(acc(TREASURY)),
             None,
+            None,
         );
         Ctx::new(ROOT, TOKEN).set();
         r.ft_on_transfer(acc(CLIENT), U128(100 * USD), "fund".into());
@@ -2682,6 +2694,11 @@ mod stuck_hire {
                     + Gas::from_tgas(5).as_gas()
         );
         assert!(GAS_ON_RESUME.as_gas() >= GAS_ON_PAYEE_PAID.as_gas());
+        // The balance callback schedules the delete, child_closed and record.
+        assert!(
+            GAS_ON_BALANCE_CHECKED.as_gas()
+                >= GAS_CHILD_CLOSED.as_gas() + GAS_RECORD.as_gas() + Gas::from_tgas(10).as_gas()
+        );
         assert!(
             GAS_SETTLE_MIN.as_gas()
                 >= GAS_STORAGE_DEPOSIT.as_gas()
@@ -2741,6 +2758,7 @@ mod signed_check {
             None,
             Some(acc(TREASURY)),
             Some(MODEL.into()),
+            None,
         );
         Ctx::new(T1, TOKEN).set();
         j.ft_on_transfer(acc(ROOT), U128(PAY), "fund".into());
@@ -2986,6 +3004,7 @@ mod signed_check {
             Some(acc(CHECKER)),
             None,
             Some(MODEL.into()),
+            None,
         );
     }
 
@@ -3069,4 +3088,48 @@ mod signed_check {
         finalize(&mut j);
         assert_eq!(j.quote_note(), Some(U128(PAY - PAY / 100)));
     }
+}
+
+// ================================================================ track record
+
+#[test]
+fn deleted_sub_reports_the_workers_record_to_the_registry() {
+    let mut j = paid_sub();
+    balance_cb(&mut j, T1, ok(&u128_json(0)));
+    let r = call_args("record");
+    assert_eq!(r["worker"], WORKER);
+    assert_eq!(r["delivered"], true);
+    assert_eq!(r["paid"], true);
+    assert_eq!(r["junk"], false);
+    let to = get_created_receipts()
+        .into_iter()
+        .find(|x| {
+            x.actions.iter().any(|a| matches!(a, MockAction::FunctionCallWeight { method_name, .. } if method_name == b"record"))
+        })
+        .unwrap()
+        .receiver_id;
+    assert_eq!(
+        to,
+        acc(ROOT),
+        "registry defaults to the creator; hire passes the factory down"
+    );
+}
+
+#[test]
+fn root_reports_no_record() {
+    let mut j = funded_root(10 * USD);
+    Ctx::new(ROOT, CLIENT).set();
+    j.approve();
+    Ctx::new(ROOT, EVE).set();
+    j.settle();
+    rest_cb(&mut j, ROOT, true);
+    balance_cb(&mut j, ROOT, ok(&u128_json(0)));
+    assert!(!calls().iter().any(|c| c.1 == "record"));
+}
+
+#[test]
+fn hire_passes_the_registry_down() {
+    let mut j = funded_root(100 * USD);
+    hire_one(&mut j, WORKER, 30 * USD);
+    assert_eq!(call_args("new")["registry"], FACTORY);
 }

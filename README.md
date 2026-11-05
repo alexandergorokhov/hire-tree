@@ -54,7 +54,7 @@ a deliverable came out of a model call made for this task.
 | Do | See |
 |---|---|
 | `make setup` | toolchain versions; crates fetched (the only networked step besides the near-sandbox binary) |
-| `make test` | 278 unit + property tests, all `ok`: core (56 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (192), factory (16), mock checker (2), mock-usdc (7) |
+| `make test` | 283 unit + property tests, all `ok`: core (56 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (195), factory (18), mock checker (2), mock-usdc (7) |
 | `make lint` | rustfmt check and clippy `-D warnings`; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make sandbox` | a local NEAR node runs 4 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, and the full scene; `test result: ok. 4 passed`, about 2 min |

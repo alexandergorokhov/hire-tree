@@ -60,6 +60,21 @@ pub struct Posted {
     pub state: PostState,
 }
 
+/// A worker's track record, reported by the jobs this factory's tree made.
+/// Evidence, not proof: a lead can hire itself to build one.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Record {
+    pub jobs: u32,
+    pub delivered: u32,
+    pub checked: u32,
+    pub junk: u32,
+    pub paid: u32,
+    /// Sum and count of check scores, for an average.
+    pub score_sum: u32,
+    pub scored: u32,
+}
+
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
 pub struct Factory {
@@ -75,6 +90,7 @@ pub struct Factory {
     jobs: LookupMap<u32, Posted>,
     /// Prepaid NEAR per client, in yocto.
     credits: LookupMap<AccountId, u128>,
+    records: LookupMap<AccountId, Record>,
 }
 
 fn emit(event: &str, data: serde_json::Value) {
@@ -107,6 +123,7 @@ impl Factory {
             next: 1,
             jobs: LookupMap::new(b"j"),
             credits: LookupMap::new(b"c"),
+            records: LookupMap::new(b"r"),
         }
     }
 
@@ -319,6 +336,46 @@ impl Factory {
         );
         self.jobs.insert(n, p);
         U128(amount.0 - used)
+    }
+
+    /// Called by a settled job of this factory's tree (any account under
+    /// `.<factory>`: only the factory and its jobs can create those, and the
+    /// jobs run the pinned global code). Counts one finished job.
+    pub fn record(
+        &mut self,
+        worker: AccountId,
+        delivered: bool,
+        checked: bool,
+        junk: bool,
+        paid: bool,
+        quality: Option<u8>,
+    ) {
+        let caller = env::predecessor_account_id();
+        require!(
+            caller
+                .as_str()
+                .ends_with(&format!(".{}", env::current_account_id())),
+            "only jobs of this factory report records"
+        );
+        let mut r = self.records.get(&worker).cloned().unwrap_or_default();
+        r.jobs += 1;
+        r.delivered += delivered as u32;
+        r.checked += checked as u32;
+        r.junk += junk as u32;
+        r.paid += paid as u32;
+        if let Some(q) = quality.filter(|q| *q <= 10) {
+            r.score_sum += q as u32;
+            r.scored += 1;
+        }
+        emit(
+            "record",
+            json!({ "worker": worker, "by": caller, "record": r }),
+        );
+        self.records.insert(worker, r);
+    }
+
+    pub fn get_record(&self, account_id: AccountId) -> Record {
+        self.records.get(&account_id).cloned().unwrap_or_default()
     }
 
     pub fn get_job(&self, n: u32) -> Option<Posted> {
@@ -661,6 +718,39 @@ mod tests {
             .unwrap();
         assert_eq!(init["judge"], "judge-model");
         assert!(init["checker"].is_null());
+    }
+
+    #[test]
+    fn jobs_of_this_factory_build_a_workers_record() {
+        let mut f = factory();
+        for (who, junk) in [
+            ("t1.job-1.hiretree.test", false),
+            ("job-2.hiretree.test", true),
+        ] {
+            ctx(who, vec![]);
+            f.record(
+                acc("w.test"),
+                true,
+                !junk,
+                junk,
+                !junk,
+                Some(if junk { 2 } else { 8 }),
+            );
+        }
+        let r = f.get_record(acc("w.test"));
+        assert_eq!(
+            (r.jobs, r.delivered, r.checked, r.junk, r.paid),
+            (2, 2, 1, 1, 1)
+        );
+        assert_eq!((r.score_sum, r.scored), (10, 2));
+    }
+
+    #[test]
+    #[should_panic(expected = "only jobs of this factory report records")]
+    fn strangers_cannot_write_records() {
+        let mut f = factory();
+        ctx("hiretree.test.evil.test", vec![]);
+        f.record(acc("w.test"), true, true, false, true, Some(10));
     }
 
     #[test]

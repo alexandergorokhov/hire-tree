@@ -71,7 +71,9 @@ const GAS_ON_CHILD_FUNDED: Gas = Gas::from_tgas(25);
 const GAS_ON_CHILD_CREATED: Gas = Gas::from_tgas(100);
 // Each callback's static gas covers the static gas of what it schedules
 // plus its own work (checked in `settle_at_minimum_gas_budget_...`).
-const GAS_ON_BALANCE_CHECKED: Gas = Gas::from_tgas(25);
+const GAS_ON_BALANCE_CHECKED: Gas = Gas::from_tgas(35);
+/// The track-record report to the registry (factory) at delete.
+pub const GAS_RECORD: Gas = Gas::from_tgas(10);
 const GAS_ON_REST_PAID: Gas = Gas::from_tgas(45);
 const GAS_ON_PAYEE_PAID: Gas = Gas::from_tgas(75);
 const GAS_ON_RESUME: Gas = Gas::from_tgas(80);
@@ -244,6 +246,7 @@ pub struct JobView {
     pub failed_checks: u32,
     pub judge: Option<String>,
     pub rounds: Vec<CheckRound>,
+    pub registry: AccountId,
 }
 
 #[near(contract_state)]
@@ -308,6 +311,8 @@ pub struct Job {
     judge: Option<String>,
     /// Open signed-check rounds.
     rounds: Vec<CheckRound>,
+    /// Where workers' track records live (the factory).
+    registry: AccountId,
 }
 
 fn emit(event: &str, data: serde_json::Value) {
@@ -361,6 +366,7 @@ impl Job {
         checker: Option<AccountId>,
         treasury: Option<AccountId>,
         judge: Option<String>,
+        registry: Option<AccountId>,
     ) -> Self {
         require!(
             !(checker.is_some() && judge.is_some()),
@@ -447,6 +453,8 @@ impl Job {
             note_price: 0,
             judge,
             rounds: Vec::new(),
+            // Root: its creator (the factory). Sub-jobs inherit it.
+            registry: registry.unwrap_or_else(env::predecessor_account_id),
         };
         emit(
             "job_created",
@@ -731,6 +739,7 @@ impl Job {
             "checker": self.checker,
             "treasury": self.treasury,
             "judge": self.judge,
+            "registry": self.registry,
         });
         // The job keeps HIRE_KEEP_NEAR (child's token registration + its own
         // child record); the rest is the child's storage.
@@ -1983,6 +1992,7 @@ impl Job {
     }
 
     fn finalize(&mut self) -> Promise {
+        let prev = self.status_before_settle;
         self.status = transition(self.status, Event::SettleOk).unwrap_or_else(|e| fail(e));
         self.status_before_settle = None;
         self.payout = None;
@@ -1994,6 +2004,28 @@ impl Job {
         let delete = Promise::new(me).delete_account(self.parent.clone());
         if self.root {
             return delete;
+        }
+        if let Some(worker) = self.worker.clone() {
+            // The worker's track record (fire-and-forget; evidence, not proof).
+            let paid =
+                self.note_sold || (self.ledger.payee_paid && self.payee.as_ref() == Some(&worker));
+            Promise::new(self.registry.clone())
+                .function_call(
+                    "record",
+                    json!({
+                        "worker": worker,
+                        "delivered": self.seq > 0,
+                        "checked": prev == Some(Status::Checked),
+                        "junk": prev == Some(Status::Refunded),
+                        "paid": paid,
+                        "quality": self.quality,
+                    })
+                    .to_string()
+                    .into_bytes(),
+                    NO_DEPOSIT,
+                    GAS_RECORD,
+                )
+                .detach();
         }
         // A callback may not return a joint promise (the runtime refuses it,
         // found on the sandbox), so the parent notice is detached.
@@ -2074,6 +2106,7 @@ impl Job {
             failed_checks: self.failed_checks,
             judge: self.judge.clone(),
             rounds: self.rounds.clone(),
+            registry: self.registry.clone(),
         }
     }
 }

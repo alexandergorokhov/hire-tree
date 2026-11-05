@@ -900,6 +900,31 @@ async fn scene_full_tree_on_local_node() {
     story.step(&w, "100 in, 100 out",
         "researcher 29.70 + treasury fee 0.30 + translator 20 + junk 0 + lead fee 10 + back to the client 40 (unspent 30 + refunded 10) = 100 fUSD. No account is left holding anything.",
         &jobs, &people).await;
+    // Track records the jobs reported to the factory as they deleted.
+    let rec = w
+        .view(
+            &hub.id,
+            "get_record",
+            json!({ "account_id": researcher.id }),
+        )
+        .await;
+    assert_eq!(
+        (
+            rec["jobs"].as_u64(),
+            rec["checked"].as_u64(),
+            rec["paid"].as_u64()
+        ),
+        (Some(1), Some(1), Some(1)),
+        "{rec}"
+    );
+    let rec = w
+        .view(&hub.id, "get_record", json!({ "account_id": junk.id }))
+        .await;
+    assert_eq!(
+        (rec["junk"].as_u64(), rec["paid"].as_u64()),
+        (Some(1), Some(0)),
+        "{rec}"
+    );
     story.save();
     let (hub_near_end, _, _) = w.account_state(&hub.id).await.unwrap();
     eprintln!(

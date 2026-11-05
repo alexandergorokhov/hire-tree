@@ -45,3 +45,18 @@ budget SHALL be at least 1 fUSD. A failed post gives the credit back.
 Only the owner sets signer, checker and code hash; jobs created later use
 the new values, existing jobs keep theirs.
 - unit: `only_owner_changes_settings`
+
+### Requirement: Worker track records
+Every sub-job SHALL report its worker's outcome to its registry (the
+factory, passed down the tree at hire) when it deletes: delivered, checked,
+junk (dispute upheld), paid, and the check score. The factory SHALL accept
+reports only from accounts under `.<factory>` (only the factory and its
+keyless jobs can create those). `get_record(account)` returns the counts.
+Records are evidence, not proof: a lead can hire itself to build one.
+
+#### Scenario: A finished sub-job reports
+- unit: `deleted_sub_reports_the_workers_record_to_the_registry`, `root_reports_no_record`, `hire_passes_the_registry_down`; factory: `jobs_of_this_factory_build_a_workers_record`; sandbox: `scene_full_tree_on_local_node` (researcher checked + paid, junk worker junk)
+
+#### Scenario: A stranger writes a record
+- THEN refused
+- factory: `strangers_cannot_write_records`
