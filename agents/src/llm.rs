@@ -129,6 +129,50 @@ impl NearAi {
         })
     }
 
+    /// The model's signing address from NEAR AI's attestation report (no
+    /// tokens spent). The report itself is what proves the key lives in a TEE.
+    pub async fn signing_address(&self) -> Result<String, String> {
+        let v: Value = self
+            .http
+            .get(format!("{}/v1/attestation/report", self.base))
+            .query(&[("model", self.model.as_str()), ("signing_algo", "ecdsa")])
+            .bearer_auth(&self.key)
+            .send()
+            .await
+            .map_err(|e| format!("attestation: {e}"))?
+            .json()
+            .await
+            .map_err(|e| format!("attestation json: {e}"))?;
+        let a = v["signing_address"]
+            .as_str()
+            .or_else(|| v["all_attestations"][0]["signing_address"].as_str())
+            .ok_or(format!(
+                "attestation: no signing_address in {}",
+                v.to_string().chars().take(300).collect::<String>()
+            ))?;
+        Ok(a.trim_start_matches("0x").to_lowercase())
+    }
+
+    /// Model ids NEAR AI serves.
+    pub async fn models(&self) -> Result<Vec<String>, String> {
+        let v: Value = self
+            .http
+            .get(format!("{}/v1/models", self.base))
+            .bearer_auth(&self.key)
+            .send()
+            .await
+            .map_err(|e| format!("models: {e}"))?
+            .json()
+            .await
+            .map_err(|e| format!("models json: {e}"))?;
+        Ok(v["data"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|m| m["id"].as_str().map(String::from))
+            .collect())
+    }
+
     /// POST the exact body bytes, then fetch the signature for that chat.
     /// Fails if NEAR AI's signed text is not `model:sha256(our request
     /// bytes):sha256(the response bytes we got)`: that is the format the
@@ -325,4 +369,40 @@ pub fn chat_body(model: &str, system: &str, user: &str, max_tokens: u32) -> Vec<
             "messages": [ { "role": "system", "content": system }, { "role": "user", "content": user } ] })
     .to_string()
     .into_bytes()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn cassette_verifies_and_catches_tampering() {
+        let llm = Llm::Mock(Mock::new("m", Box::new(|_| "hi".into())));
+        let body = chat_body("m", "s", "u", 4);
+        let r = llm.chat(&body).await.unwrap();
+        assert_eq!(r.content(), "hi");
+        let mut c = Cassette {
+            model: "m".into(),
+            signer: llm.signer().unwrap(),
+            signer_source: "test".into(),
+            entries: vec![Entry {
+                req: String::from_utf8(body).unwrap(),
+                resp: String::from_utf8(r.body).unwrap(),
+                sig: r.sig,
+            }],
+        };
+        assert_eq!(c.verify().unwrap(), 1);
+        c.entries[0].resp = c.entries[0].resp.replace("hi", "ho");
+        assert!(c.verify().is_err(), "an edited answer must fail");
+    }
+
+    #[tokio::test]
+    async fn replay_refuses_a_request_it_never_saw() {
+        let c = Llm::Replay(Cassette {
+            model: "m".into(),
+            ..Default::default()
+        });
+        let e = c.chat(b"{}").await.unwrap_err();
+        assert!(e.contains("diverged"));
+    }
 }

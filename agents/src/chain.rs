@@ -21,6 +21,8 @@ pub struct Chain {
     pub net: NetworkConfig,
     /// Funds new accounts (sandbox genesis; on testnet the operator).
     pub funder: Acc,
+    /// Derives demo account keys (sha256 of the operator key).
+    seed: [u8; 32],
     pub usdc: AccountId,
     /// May mint fUSD (sandbox: the mock-usdc account; testnet: its owner).
     pub usdc_owner: Acc,
@@ -69,78 +71,211 @@ impl Chain {
             signer: Signer::from_secret_key(DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY.parse().unwrap())
                 .unwrap(),
         };
-        let mut c = Chain {
-            sbx: Some(sbx),
+        let mut c = Chain::new(
+            Some(sbx),
             net,
-            funder: funder.clone(),
-            usdc: funder.id.clone(),
-            usdc_owner: funder.clone(),
-            hub: funder.id.clone(),
-            network_name: "near-sandbox (local node)".into(),
-            explorer: None,
-            txs: Default::default(),
-        };
-        let usdc = c.account("usdc", 20).await;
-        Contract::deploy(usdc.id.clone())
-            .use_code(wasm("USDC_WASM", "mock_usdc.wasm"))
-            .with_init_call("new", json!({ "owner_id": usdc.id }))
-            .unwrap()
-            .with_signer(usdc.signer.clone())
-            .send_to(&c.net)
-            .await
-            .unwrap()
-            .assert_success();
-        c.usdc = usdc.id.clone();
-        c.usdc_owner = usdc.clone();
-        let hub = c.account("hub", 100).await;
-        let code = wasm("JOB_WASM", "hire_tree_job.wasm");
-        let code_hash: [u8; 32] = Sha256::digest(&code).into();
-        Contract::deploy_global_contract_code(code)
-            .as_hash()
-            .with_signer(hub.id.clone(), hub.signer.clone())
-            .send_to(&c.net)
-            .await
-            .unwrap()
-            .assert_success();
-        Contract::deploy(hub.id.clone())
-            .use_code(wasm("FACTORY_WASM", "hire_tree_factory.wasm"))
-            .with_init_call(
-                "new",
-                json!({ "owner": hub.id, "token": usdc.id,
-                        "code_hash": near_api::types::CryptoHash(code_hash).to_string(),
-                        "signer": signer, "checker": null }),
-            )
-            .unwrap()
-            .with_signer(hub.signer.clone())
-            .send_to(&c.net)
-            .await
-            .unwrap()
-            .assert_success();
-        if let Some(m) = judge {
-            c.ok(&hub, &hub.id, "set_settings", json!({ "judge": m }))
-                .await;
-        }
-        c.hub = hub.id.clone();
-        c.register(&hub).await;
+            funder,
+            DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY,
+            "near-sandbox (local node)",
+            None,
+        );
+        c.deploy(signer, judge).await.unwrap();
         c
     }
 
-    /// A new funded sub-account of the funder.
-    pub async fn account(&self, name: &str, near: u128) -> Acc {
-        let id: AccountId = format!("{name}.{}", self.funder.id).parse().unwrap();
-        let sk = near_api::signer::generate_secret_key().unwrap();
-        Account::create_account(id.clone())
-            .fund_myself(self.funder.id.clone(), NearToken::from_near(near))
-            .with_public_key(sk.public_key())
-            .with_signer(self.funder.signer.clone())
-            .send_to(&self.net)
-            .await
-            .unwrap()
-            .assert_success();
-        Acc {
-            id,
-            signer: Signer::from_secret_key(sk).unwrap(),
+    /// Testnet, operated by `HT_OPERATOR` with the key in `HT_OPERATOR_KEY`
+    /// (env only). Every account the demo uses is a sub-account of the
+    /// operator with a key derived from the operator key, so a rerun finds
+    /// and reuses what an earlier (interrupted) run created.
+    pub async fn testnet(signer: &str, judge: Option<&str>) -> Result<Chain, String> {
+        let mut c = Chain::testnet_connect()?;
+        c.deploy(signer, judge).await?;
+        Ok(c)
+    }
+
+    /// Testnet without deploying: `usdc.<op>` and `hub.<op>` must exist.
+    pub fn testnet_connect() -> Result<Chain, String> {
+        let op =
+            std::env::var("HT_OPERATOR").map_err(|_| "set HT_OPERATOR (e.g. hiretree.testnet)")?;
+        let key =
+            std::env::var("HT_OPERATOR_KEY").map_err(|_| "set HT_OPERATOR_KEY (ed25519:...)")?;
+        let rpc = std::env::var("HT_RPC").unwrap_or_else(|_| "https://rpc.testnet.near.org".into());
+        let net = NetworkConfig::from_rpc_url(
+            "testnet",
+            rpc.parse().map_err(|e| format!("HT_RPC: {e}"))?,
+        );
+        let funder = Acc {
+            id: op.parse().map_err(|e| format!("HT_OPERATOR: {e}"))?,
+            signer: Signer::from_secret_key(
+                key.parse().map_err(|e| format!("HT_OPERATOR_KEY: {e:?}"))?,
+            )
+            .map_err(|e| format!("{e:?}"))?,
+        };
+        let mut c = Chain::new(
+            None,
+            net,
+            funder,
+            &key,
+            "NEAR testnet",
+            Some("https://testnet.nearblocks.io/txns/".into()),
+        );
+        c.usdc = format!("usdc.{op}").parse().unwrap();
+        c.usdc_owner = Acc {
+            id: c.usdc.clone(),
+            signer: c.derived("usdc"),
+        };
+        c.hub = format!("hub.{op}").parse().unwrap();
+        Ok(c)
+    }
+
+    fn new(
+        sbx: Option<near_sandbox::Sandbox>,
+        net: NetworkConfig,
+        funder: Acc,
+        seed: &str,
+        name: &str,
+        explorer: Option<String>,
+    ) -> Chain {
+        Chain {
+            sbx,
+            net,
+            funder: funder.clone(),
+            seed: Sha256::digest(seed.as_bytes()).into(),
+            usdc: funder.id.clone(),
+            usdc_owner: funder.clone(),
+            hub: funder.id.clone(),
+            network_name: name.into(),
+            explorer,
+            txs: Default::default(),
         }
+    }
+
+    pub fn is_testnet(&self) -> bool {
+        self.sbx.is_none()
+    }
+
+    /// NEAR to fund an account with: generous on the local node, tight on
+    /// testnet (where Alex pays from the faucet).
+    fn near_for(&self, sandbox: u128, testnet_milli: u128) -> NearToken {
+        if self.is_testnet() {
+            NearToken::from_millinear(testnet_milli)
+        } else {
+            NearToken::from_near(sandbox)
+        }
+    }
+
+    async fn has_code(&self, id: &AccountId) -> bool {
+        match Account(id.clone()).view().fetch_from(&self.net).await {
+            Ok(v) => !matches!(
+                v.data.contract_state,
+                near_api::types::account::ContractState::None
+            ),
+            Err(_) => false,
+        }
+    }
+
+    /// Deploy (or find) mock-usdc, the global job code and the factory.
+    pub async fn deploy(&mut self, signer: &str, judge: Option<&str>) -> Result<(), String> {
+        let code = wasm("JOB_WASM", "hire_tree_job.wasm");
+        let usdc = self.account_with("usdc", self.near_for(20, 3500)).await;
+        if !self.has_code(&usdc.id).await {
+            Contract::deploy(usdc.id.clone())
+                .use_code(wasm("USDC_WASM", "mock_usdc.wasm"))
+                .with_init_call("new", json!({ "owner_id": usdc.id }))
+                .unwrap()
+                .with_signer(usdc.signer.clone())
+                .send_to(&self.net)
+                .await
+                .map_err(|e| format!("deploy usdc: {e:?}"))?
+                .assert_success();
+        }
+        self.usdc = usdc.id.clone();
+        self.usdc_owner = usdc.clone();
+        // A global contract burns 10x the storage price per byte.
+        let global_milli = (code.len() as u128 * 10 * 10 / 1000) + 1;
+        let hub = self
+            .account_with("hub", self.near_for(100, global_milli + 5500))
+            .await;
+        let code_hash: [u8; 32] = Sha256::digest(&code).into();
+        let hash_s = near_api::types::CryptoHash(code_hash).to_string();
+        if !self.has_code(&hub.id).await {
+            let before = self.near_of(&hub.id).await;
+            Contract::deploy_global_contract_code(code)
+                .as_hash()
+                .with_signer(hub.id.clone(), hub.signer.clone())
+                .send_to(&self.net)
+                .await
+                .map_err(|e| format!("deploy global code: {e:?}"))?
+                .assert_success();
+            eprintln!(
+                "  global job code {hash_s}: cost {:.2} NEAR",
+                (before - self.near_of(&hub.id).await) as f64 / 1e24
+            );
+            Contract::deploy(hub.id.clone())
+                .use_code(wasm("FACTORY_WASM", "hire_tree_factory.wasm"))
+                .with_init_call(
+                    "new",
+                    json!({ "owner": hub.id, "token": usdc.id, "code_hash": hash_s,
+                            "signer": signer, "checker": null }),
+                )
+                .unwrap()
+                .with_signer(hub.signer.clone())
+                .send_to(&self.net)
+                .await
+                .map_err(|e| format!("deploy factory: {e:?}"))?
+                .assert_success();
+        }
+        self.hub = hub.id.clone();
+        // Settings follow this run's model and signer (a rerun may change them).
+        self.ok(&hub, &hub.id, "set_settings", json!({ "code_hash": hash_s, "signer": signer, "judge": judge, "clear_judge": judge.is_none() }))
+            .await;
+        self.register(&hub).await;
+        Ok(())
+    }
+
+    pub async fn near_of(&self, id: &AccountId) -> u128 {
+        Account(id.clone())
+            .view()
+            .fetch_from(&self.net)
+            .await
+            .map(|v| v.data.amount.as_yoctonear())
+            .unwrap_or(0)
+    }
+
+    /// A funded sub-account of the funder (sandbox: `near` NEAR; testnet:
+    /// 1 NEAR). Reused if it already exists.
+    pub async fn account(&self, name: &str, near: u128) -> Acc {
+        self.account_with(name, self.near_for(near, 1000)).await
+    }
+
+    /// The key for `name` is derived from the operator key: reruns find it.
+    pub fn derived(&self, name: &str) -> Arc<Signer> {
+        let mut h = Sha256::new();
+        h.update(self.seed);
+        h.update(name.as_bytes());
+        let sk = near_api::types::SecretKey::ED25519(
+            near_api::types::crypto::secret_key::ED25519SecretKey::from_secret_key(
+                h.finalize().into(),
+            ),
+        );
+        Signer::from_secret_key(sk).unwrap()
+    }
+
+    pub async fn account_with(&self, name: &str, amount: NearToken) -> Acc {
+        let id: AccountId = format!("{name}.{}", self.funder.id).parse().unwrap();
+        let signer = self.derived(name);
+        if !self.alive(&id).await {
+            let pk = signer.get_public_key().await.unwrap();
+            Account::create_account(id.clone())
+                .fund_myself(self.funder.id.clone(), amount)
+                .with_public_key(pk)
+                .with_signer(self.funder.signer.clone())
+                .send_to(&self.net)
+                .await
+                .unwrap()
+                .assert_success();
+        }
+        Acc { id, signer }
     }
 
     pub async fn call(

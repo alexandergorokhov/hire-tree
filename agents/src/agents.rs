@@ -101,7 +101,10 @@ impl<'a> Run<'a> {
             self.team.lead.clone(),
             self.team.treasury.clone(),
         );
-        let root: AccountId = format!("job-{n}.{}", c.hub).parse().unwrap();
+        let next = c.view(&c.hub, "get_settings", json!({})).await?["next"]
+            .as_u64()
+            .ok_or("factory: no next")?;
+        let root: AccountId = format!("job-{next}.{}", c.hub).parse().unwrap();
         self.story.jobs.clear();
         self.story.job(&format!("job-{n}"), &root);
 
@@ -109,7 +112,7 @@ impl<'a> Run<'a> {
         self.tool(&client, "post_job", json!({ "budget": budget.to_string(), "manager": lead.id, "task": task,
             "window_secs": self.window_secs, "lead_fee": fee.to_string(), "treasury": treasury.id })).await?;
         self.story.step(c, &format!("Job {n}: the client posts"),
-            &format!("\"{task}\" One transfer of {:.0} fUSD to the factory creates job-{n} from the global contract; the lead's fee is {:.0}. The rest comes back to the client at the end.", budget as f64 / 1e6, fee as f64 / 1e6)).await;
+            &format!("\"{task}\" One transfer of {:.0} fUSD to the factory creates {root} from the global contract; the lead's fee is {:.0}. The rest comes back to the client at the end.", budget as f64 / 1e6, fee as f64 / 1e6)).await;
 
         // 2. Plan.
         let pay_budget = (budget - fee) / USD;
@@ -571,4 +574,58 @@ pub async fn story<'a>(c: &'a Chain, llm: &'a Llm) -> Result<Run<'a>, String> {
     run.job(1, task, 100 * USD, 10 * USD).await?;
     run.job(2, task, 100 * USD, 10 * USD).await?;
     Ok(run)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ask(system: &str, user: Value) -> Value {
+        let req = json!({ "messages": [{ "content": system }, { "content": user.to_string() }] });
+        json_of(&mock_script(&req)).unwrap()
+    }
+
+    #[test]
+    fn json_of_takes_the_object_out_of_fences() {
+        assert_eq!(json_of("```json\n{\"a\":1}\n```").unwrap()["a"], 1);
+        assert!(json_of("no json here").is_none());
+    }
+
+    #[test]
+    fn picker_avoids_a_worker_with_unpaid_jobs() {
+        let cands = |bot_jobs: u32| {
+            json!({ "subtask": { "name": "summary" }, "candidates": [
+            { "account": "bot", "skills": ["summary"], "record": { "jobs": bot_jobs, "paid": 0 } },
+            { "account": "good", "skills": ["summary"], "record": { "jobs": 0, "paid": 0 } },
+            { "account": "other", "skills": ["research"], "record": { "jobs": 9, "paid": 9 } } ] })
+        };
+        assert_eq!(
+            ask(PICKER, cands(0))["worker"],
+            "bot",
+            "no record: first match"
+        );
+        let p = ask(PICKER, cands(2));
+        assert_eq!(p["worker"], "good");
+        assert!(p["reason"].as_str().unwrap().contains("avoided bot"));
+    }
+
+    #[test]
+    fn reviewer_buys_only_quoted_good_work() {
+        let r = |q: u8, quote: Value| {
+            ask(REVIEWER, json!({ "quality": q, "note_quote": quote }))["action"].clone()
+        };
+        assert_eq!(r(8, json!("29700000")), "buy_note");
+        assert_eq!(r(8, Value::Null), "none");
+        assert_eq!(r(2, json!("1")), "none");
+    }
+
+    #[test]
+    fn mock_judge_scores_filler_low() {
+        let judge = |d: &str| {
+            let req = json!({ "messages": [{ "content": "You grade" }, { "content": json!({ "deliverable": d }).to_string() }] });
+            mock_script(&req)
+        };
+        assert_eq!(judge("lorem ipsum"), r#"{"score":2}"#);
+        assert_eq!(judge("a real answer"), r#"{"score":8}"#);
+    }
 }

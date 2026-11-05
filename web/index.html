@@ -55,6 +55,13 @@
   .dot.on { background: var(--accent); }
   .err { color: var(--bad); }
   footer { margin-top: 18px; color: var(--muted); font-size: 13px; }
+  .decisions { margin: 0 0 18px; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .decisions li { font-size: 14px; border-left: 3px solid var(--accent); padding: 2px 0 2px 10px; }
+  .decisions .who { font-weight: 650; margin-right: 6px; }
+  .decisions .why { color: var(--muted); }
+  .run { margin-top: 10px; }
+  .run a { color: var(--info); }
+  details summary { cursor: pointer; }
   code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
 </style>
 </head>
@@ -68,6 +75,7 @@
     <div class="step-n" id="stepn"></div>
     <h2 class="step-title" id="title">Loading the scene…</h2>
     <p class="say" id="say"></p>
+    <ul class="decisions" id="decisions"></ul>
     <div class="tree" id="tree"></div>
     <div class="wallets" id="wallets"></div>
     <nav>
@@ -78,14 +86,16 @@
     </nav>
   </section>
   <footer>
-    Recorded by <code>make demo</code> on a local NEAR node (near-sandbox): every number here was read from the chain after
+    Every number here was read from the chain after
     a real transaction. All money is fake test USD (fUSD). Keys: ← → space.
+    <div class="run" id="run"></div>
   </footer>
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
+const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const usd = (s) => (Number(s) / 1e6).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-let scene = null, i = 0, timer = null;
+let scene = null, i = 0, timer = null, testKey = false;
 
 function node(j) {
   const d = document.createElement('div');
@@ -96,7 +106,7 @@ function node(j) {
     return d;
   }
   const chips = [`<span class="chip s-${j.status}">${j.status}</span>`];
-  if (j.worker) chips.push(`<span class="chip ${j.verified ? 'ok' : 'no'}">${j.verified ? '✓ NEAR AI receipt' : 'no receipt'}</span>`);
+  if (j.worker) chips.push(`<span class="chip ${j.verified ? 'ok' : 'no'}">${j.verified ? (testKey ? '✓ receipt (test key)' : '✓ NEAR AI receipt') : 'no receipt'}</span>`);
   if (j.quality !== null && j.quality !== undefined) chips.push(`<span class="chip">check ${j.quality}/10</span>`);
   if (j.note_sold) chips.push(`<span class="chip ok">note sold → ${String(j.payee).split('.')[0]}</span>`);
   d.innerHTML = `<div class="label">${j.label}</div><div class="acct">${j.account}</div>
@@ -111,6 +121,8 @@ function render() {
   $('stepn').textContent = `Scene ${s.n} of ${scene.steps.length}`;
   $('title').textContent = s.title;
   $('say').textContent = s.say;
+  $('decisions').innerHTML = (s.decisions || []).map((d) =>
+    `<li><span class="who">${esc(d.who)}</span>${esc(d.what)} <span class="why">— ${esc(d.reason)}</span></li>`).join('');
   const tree = $('tree'); tree.innerHTML = '';
   const [root, ...kids] = s.jobs;
   const r1 = document.createElement('div'); r1.className = 'row'; r1.appendChild(node(root)); tree.appendChild(r1);
@@ -146,8 +158,19 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft') go(-1);
 });
 
-fetch('scene.json').then((r) => r.json()).then((d) => {
-  scene = d; $('net').textContent = d.network; render();
+function runInfo(r) {
+  if (!r) return;
+  const tx = (r.transactions || []);
+  const link = (t) => r.explorer ? `<a href="${esc(r.explorer + t.tx)}" target="_blank" rel="noopener">${esc(t.tx.slice(0, 10))}…</a>` : `<code>${esc(t.tx.slice(0, 10))}…</code>`;
+  $('run').innerHTML = `Model answers: ${esc(r.answers)}. Model <code>${esc(r.model)}</code>, signer <code>${esc(r.signer)}</code>, ${esc(r.model_calls)} signed model calls,
+    factory <code>${esc(r.factory)}</code>.
+    <details><summary>${tx.length} transactions</summary><ol>${tx.map((t) =>
+      `<li>${esc(t.who)} → <code>${esc(t.method)}</code> on ${esc(t.on)}: ${link(t)}</li>`).join('')}</ol></details>`;
+}
+
+const sceneFile = new URLSearchParams(location.search).get('scene') || 'scene.json';
+fetch(sceneFile).then((r) => r.json()).then((d) => {
+  scene = d; testKey = /test key/.test((d.run || {}).answers || ''); $('net').textContent = d.network; runInfo(d.run); render();
 }).catch((e) => {
   $('title').innerHTML = '<span class="err">No scene.json yet</span>';
   $('say').textContent = 'Run `make demo` (writes out/scene.json and web/scene.json), then `make web`.';

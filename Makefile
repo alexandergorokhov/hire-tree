@@ -28,12 +28,14 @@ setup: ## Print toolchain versions and fetch crates (the only networked step)
 .PHONY: test
 test: ## Unit + property tests, offline (PROP_CASES=10000 by default)
 	PROP_CASES=$(PROP_CASES) cargo test --workspace --locked --offline
+	cd agents && cargo test --locked --offline --lib --bins
 
 .PHONY: lint
 lint: ## rustfmt check + clippy -D warnings
 	cargo fmt --all -- --check
 	cd agents && cargo fmt -- --check
 	cargo clippy --workspace --all-targets --locked --offline -- -D warnings
+	cd agents && cargo clippy --all-targets --locked --offline -- -D warnings
 
 # Plain cargo needs --cfg near (what cargo-near sets). Without it near-sdk's
 # panic_str aborts and every on-chain error reads only "unreachable".
@@ -56,7 +58,7 @@ build: ## Build the contract wasm into out/ with SHA256SUMS (non-reproducible fo
 # Where the hard limit is lower and cannot be raised (some containers), a
 # tiny LD_PRELOAD shim clamps that one request to the hard limit.
 .PHONY: sandbox
-sandbox: build ## near-sandbox tests: G1 delete gate, G4 global contract, 2-level tree fold (about 1 min)
+sandbox: build ## near-sandbox tests: G1, G4, tree fold, the agent story with a mock model and from a cassette (about 15 min)
 	@cd agents && \
 	if ulimit -n 65535 2>/dev/null; then pre=""; else \
 	  echo "sandbox: open-file hard limit is $$(ulimit -Hn), neard asks for 65535; loading fdshim" >&2; \
@@ -67,35 +69,49 @@ sandbox: build ## near-sandbox tests: G1 delete gate, G4 global contract, 2-leve
 	  FACTORY_WASM=$(CURDIR)/$(OUT)/hire_tree_factory.wasm OUTLAYER_WASM=$(CURDIR)/$(OUT)/mock_outlayer.wasm \
 	  cargo test --locked -- --test-threads=1 --nocapture
 
-# ---------------------------------------------------------------- not built yet
-
-.PHONY: demo
-demo: build ## The whole story on a local NEAR node, narrated; writes out/scene.json (about 2 min)
-	@cd agents && \
+# The node shim and wasm paths every local-node command needs.
+define SBX
+	cd agents && \
 	if ulimit -n 65535 2>/dev/null; then pre=""; else \
 	  mkdir -p target && cc -shared -fPIC -O2 -o target/fdshim.so fdshim/fdshim.c -ldl; \
 	  pre="$$PWD/target/fdshim.so"; \
 	fi; \
-	LD_PRELOAD="$$pre" JOB_WASM=$(CURDIR)/$(OUT)/hire_tree_job.wasm USDC_WASM=$(CURDIR)/$(OUT)/mock_usdc.wasm \
-	  FACTORY_WASM=$(CURDIR)/$(OUT)/hire_tree_factory.wasm OUTLAYER_WASM=$(CURDIR)/$(OUT)/mock_outlayer.wasm \
-	  SCENE_OUT=$(CURDIR)/$(OUT)/scene.json \
-	  cargo test --locked --test tree scene_full_tree_on_local_node -- --nocapture --test-threads=1 2>&1 \
-	  | grep -E '^(SCENE|  [^ ]|    [a-z]|scene written|test result)' ; \
-	test -s $(CURDIR)/$(OUT)/scene.json && cp $(CURDIR)/$(OUT)/scene.json $(CURDIR)/web/scene.json
+	export LD_PRELOAD="$$pre" JOB_WASM=$(CURDIR)/$(OUT)/hire_tree_job.wasm USDC_WASM=$(CURDIR)/$(OUT)/mock_usdc.wasm \
+	  FACTORY_WASM=$(CURDIR)/$(OUT)/hire_tree_factory.wasm OUTLAYER_WASM=$(CURDIR)/$(OUT)/mock_outlayer.wasm;
+endef
+
+HT = cargo run --quiet --locked --bin hiretree --
+CASSETTE ?= $(CURDIR)/demo/cassette.json
+
+.PHONY: demo
+demo: build ## The agent story on a local NEAR node (mock model, free); writes web/scene.json (about 4 min)
+	@$(SBX) $(HT) demo --llm mock --scene $(CURDIR)/web/scene.json
+
+.PHONY: demo-replay
+demo-replay: build ## The agent story replayed from the recorded NEAR AI cassette (free, offline)
+	@test -s $(CASSETTE) || { echo "$(CASSETTE) missing: make record-cassette (needs NEARAI_API_KEY)" >&2; exit 1; }
+	@$(SBX) $(HT) demo --llm replay:$(CASSETTE) --scene $(CURDIR)/web/scene.json
 
 .PHONY: web
-web: ## Serve the tree page on http://localhost:8080 (reads web/scene.json from make demo)
+web: ## Serve the tree page on http://localhost:8080 (reads web/scene.json)
 	@test -s web/scene.json || { echo "web/scene.json missing: run make demo first" >&2; exit 1; }
 	cd web && python3 -m http.server 8080
 
-.PHONY: testnet-deploy
-testnet-deploy: ## (not built yet) [testnet] deploy factory, global job code, mock-usdc
-	$(call not_built,testnet-deploy,day S+6)
+.PHONY: nearai-check
+nearai-check: ## [NEAR AI key] one tiny signed call: GO if NEAR AI signs what the contract checks (< $$0.001)
+	@cd agents && $(HT) nearai-check
 
-.PHONY: testnet-demo
-testnet-demo: ## (not built yet) [testnet] full run with real agents
-	$(call not_built,testnet-demo,day S+6)
+.PHONY: record-cassette
+record-cassette: build ## [NEAR AI key] run the story on a local node with real NEAR AI and save every signed answer (~24 calls, ~$$0.01)
+	@mkdir -p $(dir $(CASSETTE))
+	@rm -f $(CASSETTE)
+	@$(SBX) $(HT) demo --llm record:$(CASSETTE) --scene $(CURDIR)/web/scene.json
+	@cd agents && $(HT) verify-cassette $(CASSETTE)
 
-.PHONY: record-fixtures
-record-fixtures: ## (not built yet) [testnet, NEAR AI key] record 3 NEAR AI Cloud receipts
-	$(call not_built,record-fixtures,day S+2 on the owner's PC)
+.PHONY: verify-cassette
+verify-cassette: ## Re-check every NEAR AI signature in the cassette (offline)
+	@cd agents && $(HT) verify-cassette $(CASSETTE)
+
+.PHONY: testnet-all
+testnet-all: build ## [testnet: HT_OPERATOR, HT_OPERATOR_KEY, NEARAI_API_KEY] deploy (or reuse) and run the agent story with live NEAR AI; rerun resumes
+	@cd agents && $(HT) demo --net testnet --llm live --scene $(CURDIR)/web/scene-testnet.json

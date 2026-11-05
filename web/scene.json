@@ -1,8 +1,361 @@
 {
   "network": "near-sandbox (local node)",
+  "run": {
+    "explorer": null,
+    "factory": "hub.sandbox",
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "model_calls": 24,
+    "signer": "17c5185167401ed00cf5f5b2fc97d9bbfdb7d025",
+    "token": "usdc.sandbox",
+    "transactions": [
+      {
+        "method": "set_settings",
+        "on": "hub.sandbox",
+        "tx": "93smMu8Xy2PfVWM47sBSycqEYrXcTWAGnTahjT19MXeP",
+        "who": "hub.sandbox"
+      },
+      {
+        "method": "storage_deposit",
+        "on": "usdc.sandbox",
+        "tx": "EPqirc7TzoCs5vUsQ5xpsa9WMemprxAU7vkbL9eLy6KN",
+        "who": "hub.sandbox"
+      },
+      {
+        "method": "storage_deposit",
+        "on": "usdc.sandbox",
+        "tx": "6eyHLTZMpt5CHBzzRxrBkVD5hTUT9UzYY5u3k1EBgkrc",
+        "who": "client.sandbox"
+      },
+      {
+        "method": "storage_deposit",
+        "on": "usdc.sandbox",
+        "tx": "2VJa7pW57RaCfe5pykZyjWrQoRKpeuzD1dN4xB7uLpT2",
+        "who": "lead.sandbox"
+      },
+      {
+        "method": "storage_deposit",
+        "on": "usdc.sandbox",
+        "tx": "A1EeeY5QvaFADrK2bkHcaDZ9PcDnszGmBWyGdFXKTJ1h",
+        "who": "treasury.sandbox"
+      },
+      {
+        "method": "storage_deposit",
+        "on": "usdc.sandbox",
+        "tx": "Coe9wFbTBR177rPbeEwSTuYW4uCKmnsHmFCXZ9SGAV2o",
+        "who": "researcher.sandbox"
+      },
+      {
+        "method": "storage_deposit",
+        "on": "usdc.sandbox",
+        "tx": "4ooeEK8cHZXjJraLUxh2MrXxZUFuixE4dVfdGBSuaUSn",
+        "who": "translator.sandbox"
+      },
+      {
+        "method": "storage_deposit",
+        "on": "usdc.sandbox",
+        "tx": "4Y83f66kcay9uEegBvq5AbRgaXnp62qoiQ4R2SJytciL",
+        "who": "cheapbot.sandbox"
+      },
+      {
+        "method": "mint",
+        "on": "usdc.sandbox",
+        "tx": "CEWKueXjyRzisfx7ezJts1T21ThRsc5nQc97f4LHJboM",
+        "who": "usdc.sandbox"
+      },
+      {
+        "method": "mint",
+        "on": "usdc.sandbox",
+        "tx": "AnhoZEe4BZXm5EEUahWou7BjJuRfGRUURfVNQStQppN7",
+        "who": "usdc.sandbox"
+      },
+      {
+        "method": "prepay_post",
+        "on": "hub.sandbox",
+        "tx": "6Lw6abSE3QaWF7kjoeUkYGSt3igy9syY8g8rsRhpDE82",
+        "who": "client.sandbox"
+      },
+      {
+        "method": "ft_transfer_call",
+        "on": "usdc.sandbox",
+        "tx": "i4kDNb5DhatYV24sbVZGdXCReRptQHRAmVofjE3Stk3",
+        "who": "client.sandbox"
+      },
+      {
+        "method": "hire",
+        "on": "job-1.hub.sandbox",
+        "tx": "67uc6rB7UqkvWJEVonXc2ABx1g4wZPvaCkhyNqDa25Bh",
+        "who": "lead.sandbox"
+      },
+      {
+        "method": "hire",
+        "on": "job-1.hub.sandbox",
+        "tx": "GzGpbiPGNeWKWNHbbN1t2bZfgD8mnni9Gyvw25hwsN1F",
+        "who": "lead.sandbox"
+      },
+      {
+        "method": "hire",
+        "on": "job-1.hub.sandbox",
+        "tx": "JECt42kiEBcnV5tCwuQVyDgdGxN4dJPLTga5Ape3h228",
+        "who": "lead.sandbox"
+      },
+      {
+        "method": "deliver",
+        "on": "t1.job-1.hub.sandbox",
+        "tx": "FBFwVm9ndHbTA8fSmyXAFQgwjEo86F5hd9YwJcy9GyuB",
+        "who": "researcher.sandbox"
+      },
+      {
+        "method": "deliver",
+        "on": "t2.job-1.hub.sandbox",
+        "tx": "2SrYDQVsi8QypRxig6ZizrpdfnbCxk1LJxGaHgGX6Rwb",
+        "who": "cheapbot.sandbox"
+      },
+      {
+        "method": "deliver",
+        "on": "t3.job-1.hub.sandbox",
+        "tx": "3ahrFUAciyLGWEnRjex9DDsLcsRup38BhEUQJ7TJSpLd",
+        "who": "cheapbot.sandbox"
+      },
+      {
+        "method": "submit_check",
+        "on": "t1.job-1.hub.sandbox",
+        "tx": "BBrR2Bai1qduE5uz3FPCvc1zh1A7nYsRk1CuJvy68MpZ",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "submit_check",
+        "on": "t2.job-1.hub.sandbox",
+        "tx": "2bD13izyQPTQYGosxvPKfkrHLwMggNcdAK1jxUncJPLx",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "submit_check",
+        "on": "t3.job-1.hub.sandbox",
+        "tx": "A6ikfcXsowUyBoCt3B88ifgHTYnZGkLaPNCfxCN4giqQ",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "finalize_check",
+        "on": "t1.job-1.hub.sandbox",
+        "tx": "2Um2Ycq3MPxNFwtwjQek3A8dNyUPn9DqenVtw4KCshgC",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "finalize_check",
+        "on": "t2.job-1.hub.sandbox",
+        "tx": "5D4a6GW5yD4aVZ3QU1Zcr3Ni3A8TvmNjRRmXEHeRXTT4",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "finalize_check",
+        "on": "t3.job-1.hub.sandbox",
+        "tx": "zwTUJzVQhyCQGkWpkyGehJkGb9QjHUaAZSqznUspkAJ",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "ft_transfer_call",
+        "on": "usdc.sandbox",
+        "tx": "8TW5Lb7wDQg87AfXuL77RtgXAejFgGreX79szRajRF3d",
+        "who": "treasury.sandbox"
+      },
+      {
+        "method": "approve",
+        "on": "t1.job-1.hub.sandbox",
+        "tx": "2Z7NzQosiNx7V2e5yX31SkhjCDmDLQanqLYKU3E7y9Ai",
+        "who": "lead.sandbox"
+      },
+      {
+        "method": "approve",
+        "on": "t2.job-1.hub.sandbox",
+        "tx": "3JijX7ymRbmPmhyDb5uMRwcuGbBZf3TNyy7j67nD7mM4",
+        "who": "lead.sandbox"
+      },
+      {
+        "method": "approve",
+        "on": "t3.job-1.hub.sandbox",
+        "tx": "FDQy4TSvHZ5bNTeY9vnshkyLFbUY4ZsJZ9uxC6FpCex",
+        "who": "lead.sandbox"
+      },
+      {
+        "method": "settle",
+        "on": "t1.job-1.hub.sandbox",
+        "tx": "8EtvGg5qjPa8fifgLZ2vSFRCKgfeUPvS4FmYtiGF5UsB",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "settle",
+        "on": "t2.job-1.hub.sandbox",
+        "tx": "J7sGHMPkiA9VX2biWPjSfmG8d1wrXiUkPLsqKtS4zVk7",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "settle",
+        "on": "t3.job-1.hub.sandbox",
+        "tx": "4XhVP5tDd2gnbqjb7ujAPpfRjNh1kSi59c4nVJVPLUNB",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "approve",
+        "on": "job-1.hub.sandbox",
+        "tx": "3CSSKzAkFTJBBgHyrNrLQtanAJcx9Ngw8mgcSsgTayxZ",
+        "who": "client.sandbox"
+      },
+      {
+        "method": "settle",
+        "on": "job-1.hub.sandbox",
+        "tx": "6QrPzK3dHLQ2BrAFxeDKVFvmiTnFxqDF5cDaYoRtCfRH",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "ft_transfer_call",
+        "on": "usdc.sandbox",
+        "tx": "6bi1BTZTrBh9k1Y8hMVaknoCuuNcWt7oCW12H4pN8k1F",
+        "who": "client.sandbox"
+      },
+      {
+        "method": "hire",
+        "on": "job-2.hub.sandbox",
+        "tx": "A28yVXpcQBVGJxUHVADP7AuGxAgU2jdrQL3oPQehx7Nq",
+        "who": "lead.sandbox"
+      },
+      {
+        "method": "hire",
+        "on": "job-2.hub.sandbox",
+        "tx": "8hkVqi8ZYMFoXtRCrZiYu2HTnGnP4YFokztGSTUsSeGH",
+        "who": "lead.sandbox"
+      },
+      {
+        "method": "hire",
+        "on": "job-2.hub.sandbox",
+        "tx": "61BxujGe6iLA99Gbmw88upUbVmpyC6wKsbttZW5WiCic",
+        "who": "lead.sandbox"
+      },
+      {
+        "method": "deliver",
+        "on": "t1.job-2.hub.sandbox",
+        "tx": "54dBpH4hzoasE9SKw7srr4PvXZL2V3sbYAku4VfDrL15",
+        "who": "researcher.sandbox"
+      },
+      {
+        "method": "deliver",
+        "on": "t2.job-2.hub.sandbox",
+        "tx": "x7cAf85bHL7YKUFwaBNUQAFkecUXZmCEvYxszAyiVT1",
+        "who": "translator.sandbox"
+      },
+      {
+        "method": "deliver",
+        "on": "t3.job-2.hub.sandbox",
+        "tx": "Brum6TF31YfgNAEuP8f2XCRKKrWfRff1wJcFmwZfMYGe",
+        "who": "researcher.sandbox"
+      },
+      {
+        "method": "submit_check",
+        "on": "t1.job-2.hub.sandbox",
+        "tx": "FjzeeYQyrRhNzgNKxurcvutqZGdR7oZKk5eS4Dgzep6g",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "submit_check",
+        "on": "t2.job-2.hub.sandbox",
+        "tx": "5UnjZym6cdJBHHDEQG9JcWuiFMBUp6x1aNnEzpkiNXEw",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "submit_check",
+        "on": "t3.job-2.hub.sandbox",
+        "tx": "9VXeR9LDfZyZ5XQEV9hkJYSFTW8BT4YFcTUb9gC5oecU",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "finalize_check",
+        "on": "t1.job-2.hub.sandbox",
+        "tx": "Gv89wKeqSbXpxLSuofRmgdQQpa2pY8kkGrHMGNF2MAJK",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "finalize_check",
+        "on": "t2.job-2.hub.sandbox",
+        "tx": "Bs61jKLaaxJUTw5KA4ZjQz6Z1voyx4JzxRJyxtDKRCtm",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "finalize_check",
+        "on": "t3.job-2.hub.sandbox",
+        "tx": "EJMKnTzsSNLjYpKiMJBJPXBxe3aLAQ1u2wbDq3uHtCAc",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "ft_transfer_call",
+        "on": "usdc.sandbox",
+        "tx": "3hkGTessZ5dsRZAc8WMvhkF8rx3SpWQGK6a4BKEpkCn5",
+        "who": "treasury.sandbox"
+      },
+      {
+        "method": "ft_transfer_call",
+        "on": "usdc.sandbox",
+        "tx": "4S28AUrRBpSwoGVJ2D6Dbo8iTa62JiGSePy7K1mgLe6h",
+        "who": "treasury.sandbox"
+      },
+      {
+        "method": "ft_transfer_call",
+        "on": "usdc.sandbox",
+        "tx": "62pa2RaM3en84TfzVJGifkTya6HKUcLXLwSVUEy4cXj5",
+        "who": "treasury.sandbox"
+      },
+      {
+        "method": "approve",
+        "on": "t1.job-2.hub.sandbox",
+        "tx": "7S2iPu1HaAcH6smMrJnM1UmZFDWNHWWp7YnLy6FZ1y3k",
+        "who": "lead.sandbox"
+      },
+      {
+        "method": "approve",
+        "on": "t2.job-2.hub.sandbox",
+        "tx": "68ajCoZqJY7WQp6Grz3ZvwBm8V5v2cDk3GMVuvoQNiMa",
+        "who": "lead.sandbox"
+      },
+      {
+        "method": "approve",
+        "on": "t3.job-2.hub.sandbox",
+        "tx": "AYpjc1GMCTSvqSFMys7NosinjBAjs7BfveDKn1SRyT5b",
+        "who": "lead.sandbox"
+      },
+      {
+        "method": "settle",
+        "on": "t1.job-2.hub.sandbox",
+        "tx": "3ZeyyuogbWmKTa64HgyZjMSyoiaGJRdze6UbdLvLY68f",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "settle",
+        "on": "t2.job-2.hub.sandbox",
+        "tx": "2hup9fo2w64HwNu9Q1LtuLMBrH9w1vVjejARi72FLxL1",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "settle",
+        "on": "t3.job-2.hub.sandbox",
+        "tx": "6R89jsCTatb8pqPwM6q4ASgC977HU2rnCmpWsa8kfkXs",
+        "who": "keeper.sandbox"
+      },
+      {
+        "method": "approve",
+        "on": "job-2.hub.sandbox",
+        "tx": "FDsaryiihEMt4zVMFsKVmAM9EETCxtuB1VjQ1FSLDjTy",
+        "who": "client.sandbox"
+      },
+      {
+        "method": "settle",
+        "on": "job-2.hub.sandbox",
+        "tx": "7sjiHj5hYAKBpzwU47Mt2uUVdsbSt6pQUmRoct3cuPcY",
+        "who": "keeper.sandbox"
+      }
+    ]
+  },
   "schema": "hiretree-scene.v1",
   "steps": [
     {
+      "decisions": [],
       "jobs": [
         {
           "account": "job-1.hub.sandbox",
@@ -15,18 +368,17 @@
           "payee": "lead.sandbox",
           "quality": null,
           "status": "Open",
-          "storage_near": "0.05000 NEAR",
           "verified": false,
           "worker": null
         }
       ],
       "n": 1,
-      "say": "One ft_transfer_call to the factory creates job-1 from the global contract and funds it with 100 fUSD. Nobody holds the money: the job account does.",
-      "title": "The client posts a job",
+      "say": "\"Write a short explainer of NEAR global contracts in English and Spanish, plus a one-line summary.\" One transfer of 100 fUSD to the factory creates job-1 from the global contract; the lead's fee is 10. The rest comes back to the client at the end.",
+      "title": "Job 1: the client posts",
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "0",
+          "ft": "100000000",
           "label": "client"
         },
         {
@@ -36,8 +388,13 @@
         },
         {
           "account": "treasury.sandbox",
-          "ft": "50000000",
+          "ft": "100000000",
           "label": "treasury"
+        },
+        {
+          "account": "cheapbot.sandbox",
+          "ft": "0",
+          "label": "cheapbot"
         },
         {
           "account": "researcher.sandbox",
@@ -48,15 +405,42 @@
           "account": "translator.sandbox",
           "ft": "0",
           "label": "translator"
-        },
-        {
-          "account": "junk.sandbox",
-          "ft": "0",
-          "label": "junk"
         }
       ]
     },
     {
+      "decisions": [
+        {
+          "reason": "Explain NEAR global contracts in 3 sentences.",
+          "what": "plan: research for 30 fUSD",
+          "who": "lead"
+        },
+        {
+          "reason": "Translate the explanation into Spanish.",
+          "what": "plan: translate for 20 fUSD",
+          "who": "lead"
+        },
+        {
+          "reason": "Write a one-line summary.",
+          "what": "plan: summary for 10 fUSD",
+          "who": "lead"
+        },
+        {
+          "reason": "skills match; no bad record yet",
+          "what": "pick researcher for research",
+          "who": "lead"
+        },
+        {
+          "reason": "skills match; no bad record yet",
+          "what": "pick cheapbot for translate",
+          "who": "lead"
+        },
+        {
+          "reason": "skills match; no bad record yet",
+          "what": "pick cheapbot for summary",
+          "who": "lead"
+        }
+      ],
       "jobs": [
         {
           "account": "job-1.hub.sandbox",
@@ -69,7 +453,6 @@
           "payee": "lead.sandbox",
           "quality": null,
           "status": "Open",
-          "storage_near": "0.06125 NEAR",
           "verified": false,
           "worker": null
         },
@@ -78,13 +461,12 @@
           "alive": true,
           "amount": "30000000",
           "ft": "30000000",
-          "label": "t1 researcher",
+          "label": "t1 research",
           "note_sold": false,
           "parent": "job-1.hub.sandbox",
           "payee": "researcher.sandbox",
           "quality": null,
           "status": "Open",
-          "storage_near": "0.03000 NEAR",
           "verified": false,
           "worker": "researcher.sandbox"
         },
@@ -93,39 +475,37 @@
           "alive": true,
           "amount": "20000000",
           "ft": "20000000",
-          "label": "t2 translator",
+          "label": "t2 translate",
           "note_sold": false,
           "parent": "job-1.hub.sandbox",
-          "payee": "translator.sandbox",
+          "payee": "cheapbot.sandbox",
           "quality": null,
           "status": "Open",
-          "storage_near": "0.03000 NEAR",
           "verified": false,
-          "worker": "translator.sandbox"
+          "worker": "cheapbot.sandbox"
         },
         {
           "account": "t3.job-1.hub.sandbox",
           "alive": true,
           "amount": "10000000",
           "ft": "10000000",
-          "label": "t3 junk",
+          "label": "t3 summary",
           "note_sold": false,
           "parent": "job-1.hub.sandbox",
-          "payee": "junk.sandbox",
+          "payee": "cheapbot.sandbox",
           "quality": null,
           "status": "Open",
-          "storage_near": "0.03000 NEAR",
           "verified": false,
-          "worker": "junk.sandbox"
+          "worker": "cheapbot.sandbox"
         }
       ],
       "n": 2,
-      "say": "Each hire creates a sub-account (t1, t2, t3) running the same code by hash and moves that job's pay into it: 30, 20 and 10 fUSD.",
-      "title": "The lead agent hires three workers",
+      "say": "The lead's model splits the task, reads each candidate's on-chain track record, and picks. Each hire creates a sub-account holding exactly that pay.",
+      "title": "The lead agent plans and hires",
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "0",
+          "ft": "100000000",
           "label": "client"
         },
         {
@@ -135,8 +515,13 @@
         },
         {
           "account": "treasury.sandbox",
-          "ft": "50000000",
+          "ft": "100000000",
           "label": "treasury"
+        },
+        {
+          "account": "cheapbot.sandbox",
+          "ft": "0",
+          "label": "cheapbot"
         },
         {
           "account": "researcher.sandbox",
@@ -147,15 +532,27 @@
           "account": "translator.sandbox",
           "ft": "0",
           "label": "translator"
-        },
-        {
-          "account": "junk.sandbox",
-          "ft": "0",
-          "label": "junk"
         }
       ]
     },
     {
+      "decisions": [
+        {
+          "reason": "Deliverable: Explain NEAR global contracts in 3 sentences.",
+          "what": "deliver with NEAR AI receipt",
+          "who": "researcher"
+        },
+        {
+          "reason": "filler text, no model call, no receipt",
+          "what": "deliver",
+          "who": "cheapbot"
+        },
+        {
+          "reason": "filler text, no model call, no receipt",
+          "what": "deliver",
+          "who": "cheapbot"
+        }
+      ],
       "jobs": [
         {
           "account": "job-1.hub.sandbox",
@@ -168,7 +565,6 @@
           "payee": "lead.sandbox",
           "quality": null,
           "status": "Open",
-          "storage_near": "0.06125 NEAR",
           "verified": false,
           "worker": null
         },
@@ -177,14 +573,13 @@
           "alive": true,
           "amount": "30000000",
           "ft": "30000000",
-          "label": "t1 researcher",
+          "label": "t1 research",
           "note_sold": false,
           "parent": "job-1.hub.sandbox",
           "payee": "researcher.sandbox",
           "quality": null,
-          "status": "Open",
-          "storage_near": "0.03000 NEAR",
-          "verified": false,
+          "status": "Delivered",
+          "verified": true,
           "worker": "researcher.sandbox"
         },
         {
@@ -192,39 +587,37 @@
           "alive": true,
           "amount": "20000000",
           "ft": "20000000",
-          "label": "t2 translator",
+          "label": "t2 translate",
           "note_sold": false,
           "parent": "job-1.hub.sandbox",
-          "payee": "translator.sandbox",
+          "payee": "cheapbot.sandbox",
           "quality": null,
-          "status": "Open",
-          "storage_near": "0.03000 NEAR",
+          "status": "Delivered",
           "verified": false,
-          "worker": "translator.sandbox"
+          "worker": "cheapbot.sandbox"
         },
         {
           "account": "t3.job-1.hub.sandbox",
           "alive": true,
           "amount": "10000000",
           "ft": "10000000",
-          "label": "t3 junk",
+          "label": "t3 summary",
           "note_sold": false,
           "parent": "job-1.hub.sandbox",
-          "payee": "junk.sandbox",
+          "payee": "cheapbot.sandbox",
           "quality": null,
-          "status": "Open",
-          "storage_near": "0.03000 NEAR",
+          "status": "Delivered",
           "verified": false,
-          "worker": "junk.sandbox"
+          "worker": "cheapbot.sandbox"
         }
       ],
       "n": 3,
-      "say": "The translator submits the researcher's genuine NEAR AI receipt on its own job. The contract refuses: Smart contract panicked: receipt: binding tag HT1:t1.job-1.hub.sandbox:abababababababababababababababababababababababababababababababab:1 is not this task",
-      "title": "A cheater copies a real AI receipt",
+      "say": "Workers that used NEAR AI deliver the raw response with its signature: the contract checks that the request carries this job's HT1 tag and that NEAR AI signed it. Each delivery opens a 5-minute check round.",
+      "title": "Workers deliver",
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "0",
+          "ft": "100000000",
           "label": "client"
         },
         {
@@ -234,8 +627,13 @@
         },
         {
           "account": "treasury.sandbox",
-          "ft": "50000000",
+          "ft": "100000000",
           "label": "treasury"
+        },
+        {
+          "account": "cheapbot.sandbox",
+          "ft": "0",
+          "label": "cheapbot"
         },
         {
           "account": "researcher.sandbox",
@@ -246,15 +644,27 @@
           "account": "translator.sandbox",
           "ft": "0",
           "label": "translator"
-        },
-        {
-          "account": "junk.sandbox",
-          "ft": "0",
-          "label": "junk"
         }
       ]
     },
     {
+      "decisions": [
+        {
+          "reason": "signed NEAR AI answer, verified on-chain",
+          "what": "judge says 8/10 for research (panel 0)",
+          "who": "keeper"
+        },
+        {
+          "reason": "signed NEAR AI answer, verified on-chain",
+          "what": "judge says 2/10 for translate (panel 0)",
+          "who": "keeper"
+        },
+        {
+          "reason": "signed NEAR AI answer, verified on-chain",
+          "what": "judge says 2/10 for summary (panel 0)",
+          "who": "keeper"
+        }
+      ],
       "jobs": [
         {
           "account": "job-1.hub.sandbox",
@@ -267,7 +677,6 @@
           "payee": "lead.sandbox",
           "quality": null,
           "status": "Open",
-          "storage_near": "0.06125 NEAR",
           "verified": false,
           "worker": null
         },
@@ -276,13 +685,12 @@
           "alive": true,
           "amount": "30000000",
           "ft": "30000000",
-          "label": "t1 researcher",
+          "label": "t1 research",
           "note_sold": false,
           "parent": "job-1.hub.sandbox",
           "payee": "researcher.sandbox",
           "quality": 8,
           "status": "Checked",
-          "storage_near": "0.03000 NEAR",
           "verified": true,
           "worker": "researcher.sandbox"
         },
@@ -291,39 +699,37 @@
           "alive": true,
           "amount": "20000000",
           "ft": "20000000",
-          "label": "t2 translator",
+          "label": "t2 translate",
           "note_sold": false,
           "parent": "job-1.hub.sandbox",
-          "payee": "translator.sandbox",
-          "quality": null,
+          "payee": "cheapbot.sandbox",
+          "quality": 2,
           "status": "Open",
-          "storage_near": "0.03000 NEAR",
           "verified": false,
-          "worker": "translator.sandbox"
+          "worker": "cheapbot.sandbox"
         },
         {
           "account": "t3.job-1.hub.sandbox",
           "alive": true,
           "amount": "10000000",
           "ft": "10000000",
-          "label": "t3 junk",
+          "label": "t3 summary",
           "note_sold": false,
           "parent": "job-1.hub.sandbox",
-          "payee": "junk.sandbox",
-          "quality": null,
+          "payee": "cheapbot.sandbox",
+          "quality": 2,
           "status": "Open",
-          "storage_near": "0.03000 NEAR",
           "verified": false,
-          "worker": "junk.sandbox"
+          "worker": "cheapbot.sandbox"
         }
       ],
       "n": 4,
-      "say": "The contract recomputes sha256(request), checks the HT1 tag binds it to t1 and delivery 1, and ecrecovers the NEAR AI Cloud signature. Then it starts one quality check itself: 8/10.",
-      "title": "The researcher proves its work came from NEAR AI",
+      "say": "For each delivery the contract builds the judge question itself. A keeper asks NEAR AI exactly that and submits the signed answer; the contract verifies the signature and reads the score. Low scores reopen the job.",
+      "title": "The contract's check, answered by NEAR AI",
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "0",
+          "ft": "100000000",
           "label": "client"
         },
         {
@@ -333,8 +739,13 @@
         },
         {
           "account": "treasury.sandbox",
-          "ft": "50000000",
+          "ft": "100000000",
           "label": "treasury"
+        },
+        {
+          "account": "cheapbot.sandbox",
+          "ft": "0",
+          "label": "cheapbot"
         },
         {
           "account": "researcher.sandbox",
@@ -345,15 +756,27 @@
           "account": "translator.sandbox",
           "ft": "0",
           "label": "translator"
-        },
-        {
-          "account": "junk.sandbox",
-          "ft": "0",
-          "label": "junk"
         }
       ]
     },
     {
+      "decisions": [
+        {
+          "reason": "checked, verified, good work: pay now",
+          "what": "buy research's note for 29.70",
+          "who": "lead"
+        },
+        {
+          "reason": "not checked as good; settle decides",
+          "what": "no action on translate (Open)",
+          "who": "lead"
+        },
+        {
+          "reason": "not checked as good; settle decides",
+          "what": "no action on summary (Open)",
+          "who": "lead"
+        }
+      ],
       "jobs": [
         {
           "account": "job-1.hub.sandbox",
@@ -366,7 +789,6 @@
           "payee": "lead.sandbox",
           "quality": null,
           "status": "Open",
-          "storage_near": "0.06125 NEAR",
           "verified": false,
           "worker": null
         },
@@ -375,13 +797,12 @@
           "alive": true,
           "amount": "30000000",
           "ft": "30000000",
-          "label": "t1 researcher",
+          "label": "t1 research",
           "note_sold": true,
           "parent": "job-1.hub.sandbox",
           "payee": "treasury.sandbox",
           "quality": 8,
           "status": "Checked",
-          "storage_near": "0.02875 NEAR",
           "verified": true,
           "worker": "researcher.sandbox"
         },
@@ -390,39 +811,37 @@
           "alive": true,
           "amount": "20000000",
           "ft": "20000000",
-          "label": "t2 translator",
+          "label": "t2 translate",
           "note_sold": false,
           "parent": "job-1.hub.sandbox",
-          "payee": "translator.sandbox",
-          "quality": null,
+          "payee": "cheapbot.sandbox",
+          "quality": 2,
           "status": "Open",
-          "storage_near": "0.03000 NEAR",
           "verified": false,
-          "worker": "translator.sandbox"
+          "worker": "cheapbot.sandbox"
         },
         {
           "account": "t3.job-1.hub.sandbox",
           "alive": true,
           "amount": "10000000",
           "ft": "10000000",
-          "label": "t3 junk",
+          "label": "t3 summary",
           "note_sold": false,
           "parent": "job-1.hub.sandbox",
-          "payee": "junk.sandbox",
-          "quality": null,
+          "payee": "cheapbot.sandbox",
+          "quality": 2,
           "status": "Open",
-          "storage_near": "0.03000 NEAR",
           "verified": false,
-          "worker": "junk.sandbox"
+          "worker": "cheapbot.sandbox"
         }
       ],
       "n": 5,
-      "say": "The lead's treasury buys the researcher's Job Note for 29.70 (1% off). The researcher is paid in the same transaction; the treasury now collects the 30 at settle.",
-      "title": "Paid now, not in 72 hours",
+      "say": "The lead's model reads each delivery and its score. For good, verified work its treasury buys the Job Note: the worker is paid now, not when the job closes.",
+      "title": "The lead reviews: paid now, or disputed",
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "0",
+          "ft": "100000000",
           "label": "client"
         },
         {
@@ -432,8 +851,13 @@
         },
         {
           "account": "treasury.sandbox",
-          "ft": "20300000",
+          "ft": "70300000",
           "label": "treasury"
+        },
+        {
+          "account": "cheapbot.sandbox",
+          "ft": "0",
+          "label": "cheapbot"
         },
         {
           "account": "researcher.sandbox",
@@ -444,95 +868,56 @@
           "account": "translator.sandbox",
           "ft": "0",
           "label": "translator"
-        },
-        {
-          "account": "junk.sandbox",
-          "ft": "0",
-          "label": "junk"
         }
       ]
     },
     {
+      "decisions": [],
       "jobs": [
         {
           "account": "job-1.hub.sandbox",
-          "alive": true,
-          "amount": "10000000",
-          "ft": "40000000",
-          "label": "job-1",
-          "note_sold": false,
-          "parent": "hub.sandbox",
-          "payee": "lead.sandbox",
-          "quality": null,
-          "status": "Open",
-          "storage_near": "0.06125 NEAR",
-          "verified": false,
-          "worker": null
+          "alive": false,
+          "label": "job-1"
         },
         {
           "account": "t1.job-1.hub.sandbox",
-          "alive": true,
-          "amount": "30000000",
-          "ft": "30000000",
-          "label": "t1 researcher",
-          "note_sold": true,
-          "parent": "job-1.hub.sandbox",
-          "payee": "treasury.sandbox",
-          "quality": 8,
-          "status": "Checked",
-          "storage_near": "0.02875 NEAR",
-          "verified": true,
-          "worker": "researcher.sandbox"
+          "alive": false,
+          "label": "t1 research"
         },
         {
           "account": "t2.job-1.hub.sandbox",
-          "alive": true,
-          "amount": "20000000",
-          "ft": "20000000",
-          "label": "t2 translator",
-          "note_sold": false,
-          "parent": "job-1.hub.sandbox",
-          "payee": "translator.sandbox",
-          "quality": 8,
-          "status": "Checked",
-          "storage_near": "0.03000 NEAR",
-          "verified": false,
-          "worker": "translator.sandbox"
+          "alive": false,
+          "label": "t2 translate"
         },
         {
           "account": "t3.job-1.hub.sandbox",
-          "alive": true,
-          "amount": "10000000",
-          "ft": "10000000",
-          "label": "t3 junk",
-          "note_sold": false,
-          "parent": "job-1.hub.sandbox",
-          "payee": "junk.sandbox",
-          "quality": null,
-          "status": "Open",
-          "storage_near": "0.03000 NEAR",
-          "verified": false,
-          "worker": "junk.sandbox"
+          "alive": false,
+          "label": "t3 summary"
         }
       ],
       "n": 6,
-      "say": "The translator delivers without a NEAR AI receipt. It will be paid at settle, but its note is not sellable.",
-      "title": "No receipt, no early pay",
+      "say": "Each account pays out, proves its balance is zero and deletes itself; the client gets the unspent budget back. Each finished job reported its worker's outcome to the factory: cheapbot 0/2 paid, researcher 1/1 paid, translator 0/0 paid.",
+      "title": "The tree folds; track records update",
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "0",
+          "ft": "160000000",
           "label": "client"
         },
         {
           "account": "lead.sandbox",
-          "ft": "0",
+          "ft": "10000000",
           "label": "lead"
         },
         {
           "account": "treasury.sandbox",
-          "ft": "20300000",
+          "ft": "100300000",
           "label": "treasury"
+        },
+        {
+          "account": "cheapbot.sandbox",
+          "ft": "0",
+          "label": "cheapbot"
         },
         {
           "account": "researcher.sandbox",
@@ -543,143 +928,161 @@
           "account": "translator.sandbox",
           "ft": "0",
           "label": "translator"
-        },
-        {
-          "account": "junk.sandbox",
-          "ft": "0",
-          "label": "junk"
         }
       ]
     },
     {
+      "decisions": [],
       "jobs": [
         {
-          "account": "job-1.hub.sandbox",
+          "account": "job-2.hub.sandbox",
           "alive": true,
           "amount": "10000000",
-          "ft": "40000000",
-          "label": "job-1",
+          "ft": "100000000",
+          "label": "job-2",
           "note_sold": false,
           "parent": "hub.sandbox",
           "payee": "lead.sandbox",
           "quality": null,
           "status": "Open",
-          "storage_near": "0.06125 NEAR",
+          "verified": false,
+          "worker": null
+        }
+      ],
+      "n": 7,
+      "say": "\"Write a short explainer of NEAR global contracts in English and Spanish, plus a one-line summary.\" One transfer of 100 fUSD to the factory creates job-2 from the global contract; the lead's fee is 10. The rest comes back to the client at the end.",
+      "title": "Job 2: the client posts",
+      "wallets": [
+        {
+          "account": "client.sandbox",
+          "ft": "60000000",
+          "label": "client"
+        },
+        {
+          "account": "lead.sandbox",
+          "ft": "10000000",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.sandbox",
+          "ft": "100300000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.sandbox",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.sandbox",
+          "ft": "29700000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.sandbox",
+          "ft": "0",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [
+        {
+          "reason": "Explain NEAR global contracts in 3 sentences.",
+          "what": "plan: research for 30 fUSD",
+          "who": "lead"
+        },
+        {
+          "reason": "Translate the explanation into Spanish.",
+          "what": "plan: translate for 20 fUSD",
+          "who": "lead"
+        },
+        {
+          "reason": "Write a one-line summary.",
+          "what": "plan: summary for 10 fUSD",
+          "who": "lead"
+        },
+        {
+          "reason": "skills match; no bad record yet",
+          "what": "pick researcher for research",
+          "who": "lead"
+        },
+        {
+          "reason": "skills match; avoided cheapbot.sandbox (2 jobs, 0 paid) on its on-chain record",
+          "what": "pick translator for translate",
+          "who": "lead"
+        },
+        {
+          "reason": "skills match; avoided cheapbot.sandbox (2 jobs, 0 paid) on its on-chain record",
+          "what": "pick researcher for summary",
+          "who": "lead"
+        }
+      ],
+      "jobs": [
+        {
+          "account": "job-2.hub.sandbox",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "40000000",
+          "label": "job-2",
+          "note_sold": false,
+          "parent": "hub.sandbox",
+          "payee": "lead.sandbox",
+          "quality": null,
+          "status": "Open",
           "verified": false,
           "worker": null
         },
         {
-          "account": "t1.job-1.hub.sandbox",
+          "account": "t1.job-2.hub.sandbox",
           "alive": true,
           "amount": "30000000",
           "ft": "30000000",
-          "label": "t1 researcher",
-          "note_sold": true,
-          "parent": "job-1.hub.sandbox",
-          "payee": "treasury.sandbox",
-          "quality": 8,
-          "status": "Checked",
-          "storage_near": "0.02875 NEAR",
-          "verified": true,
+          "label": "t1 research",
+          "note_sold": false,
+          "parent": "job-2.hub.sandbox",
+          "payee": "researcher.sandbox",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
           "worker": "researcher.sandbox"
         },
         {
-          "account": "t2.job-1.hub.sandbox",
+          "account": "t2.job-2.hub.sandbox",
           "alive": true,
           "amount": "20000000",
           "ft": "20000000",
-          "label": "t2 translator",
+          "label": "t2 translate",
           "note_sold": false,
-          "parent": "job-1.hub.sandbox",
+          "parent": "job-2.hub.sandbox",
           "payee": "translator.sandbox",
-          "quality": 8,
-          "status": "Checked",
-          "storage_near": "0.03000 NEAR",
+          "quality": null,
+          "status": "Open",
           "verified": false,
           "worker": "translator.sandbox"
         },
         {
-          "account": "t3.job-1.hub.sandbox",
+          "account": "t3.job-2.hub.sandbox",
           "alive": true,
           "amount": "10000000",
           "ft": "10000000",
-          "label": "t3 junk",
+          "label": "t3 summary",
           "note_sold": false,
-          "parent": "job-1.hub.sandbox",
-          "payee": "junk.sandbox",
-          "quality": 7,
-          "status": "Refunded",
-          "storage_near": "0.03000 NEAR",
+          "parent": "job-2.hub.sandbox",
+          "payee": "researcher.sandbox",
+          "quality": null,
+          "status": "Open",
           "verified": false,
-          "worker": "junk.sandbox"
-        }
-      ],
-      "n": 7,
-      "say": "The junk passed one check (7/10). The lead disputes: two more checks with fresh seeds say 1 and 2. Two of three votes say junk, so t3's pay goes back up the tree.",
-      "title": "Junk is disputed",
-      "wallets": [
-        {
-          "account": "client.sandbox",
-          "ft": "0",
-          "label": "client"
-        },
-        {
-          "account": "lead.sandbox",
-          "ft": "0",
-          "label": "lead"
-        },
-        {
-          "account": "treasury.sandbox",
-          "ft": "20300000",
-          "label": "treasury"
-        },
-        {
-          "account": "researcher.sandbox",
-          "ft": "29700000",
-          "label": "researcher"
-        },
-        {
-          "account": "translator.sandbox",
-          "ft": "0",
-          "label": "translator"
-        },
-        {
-          "account": "junk.sandbox",
-          "ft": "0",
-          "label": "junk"
-        }
-      ]
-    },
-    {
-      "jobs": [
-        {
-          "account": "job-1.hub.sandbox",
-          "alive": false,
-          "label": "job-1"
-        },
-        {
-          "account": "t1.job-1.hub.sandbox",
-          "alive": false,
-          "label": "t1 researcher"
-        },
-        {
-          "account": "t2.job-1.hub.sandbox",
-          "alive": false,
-          "label": "t2 translator"
-        },
-        {
-          "account": "t3.job-1.hub.sandbox",
-          "alive": false,
-          "label": "t3 junk"
+          "worker": "researcher.sandbox"
         }
       ],
       "n": 8,
-      "say": "Settle runs bottom-up: each account pays its note holder, returns the rest to its parent, proves its token balance is zero, and deletes itself. Storage NEAR flows back up.",
-      "title": "The tree folds",
+      "say": "The lead's model splits the task, reads each candidate's on-chain track record, and picks. Each hire creates a sub-account holding exactly that pay.",
+      "title": "The lead agent plans and hires",
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "40000000",
+          "ft": "60000000",
           "label": "client"
         },
         {
@@ -689,8 +1092,13 @@
         },
         {
           "account": "treasury.sandbox",
-          "ft": "50300000",
+          "ft": "100300000",
           "label": "treasury"
+        },
+        {
+          "account": "cheapbot.sandbox",
+          "ft": "0",
+          "label": "cheapbot"
         },
         {
           "account": "researcher.sandbox",
@@ -699,46 +1107,94 @@
         },
         {
           "account": "translator.sandbox",
-          "ft": "20000000",
-          "label": "translator"
-        },
-        {
-          "account": "junk.sandbox",
           "ft": "0",
-          "label": "junk"
+          "label": "translator"
         }
       ]
     },
     {
+      "decisions": [
+        {
+          "reason": "Deliverable: Explain NEAR global contracts in 3 sentences.",
+          "what": "deliver with NEAR AI receipt",
+          "who": "researcher"
+        },
+        {
+          "reason": "Deliverable: Translate the explanation into Spanish.",
+          "what": "deliver with NEAR AI receipt",
+          "who": "translator"
+        },
+        {
+          "reason": "Deliverable: Write a one-line summary.",
+          "what": "deliver with NEAR AI receipt",
+          "who": "researcher"
+        }
+      ],
       "jobs": [
         {
-          "account": "job-1.hub.sandbox",
-          "alive": false,
-          "label": "job-1"
+          "account": "job-2.hub.sandbox",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "40000000",
+          "label": "job-2",
+          "note_sold": false,
+          "parent": "hub.sandbox",
+          "payee": "lead.sandbox",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
         },
         {
-          "account": "t1.job-1.hub.sandbox",
-          "alive": false,
-          "label": "t1 researcher"
+          "account": "t1.job-2.hub.sandbox",
+          "alive": true,
+          "amount": "30000000",
+          "ft": "30000000",
+          "label": "t1 research",
+          "note_sold": false,
+          "parent": "job-2.hub.sandbox",
+          "payee": "researcher.sandbox",
+          "quality": null,
+          "status": "Delivered",
+          "verified": true,
+          "worker": "researcher.sandbox"
         },
         {
-          "account": "t2.job-1.hub.sandbox",
-          "alive": false,
-          "label": "t2 translator"
+          "account": "t2.job-2.hub.sandbox",
+          "alive": true,
+          "amount": "20000000",
+          "ft": "20000000",
+          "label": "t2 translate",
+          "note_sold": false,
+          "parent": "job-2.hub.sandbox",
+          "payee": "translator.sandbox",
+          "quality": null,
+          "status": "Delivered",
+          "verified": true,
+          "worker": "translator.sandbox"
         },
         {
-          "account": "t3.job-1.hub.sandbox",
-          "alive": false,
-          "label": "t3 junk"
+          "account": "t3.job-2.hub.sandbox",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "10000000",
+          "label": "t3 summary",
+          "note_sold": false,
+          "parent": "job-2.hub.sandbox",
+          "payee": "researcher.sandbox",
+          "quality": null,
+          "status": "Delivered",
+          "verified": true,
+          "worker": "researcher.sandbox"
         }
       ],
       "n": 9,
-      "say": "researcher 29.70 + treasury fee 0.30 + translator 20 + junk 0 + lead fee 10 + back to the client 40 (unspent 30 + refunded 10) = 100 fUSD. No account is left holding anything.",
-      "title": "100 in, 100 out",
+      "say": "Workers that used NEAR AI deliver the raw response with its signature: the contract checks that the request carries this job's HT1 tag and that NEAR AI signed it. Each delivery opens a 5-minute check round.",
+      "title": "Workers deliver",
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "40000000",
+          "ft": "60000000",
           "label": "client"
         },
         {
@@ -748,8 +1204,13 @@
         },
         {
           "account": "treasury.sandbox",
-          "ft": "50300000",
+          "ft": "100300000",
           "label": "treasury"
+        },
+        {
+          "account": "cheapbot.sandbox",
+          "ft": "0",
+          "label": "cheapbot"
         },
         {
           "account": "researcher.sandbox",
@@ -758,13 +1219,292 @@
         },
         {
           "account": "translator.sandbox",
-          "ft": "20000000",
+          "ft": "0",
           "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [
+        {
+          "reason": "signed NEAR AI answer, verified on-chain",
+          "what": "judge says 8/10 for research (panel 0)",
+          "who": "keeper"
         },
         {
-          "account": "junk.sandbox",
+          "reason": "signed NEAR AI answer, verified on-chain",
+          "what": "judge says 8/10 for translate (panel 0)",
+          "who": "keeper"
+        },
+        {
+          "reason": "signed NEAR AI answer, verified on-chain",
+          "what": "judge says 8/10 for summary (panel 0)",
+          "who": "keeper"
+        }
+      ],
+      "jobs": [
+        {
+          "account": "job-2.hub.sandbox",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "40000000",
+          "label": "job-2",
+          "note_sold": false,
+          "parent": "hub.sandbox",
+          "payee": "lead.sandbox",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "t1.job-2.hub.sandbox",
+          "alive": true,
+          "amount": "30000000",
+          "ft": "30000000",
+          "label": "t1 research",
+          "note_sold": false,
+          "parent": "job-2.hub.sandbox",
+          "payee": "researcher.sandbox",
+          "quality": 8,
+          "status": "Checked",
+          "verified": true,
+          "worker": "researcher.sandbox"
+        },
+        {
+          "account": "t2.job-2.hub.sandbox",
+          "alive": true,
+          "amount": "20000000",
+          "ft": "20000000",
+          "label": "t2 translate",
+          "note_sold": false,
+          "parent": "job-2.hub.sandbox",
+          "payee": "translator.sandbox",
+          "quality": 8,
+          "status": "Checked",
+          "verified": true,
+          "worker": "translator.sandbox"
+        },
+        {
+          "account": "t3.job-2.hub.sandbox",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "10000000",
+          "label": "t3 summary",
+          "note_sold": false,
+          "parent": "job-2.hub.sandbox",
+          "payee": "researcher.sandbox",
+          "quality": 8,
+          "status": "Checked",
+          "verified": true,
+          "worker": "researcher.sandbox"
+        }
+      ],
+      "n": 10,
+      "say": "For each delivery the contract builds the judge question itself. A keeper asks NEAR AI exactly that and submits the signed answer; the contract verifies the signature and reads the score. Low scores reopen the job.",
+      "title": "The contract's check, answered by NEAR AI",
+      "wallets": [
+        {
+          "account": "client.sandbox",
+          "ft": "60000000",
+          "label": "client"
+        },
+        {
+          "account": "lead.sandbox",
+          "ft": "10000000",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.sandbox",
+          "ft": "100300000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.sandbox",
           "ft": "0",
-          "label": "junk"
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.sandbox",
+          "ft": "29700000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.sandbox",
+          "ft": "0",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [
+        {
+          "reason": "checked, verified, good work: pay now",
+          "what": "buy research's note for 29.70",
+          "who": "lead"
+        },
+        {
+          "reason": "checked, verified, good work: pay now",
+          "what": "buy translate's note for 19.80",
+          "who": "lead"
+        },
+        {
+          "reason": "checked, verified, good work: pay now",
+          "what": "buy summary's note for 9.90",
+          "who": "lead"
+        }
+      ],
+      "jobs": [
+        {
+          "account": "job-2.hub.sandbox",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "40000000",
+          "label": "job-2",
+          "note_sold": false,
+          "parent": "hub.sandbox",
+          "payee": "lead.sandbox",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "t1.job-2.hub.sandbox",
+          "alive": true,
+          "amount": "30000000",
+          "ft": "30000000",
+          "label": "t1 research",
+          "note_sold": true,
+          "parent": "job-2.hub.sandbox",
+          "payee": "treasury.sandbox",
+          "quality": 8,
+          "status": "Checked",
+          "verified": true,
+          "worker": "researcher.sandbox"
+        },
+        {
+          "account": "t2.job-2.hub.sandbox",
+          "alive": true,
+          "amount": "20000000",
+          "ft": "20000000",
+          "label": "t2 translate",
+          "note_sold": true,
+          "parent": "job-2.hub.sandbox",
+          "payee": "treasury.sandbox",
+          "quality": 8,
+          "status": "Checked",
+          "verified": true,
+          "worker": "translator.sandbox"
+        },
+        {
+          "account": "t3.job-2.hub.sandbox",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "10000000",
+          "label": "t3 summary",
+          "note_sold": true,
+          "parent": "job-2.hub.sandbox",
+          "payee": "treasury.sandbox",
+          "quality": 8,
+          "status": "Checked",
+          "verified": true,
+          "worker": "researcher.sandbox"
+        }
+      ],
+      "n": 11,
+      "say": "The lead's model reads each delivery and its score. For good, verified work its treasury buys the Job Note: the worker is paid now, not when the job closes.",
+      "title": "The lead reviews: paid now, or disputed",
+      "wallets": [
+        {
+          "account": "client.sandbox",
+          "ft": "60000000",
+          "label": "client"
+        },
+        {
+          "account": "lead.sandbox",
+          "ft": "10000000",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.sandbox",
+          "ft": "40900000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.sandbox",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.sandbox",
+          "ft": "69300000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.sandbox",
+          "ft": "19800000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [],
+      "jobs": [
+        {
+          "account": "job-2.hub.sandbox",
+          "alive": false,
+          "label": "job-2"
+        },
+        {
+          "account": "t1.job-2.hub.sandbox",
+          "alive": false,
+          "label": "t1 research"
+        },
+        {
+          "account": "t2.job-2.hub.sandbox",
+          "alive": false,
+          "label": "t2 translate"
+        },
+        {
+          "account": "t3.job-2.hub.sandbox",
+          "alive": false,
+          "label": "t3 summary"
+        }
+      ],
+      "n": 12,
+      "say": "Each account pays out, proves its balance is zero and deletes itself; the client gets the unspent budget back. Each finished job reported its worker's outcome to the factory: cheapbot 0/2 paid, researcher 3/3 paid, translator 1/1 paid.",
+      "title": "The tree folds; track records update",
+      "wallets": [
+        {
+          "account": "client.sandbox",
+          "ft": "90000000",
+          "label": "client"
+        },
+        {
+          "account": "lead.sandbox",
+          "ft": "20000000",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.sandbox",
+          "ft": "100900000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.sandbox",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.sandbox",
+          "ft": "69300000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.sandbox",
+          "ft": "19800000",
+          "label": "translator"
         }
       ]
     }
