@@ -7,7 +7,7 @@ SHELL := /bin/bash
 
 PROP_CASES ?= 10000
 OUT := out
-CONTRACTS := job mock-usdc
+CONTRACTS := job factory mock-usdc mock-outlayer
 export CARGO_INCREMENTAL := 0
 
 define not_built
@@ -46,8 +46,8 @@ build: ## Build the contract wasm into out/ with SHA256SUMS (non-reproducible fo
 	  done; \
 	else \
 	  echo "cargo-near not installed: plain cargo wasm build (no ABI, no wasm-opt)" >&2; \
-	  RUSTFLAGS='--cfg near' cargo build --offline --locked --release --target wasm32-unknown-unknown -p hire-tree-job -p mock-usdc; \
-	  cp target/wasm32-unknown-unknown/release/hire_tree_job.wasm target/wasm32-unknown-unknown/release/mock_usdc.wasm $(OUT)/; \
+	  RUSTFLAGS='--cfg near' cargo build --offline --locked --release --target wasm32-unknown-unknown -p hire-tree-job -p hire-tree-factory -p mock-usdc -p mock-outlayer; \
+	  for w in hire_tree_job hire_tree_factory mock_usdc mock_outlayer; do cp target/wasm32-unknown-unknown/release/$$w.wasm $(OUT)/; done; \
 	fi
 	cd $(OUT) && sha256sum *.wasm | tee SHA256SUMS
 	@echo "build: non-reproducible wasm in $(OUT)/ (the Docker reproducible build is not built yet)" >&2
@@ -64,6 +64,7 @@ sandbox: build ## near-sandbox tests: G1 delete gate, G4 global contract, 2-leve
 	  pre="$$PWD/target/fdshim.so"; \
 	fi; \
 	LD_PRELOAD="$$pre" JOB_WASM=$(CURDIR)/$(OUT)/hire_tree_job.wasm USDC_WASM=$(CURDIR)/$(OUT)/mock_usdc.wasm \
+	  FACTORY_WASM=$(CURDIR)/$(OUT)/hire_tree_factory.wasm OUTLAYER_WASM=$(CURDIR)/$(OUT)/mock_outlayer.wasm \
 	  cargo test --locked -- --test-threads=1 --nocapture
 
 # ---------------------------------------------------------------- not built yet

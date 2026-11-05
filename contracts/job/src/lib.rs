@@ -38,7 +38,8 @@ pub const MAX_CHILDREN: usize = 16;
 pub const MAX_WINDOW_SECS: u64 = 30 * 24 * 3600;
 const NS_PER_SEC: u64 = 1_000_000_000;
 
-/// NEAR a new child account gets from the job's own balance (its storage).
+/// Least NEAR the manager attaches to `hire`; all of it goes to the new
+/// child account (its storage), and comes back up the tree on delete.
 /// Measured on near-sandbox: a job account uses 463-583 bytes (0.005-0.006
 /// NEAR locked); each child record adds about 60 bytes, so 16 children stay
 /// under 0.02 NEAR. The manager may attach more to `hire`; it goes to the
@@ -372,11 +373,9 @@ impl Job {
     }
 
     fn receive_fund(&mut self, sender: AccountId, amount: U128) -> PromiseOrValue<U128> {
-        let allowed = if self.root {
-            self.client.as_ref() == Some(&sender)
-        } else {
-            sender == self.parent
-        };
+        // Root: the client, or the factory (our parent) forwarding the
+        // client's budget at post time. Sub-job: only the parent job.
+        let allowed = sender == self.parent || (self.root && self.client.as_ref() == Some(&sender));
         if !allowed {
             return self.refund(amount, "fund: sender is not the client or parent");
         }
@@ -479,8 +478,9 @@ impl Job {
     /// Manager only. Creates `t{n}.<this account>` from the global contract
     /// (by code hash), registers it on the token and sends it
     /// `amount + sub` tokens. `amount` is the worker's pay; `sub` is a budget
-    /// the child may hire with. Attached NEAR goes to the child on top of
-    /// `CHILD_BASE_NEAR`.
+    /// the child may hire with. The manager attaches at least
+    /// `CHILD_BASE_NEAR` (0.03 NEAR); all of it goes to the child, so a job
+    /// never pays its children's storage from its own balance.
     #[payable]
     pub fn hire(
         &mut self,
@@ -497,6 +497,10 @@ impl Job {
         require!(self.window_open(), "window is closed");
         require!(self.children.len() < MAX_CHILDREN, "too many children");
         require!(amount.0 > 0, "amount must be greater than zero");
+        require!(
+            env::attached_deposit() >= CHILD_BASE_NEAR,
+            "attach at least 0.03 NEAR for the child account's storage"
+        );
         require!(
             env::prepaid_gas() >= GAS_HIRE_MIN,
             "not enough gas for hire (attach at least 150 Tgas)"
@@ -541,9 +545,7 @@ impl Job {
             "checker": self.checker,
             "treasury": self.treasury,
         });
-        let child_near = CHILD_BASE_NEAR
-            .checked_add(env::attached_deposit())
-            .unwrap_or_else(|| env::panic_str("deposit overflow"));
+        let child_near = env::attached_deposit();
         emit(
             "hire_started",
             json!({ "child": child, "worker": worker, "amount": amount, "total": U128(total) }),
@@ -984,7 +986,12 @@ impl Job {
         let approvable = if self.root {
             self.status.can_settle_from()
         } else {
-            matches!(self.status, Status::Delivered | Status::Checked)
+            // A refunded (disputed) sub-job may close early too: it only
+            // returns the pay to the parent.
+            matches!(
+                self.status,
+                Status::Delivered | Status::Checked | Status::Refunded
+            )
         };
         require!(approvable, "job cannot be approved in this status");
         self.approved = true;

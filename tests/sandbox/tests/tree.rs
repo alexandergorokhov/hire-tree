@@ -286,6 +286,8 @@ impl World {
         sub: u128,
         near: NearToken,
     ) -> Result<Value, String> {
+        // The manager pays the child account's storage (0.03 NEAR base).
+        let near = near.saturating_add(NearToken::from_millinear(30));
         self.call(
             lead,
             job,
@@ -576,5 +578,221 @@ async fn two_level_tree_folds_bottom_up_and_money_rule_holds() {
     eprintln!(
         "factory: sent 3 NEAR to the root, got back {} on delete",
         near_str(factory_near_1 + NearToken::from_near(3).as_yoctonear() - factory_near_0)
+    );
+}
+
+// ---------------------------------------------------------------- full scene
+
+mod scene_util {
+    use ht_core::receipt::{eip191_digest, eth_address, sha256, sha256_hex};
+    use secp256k1::{Message, Secp256k1, SecretKey};
+
+    pub const MODEL: &str = "deepseek-ai/DeepSeek-V4.1-Flash-1017";
+
+    /// Stand-in for the NEAR AI Cloud TEE key (sandbox only).
+    pub fn key() -> SecretKey {
+        SecretKey::from_slice(&[0x42; 32]).unwrap()
+    }
+
+    pub fn addr_hex(k: &SecretKey) -> String {
+        let pk = k.public_key(&Secp256k1::new()).serialize_uncompressed();
+        hex::encode(eth_address(&pk[1..].try_into().unwrap()))
+    }
+
+    /// (resp_hash, req base64, sig hex, model) for a request bound to `task`.
+    pub fn receipt(task: &str, spec: &str, seq: u32, answer: &str) -> serde_json::Value {
+        let req = format!(
+            "{{\"model\":\"{MODEL}\",\"messages\":[{{\"role\":\"user\",\"content\":\"HT1:{task}:{spec}:{seq} Research: NEAR global contracts\"}}]}}"
+        );
+        let resp = format!("{{\"choices\":[{{\"message\":{{\"content\":\"{answer}\"}}}}]}}");
+        let text = format!(
+            "{MODEL}:{}:{}",
+            sha256_hex(req.as_bytes()),
+            sha256_hex(resp.as_bytes())
+        );
+        let (rid, rs) = Secp256k1::new()
+            .sign_ecdsa_recoverable(
+                &Message::from_slice(&eip191_digest(text.as_bytes())).unwrap(),
+                &key(),
+            )
+            .serialize_compact();
+        let mut sig = rs.to_vec();
+        sig.push(27 + rid.to_i32() as u8);
+        use near_api::types::json::Base64VecU8;
+        serde_json::json!({
+            "resp_hash": hex::encode(sha256(resp.as_bytes())),
+            "req": Base64VecU8::from(req.into_bytes()),
+            "sig": hex::encode(sig),
+            "model": MODEL,
+        })
+    }
+}
+
+/// The demo story on a real local node: factory posts the job; the lead
+/// hires three workers; a cheater's copied receipt is rejected; a verified
+/// and checked worker sells its note to the lead's treasury and is paid at
+/// once; a junk delivery is disputed and refunded; everything settles
+/// bottom-up, every job account is deleted, and the money rule holds.
+#[tokio::test]
+async fn scene_full_tree_on_local_node() {
+    use scene_util::*;
+    let w = World::start().await;
+    let client = w.account("client", 10).await;
+    let lead = w.account("lead", 10).await;
+    let treasury = w.account("treasury", 10).await;
+    let researcher = w.account("researcher", 5).await;
+    let translator = w.account("translator", 5).await;
+    let junk = w.account("junk", 5).await;
+
+    // Checker and factory.
+    let checker = w.account("outlayer", 10).await;
+    Contract::deploy(checker.id.clone())
+        .use_code(wasm("OUTLAYER_WASM", "mock_outlayer.wasm"))
+        .with_init_call("new", json!({ "owner": checker.id, "default_score": 8 }))
+        .unwrap()
+        .with_signer(checker.signer.clone())
+        .send_to(&w.net)
+        .await
+        .unwrap()
+        .assert_success();
+    let hub = w.account("hub", 30).await;
+    Contract::deploy(hub.id.clone())
+        .use_code(wasm("FACTORY_WASM", "hire_tree_factory.wasm"))
+        .with_init_call(
+            "new",
+            json!({ "owner": hub.id, "token": w.usdc.id,
+                    "code_hash": near_api::types::CryptoHash(w.code_hash).to_string(),
+                    "signer": addr_hex(&key()), "checker": checker.id }),
+        )
+        .unwrap()
+        .with_signer(hub.signer.clone())
+        .send_to(&w.net)
+        .await
+        .unwrap()
+        .assert_success();
+    for a in [&client, &lead, &treasury, &hub] {
+        w.register(a).await;
+    }
+    w.mint(&client.id, 100 * USD).await;
+    w.mint(&treasury.id, 50 * USD).await;
+    let (hub_near_start, _, _) = w.account_state(&hub.id).await.unwrap();
+
+    // 1. The client posts and funds the job in one transfer.
+    let post = json!({ "manager": lead.id, "spec_hash": SPEC, "window_secs": 3600,
+                       "treasury": treasury.id })
+    .to_string();
+    w.send(&client, &hub.id, 100 * USD, Some(&post)).await;
+    let root: AccountId = format!("job-1.{}", hub.id).parse().unwrap();
+    assert_eq!(w.ft(&root).await, 100 * USD);
+    assert_eq!(w.ft(&client.id).await, 0);
+    assert!(
+        w.account_state(&root).await.unwrap().2,
+        "root runs the global code"
+    );
+
+    // 2. The lead hires three workers.
+    for (wk, pay) in [(&researcher, 30), (&translator, 20), (&junk, 10)] {
+        w.hire(
+            &lead,
+            &root,
+            &wk.id,
+            pay * USD,
+            0,
+            NearToken::from_yoctonear(0),
+        )
+        .await
+        .unwrap();
+    }
+    let (t1, t2, t3) = (child(&root, 1), child(&root, 2), child(&root, 3));
+
+    // 3. Cheat: the translator submits a genuine receipt made for t1's task.
+    let stolen = receipt(
+        t1.as_str(),
+        SPEC,
+        1,
+        "NEAR global contracts are deployed once by hash",
+    );
+    let err = w
+        .call(
+            &translator,
+            &t2,
+            "deliver",
+            stolen.clone(),
+            NearToken::from_yoctonear(0),
+        )
+        .await
+        .unwrap_err();
+    assert!(err.contains("is not this task"), "{err}");
+
+    // 4. The researcher delivers with its own receipt: verified, checked (8).
+    w.ok(&researcher, &t1, "deliver", stolen).await;
+    let j1 = w.job(&t1).await;
+    assert_eq!(j1["status"], "Checked");
+    assert_eq!(j1["verified"], true);
+    assert_eq!(j1["quality"], 8);
+
+    // 5. The lead's treasury buys the note: the researcher is paid now.
+    let quote = num(&w.view(&t1, "quote_note", json!({})).await);
+    assert_eq!(quote, 29_700_000);
+    w.send(&treasury, &t1, quote, Some("buy_note")).await;
+    assert_eq!(w.ft(&researcher.id).await, quote);
+    assert_eq!(w.job(&t1).await["payee"], treasury.id.to_string());
+
+    // 6. The translator delivers without a receipt: paid at settle only.
+    w.ok(
+        &translator,
+        &t2,
+        "deliver",
+        json!({ "resp_hash": "02".repeat(32) }),
+    )
+    .await;
+    assert_eq!(w.job(&t2).await["verified"], false);
+    assert!(w.view(&t2, "quote_note", json!({})).await.is_null());
+
+    // 7. Junk passes the first check (7) but the dispute panels say 1 and 2.
+    let junk_hash = "03".repeat(32);
+    w.ok(
+        &checker,
+        &checker.id,
+        "set_scores",
+        json!({ "deliverable_hash": junk_hash, "scores": [7, 1, 2] }),
+    )
+    .await;
+    w.ok(&junk, &t3, "deliver", json!({ "resp_hash": junk_hash }))
+        .await;
+    assert_eq!(w.job(&t3).await["status"], "Checked");
+    w.ok(&lead, &t3, "dispute", json!({})).await;
+    assert_eq!(w.job(&t3).await["status"], "Refunded");
+
+    // 8. Settle bottom-up: the lead approves the sub-jobs, the client the root.
+    for t in [&t1, &t2, &t3] {
+        w.ok(&lead, t, "approve", json!({})).await;
+        w.ok(&lead, t, "settle", json!({})).await;
+        assert!(w.account_state(t).await.is_none(), "{t} deleted");
+    }
+    w.ok(&client, &root, "approve", json!({})).await;
+    w.ok(&lead, &root, "settle", json!({})).await;
+    assert!(w.account_state(&root).await.is_none(), "root deleted");
+
+    // 9. Money rule: 100 in, 100 out.
+    let (r, tr, tl, jk, ld) = (
+        w.ft(&researcher.id).await,
+        w.ft(&treasury.id).await,
+        w.ft(&translator.id).await,
+        w.ft(&junk.id).await,
+        w.ft(&lead.id).await,
+    );
+    eprintln!("researcher {r}, treasury {tr}, translator {tl}, junk {jk}, lead {ld}");
+    assert_eq!(r, 29_700_000);
+    assert_eq!(tr, 50 * USD + 300_000, "treasury earned the 1% fee");
+    assert_eq!(tl, 20 * USD);
+    assert_eq!(jk, 0);
+    assert_eq!(ld, 50 * USD, "lead keeps the unspent 40 + refunded 10");
+    assert_eq!(r + (tr - 50 * USD) + tl + jk + ld, 100 * USD);
+    let (hub_near_end, _, _) = w.account_state(&hub.id).await.unwrap();
+    eprintln!(
+        "hub NEAR: {} -> {}",
+        near_str(hub_near_start),
+        near_str(hub_near_end)
     );
 }

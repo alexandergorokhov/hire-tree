@@ -213,7 +213,7 @@ fn funded_sub(pay: u128, total: u128) -> Job {
 
 fn hire_one(j: &mut Job, worker: &str, amount: u128) -> u32 {
     let idx = j.children.len() as u32;
-    Ctx::new(ROOT, LEAD).set();
+    Ctx::new(ROOT, LEAD).deposit(CHILD_BASE_NEAR).set();
     j.hire(acc(worker), U128(amount), spec(), None);
     idx
 }
@@ -412,6 +412,17 @@ fn wrong_token_is_refunded_without_state_change() {
 }
 
 #[test]
+fn factory_parent_can_fund_root() {
+    let mut j = new_root();
+    Ctx::new(ROOT, TOKEN).set();
+    assert_eq!(
+        value(j.ft_on_transfer(acc(FACTORY), U128(5 * USD), "fund".into())),
+        0
+    );
+    assert_eq!(j.get_job().funded.0, 5 * USD);
+}
+
+#[test]
 fn stranger_funding_root_is_refunded() {
     let mut j = new_root();
     Ctx::new(ROOT, TOKEN).set();
@@ -517,7 +528,7 @@ fn funding_after_window_is_refunded() {
 fn hire_creates_child_from_global_contract() {
     let mut j = funded_root(100 * USD);
     Ctx::new(ROOT, LEAD)
-        .deposit(NearToken::from_millinear(20))
+        .deposit(NearToken::from_millinear(50))
         .set();
     j.hire(acc(WORKER), U128(30 * USD), spec(), Some(U128(5 * USD)));
     let receipts = get_created_receipts();
@@ -570,6 +581,14 @@ fn children_get_increasing_names() {
 }
 
 #[test]
+#[should_panic(expected = "attach at least 0.03 NEAR")]
+fn hire_without_storage_deposit_refused() {
+    let mut j = funded_root(100 * USD);
+    Ctx::new(ROOT, LEAD).set();
+    j.hire(acc(WORKER), U128(USD), spec(), None);
+}
+
+#[test]
 #[should_panic(expected = "only the manager can hire")]
 fn non_manager_cannot_hire() {
     let mut j = funded_root(100 * USD);
@@ -605,7 +624,7 @@ fn hire_zero_refused() {
 #[should_panic(expected = "amount overflow")]
 fn hire_overflow_refused() {
     let mut j = funded_root(10 * USD);
-    Ctx::new(ROOT, LEAD).set();
+    Ctx::new(ROOT, LEAD).deposit(CHILD_BASE_NEAR).set();
     j.hire(acc(WORKER), U128(u128::MAX), spec(), Some(U128(1)));
 }
 
@@ -613,7 +632,10 @@ fn hire_overflow_refused() {
 #[should_panic(expected = "not enough gas for hire")]
 fn hire_with_low_gas_refused() {
     let mut j = funded_root(10 * USD);
-    Ctx::new(ROOT, LEAD).gas(Gas::from_tgas(100)).set();
+    Ctx::new(ROOT, LEAD)
+        .gas(Gas::from_tgas(100))
+        .deposit(CHILD_BASE_NEAR)
+        .set();
     j.hire(acc(WORKER), U128(USD), spec(), None);
 }
 
@@ -1666,7 +1688,7 @@ fn failed_child_cannot_close() {
 fn two_level_tree_folds_bottom_up() {
     const GC: &str = "t1.t1.job-1.hiretree.test";
     let mut root = funded_root(100 * USD);
-    Ctx::new(ROOT, LEAD).set();
+    Ctx::new(ROOT, LEAD).deposit(CHILD_BASE_NEAR).set();
     root.hire(acc(WORKER), U128(30 * USD), spec(), Some(U128(10 * USD)));
     Ctx::new(ROOT, ROOT).results(vec![ok(b"")]).set();
     root.on_child_created(0);
@@ -1677,7 +1699,7 @@ fn two_level_tree_folds_bottom_up() {
 
     let mut t1 = funded_sub(30 * USD, 40 * USD);
     assert_eq!(t1.get_job().unallocated.0, 10 * USD);
-    Ctx::new(T1, LEAD).set();
+    Ctx::new(T1, LEAD).deposit(CHILD_BASE_NEAR).set();
     t1.hire(acc(WORKER2), U128(8 * USD), spec(), None);
     Ctx::new(T1, T1).results(vec![ok(b"")]).set();
     t1.on_child_created(0);
@@ -2115,6 +2137,17 @@ mod check_note_dispute {
     }
 
     #[test]
+    fn manager_can_close_a_refunded_sub_early() {
+        let mut j = disputed();
+        verdict(&mut j, num(2), num(4));
+        Ctx::new(T1, LEAD).set();
+        j.approve();
+        Ctx::new(T1, EVE).set();
+        j.settle();
+        assert_eq!(transfers(), vec![(ROOT.into(), PAY.to_string())]);
+    }
+
+    #[test]
     fn dispute_rejected_back_to_checked() {
         let mut j = disputed();
         verdict(&mut j, num(2), num(9));
@@ -2195,7 +2228,7 @@ mod check_note_dispute {
         );
         Ctx::new(ROOT, TOKEN).set();
         r.ft_on_transfer(acc(CLIENT), U128(100 * USD), "fund".into());
-        Ctx::new(ROOT, LEAD).set();
+        Ctx::new(ROOT, LEAD).deposit(CHILD_BASE_NEAR).set();
         r.hire(acc(WORKER), U128(USD), spec(), None);
         let a = call_args("new");
         assert_eq!(a["checker"], CHECKER);

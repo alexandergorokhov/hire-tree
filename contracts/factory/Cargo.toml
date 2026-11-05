@@ -1,0 +1,17 @@
+[package]
+name = "hire-tree-factory"
+description = "Hire Tree factory: creates root jobs from the global job contract."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk.workspace = true
+hire-tree-core = { path = "../../core" }
+
+[dev-dependencies]
+near-sdk = { workspace = true, features = ["unit-testing"] }
