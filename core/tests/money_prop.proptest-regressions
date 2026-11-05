@@ -5,3 +5,4 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc 85ee7b0b58bf8830729c73c07233ddf939ca19af3ce997997197d393ba213f2a # shrinks to funding = 7563929, bond = 0, ops = [Hire { parent: 0, amount: 1, sub: 1, fail: false }, Deliver(8988262076820535603), Hire { parent: 8351569649488870322, amount: 1, sub: 782915, fail: false }, Hire { parent: 2160219547377208635, amount: 1, sub: 0, fail: false }, Hire { parent: 8979862007350126920, amount: 1, sub: 0, fail: false }, Settle { node: 9317525456390341976, payee_ok: true, rest_ok: false }, Check(4519602857888075351, true), Buy(13767553259737219411)]
+cc e610f13ec3dc9811f8ad8085d77c194f375a4e3158a61eb90e110f57b5a56a83 # shrinks to funding = 2548767, bond = 2548767, ops = [Settle { node: 0, payee_ok: false, rest_ok: true }, Hire { parent: 0, amount: 1, sub: 0, fail: false }, Deliver(3721254038887779961)]

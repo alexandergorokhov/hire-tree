@@ -548,13 +548,15 @@ async fn two_level_tree_folds_bottom_up_and_money_rule_holds() {
         "paid out: w1 {} w2 {} w3 {} lead {}",
         paid[0], paid[1], paid[2], paid[3]
     );
-    assert_eq!(paid, [30 * USD, 20 * USD, 8 * USD, 52 * USD]);
+    // The lead gets its bond back (no fee on this root); the client gets
+    // the unspent 42 back.
+    assert_eq!(paid, [30 * USD, 20 * USD, 8 * USD, 10 * USD]);
+    assert_eq!(w.ft(&client.id).await, 42 * USD);
     // Money rule: tree balances (all 0, accounts gone) + paid out == funding + bond.
     for id in [&root, &t1, &t2, &t11] {
         assert_eq!(w.ft(id).await, 0);
     }
-    assert_eq!(paid.iter().sum::<u128>(), 100 * USD + 10 * USD);
-    assert_eq!(w.ft(&client.id).await, 0);
+    assert_eq!(paid.iter().sum::<u128>() + 42 * USD, 100 * USD + 10 * USD);
 
     let factory_near_1 = w.account_state(&w.factory.id).await.unwrap().0;
     eprintln!(
@@ -733,7 +735,7 @@ async fn scene_full_tree_on_local_node() {
 
     // 1. The client posts and funds the job in one transfer.
     let post = json!({ "manager": lead.id, "spec_hash": SPEC, "window_secs": 3600,
-                       "treasury": treasury.id })
+                       "treasury": treasury.id, "lead_fee": (10 * USD).to_string() })
     .to_string();
     w.send(&client, &hub.id, 100 * USD, Some(&post)).await;
     let root: AccountId = format!("job-1.{}", hub.id).parse().unwrap();
@@ -875,6 +877,7 @@ async fn scene_full_tree_on_local_node() {
         &jobs, &people).await;
 
     // 9. Money rule: 100 in, 100 out.
+    let cl = w.ft(&client.id).await;
     let (r, tr, tl, jk, ld) = (
         w.ft(&researcher.id).await,
         w.ft(&treasury.id).await,
@@ -887,10 +890,15 @@ async fn scene_full_tree_on_local_node() {
     assert_eq!(tr, 50 * USD + 300_000, "treasury earned the 1% fee");
     assert_eq!(tl, 20 * USD);
     assert_eq!(jk, 0);
-    assert_eq!(ld, 50 * USD, "lead keeps the unspent 40 + refunded 10");
-    assert_eq!(r + (tr - 50 * USD) + tl + jk + ld, 100 * USD);
+    assert_eq!(ld, 10 * USD, "the lead's fee, set by the client at post");
+    assert_eq!(
+        cl,
+        40 * USD,
+        "client gets back the unspent 30 + refunded 10"
+    );
+    assert_eq!(r + (tr - 50 * USD) + tl + jk + ld + cl, 100 * USD);
     story.step(&w, "100 in, 100 out",
-        "researcher 29.70 + treasury fee 0.30 + translator 20 + junk 0 + lead 50 (unspent 40 + refunded 10) = 100 fUSD. No account is left holding anything.",
+        "researcher 29.70 + treasury fee 0.30 + translator 20 + junk 0 + lead fee 10 + back to the client 40 (unspent 30 + refunded 10) = 100 fUSD. No account is left holding anything.",
         &jobs, &people).await;
     story.save();
     let (hub_near_end, _, _) = w.account_state(&hub.id).await.unwrap();

@@ -79,8 +79,10 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
   failed, the parent would need a manual fix (not seen in tests).
 - NEAR from a failed create goes back to the job, not the manager (a few
   mNEAR; it flows up the tree on delete).
-- The root's leftover goes to the manager (the lead's margin), not back to
-  the client; the client's protection is the approval window.
+- The lead's fee is fixed by the client at post; the rest of the root's
+  budget goes back to the client at settle (`root_fee_and_bond_go_to_the_manager_the_rest_back_to_the_client`).
+  Root (client) disputes are still cut; the client's protection is the fee
+  cap and the approval window.
 - Root (client) disputes are cut (plan cut order 4); a client's protection
   is the approval window and that the lead only gets the remainder.
 - The checker is pinned per factory, not per job; changing it affects only

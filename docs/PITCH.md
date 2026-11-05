@@ -6,7 +6,7 @@ that job's money, proves the AI did the work, pays the worker early if the
 work checks out, and deletes itself when the job is done.
 
 ## The problem (say it in 3 sentences)
-Agents already hire agents, but the money sits with a platform, and an agent
+On agent marketplaces the escrow sits in one platform contract, and an agent
 that subcontracts has no safe way to hand part of its budget to a sub-agent.
 Workers wait for the whole job to close before they see a cent. And nobody
 can prove a deliverable came out of a model call made for this task rather
@@ -15,10 +15,10 @@ than being copied or made up.
 ## What is new (3 NEAR features, combined)
 | Piece | NEAR feature | What it gives |
 |---|---|---|
-| Every job is an account (`t1.job-1.hiretree`) | sub-accounts + one global contract by code hash + `delete_account` | escrow with no owner key; nests to any depth; folds and refunds its storage when done |
+| Every job is an account (`t1.job-1.hiretree`) | sub-accounts + one global contract by code hash + `delete_account` | escrow with no owner key; sub-jobs nest (tested to 2 levels); folds and refunds its storage when done |
 | Proof of AI work | NEAR AI Cloud TEE receipt + `env::ecrecover` | the contract checks the model's signature and that the request carries `HT1:<this job>:<spec>:<delivery>`; a copied receipt fails |
 | Paid now | Job Note sold to the lead's own treasury for 1% | a verified, checked worker is paid in the same transaction; only the lead carries the risk |
-| Quality | one AI check per delivery, started by the contract (OutLayer on testnet) | junk cannot be re-rolled until it passes; 2-of-3 disputes |
+| Quality | one check per delivery, started by the contract on a pinned checker (mocked in the sandbox) | junk cannot be re-rolled until it passes; 2-of-3 disputes |
 
 ## 30-second spoken pitch
 "Agents hire agents now, but who holds the money? In Hire Tree, nobody does:
@@ -47,7 +47,7 @@ run) next to a terminal. One scene per page step. Voice-over in quotes.
 | 6 | 2:00-2:15 | Scene 6: t2 no receipt | "The translator used no verified model. It still gets paid, but only at the end, and nobody can buy its note." |
 | 7 | 2:15-2:30 | Scene 7: t3 Refunded | "Junk got past one check. The lead disputes; two fresh checks say junk; two of three votes refund the pay up the tree." |
 | 8 | 2:30-2:50 | Scenes 8-9: accounts grey out, totals | "And the tree folds. Each account pays out, proves its token balance is zero, deletes itself, and returns its storage to its parent. A hundred in, a hundred out." |
-| 9 | 2:50-3:00 | Terminal: `make test` and `make demo` passing; repo URL | "It's all open source and runs on a local NEAR node with one command: make demo. Hire Tree." |
+| 9 | 2:50-3:00 | Terminal: `make test` and `make demo` passing; repo URL | "It's all open source and runs on a local NEAR node: make setup, then make demo. Hire Tree." |
 
 Recording tips: browser at 1280x800, page zoom 110%. Use the page's Play
 button (6 s per scene) or the arrow keys. Show the terminal once at the end,
@@ -58,13 +58,12 @@ not throughout.
 |---|---|
 | Why NEAR? | Named sub-accounts that a contract can create and delete, global contracts (one code hash for every job), NEAR AI Cloud's TEE-signed receipts, and `ecrecover` on-chain. The design is the account tree; elsewhere it would be a mapping inside one contract. |
 | How is this different from market.near.ai? | That market holds funds itself and does not nest. Here each job is its own keyless account, sub-jobs nest, and pay can go out early against an on-chain AI proof. |
-| What is real and what is mocked? | Real: contracts, factory, global contract, sub-account create/delete, token transfers, ecrecover, all on a local NEAR node. Mocked in the sandbox: the quality checker (fixed scores) and the NEAR AI signing key (a test key; the text format matches a real NEAR AI Cloud receipt recorded on testnet). On testnet the signer is pinned to NEAR AI Cloud's address. |
+| What is real and what is mocked? | Real: contracts, factory, global contract, sub-account create/delete, token transfers, ecrecover, all on a local NEAR node. Mocked in the sandbox: the quality checker (fixed scores) and the NEAR AI signing key (a test key; the signed text follows NEAR AI Cloud's documented format). The factory pins the signer; on testnet that will be NEAR AI Cloud's address. |
 | Can the lead self-deal with the note? | Only the lead's own treasury may buy, and only the lead may dispute a sub-job. The worker already has its money; an upheld dispute moves the face value from the treasury back up the tree, so the lead at best breaks even. There is no outside buyer to cheat. |
 | What if the checker is down? | Fail closed: the delivery stays unscored, is not paid unless the lead approves it, and its note is never sellable. A lost answer can be cleared after 10 minutes. Settle waits while a check is pending, so junk delivered in the last second is not paid before its score lands. |
 | What if the AI checker is fooled? | Then the lead, who paid early, loses; not the client. Disputes add two more checks with seeds the worker cannot choose. |
 | What if a transaction fails half-way? | Settle sends one transfer at a time; every stuck step (hire, check, note sale, settle, dispute) has a resume path decided from the real token balance. Tokens above the books are never booked, only swept up the tree, so a refunded transfer cannot lock a job. 10,000 random trees with random failures keep the money rule. |
 
 ## Tracks
-`swarms` (agents hiring agents in a tree) and `realworld` (escrow and early
-payment for agent work). Not `agents`, `business` or `security` (those are
-Agent Exit's).
+`swarms` only (agents hiring agents in a tree). Not `agents`, `business` or
+`security` (those are Agent Exit's).

@@ -286,23 +286,49 @@ fn init_must_be_called_by_parent_account() {
     );
 }
 
-#[test]
-#[should_panic(expected = "root job has no own pay")]
-fn root_with_amount_refused() {
+fn root_with_fee(fee: u128) -> Job {
     Ctx::new(ROOT, FACTORY).set();
     Job::new(
         Some(acc(CLIENT)),
         acc(LEAD),
         None,
         acc(TOKEN),
-        U128(1),
+        U128(fee),
         spec(),
         WINDOW,
         signer(),
         code_hash(),
         None,
         None,
-    );
+    )
+}
+
+#[test]
+fn root_fee_and_bond_go_to_the_manager_the_rest_back_to_the_client() {
+    let mut j = root_with_fee(10 * USD);
+    Ctx::new(ROOT, TOKEN).set();
+    j.ft_on_transfer(acc(CLIENT), U128(100 * USD), "fund".into());
+    j.ft_on_transfer(acc(LEAD), U128(5 * USD), "bond".into());
+    assert_eq!(j.get_job().unallocated.0, 90 * USD, "fee is never hireable");
+    Ctx::new(ROOT, CLIENT).set();
+    j.approve();
+    Ctx::new(ROOT, EVE).set();
+    j.settle();
+    assert_eq!(call_args("storage_deposit")["account_id"], LEAD);
+    assert_eq!(transfers(), vec![(LEAD.into(), (15 * USD).to_string())]);
+    payee_cb(&mut j, ROOT, true);
+    assert_eq!(transfers(), vec![(CLIENT.into(), (90 * USD).to_string())]);
+}
+
+#[test]
+fn root_funding_below_the_fee_refunded() {
+    let mut j = root_with_fee(10 * USD);
+    Ctx::new(ROOT, TOKEN).set();
+    assert!(matches!(
+        j.ft_on_transfer(acc(CLIENT), U128(5 * USD), "fund".into()),
+        PromiseOrValue::Value(U128(x)) if x == 5 * USD
+    ));
+    assert_eq!(j.get_job().funded.0, 0);
 }
 
 #[test]
@@ -1354,14 +1380,14 @@ fn settle_undelivered_sub_returns_everything_to_parent() {
 }
 
 #[test]
-fn settle_root_sends_remainder_to_manager() {
+fn settle_root_sends_remainder_back_to_client() {
     let mut j = funded_root(100 * USD);
     Ctx::new(ROOT, CLIENT).set();
     j.approve();
     Ctx::new(ROOT, EVE).set();
     j.settle();
     let args = call_args("ft_transfer");
-    assert_eq!(args["receiver_id"], LEAD);
+    assert_eq!(args["receiver_id"], CLIENT);
     assert_eq!(args["amount"], (100 * USD).to_string());
 }
 
@@ -1602,14 +1628,14 @@ fn anyone_can_resume_after_a_day() {
 }
 
 #[test]
-fn root_registers_the_manager_before_paying_it() {
+fn root_registers_the_client_before_refunding_it() {
     let mut j = funded_root(10 * USD);
     Ctx::new(ROOT, CLIENT).set();
     j.approve();
     Ctx::new(ROOT, EVE).set();
     j.settle();
-    assert_eq!(call_args("storage_deposit")["account_id"], LEAD);
-    assert_eq!(transfers(), vec![(LEAD.into(), (10 * USD).to_string())]);
+    assert_eq!(call_args("storage_deposit")["account_id"], CLIENT);
+    assert_eq!(transfers(), vec![(CLIENT.into(), (10 * USD).to_string())]);
 }
 
 #[test]
@@ -1868,14 +1894,14 @@ fn two_level_tree_folds_bottom_up() {
     Ctx::new(ROOT, T1).at(AFTER).set();
     root.child_closed(U128(2 * USD));
 
-    // Root: 60 unspent + 2 returned = 62 to the lead.
+    // Root (no fee): 60 unspent + 2 returned = 62 back to the client.
     assert_eq!(root.get_job().ft_balance.0, 62 * USD);
     Ctx::new(ROOT, EVE).at(AFTER).set();
     root.settle();
     let args = call_args("ft_transfer");
-    assert_eq!(args["receiver_id"], LEAD);
+    assert_eq!(args["receiver_id"], CLIENT);
     assert_eq!(args["amount"], (62 * USD).to_string());
-    // Money rule: 8 (worker2) + 30 (worker) + 62 (lead) == 100 funded.
+    // Money rule: 8 (worker2) + 30 (worker) + 62 (client) == 100 funded.
 }
 
 // ================================================================ checks, notes, disputes

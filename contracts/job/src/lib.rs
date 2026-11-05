@@ -5,7 +5,7 @@
 //! - each sub-job, e.g. `t1.job-1.hiretree.testnet`, created by `hire`.
 //!
 //! Each account holds that job's fake USDC. `settle` runs bottom-up: pay the
-//! payee, send the rest to the parent (root: to the manager), confirm the
+//! payee, send the rest to the parent (root: back to the client), confirm the
 //! real token balance is zero, then delete the account (beneficiary: parent).
 //!
 //! Built: init, funding, bond, hire, deliver (with or without a NEAR AI
@@ -319,12 +319,9 @@ impl Job {
             (None, Some(_)) => false,
             _ => env::panic_str("exactly one of client (root job) or worker (sub-job)"),
         };
-        if root {
-            require!(
-                amount.0 == 0,
-                "a root job has no own pay (amount must be 0)"
-            );
-        } else {
+        // Root: `amount` is the lead's fee, set by the client at post (may
+        // be 0); the rest of the budget goes back to the client at settle.
+        if !root {
             require!(amount.0 > 0, "a sub-job's amount must be greater than zero");
         }
         require!(
@@ -339,12 +336,18 @@ impl Job {
             .checked_mul(NS_PER_SEC)
             .and_then(|w| env::block_timestamp().checked_add(w))
             .unwrap_or_else(|| env::panic_str("window overflow"));
+        let payee = if root {
+            Some(manager.clone())
+        } else {
+            worker.clone()
+        };
         let job = Self {
             parent,
             root,
             client,
             manager,
-            payee: worker.clone(),
+            // Root: the manager collects its fee (and bond) at settle.
+            payee,
             worker,
             token,
             spec_hash: spec,
@@ -428,6 +431,9 @@ impl Job {
         }
         if self.status != Status::Open || !self.window_open() {
             return self.refund(amount, "fund: job is not open");
+        }
+        if self.root && self.ledger.funded.saturating_add(amount.0) < self.ledger.amount {
+            return self.refund(amount, "fund: the budget must cover the lead's fee");
         }
         if let Err(e) = self.ledger.fund(amount.0) {
             return self.refund(amount, &e.to_string());
@@ -1280,7 +1286,7 @@ impl Job {
     /// resolved from the real token balance alone (see `resume_settle`):
     /// 1. payee leg: register the payee on the token (a no-op refund if it
     ///    already is), then pay it `amount` (only if the work was delivered);
-    /// 2. rest leg: send the rest to the parent (root: to the manager);
+    /// 2. rest leg: send the rest to the parent (root: back to the client);
     /// 3. balance leg: ask the token for the real balance; delete only at zero.
     ///
     /// A failed transfer keeps its tokens here, the job goes back to its
@@ -1314,10 +1320,13 @@ impl Job {
             Status::Delivered => self.checker.is_none() || (!self.root && self.approved),
             _ => false,
         };
-        let split = self
-            .ledger
-            .settle_split(pay_payee)
-            .unwrap_or_else(|e| fail(e));
+        // Root: fee + bond to the manager, the rest back to the client.
+        let split = if self.root {
+            self.ledger.settle_split_root()
+        } else {
+            self.ledger.settle_split(pay_payee)
+        }
+        .unwrap_or_else(|e| fail(e));
         self.status = settling;
         self.status_before_settle = Some(prev);
         emit(
@@ -1381,8 +1390,8 @@ impl Job {
         }
         let attempt = self.next_attempt(Leg::Rest, split);
         let dest = self.rest_dest();
-        // On the root the rest goes to the manager, who may never have
-        // registered on the token: register it first (refunded if already).
+        // On the root the rest goes back to the client, who may have
+        // unregistered since: register it first (refunded if already).
         let transfer = if self.root {
             self.register(dest.clone())
                 .then(self.ft_transfer(dest, split.to_rest))
@@ -1581,7 +1590,9 @@ impl Job {
 
     fn rest_dest(&self) -> AccountId {
         if self.root {
-            self.manager.clone()
+            self.client
+                .clone()
+                .unwrap_or_else(|| env::panic_str("root has no client"))
         } else {
             self.parent.clone()
         }

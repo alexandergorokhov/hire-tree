@@ -38,6 +38,8 @@ struct PostMsg {
     spec_hash: String,
     window_secs: u64,
     treasury: Option<AccountId>,
+    /// The lead's fee, paid at settle; the rest goes back to the client.
+    lead_fee: Option<U128>,
 }
 
 #[near(serializers = [borsh, json])]
@@ -174,11 +176,15 @@ impl Factory {
         let Ok(m) = serde_json::from_str::<PostMsg>(&msg) else {
             return self.refund(
                 amount,
-                "msg must be {manager, spec_hash, window_secs, treasury?}",
+                "msg must be {manager, spec_hash, window_secs, treasury?, lead_fee?}",
             );
         };
         if parse_hash32_hex(&m.spec_hash).is_none() {
             return self.refund(amount, "spec_hash must be 64 hex chars");
+        }
+        let lead_fee = m.lead_fee.map(|f| f.0).unwrap_or(0);
+        if lead_fee > amount.0 {
+            return self.refund(amount, "lead_fee is larger than the budget");
         }
         if m.window_secs == 0 || m.window_secs > MAX_WINDOW_SECS {
             return self.refund(amount, "window_secs out of range");
@@ -209,7 +215,7 @@ impl Factory {
         );
         let init = json!({
             "client": sender_id, "manager": m.manager, "worker": null,
-            "token": self.token, "amount": "0", "spec_hash": m.spec_hash,
+            "token": self.token, "amount": U128(lead_fee), "spec_hash": m.spec_hash,
             "window_secs": m.window_secs, "signer": self.signer,
             "code_hash": Base58CryptoHash::from(self.code_hash),
             "checker": self.checker, "treasury": m.treasury,
@@ -492,6 +498,36 @@ mod tests {
         f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
         ctx(F, vec![PromiseResult::Successful(b"\"0\"".to_vec())]);
         assert_eq!(f.on_posted(2, U128(BUDGET)), U128(BUDGET));
+    }
+
+    #[test]
+    fn lead_fee_goes_into_the_root_init_and_cannot_exceed_the_budget() {
+        let mut f = factory();
+        ctx(TOKEN, vec![]);
+        let over = json!({ "manager": "lead.test", "spec_hash": "ab".repeat(32), "window_secs": 60,
+                           "lead_fee": (BUDGET + 1).to_string() })
+        .to_string();
+        assert_eq!(
+            value(f.ft_on_transfer(acc("client.test"), U128(BUDGET), over)),
+            BUDGET
+        );
+        let ok = json!({ "manager": "lead.test", "spec_hash": "ab".repeat(32), "window_secs": 60,
+                         "lead_fee": "5000000" })
+        .to_string();
+        f.ft_on_transfer(acc("client.test"), U128(BUDGET), ok);
+        let init = get_created_receipts()
+            .into_iter()
+            .flat_map(|r| r.actions)
+            .find_map(|a| match a {
+                MockAction::FunctionCallWeight {
+                    method_name, args, ..
+                } if method_name == b"new" => {
+                    Some(serde_json::from_slice::<serde_json::Value>(&args).unwrap())
+                }
+                _ => None,
+            })
+            .unwrap();
+        assert_eq!(init["amount"], "5000000");
     }
 
     #[test]

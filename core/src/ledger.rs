@@ -158,6 +158,27 @@ impl Ledger {
         })
     }
 
+    /// The root's split: the manager (payee) gets its fee (`amount`, set by
+    /// the client at post) plus its bond back; everything else goes back to
+    /// the client.
+    pub fn settle_split_root(&self) -> Result<Split, MoneyError> {
+        let to_payee = if self.payee_paid {
+            0
+        } else {
+            add(self.amount, self.bond)?
+        };
+        if to_payee > self.ft_balance {
+            return Err(MoneyError::NotEnoughBalance {
+                needed: to_payee,
+                balance: self.ft_balance,
+            });
+        }
+        Ok(Split {
+            to_payee,
+            to_rest: self.ft_balance - to_payee,
+        })
+    }
+
     /// Take a split off the balance before sending the transfers.
     pub fn begin_payout(&mut self, s: Split) -> Result<(), MoneyError> {
         let total = add(s.to_payee, s.to_rest)?;
@@ -332,5 +353,33 @@ mod tests {
             l.settle_split(true),
             Err(MoneyError::NotEnoughBalance { .. })
         ));
+    }
+
+    #[test]
+    fn root_split_pays_fee_and_bond_to_manager_rest_to_client() {
+        let mut l = Ledger::new(10);
+        l.fund(100).unwrap();
+        l.add_bond(5).unwrap();
+        assert_eq!(l.unallocated(), 90, "fee and bond are never hireable");
+        l.allocate(60).unwrap();
+        l.credit(20).unwrap(); // a child returned 20
+        let s = l.settle_split_root().unwrap();
+        assert_eq!(
+            s,
+            Split {
+                to_payee: 15,
+                to_rest: 50
+            }
+        );
+        l.begin_payout(s).unwrap();
+        l.payout_result(s, true, false).unwrap();
+        // Retry after a failed rest leg: the manager is not paid twice.
+        assert_eq!(
+            l.settle_split_root().unwrap(),
+            Split {
+                to_payee: 0,
+                to_rest: 50
+            }
+        );
     }
 }

@@ -55,6 +55,9 @@ struct Node {
     /// Sent to the parent so far (credited to the parent at close).
     returned: u128,
     note_sold: bool,
+    /// A settle has started: like the contract (hire needs an open window,
+    /// settle needs a closed one), no more hires.
+    settle_started: bool,
 }
 
 struct World {
@@ -86,6 +89,7 @@ impl World {
                 children_open: 0,
                 returned: 0,
                 note_sold: false,
+                settle_started: false,
             }],
             funding,
             bond,
@@ -115,7 +119,10 @@ impl World {
                 fail,
             } => {
                 let p = self.pick(parent);
-                if !self.live(p) || self.nodes[p].status != Status::Open {
+                if !self.live(p)
+                    || self.nodes[p].status != Status::Open
+                    || self.nodes[p].settle_started
+                {
                     return;
                 }
                 let (amount, sub) = (amount as u128, sub as u128);
@@ -141,6 +148,7 @@ impl World {
                     children_open: 0,
                     returned: 0,
                     note_sold: false,
+                    settle_started: false,
                 });
             }
             Op::Deliver(n) => {
@@ -203,7 +211,12 @@ impl World {
             return;
         };
         let pay_payee = matches!(prev, Status::Delivered | Status::Checked);
-        let split = self.nodes[n].ledger.settle_split(pay_payee).unwrap();
+        self.nodes[n].settle_started = true;
+        let split = if self.nodes[n].parent.is_none() {
+            self.nodes[n].ledger.settle_split_root().unwrap()
+        } else {
+            self.nodes[n].ledger.settle_split(pay_payee).unwrap()
+        };
         self.nodes[n].ledger.begin_payout(split).unwrap();
         self.nodes[n].status = settling;
 
@@ -225,7 +238,7 @@ impl World {
                     self.nodes[p].real += split.to_rest;
                     self.nodes[n].returned += split.to_rest;
                 }
-                None => self.paid_out += split.to_rest, // root: to the manager
+                None => self.paid_out += split.to_rest, // root: back to the client
             }
         }
         self.nodes[n]

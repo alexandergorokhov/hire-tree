@@ -7,12 +7,12 @@
         {
           "account": "job-1.hub.sandbox",
           "alive": true,
-          "amount": "0",
+          "amount": "10000000",
           "ft": "100000000",
           "label": "job-1",
           "note_sold": false,
           "parent": "hub.sandbox",
-          "payee": null,
+          "payee": "lead.sandbox",
           "quality": null,
           "status": "Open",
           "storage_near": "0.05000 NEAR",
@@ -61,12 +61,12 @@
         {
           "account": "job-1.hub.sandbox",
           "alive": true,
-          "amount": "0",
+          "amount": "10000000",
           "ft": "40000000",
           "label": "job-1",
           "note_sold": false,
           "parent": "hub.sandbox",
-          "payee": null,
+          "payee": "lead.sandbox",
           "quality": null,
           "status": "Open",
           "storage_near": "0.06125 NEAR",
@@ -160,12 +160,12 @@
         {
           "account": "job-1.hub.sandbox",
           "alive": true,
-          "amount": "0",
+          "amount": "10000000",
           "ft": "40000000",
           "label": "job-1",
           "note_sold": false,
           "parent": "hub.sandbox",
-          "payee": null,
+          "payee": "lead.sandbox",
           "quality": null,
           "status": "Open",
           "storage_near": "0.06125 NEAR",
@@ -259,12 +259,12 @@
         {
           "account": "job-1.hub.sandbox",
           "alive": true,
-          "amount": "0",
+          "amount": "10000000",
           "ft": "40000000",
           "label": "job-1",
           "note_sold": false,
           "parent": "hub.sandbox",
-          "payee": null,
+          "payee": "lead.sandbox",
           "quality": null,
           "status": "Open",
           "storage_near": "0.06125 NEAR",
@@ -358,12 +358,12 @@
         {
           "account": "job-1.hub.sandbox",
           "alive": true,
-          "amount": "0",
+          "amount": "10000000",
           "ft": "40000000",
           "label": "job-1",
           "note_sold": false,
           "parent": "hub.sandbox",
-          "payee": null,
+          "payee": "lead.sandbox",
           "quality": null,
           "status": "Open",
           "storage_near": "0.06125 NEAR",
@@ -457,12 +457,12 @@
         {
           "account": "job-1.hub.sandbox",
           "alive": true,
-          "amount": "0",
+          "amount": "10000000",
           "ft": "40000000",
           "label": "job-1",
           "note_sold": false,
           "parent": "hub.sandbox",
-          "payee": null,
+          "payee": "lead.sandbox",
           "quality": null,
           "status": "Open",
           "storage_near": "0.06125 NEAR",
@@ -556,12 +556,12 @@
         {
           "account": "job-1.hub.sandbox",
           "alive": true,
-          "amount": "0",
+          "amount": "10000000",
           "ft": "40000000",
           "label": "job-1",
           "note_sold": false,
           "parent": "hub.sandbox",
-          "payee": null,
+          "payee": "lead.sandbox",
           "quality": null,
           "status": "Open",
           "storage_near": "0.06125 NEAR",
@@ -679,12 +679,12 @@
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "0",
+          "ft": "40000000",
           "label": "client"
         },
         {
           "account": "lead.sandbox",
-          "ft": "50000000",
+          "ft": "10000000",
           "label": "lead"
         },
         {
@@ -733,17 +733,17 @@
         }
       ],
       "n": 9,
-      "say": "researcher 29.70 + treasury fee 0.30 + translator 20 + junk 0 + lead 50 (unspent 40 + refunded 10) = 100 fUSD. No account is left holding anything.",
+      "say": "researcher 29.70 + treasury fee 0.30 + translator 20 + junk 0 + lead fee 10 + back to the client 40 (unspent 30 + refunded 10) = 100 fUSD. No account is left holding anything.",
       "title": "100 in, 100 out",
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "0",
+          "ft": "40000000",
           "label": "client"
         },
         {
           "account": "lead.sandbox",
-          "ft": "50000000",
+          "ft": "10000000",
           "label": "lead"
         },
         {

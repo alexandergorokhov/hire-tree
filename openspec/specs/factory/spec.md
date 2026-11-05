@@ -9,7 +9,7 @@ pinned signer, checker and token.
 
 ### Requirement: Post a job in one transfer
 `ft_transfer_call(factory, budget, msg)` with msg
-`{"manager", "spec_hash", "window_secs", "treasury"?}` SHALL create
+`{"manager", "spec_hash", "window_secs", "treasury"?, "lead_fee"?}` SHALL create
 `job-<n>.<factory>` with `use_global_contract(code_hash)`, init it with
 `client = sender` and the factory's pinned signer/checker, register it on the
 token and forward the budget with `fund`. The client SHALL first prepay
@@ -27,6 +27,11 @@ budget SHALL be at least 1 fUSD. A failed post gives the credit back.
 #### Scenario: Bad message, wrong token, zero amount
 - THEN refunded in full, no account created
 - unit: `bad_post_msg_refunded`, `wrong_token_refunded`
+
+#### Scenario: Lead fee
+- WHEN the msg names a `lead_fee`
+- THEN it becomes the root's `amount`; a fee above the budget is refunded
+- unit: `lead_fee_goes_into_the_root_init_and_cannot_exceed_the_budget`
 
 #### Scenario: Create or fund fails
 - THEN `on_posted` returns the whole budget as unused (token refunds the client) and marks the job failed

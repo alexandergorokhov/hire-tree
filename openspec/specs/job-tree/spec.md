@@ -13,6 +13,21 @@ Exactly one of client (root) or worker (sub-job); sub-job amount > 0; window
 sub-account of its creator.
 - unit: `root_init_sets_fields`, `sub_init_sets_worker_as_payee`, `init_must_be_called_by_parent_account`, `root_with_amount_refused`, `sub_with_zero_amount_refused`, `client_and_worker_both_refused`, `bad_spec_hash_refused`, `bad_signer_refused`, `window_too_long_refused`
 
+### Requirement: Lead fee and client refund
+A root's `amount` SHALL be the lead's fee, set by the client at post. It is
+never hireable. At settle the manager gets fee + bond; everything else goes
+back to the client.
+
+#### Scenario: Root settles
+- WHEN the client approves (or the window ends) and all children are closed
+- THEN the manager is registered and paid fee + bond, then the client is registered and paid the rest
+- unit: `root_fee_and_bond_go_to_the_manager_the_rest_back_to_the_client`, `settle_root_sends_remainder_back_to_client`, `root_registers_the_client_before_refunding_it`; core: `root_split_pays_fee_and_bond_to_manager_rest_to_client`
+
+#### Scenario: Budget below the fee
+- WHEN the root is funded with less than its fee
+- THEN refunded in full
+- unit: `root_funding_below_the_fee_refunded`
+
 ### Requirement: Funding and bond
 Only the client funds the root, only the parent funds a sub-job, only the
 manager bonds the root; wrong token, zero amount, unknown msg and late
