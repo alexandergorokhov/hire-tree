@@ -31,7 +31,7 @@ const YOCTO_PER_BYTE: u128 = 10_000_000_000_000_000_000;
 
 fn wasm(var: &str, default: &str) -> Vec<u8> {
     let path = std::env::var(var)
-        .unwrap_or_else(|_| format!("{}/../../out/{default}", env!("CARGO_MANIFEST_DIR")));
+        .unwrap_or_else(|_| format!("{}/../out/{default}", env!("CARGO_MANIFEST_DIR")));
     std::fs::read(&path).unwrap_or_else(|e| panic!("{path}: {e} (run `make build` first)"))
 }
 
@@ -666,7 +666,7 @@ impl Story {
 
     fn save(&self) {
         let path = std::env::var("SCENE_OUT")
-            .unwrap_or_else(|_| format!("{}/../../out/scene.json", env!("CARGO_MANIFEST_DIR")));
+            .unwrap_or_else(|_| format!("{}/../out/scene.json", env!("CARGO_MANIFEST_DIR")));
         let doc = json!({ "schema": "hiretree-scene.v1", "network": "near-sandbox (local node)", "steps": self.steps });
         std::fs::write(&path, serde_json::to_string_pretty(&doc).unwrap()).unwrap();
         println!("\nscene written to {path}");

@@ -3,7 +3,7 @@
 Spec-driven (OpenSpec layout). Each capability under `specs/<name>/spec.md`
 lists requirements and WHEN/THEN scenarios. Every scenario names the test
 that proves it (`unit:` = `contracts/job/src/tests.rs` or a core test,
-`sandbox:` = `tests/sandbox/tests/*.rs`). A scenario without a test is
+`sandbox:` = `agents/tests/*.rs`). A scenario without a test is
 marked `(planned)`.
 
 Process: write or change the scenario first, then a failing test, then the

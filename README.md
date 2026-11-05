@@ -71,7 +71,7 @@ a deliverable came out of a model call made for this task.
 | `contracts/factory/` | posts and funds root jobs; pins signer, checker, token |
 | `contracts/mock-usdc/` | NEP-141 fake test USD |
 | `contracts/mock-outlayer/` | sandbox stand-in for the OutLayer quality checker (recorded scores, no AI) |
-| `tests/sandbox/` | near-sandbox integration tests and the demo scene |
+| `agents/` | near-sandbox integration tests and the demo scene |
 | `web/` | static tree page |
 | `docs/THREATS.md` | every threat and the test that answers it |
 | `docs/PITCH.md` | pitch, 30 s speech, 3 min video script, judge Q&A |

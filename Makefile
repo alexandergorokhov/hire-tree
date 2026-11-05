@@ -32,7 +32,7 @@ test: ## Unit + property tests, offline (PROP_CASES=10000 by default)
 .PHONY: lint
 lint: ## rustfmt check + clippy -D warnings
 	cargo fmt --all -- --check
-	cd tests/sandbox && cargo fmt -- --check
+	cd agents && cargo fmt -- --check
 	cargo clippy --workspace --all-targets --locked --offline -- -D warnings
 
 # Plain cargo needs --cfg near (what cargo-near sets). Without it near-sdk's
@@ -57,7 +57,7 @@ build: ## Build the contract wasm into out/ with SHA256SUMS (non-reproducible fo
 # tiny LD_PRELOAD shim clamps that one request to the hard limit.
 .PHONY: sandbox
 sandbox: build ## near-sandbox tests: G1 delete gate, G4 global contract, 2-level tree fold (about 1 min)
-	@cd tests/sandbox && \
+	@cd agents && \
 	if ulimit -n 65535 2>/dev/null; then pre=""; else \
 	  echo "sandbox: open-file hard limit is $$(ulimit -Hn), neard asks for 65535; loading fdshim" >&2; \
 	  mkdir -p target && cc -shared -fPIC -O2 -o target/fdshim.so fdshim/fdshim.c -ldl; \
@@ -71,7 +71,7 @@ sandbox: build ## near-sandbox tests: G1 delete gate, G4 global contract, 2-leve
 
 .PHONY: demo
 demo: build ## The whole story on a local NEAR node, narrated; writes out/scene.json (about 2 min)
-	@cd tests/sandbox && \
+	@cd agents && \
 	if ulimit -n 65535 2>/dev/null; then pre=""; else \
 	  mkdir -p target && cc -shared -fPIC -O2 -o target/fdshim.so fdshim/fdshim.c -ldl; \
 	  pre="$$PWD/target/fdshim.so"; \

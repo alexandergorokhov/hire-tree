@@ -45,6 +45,6 @@ Run `make test` and `make lint` before every commit. Use
 - `core/tests/money_prop.rs`: the money-rule property test.
 - `contracts/job/src/lib.rs`: the job contract; `tests.rs` beside it.
 - `contracts/mock-usdc/src/lib.rs`: the fake token.
-- `tests/sandbox/tests/tree.rs`: G1, G4 and the 2-level fold on near-sandbox.
-  `tests/sandbox/fdshim/` is only loaded when neard cannot raise its
+- `agents/tests/tree.rs`: G1, G4 and the 2-level fold on near-sandbox.
+  `agents/fdshim/` is only loaded when neard cannot raise its
   open-file limit.

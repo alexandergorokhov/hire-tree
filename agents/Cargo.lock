@@ -758,6 +758,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "hire-tree-agents"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "hex",
+ "hire-tree-core",
+ "near-api",
+ "near-sandbox",
+ "reqwest",
+ "secp256k1",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tokio",
+]
+
+[[package]]
 name = "hire-tree-core"
 version = "0.1.0"
 dependencies = [
@@ -765,20 +782,6 @@ dependencies = [
  "hex",
  "sha2 0.10.9",
  "sha3",
-]
-
-[[package]]
-name = "hire-tree-sandbox"
-version = "0.1.0"
-dependencies = [
- "hex",
- "hire-tree-core",
- "near-api",
- "near-sandbox",
- "secp256k1",
- "serde_json",
- "sha2 0.10.9",
- "tokio",
 ]
 
 [[package]]
