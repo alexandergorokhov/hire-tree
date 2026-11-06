@@ -15,6 +15,13 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
          s(json!({ "budget": str_, "manager": str_, "task": str_, "window_secs": { "type": "integer" }, "lead_fee": str_, "treasury": str_ }), &["budget", "manager", "task", "window_secs"])),
         ("hire", "Manager: hire a worker as a new sub-account t<n>.<job> holding exactly `amount` (+ optional `sub` budget). Attaches 0.035 NEAR.",
          s(json!({ "job": str_, "worker": str_, "amount": str_, "task": str_, "sub": str_ }), &["job", "worker", "amount", "task"])),
+        ("open_bids", "Manager: put a subtask out for bids on the job account (max = the most it will pay, fUSD units as a string; secs 10..3600). Returns the slot number.",
+         s(json!({ "job": str_, "task": str_, "max": str_, "secs": { "type": "integer" } }), &["job", "task", "max", "secs"])),
+        ("bid", "Worker: bid `price` (at most the slot's max) on an open slot; a second bid replaces the first.",
+         s(json!({ "job": str_, "slot": { "type": "integer" }, "price": str_ }), &["job", "slot", "price"])),
+        ("get_bids", "Anyone: a bid slot with its bids and award.", s(json!({ "job": str_, "slot": { "type": "integer" } }), &["job", "slot"])),
+        ("award", "Manager: after bidding closes, hire one bidder at its own bid (a new sub-account). Attaches 0.035 NEAR.",
+         s(json!({ "job": str_, "slot": { "type": "integer" }, "worker": str_, "sub": str_ }), &["job", "slot", "worker"])),
         ("deliver", "Worker: deliver the response bytes (base64) with an optional NEAR AI receipt (req base64, sig hex, model).",
          s(json!({ "job": str_, "resp": str_, "req": str_, "sig": str_, "model": str_ }), &["job", "resp"])),
         ("check_request", "Anyone: the exact judge request body for a delivery (base64).",
@@ -88,6 +95,43 @@ impl Tools<'_> {
                     "hire",
                     json!({ "worker": s(a, "worker")?, "amount": s(a, "amount")?,
                             "spec_hash": ht_core::receipt::sha256_hex(task.as_bytes()),
+                            "sub": a["sub"].as_str() }),
+                    NearToken::from_millinear(35),
+                )
+                .await
+            }
+            "open_bids" => {
+                let task = s(a, "task")?;
+                c.call(
+                    who,
+                    &id(a, "job")?,
+                    "open_bids",
+                    json!({ "spec_hash": ht_core::receipt::sha256_hex(task.as_bytes()), "max": s(a, "max")?,
+                            "secs": a["secs"].as_u64().ok_or("missing secs")? }),
+                    zero,
+                )
+                .await
+            }
+            "bid" => {
+                c.call(
+                    who,
+                    &id(a, "job")?,
+                    "bid",
+                    json!({ "slot": a["slot"].as_u64().ok_or("missing slot")?, "price": s(a, "price")? }),
+                    zero,
+                )
+                .await
+            }
+            "get_bids" => {
+                c.view(&id(a, "job")?, "get_bids", json!({ "slot": a["slot"].as_u64().ok_or("missing slot")? }))
+                    .await
+            }
+            "award" => {
+                c.call(
+                    who,
+                    &id(a, "job")?,
+                    "award",
+                    json!({ "slot": a["slot"].as_u64().ok_or("missing slot")?, "worker": s(a, "worker")?,
                             "sub": a["sub"].as_str() }),
                     NearToken::from_millinear(35),
                 )

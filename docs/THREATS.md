@@ -70,6 +70,15 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | Settle or dispute while a sale is in flight | both wait | `settle_waits_for_note_sale`, `dispute_waits_for_note_sale` |
 | The sale callback is lost: sale stuck in flight forever | `resume_note` after 10 min undoes the sale (the token refunded the treasury) and books any worker payment already made as prepaid | `stuck_sale_worker_unpaid_is_undone`, `stuck_sale_worker_paid_from_job_counts_as_prepaid` |
 
+## Bidding
+| Threat | Answer | Test |
+|---|---|---|
+| Lead awards above a bid | the award pays exactly the winner's bid, read from state | `manager_opens_workers_bid_manager_awards_at_the_bid_price` |
+| Slot opened for more than the job holds | `max <= unallocated budget` | `slot_max_cannot_exceed_the_free_budget` |
+| Bid spam fills a slot | 8 bidders per slot, 16 slots per job; a bidder's second bid replaces its first | `bids_per_slot_are_capped`, `a_new_bid_replaces_the_bidders_old_one` |
+| Late bid or award before close | refused both ways | `late_bid_refused`, `award_before_close_refused` |
+| Lead bids through another account and awards itself | possible, as with a direct `hire`: the lead already chooses who works. The client's protection is the fixed lead fee, the judge's score and settle (unscored work is not paid unless approved) | not preventable on-chain |
+
 ## Agents (off-chain)
 | Threat | Answer | Test |
 |---|---|---|

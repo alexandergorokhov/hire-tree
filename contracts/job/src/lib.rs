@@ -111,6 +111,34 @@ pub const MAX_RESPONSE_BYTES: usize = 16 * 1024;
 /// How long a signed check round takes answers (then `finalize_check`).
 pub const CHECK_WINDOW_SECS: u64 = 300;
 
+/// Bidding: at most this many open-or-awarded slots per job, and bids per slot.
+pub const MAX_BID_SLOTS: usize = 16;
+pub const MAX_BIDS: usize = 8;
+/// A bid slot stays open between 10 seconds and 1 hour.
+pub const MIN_BID_SECS: u64 = 10;
+pub const MAX_BID_SECS: u64 = 3600;
+
+/// One worker's offer on a bid slot.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Bid {
+    pub worker: AccountId,
+    pub price: U128,
+}
+
+/// A subtask the manager put out for bids: workers offer a price up to
+/// `max` until `closes_ns`; then the manager awards one bidder, who is hired
+/// at exactly its own bid.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BidSlot {
+    pub spec_hash: String,
+    pub max: U128,
+    pub closes_ns: U64,
+    pub bids: Vec<Bid>,
+    pub awarded: Option<AccountId>,
+}
+
 /// One signed-check round: panel 0 checks a delivery, panels 1 and 2 are a
 /// dispute's extra votes.
 #[near(serializers = [borsh, json])]
@@ -311,6 +339,8 @@ pub struct Job {
     judge: Option<String>,
     /// Open signed-check rounds.
     rounds: Vec<CheckRound>,
+    /// Bid slots, in the order they were opened.
+    bid_slots: Vec<BidSlot>,
     /// Where workers' track records live (the factory).
     registry: AccountId,
 }
@@ -453,6 +483,7 @@ impl Job {
             note_price: 0,
             judge,
             rounds: Vec::new(),
+            bid_slots: Vec::new(),
             // Root: its creator (the factory). Sub-jobs inherit it.
             registry: registry.unwrap_or_else(env::predecessor_account_id),
         };
@@ -686,6 +717,123 @@ impl Job {
             env::predecessor_account_id() == self.manager,
             "only the manager can hire"
         );
+        self.hire_inner(worker, amount, spec_hash, sub)
+    }
+
+    /// Manager only, while the job is open: put a subtask out for bids.
+    /// `max` is the most the manager will pay; it must fit the free budget.
+    /// Returns the slot number.
+    pub fn open_bids(&mut self, spec_hash: String, max: U128, secs: u64) -> u32 {
+        require!(
+            env::predecessor_account_id() == self.manager,
+            "only the manager can open bids"
+        );
+        require!(self.status == Status::Open, "job is not open");
+        require!(self.window_open(), "window is closed");
+        require!(self.bid_slots.len() < MAX_BID_SLOTS, "too many bid slots");
+        require!(
+            (MIN_BID_SECS..=MAX_BID_SECS).contains(&secs),
+            "bid time must be 10 s to 1 h"
+        );
+        require!(max.0 > 0, "max must be greater than zero");
+        require!(
+            max.0 <= self.ledger.unallocated(),
+            "max is more than the job can still hire"
+        );
+        parse_hash32_hex(&spec_hash)
+            .unwrap_or_else(|| env::panic_str("spec_hash must be 64 hex chars"));
+        let closes_ns = env::block_timestamp() + secs * NS_PER_SEC;
+        require!(
+            closes_ns < self.window_end_ns,
+            "bidding must close before the window"
+        );
+        self.bid_slots.push(BidSlot {
+            spec_hash: spec_hash.clone(),
+            max,
+            closes_ns: U64(closes_ns),
+            bids: Vec::new(),
+            awarded: None,
+        });
+        let slot = (self.bid_slots.len() - 1) as u32;
+        emit(
+            "bids_open",
+            json!({ "slot": slot, "spec_hash": spec_hash, "max": max, "closes_ns": U64(closes_ns) }),
+        );
+        slot
+    }
+
+    /// Any account but the manager and the job: offer to do slot `slot` for
+    /// `price` (at most the slot's max). A second bid replaces the first.
+    pub fn bid(&mut self, slot: u32, price: U128) {
+        let me = env::predecessor_account_id();
+        require!(me != self.manager, "the manager cannot bid");
+        require!(me != env::current_account_id(), "the job cannot bid");
+        let s = self
+            .bid_slots
+            .get_mut(slot as usize)
+            .unwrap_or_else(|| env::panic_str("no such bid slot"));
+        require!(s.awarded.is_none(), "cannot bid on the awarded slot");
+        require!(env::block_timestamp() < s.closes_ns.0, "bidding is closed");
+        require!(price.0 > 0, "price must be greater than zero");
+        require!(price.0 <= s.max.0, "bid is above the slot's max");
+        match s.bids.iter_mut().find(|b| b.worker == me) {
+            Some(b) => b.price = price,
+            None => {
+                require!(s.bids.len() < MAX_BIDS, "too many bids on this slot");
+                s.bids.push(Bid {
+                    worker: me.clone(),
+                    price,
+                });
+            }
+        }
+        emit("bid", json!({ "slot": slot, "worker": me, "price": price }));
+    }
+
+    /// Manager only, after bidding closes: hire one bidder at its own bid.
+    /// The manager may pick any bid, not only the lowest (it may weigh
+    /// track records); the price is always the bidder's own.
+    #[payable]
+    pub fn award(&mut self, slot: u32, worker: AccountId, sub: Option<U128>) -> Promise {
+        require!(
+            env::predecessor_account_id() == self.manager,
+            "only the manager can award"
+        );
+        let s = self
+            .bid_slots
+            .get(slot as usize)
+            .cloned()
+            .unwrap_or_else(|| env::panic_str("no such bid slot"));
+        require!(s.awarded.is_none(), "slot already awarded");
+        require!(
+            env::block_timestamp() >= s.closes_ns.0,
+            "bidding is still open"
+        );
+        let price = s
+            .bids
+            .iter()
+            .find(|b| b.worker == worker)
+            .map(|b| b.price)
+            .unwrap_or_else(|| env::panic_str("that account did not bid on this slot"));
+        self.bid_slots[slot as usize].awarded = Some(worker.clone());
+        emit(
+            "award",
+            json!({ "slot": slot, "worker": worker, "price": price }),
+        );
+        self.hire_inner(worker, price, s.spec_hash, sub)
+    }
+
+    /// One bid slot, or null.
+    pub fn get_bids(&self, slot: u32) -> Option<BidSlot> {
+        self.bid_slots.get(slot as usize).cloned()
+    }
+
+    fn hire_inner(
+        &mut self,
+        worker: AccountId,
+        amount: U128,
+        spec_hash: String,
+        sub: Option<U128>,
+    ) -> Promise {
         require!(self.status == Status::Open, "job is not open");
         require!(self.window_open(), "window is closed");
         require!(self.children.len() < MAX_CHILDREN, "too many children");

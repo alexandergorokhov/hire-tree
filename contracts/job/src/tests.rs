@@ -2896,7 +2896,9 @@ mod signed_check {
         let mut j = judged_sub();
         deliver(&mut j, DELIVERED);
         assert!(!finalize(&mut j));
-        Ctx::new(T1, WORKER).at(T0 + (WINDOW + 10) * NS_PER_SEC).set();
+        Ctx::new(T1, WORKER)
+            .at(T0 + (WINDOW + 10) * NS_PER_SEC)
+            .set();
         j.settle();
         assert_eq!(transfers(), vec![(ROOT.into(), PAY.to_string())]);
     }
@@ -3162,4 +3164,155 @@ fn hire_passes_the_registry_down() {
     let mut j = funded_root(100 * USD);
     hire_one(&mut j, WORKER, 30 * USD);
     assert_eq!(call_args("new")["registry"], FACTORY);
+}
+
+mod bidding {
+    use super::*;
+
+    const BID_SECS: u64 = 60;
+    const CLOSED: u64 = T0 + (BID_SECS + 1) * NS_PER_SEC;
+
+    fn open(j: &mut Job) -> u32 {
+        Ctx::new(ROOT, LEAD).set();
+        j.open_bids(spec(), U128(30 * USD), BID_SECS)
+    }
+
+    fn bid(j: &mut Job, who: &str, slot: u32, price: u128) {
+        Ctx::new(ROOT, who).set();
+        j.bid(slot, U128(price));
+    }
+
+    fn award(j: &mut Job, slot: u32, who: &str) {
+        Ctx::new(ROOT, LEAD)
+            .at(CLOSED)
+            .deposit(NearToken::from_millinear(50))
+            .set();
+        j.award(slot, acc(who), None);
+    }
+
+    #[test]
+    fn manager_opens_workers_bid_manager_awards_at_the_bid_price() {
+        let mut j = funded_root(100 * USD);
+        let s = open(&mut j);
+        bid(&mut j, WORKER, s, 25 * USD);
+        bid(&mut j, WORKER2, s, 18 * USD);
+        let slot = j.get_bids(s).unwrap();
+        assert_eq!(slot.bids.len(), 2);
+        award(&mut j, s, WORKER);
+        let v = j.get_job();
+        assert_eq!(v.children.len(), 1);
+        assert_eq!(v.children[0].worker, acc(WORKER));
+        assert_eq!(v.children[0].total, U128(25 * USD), "hired at its own bid");
+        assert_eq!(j.get_bids(s).unwrap().awarded, Some(acc(WORKER)));
+    }
+
+    #[test]
+    fn a_new_bid_replaces_the_bidders_old_one() {
+        let mut j = funded_root(100 * USD);
+        let s = open(&mut j);
+        bid(&mut j, WORKER, s, 25 * USD);
+        bid(&mut j, WORKER, s, 20 * USD);
+        let b = j.get_bids(s).unwrap().bids;
+        assert_eq!(
+            b,
+            vec![Bid {
+                worker: acc(WORKER),
+                price: U128(20 * USD)
+            }]
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "only the manager can open bids")]
+    fn stranger_cannot_open_bids() {
+        let mut j = funded_root(100 * USD);
+        Ctx::new(ROOT, EVE).set();
+        j.open_bids(spec(), U128(30 * USD), BID_SECS);
+    }
+
+    #[test]
+    #[should_panic(expected = "bid is above the slot's max")]
+    fn bid_above_max_refused() {
+        let mut j = funded_root(100 * USD);
+        let s = open(&mut j);
+        bid(&mut j, WORKER, s, 31 * USD);
+    }
+
+    #[test]
+    #[should_panic(expected = "the manager cannot bid")]
+    fn manager_cannot_bid() {
+        let mut j = funded_root(100 * USD);
+        let s = open(&mut j);
+        bid(&mut j, LEAD, s, 10 * USD);
+    }
+
+    #[test]
+    #[should_panic(expected = "bidding is closed")]
+    fn late_bid_refused() {
+        let mut j = funded_root(100 * USD);
+        let s = open(&mut j);
+        Ctx::new(ROOT, WORKER).at(CLOSED).set();
+        j.bid(s, U128(10 * USD));
+    }
+
+    #[test]
+    #[should_panic(expected = "bidding is still open")]
+    fn award_before_close_refused() {
+        let mut j = funded_root(100 * USD);
+        let s = open(&mut j);
+        bid(&mut j, WORKER, s, 10 * USD);
+        Ctx::new(ROOT, LEAD)
+            .deposit(NearToken::from_millinear(50))
+            .set();
+        j.award(s, acc(WORKER), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "did not bid")]
+    fn award_to_a_non_bidder_refused() {
+        let mut j = funded_root(100 * USD);
+        let s = open(&mut j);
+        bid(&mut j, WORKER, s, 10 * USD);
+        award(&mut j, s, WORKER2);
+    }
+
+    #[test]
+    #[should_panic(expected = "already awarded")]
+    fn second_award_refused() {
+        let mut j = funded_root(100 * USD);
+        let s = open(&mut j);
+        bid(&mut j, WORKER, s, 10 * USD);
+        bid(&mut j, WORKER2, s, 12 * USD);
+        award(&mut j, s, WORKER);
+        award(&mut j, s, WORKER2);
+    }
+
+    #[test]
+    #[should_panic(expected = "bid on the awarded")]
+    fn bid_after_award_refused() {
+        let mut j = funded_root(100 * USD);
+        let s = open(&mut j);
+        bid(&mut j, WORKER, s, 10 * USD);
+        award(&mut j, s, WORKER);
+        Ctx::new(ROOT, WORKER2).set();
+        j.bid(s, U128(5 * USD));
+    }
+
+    #[test]
+    #[should_panic(expected = "max is more than the job can still hire")]
+    fn slot_max_cannot_exceed_the_free_budget() {
+        let mut j = funded_root(100 * USD);
+        Ctx::new(ROOT, LEAD).set();
+        j.open_bids(spec(), U128(101 * USD), BID_SECS);
+    }
+
+    #[test]
+    #[should_panic(expected = "too many bids")]
+    fn bids_per_slot_are_capped() {
+        let mut j = funded_root(100 * USD);
+        let s = open(&mut j);
+        for i in 0..=MAX_BIDS {
+            bid(&mut j, &format!("w{i}.test"), s, 10 * USD);
+        }
+    }
 }

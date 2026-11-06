@@ -25,7 +25,11 @@ a deliverable came out of a model call made for this task.
    to the factory with one `ft_transfer_call`, naming the lead and the
    lead's fee. The factory creates `job-1.hiretree.<net>` from one global
    contract (by code hash) and funds it. The account has no owner key.
-2. **Hire.** The lead agent (manager) calls `hire`: a sub-account
+2. **Bid and hire.** The lead agent (manager) puts each subtask out for
+   bids on the job account (`open_bids`, with a maximum price). Worker
+   agents bid on-chain; after 60 s the lead awards one bid (`award`),
+   weighing price against each bidder's track record. The award (or a
+   direct `hire`) creates a sub-account
    `t1.job-1...` is created from the same code and receives exactly that
    job's pay. Sub-jobs can hire in turn (a tree).
 3. **Deliver with proof.** A worker that used NEAR AI Cloud sends the raw
@@ -64,15 +68,15 @@ gets from `hiretree mcp`).
 
 | Agent | Decides with a model | Acts with tools |
 |---|---|---|
-| Lead | planner: split the task and the budget; picker: choose a worker from skills and its on-chain record; reviewer: buy the note, dispute, or wait | `get_record`, `hire`, `quote_note`, `buy_note`, `dispute`, `approve` |
-| Worker | does the subtask through NEAR AI with the job's `HT1` tag | `deliver` with the signed receipt |
-| Junk bot | nothing: sends filler, no model call | `deliver` without a receipt |
+| Lead | planner: split the task and the budget; picker: choose a bid by price and the bidder's on-chain record; reviewer: buy the note, dispute, or wait | `open_bids`, `get_bids`, `get_record`, `award`, `quote_note`, `buy_note`, `dispute`, `approve` |
+| Worker | bids its own price (or passes); does the subtask through NEAR AI with the job's `HT1` tag | `bid`, `deliver` with the signed receipt |
+| Junk bot | nothing: bids 60% of max on anything near its skills, sends filler | `bid`, `deliver` without a receipt |
 | Keeper | none of its own: asks the judge model the contract's question | `check_request`, `submit_check`, `finalize_check`, `finalize_dispute`, `settle` |
 
-The story (two jobs): in job 1 the lead has no records and hires the cheap
-bot for two parts; the judge scores its filler 2/10, those parts reopen and
-their pay goes back. In job 2 the picker reads the bot's record (2 jobs, 0
-paid) and hires the others; the lead's treasury buys every note, so the
+The story (two jobs): in job 1 nobody has a record, so the cheap bot's low
+bids win two parts; the judge scores its filler 2/10, those parts reopen and
+their pay goes back. In job 2 the bot bids low again, but the picker reads its record (2 jobs,
+0 paid) and awards the others; the lead's treasury buys every note, so the
 workers are paid before the job closes.
 
 Model answers come from one of: a scripted test model signing with a test
@@ -86,7 +90,7 @@ again on every replay; `make verify-cassette` checks them offline.
 | Do | See |
 |---|---|
 | `make setup` | toolchain versions; crates fetched (the only networked step besides the near-sandbox binary) |
-| `make test` | 291 unit + property tests, all `ok`: core (56 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (197), factory (18), mock checker (2), mock-usdc (7), agents (6) |
+| `make test` | 304 unit + property tests, all `ok`: core (56 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (209), factory (18), mock checker (2), mock-usdc (7), agents (7) |
 | `make lint` | rustfmt check and clippy `-D warnings`; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make sandbox` | a local NEAR node runs 6 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model, and the same story replayed from a cassette; about 15 min |
@@ -128,8 +132,10 @@ again on every replay; `make verify-cassette` checks them offline.
   disputes. See `docs/THREATS.md` "Known limits".
 
 ## Hackathon
-- Track: `swarms` (AI Swarms). Hints used: MULTI-AGENT SYSTEMS (a lead
-  agent hires worker agents; a keeper answers checks) and SUB-ACCOUNTS
+- Track: `swarms` (AI Swarms): a coordination market with on-chain bidding
+  between agents, and an agent economy shaped by track records. Hints used: MULTI-AGENT SYSTEMS (a lead
+  agent hires worker agents that bid for the work; a keeper answers checks)
+  and SUB-ACCOUNTS
   (every job and sub-job is its own account, created and deleted by the
   contract). NEAR Intents is not used.
 - Built in the window: the first commit is 2026-11-04, so all of the code,
