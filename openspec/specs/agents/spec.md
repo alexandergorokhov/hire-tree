@@ -83,3 +83,11 @@ any demo account (`as`), and add `guide`, `accounts`, `wait`, `do_work`
 (a signed delivery from the test model), `judge_check` (the contract's own
 question, signed answer) and `run_story`. Only JSON-RPC reaches stdout.
 - sandbox: `a_judge_walks_the_guide_over_mcp` (post, bid refused above max, award, signed delivery, 8/10, paid 24.75 early, fold)
+
+### Requirement: An outside agent can compete in an open market
+`join` SHALL give a guest agent its own funded account and skills;
+`open_round` posts a job whose parts the house workers bid on;
+`close_round` lets the lead pick by price and on-chain record (the guest is
+treated like any bidder) and makes house winners deliver and get judged;
+`finish_round` pays checked work early, folds the tree and reports records.
+- sandbox: `a_judges_agent_competes_in_the_open_market` (round 1 wins at 20 and is paid 19.80; round 2 junk scores 2, unpaid; round 3 loses on record though lowest)

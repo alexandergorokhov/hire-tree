@@ -6,8 +6,8 @@
 //! model signing with a test key (pinned by this local factory), and all
 //! money is fake.
 
-use crate::agents::{b64, mock_script, story, team, Team, CHECK_WINDOW_SECS};
-use crate::chain::{Acc, Chain};
+use crate::agents::{b64, json_of, mock_script, story, team, Team, CHECK_WINDOW_SECS, PICKER};
+use crate::chain::{num, Acc, Chain, USD};
 use crate::llm::{chat_body, Llm, Mock};
 use crate::mcp::PROTOCOL;
 use crate::tools::{list, Tools};
@@ -25,7 +25,32 @@ pub struct Playground {
     /// The exact bytes each job's last delivery carried (the contract
     /// checks the judge question against their hash).
     pub delivered: std::sync::Mutex<std::collections::HashMap<String, Vec<u8>>>,
+    /// Guest agents: (name, account, skills).
+    pub guests: std::sync::Mutex<Vec<(String, Acc, Vec<String>)>>,
+    pub rounds: std::sync::Mutex<std::collections::HashMap<String, Round>>,
 }
+
+/// One open-market round: its parts (skill, task, slot) and, after the
+/// awards, the sub-jobs (account, task).
+#[derive(Clone, Default)]
+pub struct Round {
+    pub parts: Vec<(String, String, u64)>,
+    pub hired: Vec<(String, String)>,
+}
+
+pub const SKILLS: [&str; 3] = ["research", "translate", "summary"];
+const TOPICS: [&str; 6] = [
+    "NEAR sub-accounts",
+    "NEAR global contracts",
+    "NEAR AI Cloud receipts",
+    "fungible tokens on NEAR",
+    "storage staking on NEAR",
+    "function-call access keys",
+];
+const ROUND_BID_SECS: u64 = 60;
+const ROUND_WINDOW_SECS: u64 = 900;
+/// House workers bid their rate (percent of max) times this margin (/100).
+const HOUSE_MARGIN: u128 = 95;
 
 pub const GUIDE: &str = "Hire Tree playground on a local NEAR node (fake money, scripted test model signing with a test key).
 
@@ -40,6 +65,7 @@ Try this (about 15 calls):
 6. judge_check on t1 with the same task (as keeper): the contract builds the judge question, the model's signed answer is verified on-chain, the score is read (8/10; pass text containing \"lorem\" to do_work to get 2/10 and see the job reopen).
 7. wait 301, finalize_check, then quote_note and buy_note as treasury: the worker is paid now.
 8. approve as lead on t1, settle t1 (as keeper), approve as client and settle the root: each account pays out, checks its balance is zero and deletes itself. get_record shows the worker's record.
+Open market (compete yourself): join with a name and skills, open_round, bid on the matching slot as your guest (undercut the house, or not), close_round, do_work + judge_check if you won, finish_round. The lead prefers the lowest bid unless the bidder's on-chain record shows unpaid jobs, so deliver junk once (do_work with text \"lorem ipsum\") and watch your next bid lose.
 Or call run_story once to watch the whole scripted three-job story (bids, a junk bot losing work by its record, three clients pooling money); it takes a few minutes.";
 
 impl Playground {
@@ -52,23 +78,340 @@ impl Playground {
             llm,
             team,
             delivered: Default::default(),
+            guests: Default::default(),
+            rounds: Default::default(),
         }
     }
 
-    fn named(&self) -> Vec<(String, &Acc)> {
+    fn named(&self) -> Vec<(String, Acc)> {
         let t = &self.team;
         let mut v = vec![
-            ("client".to_string(), &t.client),
-            ("client2".to_string(), &t.members[0]),
-            ("client3".to_string(), &t.members[1]),
-            ("lead".to_string(), &t.lead),
-            ("treasury".to_string(), &t.treasury),
-            ("keeper".to_string(), &t.keeper),
+            ("client".to_string(), t.client.clone()),
+            ("client2".to_string(), t.members[0].clone()),
+            ("client3".to_string(), t.members[1].clone()),
+            ("lead".to_string(), t.lead.clone()),
+            ("treasury".to_string(), t.treasury.clone()),
+            ("keeper".to_string(), t.keeper.clone()),
         ];
         for w in &t.workers {
-            v.push((w.name.clone(), &w.acc));
+            v.push((w.name.clone(), w.acc.clone()));
+        }
+        for g in self.guests.lock().unwrap().iter() {
+            v.push((g.0.clone(), g.1.clone()));
         }
         v
+    }
+
+    fn skills_of(&self, id: &str) -> Vec<String> {
+        if let Some(w) = self.team.workers.iter().find(|w| w.acc.id.as_str() == id) {
+            return w.skills.clone();
+        }
+        self.guests
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|g| g.1.id.as_str() == id)
+            .map(|g| g.2.clone())
+            .unwrap_or_default()
+    }
+
+    /// A guest agent (the judge's own) joins the market with its own
+    /// funded account and skills; it then acts with `as` = its name.
+    async fn join(&self, a: &Value) -> Result<Value, String> {
+        let name: String = a["name"]
+            .as_str()
+            .ok_or("missing name")?
+            .to_lowercase()
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric())
+            .take(16)
+            .collect();
+        if name.is_empty() || self.named().iter().any(|n| n.0 == name) {
+            return Err(format!("pick another name ({name} is taken or empty)"));
+        }
+        let skills: Vec<String> = a["skills"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|v| v.as_str().map(|s| s.to_lowercase()))
+            .filter(|s| SKILLS.contains(&s.as_str()))
+            .collect();
+        if skills.is_empty() {
+            return Err(format!("skills: one or more of {SKILLS:?}"));
+        }
+        let acc = self.chain.account(&format!("guest{name}"), 5).await;
+        self.chain.register(&acc).await;
+        self.guests
+            .lock()
+            .unwrap()
+            .push((name.clone(), acc.clone(), skills.clone()));
+        Ok(json!({ "as": name, "account": acc.id, "skills": skills,
+            "next": "call open_round (or wait for one) and bid on the slots that match your skills; the lead picks by price and on-chain record" }))
+    }
+
+    /// The house client posts a job; the house lead puts three parts out
+    /// for bids; the house workers bid by their own strategy. Guests bid
+    /// next with `bid`, then `close_round`.
+    async fn open_round(&self) -> Result<Value, String> {
+        let c = &self.chain;
+        let t = &self.team;
+        let tools = Tools { chain: c };
+        let next = c.view(&c.hub, "get_settings", json!({})).await?["next"]
+            .as_u64()
+            .ok_or("factory: no next")?;
+        let root = format!("job-{next}.{}", c.hub);
+        let topic = TOPICS[(next as usize) % TOPICS.len()];
+        let task = format!(
+            "Write a short explainer of {topic} in English and Spanish, plus a one-line summary."
+        );
+        c.call(
+            &t.client,
+            &c.hub,
+            "prepay_post",
+            json!({}),
+            near_api::types::NearToken::from_millinear(60),
+        )
+        .await?;
+        tools.call(&t.client, "post_job", &json!({ "budget": (70 * USD).to_string(), "manager": t.lead.id, "task": task,
+            "window_secs": ROUND_WINDOW_SECS, "lead_fee": (7 * USD).to_string(), "treasury": t.treasury.id })).await?;
+        let parts = [
+            (
+                "research",
+                format!("Explain {topic} in 3 sentences."),
+                30u128,
+            ),
+            (
+                "translate",
+                format!("Translate the explanation of {topic} into Spanish."),
+                20,
+            ),
+            (
+                "summary",
+                format!("Write a one-line summary of {topic}."),
+                10,
+            ),
+        ];
+        let mut slots = vec![];
+        for (name, ptask, max) in &parts {
+            let slot = tools
+                .call(
+                    &t.lead,
+                    "open_bids",
+                    &json!({ "job": root, "task": ptask,
+                "max": (max * USD).to_string(), "secs": ROUND_BID_SECS }),
+                )
+                .await?;
+            let slot = slot.as_u64().ok_or("open_bids: no slot")?;
+            for w in &t.workers {
+                if w.skills.iter().any(|s| s == name) {
+                    let price = max * USD * w.rate * HOUSE_MARGIN / 10_000;
+                    let _ = tools
+                        .call(
+                            &w.acc,
+                            "bid",
+                            &json!({ "job": root, "slot": slot, "price": price.to_string() }),
+                        )
+                        .await;
+                }
+            }
+            slots.push(json!({ "slot": slot, "skill": name, "task": ptask, "max": (max * USD).to_string(),
+                "bids": tools.call(&t.lead, "get_bids", &json!({ "job": root, "slot": slot })).await?["bids"] }));
+        }
+        self.rounds.lock().unwrap().insert(
+            root.clone(),
+            Round {
+                parts: parts
+                    .iter()
+                    .zip(&slots)
+                    .map(|((n, t, _), s)| (n.to_string(), t.clone(), s["slot"].as_u64().unwrap()))
+                    .collect(),
+                hired: vec![],
+            },
+        );
+        Ok(json!({ "job": root, "task": task, "slots": slots,
+            "note": format!("bidding closes in {ROUND_BID_SECS} s of chain time; bid with `bid` as your guest (job, slot, price), then close_round") }))
+    }
+
+    /// Bidding closes; the lead picks each slot's winner by price and
+    /// on-chain record and awards it; the house winners work at once.
+    async fn close_round(&self, a: &Value) -> Result<Value, String> {
+        let c = &self.chain;
+        let t = &self.team;
+        let tools = Tools { chain: c };
+        let root = a["job"].as_str().ok_or("missing job")?.to_string();
+        let parts = self
+            .rounds
+            .lock()
+            .unwrap()
+            .get(&root)
+            .map(|r| r.parts.clone())
+            .ok_or("not an open round: call open_round")?;
+        c.fast_forward(ROUND_BID_SECS + 1).await;
+        let mut out = vec![];
+        let mut hired = vec![];
+        for (name, ptask, slot) in &parts {
+            let b = tools
+                .call(&t.lead, "get_bids", &json!({ "job": root, "slot": slot }))
+                .await?;
+            let mut cands = vec![];
+            for bid in b["bids"].as_array().into_iter().flatten() {
+                let who = bid["worker"].as_str().unwrap_or_default().to_string();
+                let rec = tools
+                    .call(&t.lead, "get_record", &json!({ "account": who }))
+                    .await?;
+                cands.push(json!({ "account": who, "skills": self.skills_of(&who), "bid": num(&bid["price"]) / USD, "record": rec }));
+            }
+            if cands.is_empty() {
+                out.push(json!({ "skill": name, "award": null, "reason": "no bids" }));
+                continue;
+            }
+            let body = chat_body(
+                MODEL,
+                PICKER,
+                &json!({ "subtask": { "name": name, "task": ptask }, "candidates": cands })
+                    .to_string(),
+                200,
+            );
+            let pick = json_of(&self.llm.chat(&body).await?.content()).ok_or("picker: not JSON")?;
+            let who = pick["worker"].as_str().unwrap_or_default().to_string();
+            if who.is_empty() {
+                out.push(
+                    json!({ "skill": name, "award": null, "reason": "no bidder has this skill" }),
+                );
+                continue;
+            }
+            tools
+                .call(
+                    &t.lead,
+                    "award",
+                    &json!({ "job": root, "slot": slot, "worker": who }),
+                )
+                .await?;
+            let sub = format!("t{}.{root}", hired.len() + 1);
+            let price = cands
+                .iter()
+                .find(|x| x["account"] == who.as_str())
+                .map(|x| x["bid"].clone())
+                .unwrap_or(json!(null));
+            let guest = self
+                .guests
+                .lock()
+                .unwrap()
+                .iter()
+                .find(|g| g.1.id.as_str() == who)
+                .map(|g| g.0.clone());
+            match &guest {
+                Some(g) => out.push(json!({ "skill": name, "award": who, "price_fusd": price, "sub_job": sub, "reason": pick["reason"],
+                    "you_won": format!("call do_work as {g} with job {sub} and task {ptask:?}, then judge_check, then finish_round") })),
+                None => {
+                    let w = t.workers.iter().find(|w| w.acc.id.as_str() == who).ok_or("unknown winner")?;
+                    let wname = w.name.clone();
+                    if w.junk {
+                        let bytes = b"lorem ipsum dolor sit amet, lorem ipsum dolor sit amet".to_vec();
+                        tools.call(&w.acc, "deliver", &json!({ "job": sub, "resp": b64(&bytes) })).await?;
+                        self.delivered.lock().unwrap().insert(sub.clone(), bytes);
+                    } else {
+                        self.do_work(&json!({ "as": wname, "job": sub, "task": ptask })).await?;
+                    }
+                    self.judge_check(&json!({ "job": sub, "task": ptask })).await?;
+                    out.push(json!({ "skill": name, "award": who, "price_fusd": price, "sub_job": sub, "reason": pick["reason"], "worked": "delivered and judged" }));
+                }
+            }
+            hired.push((sub, ptask.clone()));
+        }
+        if let Some(r) = self.rounds.lock().unwrap().get_mut(&root) {
+            r.hired = hired;
+        }
+        Ok(json!({ "job": root, "awards": out }))
+    }
+
+    /// Close the check rounds, pay good work early, fold the tree, and show
+    /// who earned what and every record.
+    async fn finish_round(&self, a: &Value) -> Result<Value, String> {
+        let c = &self.chain;
+        let t = &self.team;
+        let tools = Tools { chain: c };
+        let root = a["job"].as_str().ok_or("missing job")?.to_string();
+        let hired = self
+            .rounds
+            .lock()
+            .unwrap()
+            .get(&root)
+            .map(|r| r.hired.clone())
+            .ok_or("not a closed round")?;
+        c.fast_forward(CHECK_WINDOW_SECS + 1).await;
+        let mut lines = vec![];
+        for (sub, _) in &hired {
+            let _ = tools
+                .call(&t.keeper, "finalize_check", &json!({ "job": sub }))
+                .await;
+            let j = tools
+                .call(&t.lead, "get_job", &json!({ "job": sub }))
+                .await?;
+            let q = tools
+                .call(&t.lead, "quote_note", &json!({ "job": sub }))
+                .await?;
+            if !q.is_null() && j["quality"].as_u64().unwrap_or(0) >= 7 {
+                let price = q
+                    .as_str()
+                    .map(String::from)
+                    .unwrap_or_else(|| q.to_string());
+                tools
+                    .call(
+                        &t.treasury,
+                        "buy_note",
+                        &json!({ "job": sub, "price": price }),
+                    )
+                    .await?;
+                lines.push(format!("{sub}: score {}, paid now", j["quality"]));
+            } else {
+                lines.push(format!(
+                    "{sub}: status {}, score {}: not paid early",
+                    j["status"], j["quality"]
+                ));
+            }
+        }
+        let mut wait = false;
+        for (sub, _) in &hired {
+            let j = tools
+                .call(&t.lead, "get_job", &json!({ "job": sub }))
+                .await?;
+            if !matches!(j["status"].as_str(), Some("Checked") | Some("Refunded"))
+                || tools
+                    .call(&t.lead, "approve", &json!({ "job": sub }))
+                    .await
+                    .is_err()
+            {
+                wait = true;
+            }
+        }
+        if wait {
+            c.fast_forward(ROUND_WINDOW_SECS + 1).await;
+        }
+        for (sub, _) in &hired {
+            tools
+                .call(&t.keeper, "settle", &json!({ "job": sub }))
+                .await?;
+        }
+        let _ = tools
+            .call(&t.client, "approve", &json!({ "job": root }))
+            .await;
+        tools
+            .call(&t.keeper, "settle", &json!({ "job": root }))
+            .await?;
+        self.rounds.lock().unwrap().remove(&root);
+        let mut table = vec![];
+        for (n, acc) in self.named() {
+            if self.skills_of(acc.id.as_str()).is_empty() {
+                continue;
+            }
+            let rec = tools
+                .call(&t.lead, "get_record", &json!({ "account": acc.id }))
+                .await?;
+            table.push(json!({ "as": n, "fUSD": format!("{:.2}", c.ft(&acc.id).await as f64 / 1e6), "record": rec }));
+        }
+        Ok(json!({ "job": root, "outcome": lines, "workers": table,
+            "note": "the job tree folded: every account paid out and deleted itself; records feed the next round's picks" }))
     }
 
     fn who(&self, a: &Value) -> Result<Acc, String> {
@@ -76,7 +419,7 @@ impl Playground {
         self.named()
             .into_iter()
             .find(|(n, acc)| n == name || acc.id.as_str() == name)
-            .map(|(_, acc)| acc.clone())
+            .map(|(_, acc)| acc)
             .ok_or(format!(
                 "unknown `as` {name}: use one of {}",
                 self.named()
@@ -104,6 +447,10 @@ impl Playground {
                 Ok(json!(format!("{secs} s of chain time passed")))
             }
             "do_work" => self.do_work(a).await,
+            "join" => self.join(a).await,
+            "open_round" => self.open_round().await,
+            "close_round" => self.close_round(a).await,
+            "finish_round" => self.finish_round(a).await,
             "judge_check" => self.judge_check(a).await,
             "run_story" => {
                 let run = story(c, &self.llm).await?;
@@ -208,6 +555,24 @@ impl Playground {
     }
 }
 
+/// Plain-English errors for the cases an agent meets most.
+pub fn tidy(e: &str) -> String {
+    if e.contains("UnknownAccount")
+        || e.contains("unknown_account")
+        || e.contains("AccountDoesNotExist")
+    {
+        return "that account does not exist: a settled job pays out and deletes itself, so it is gone (see get_record for the worker's outcome)".into();
+    }
+    if let Some(i) = e.find("panic_msg: \"") {
+        let rest = &e[i + 12..];
+        return format!(
+            "refused by the contract: {}",
+            &rest[..rest.find('"').unwrap_or(rest.len())]
+        );
+    }
+    e.replace("Smart contract panicked: ", "refused by the contract: ")
+}
+
 /// The tools a judge sees: the shared tool list (with `as`) plus the
 /// playground's own.
 pub fn tool_list() -> Vec<Value> {
@@ -228,6 +593,11 @@ pub fn tool_list() -> Vec<Value> {
          s(json!({ "job": str_, "task": str_, "text": str_, "as": str_ }), &["job", "task"])),
         ("judge_check", "Keeper: send the contract's own check question about a delivery to the test model and submit its signed answer; returns the score.",
          s(json!({ "job": str_, "task": str_, "deliverable": str_, "panel": { "type": "integer" }, "as": str_ }), &["job", "task"])),
+        ("join", "Open market: your own agent joins with its own funded account (name, skills from research/translate/summary). Then act with `as` = name.",
+         s(json!({ "name": str_, "skills": { "type": "array", "items": str_ } }), &["name", "skills"])),
+        ("open_round", "Open market: the house client posts a 70 fUSD job and the lead puts 3 parts out for bids; house workers bid (the junk bot undercuts). Bid with `bid` as your guest, then close_round.", s(json!({}), &[])),
+        ("close_round", "Open market: bidding closes; the lead picks each winner by price and on-chain record and awards it. If you won, do_work and judge_check, then finish_round.", s(json!({ "job": str_ }), &["job"])),
+        ("finish_round", "Open market: close checks, pay good work early, fold the tree; returns every worker's fUSD and record (which steers the next round).", s(json!({ "job": str_ }), &["job"])),
         ("run_story", "Run the whole scripted three-job story (bidding, a junk bot losing work by its on-chain record, three clients pooling money); returns every scene and agent decision. A few minutes.", s(json!({}), &[])),
     ] {
         v.push(json!({ "name": name, "description": desc, "inputSchema": schema }));
@@ -297,7 +667,7 @@ pub async fn serve() {
                 let (text, err) = match r {
                     Ok(Value::String(s)) => (s, false),
                     Ok(v) => (v.to_string(), false),
-                    Err(e) => (e, true),
+                    Err(e) => (tidy(&e), true),
                 };
                 json!({ "content": [{ "type": "text", "text": text }], "isError": err })
             }

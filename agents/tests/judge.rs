@@ -149,7 +149,10 @@ fn a_judge_walks_the_guide_over_mcp() {
         "bid",
         json!({ "as": "translator", "job": root, "slot": slot, "price": "31000000" }),
     );
-    assert!(err && t.contains("above the slot's max"), "{t}");
+    assert!(
+        err && t.contains("refused by the contract: bid is above the slot's max"),
+        "{t}"
+    );
     c.ok("wait", json!({ "secs": 61 }));
     c.ok(
         "award",
@@ -195,8 +198,90 @@ fn a_judge_walks_the_guide_over_mcp() {
     c.ok("approve", json!({ "as": "client", "job": root }));
     c.ok("settle", json!({ "as": "keeper", "job": root }));
     let (t, err) = c.tool("get_job", json!({ "job": root }));
-    assert!(err, "the root deleted itself: {t}");
+    assert!(
+        err && t.contains("deletes itself"),
+        "the root deleted itself: {t}"
+    );
     let rec: Value =
         serde_json::from_str(&c.ok("get_record", json!({ "account": researcher }))).unwrap();
     assert_eq!(rec["paid"], json!(1));
+}
+
+/// The judge's own agent joins the open market, outbids the house, does
+/// the work and is paid early; then it delivers junk once, and its record
+/// costs it the next award even though it bids lowest again.
+#[test]
+fn a_judges_agent_competes_in_the_open_market() {
+    let mut c = Client::start();
+    c.rpc("initialize", json!({ "protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": { "name": "judge", "version": "1" } }));
+    let j: Value = serde_json::from_str(&c.ok(
+        "join",
+        json!({ "name": "judgebot", "skills": ["research"] }),
+    ))
+    .unwrap();
+    let me = j["account"].as_str().unwrap().to_string();
+
+    let round = |c: &mut Client, junk: bool| -> Value {
+        let r: Value = serde_json::from_str(&c.ok("open_round", json!({}))).unwrap();
+        let job = r["job"].as_str().unwrap().to_string();
+        let slot = r["slots"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|s| s["skill"] == "research")
+            .unwrap();
+        // The house researcher asks 95% of max (28.50); undercut it.
+        c.ok(
+            "bid",
+            json!({ "as": "judgebot", "job": job, "slot": slot["slot"], "price": "20000000" }),
+        );
+        let task = slot["task"].as_str().unwrap().to_string();
+        let a: Value = serde_json::from_str(&c.ok("close_round", json!({ "job": job }))).unwrap();
+        let mine = a["awards"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|x| x["skill"] == "research")
+            .unwrap()
+            .clone();
+        if mine["award"] == me.as_str() {
+            let sub = mine["sub_job"].as_str().unwrap();
+            let mut w = json!({ "as": "judgebot", "job": sub, "task": task });
+            if junk {
+                w["text"] = json!("lorem ipsum dolor sit amet");
+            }
+            c.ok("do_work", w);
+            c.ok("judge_check", json!({ "job": sub, "task": task }));
+        }
+        let f: Value = serde_json::from_str(&c.ok("finish_round", json!({ "job": job }))).unwrap();
+        json!({ "award": mine, "finish": f })
+    };
+
+    // Round 1: the lowest bid and no bad record: judgebot wins, is paid 19.80 now.
+    let r1 = round(&mut c, false);
+    assert_eq!(r1["award"]["award"], json!(me), "{r1}");
+    let wk = r1["finish"]["workers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|w| w["as"] == "judgebot")
+        .unwrap();
+    assert_eq!(wk["fUSD"], "19.80", "{r1}");
+    // Round 2: judgebot wins again but delivers junk: 2/10, not paid.
+    let r2 = round(&mut c, true);
+    assert_eq!(r2["award"]["award"], json!(me), "{r2}");
+    let wk = r2["finish"]["workers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|w| w["as"] == "judgebot")
+        .unwrap();
+    assert_eq!(wk["fUSD"], "19.80", "junk earns nothing: {r2}");
+    // Round 3: lowest bid again, but its record (2 jobs, 1 paid) loses the award.
+    let r3 = round(&mut c, false);
+    assert_ne!(r3["award"]["award"], json!(me), "{r3}");
+    assert!(
+        r3["award"]["reason"].as_str().unwrap().contains("avoided"),
+        "{r3}"
+    );
 }

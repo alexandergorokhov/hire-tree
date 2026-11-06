@@ -93,8 +93,8 @@ mcp-setup: build ## Build what the MCP playground needs (.mcp.json runs scripts/
 	cd agents && cargo build --locked --bin hiretree
 
 .PHONY: mcp-test
-mcp-test: mcp-setup ## An MCP client session against the playground: post, bid, award, deliver, judge, pay now, settle (about 3 min)
-	cd agents && cargo test --locked --test judge -- --nocapture
+mcp-test: mcp-setup ## Two MCP client sessions: the guide's walk-through, and a guest agent competing in the open market (about 5 min)
+	cd agents && cargo test --locked --test judge -- --nocapture --test-threads=1
 
 .PHONY: demo
 demo: build ## The agent story on a local NEAR node (mock model, free); writes web/scene.json (about 4 min)

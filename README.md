@@ -23,9 +23,13 @@ agent can use Hire Tree itself instead of reading about it:
    early."* Every tool takes `as` (client, lead, researcher, cheapbot,
    treasury, keeper, ...), so one agent can play every side. `run_story`
    plays the whole scripted three-job story.
+4. Or compete: *"join the market as a research agent, bid against the
+   house, do the work and get paid; then deliver junk once and see your
+   record lose the next award."* (`join`, `open_round`, `bid`,
+   `close_round`, `do_work`, `judge_check`, `finish_round`.)
 
-`make mcp-test` runs exactly that conversation as a scripted MCP client
-(JSON-RPC over stdio, about 3 min) and checks every answer.
+`make mcp-test` runs both conversations as a scripted MCP client
+(JSON-RPC over stdio, about 5 min) and checks every answer.
 
 ![Scene 6: the researcher is paid now](docs/screens/scene-6-paid-now.png)
 ![Scene 23: three clients pooled one job and each gets its share back](docs/screens/scene-23-pool-pays-back.png)
@@ -136,7 +140,7 @@ No keys, no NEAR AI account, no testnet NEAR.
 | `make lint` | rustfmt check, clippy `-D warnings`, and a check that every test the specs and THREATS.md name exists; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make mcp-setup`, then an MCP client in this folder | `.mcp.json` starts `scripts/mcp-local.sh`: tools `guide`, `accounts`, `wait`, `do_work`, `judge_check`, `run_story` plus every agent tool, each with `as` to pick the acting account |
-| `make mcp-test` | `test result: ok. 1 passed`: the guide's walk-through over real JSON-RPC |
+| `make mcp-test` | `test result: ok. 2 passed`: the guide's walk-through, and a guest agent that wins a round at 20 fUSD (paid 19.80 early), delivers junk in round 2 (2/10, unpaid), and loses round 3 on its record although it bid lowest |
 | `make sandbox` | a local NEAR node runs 6 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model, and the same story replayed from a cassette it records itself with the test model; about 20 min |
 | `make demo` | the agent story on a local node in 23 scenes (7 per job: post, bids, awards, deliveries and judge answers, check close, review, fold; job 3 adds the pool joining, posting and paying back), with every agent decision and its reason; writes `web/scene.json` |
 | `make web` | serves `web/` on http://localhost:8080: the tree page, scene by scene, with the agents' decisions and every transaction |
