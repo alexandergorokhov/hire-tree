@@ -59,6 +59,13 @@ a deliverable came out of a model call made for this task.
    (at the root: the lead's fee to the lead, everything else back to the
    client), confirm the real token balance is zero, delete the account
    (storage NEAR goes to the parent). Every stuck step (hire, check, note sale, settle, dispute) has a resume path, decided from the real token balance.
+9. **Buy together (pool).** Clients who would not fund a job alone join a
+   pool contract (`ft_transfer_call(pool, share, "join")`; one pool per
+   purchase, its deploy key deleted). At the target, `launch` posts the job
+   through the factory with the pool as the client; `bind` checks with the
+   factory that the job is the pool's own. Members holding more than half
+   the stake approve the work early. When the job has deleted itself, the
+   pool shares what came back, and each member `claim`s its part pro rata.
 
 ## The agents
 `agents/` holds the agents and the `hiretree` CLI. Every agent decision is
@@ -70,13 +77,16 @@ gets from `hiretree mcp`).
 | Lead | planner: split the task and the budget; picker: choose a bid by price and the bidder's on-chain record; reviewer: buy the note, dispute, or wait | `open_bids`, `get_bids`, `get_record`, `award`, `quote_note`, `buy_note`, `dispute`, `approve` |
 | Worker | bids its own price (or passes); does the subtask through NEAR AI with the job's `HT1` tag | `bid`, `deliver` with the signed receipt |
 | Junk bot | nothing: bids 60% of max on anything near its skills, sends filler | `bid`, `deliver` without a receipt |
-| Keeper | none of its own: asks the judge model the contract's question | `check_request`, `submit_check`, `finalize_check`, `finalize_dispute`, `settle` |
+| Keeper | none of its own: asks the judge model the contract's question | `check_request`, `submit_check`, `finalize_check`, `finalize_dispute`, `settle`, `finish_pool` |
+| Pool members (3 clients) | none: fixed shares | `join_pool`, `launch_pool`, `bind_pool`, `vote_approve`, `claim_pool` |
 
-The story (two jobs): in job 1 nobody has a record, so the cheap bot's low
+The story (three jobs): in job 1 nobody has a record, so the cheap bot's low
 bids win two parts; the judge scores its filler 2/10, those parts reopen and
 their pay goes back. In job 2 the bot bids low again, but the picker reads its record (2 jobs,
 0 paid) and awards the others; the lead's treasury buys every note, so the
-workers are paid before the job closes.
+workers are paid before the job closes. In job 3 three clients pool 30
+fUSD each for one 90 fUSD job; two of them vote to approve the work, and
+each gets 7 fUSD back from the 21 the job did not spend.
 
 Model answers come from one of: a scripted test model signing with a test
 key (tests, `make demo`), NEAR AI Cloud live, or a **cassette**: a file of
@@ -94,9 +104,9 @@ No keys, no NEAR AI account, no testnet NEAR.
 | Step | Command | Cold time (measured on the build box) |
 |---|---|---|
 | 1 | `make setup` | crate download |
-| 2 | `make test` | about 3 s after the first compile (a few minutes cold); 304 tests |
-| 3 | `make demo` | about 4 min: builds the wasm, starts a local NEAR node, runs the two-job agent story, writes `web/scene.json` |
-| 4 | `make web`, open http://localhost:8080 | the 14 scenes, each agent decision with its reason, and every transaction |
+| 2 | `make test` | about 3 s after the first compile (a few minutes cold); 327 tests |
+| 3 | `make demo` | about 4 min: builds the wasm, starts a local NEAR node, runs the three-job agent story, writes `web/scene.json` |
+| 4 | `make web`, open http://localhost:8080 | the 23 scenes, each agent decision with its reason, and every transaction |
 | 5 (optional) | `make sandbox` | about 16 min: all 6 local-node tests |
 
 ## Do X, see Y
@@ -104,11 +114,11 @@ No keys, no NEAR AI account, no testnet NEAR.
 | Do | See |
 |---|---|
 | `make setup` | toolchain versions; crates fetched (the only networked step besides the near-sandbox binary) |
-| `make test` | 304 unit + property tests, all `ok`: core (56 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (209), factory (18), mock checker (2), mock-usdc (7), agents (7) |
+| `make test` | 327 unit + property tests, all `ok`: core (56 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (209), factory (18), pool (23), mock checker (2), mock-usdc (7), agents (7) |
 | `make lint` | rustfmt check and clippy `-D warnings`; exit 0 |
-| `make build` | `out/*.wasm` (job, factory, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
+| `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make sandbox` | a local NEAR node runs 6 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model, and the same story replayed from a cassette; about 15 min |
-| `make demo` | the agent story on a local node in 14 scenes (7 per job: post, bids, awards, deliveries and judge answers, check close, review, fold), with every agent decision and its reason; writes `web/scene.json` |
+| `make demo` | the agent story on a local node in 23 scenes (7 per job: post, bids, awards, deliveries and judge answers, check close, review, fold; job 3 adds the pool joining, posting and paying back), with every agent decision and its reason; writes `web/scene.json` |
 | `make web` | serves `web/` on http://localhost:8080: the tree page, scene by scene, with the agents' decisions and every transaction |
 | `make nearai-check` | needs `NEARAI_API_KEY`: three small signed calls (receipt format, the contract's judge question, the planner's JSON); GO or NO-GO |
 | `make record-cassette` | needs `NEARAI_API_KEY`: the story with live NEAR AI on a local node (about 24 small calls); saves `demo/cassette.json` |
@@ -122,6 +132,7 @@ No keys, no NEAR AI account, no testnet NEAR.
 | `core/` | pure Rust: checked money math, ledger, `HT1` binding parser, receipt text, EIP-191 digest, signature parsing (low-s), state machine |
 | `contracts/job/` | the global job contract |
 | `contracts/factory/` | posts and funds root jobs; pins signer, checker, token |
+| `contracts/pool/` | collective purchasing: clients club together, the pool posts one job as client and pays members back pro rata |
 | `contracts/mock-usdc/` | NEP-141 fake test USD |
 | `contracts/mock-outlayer/` | sandbox stand-in for the OutLayer quality checker (recorded scores, no AI) |
 | `agents/` | the agents, their tools, the MCP server, NEAR AI client and cassettes, the `hiretree` CLI; near-sandbox tests |
@@ -147,7 +158,7 @@ No keys, no NEAR AI account, no testnet NEAR.
 
 ## Hackathon
 - Track: `swarms` (AI Swarms): a coordination market with on-chain bidding
-  between agents, and an agent economy shaped by track records. Hints used: MULTI-AGENT SYSTEMS (a lead
+  between agents, collective purchasing (a pool of clients buys one job), and an agent economy shaped by track records. Hints used: MULTI-AGENT SYSTEMS (a lead
   agent hires worker agents that bid for the work; a keeper answers checks)
   and SUB-ACCOUNTS
   (every job and sub-job is its own account, created and deleted by the

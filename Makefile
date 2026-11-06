@@ -7,7 +7,7 @@ SHELL := /bin/bash
 
 PROP_CASES ?= 10000
 OUT := out
-CONTRACTS := job factory mock-usdc mock-outlayer
+CONTRACTS := job factory pool mock-usdc mock-outlayer
 export CARGO_INCREMENTAL := 0
 
 define not_built
@@ -48,8 +48,8 @@ build: ## Build the contract wasm into out/ with SHA256SUMS (non-reproducible fo
 	  done; \
 	else \
 	  echo "cargo-near not installed: plain cargo wasm build (no ABI, no wasm-opt)" >&2; \
-	  RUSTFLAGS='--cfg near' cargo build --offline --locked --release --target wasm32-unknown-unknown -p hire-tree-job -p hire-tree-factory -p mock-usdc -p mock-outlayer; \
-	  for w in hire_tree_job hire_tree_factory mock_usdc mock_outlayer; do cp target/wasm32-unknown-unknown/release/$$w.wasm $(OUT)/; done; \
+	  RUSTFLAGS='--cfg near' cargo build --offline --locked --release --target wasm32-unknown-unknown -p hire-tree-job -p hire-tree-factory -p hire-tree-pool -p mock-usdc -p mock-outlayer; \
+	  for w in hire_tree_job hire_tree_factory hire_tree_pool mock_usdc mock_outlayer; do cp target/wasm32-unknown-unknown/release/$$w.wasm $(OUT)/; done; \
 	  if command -v wasm-opt >/dev/null; then for w in $(OUT)/*.wasm; do \
 	    wasm-opt -Oz --strip-debug --strip-producers --enable-bulk-memory --enable-sign-ext --enable-mutable-globals \
 	      --enable-nontrapping-float-to-int $$w -o $$w; done; \
@@ -70,7 +70,7 @@ sandbox: build ## near-sandbox tests: G1, G4, tree fold, the agent story with a 
 	  pre="$$PWD/target/fdshim.so"; \
 	fi; \
 	LD_PRELOAD="$$pre" JOB_WASM=$(CURDIR)/$(OUT)/hire_tree_job.wasm USDC_WASM=$(CURDIR)/$(OUT)/mock_usdc.wasm \
-	  FACTORY_WASM=$(CURDIR)/$(OUT)/hire_tree_factory.wasm OUTLAYER_WASM=$(CURDIR)/$(OUT)/mock_outlayer.wasm \
+	  FACTORY_WASM=$(CURDIR)/$(OUT)/hire_tree_factory.wasm OUTLAYER_WASM=$(CURDIR)/$(OUT)/mock_outlayer.wasm POOL_WASM=$(CURDIR)/$(OUT)/hire_tree_pool.wasm \
 	  cargo test --locked -- --test-threads=1 --nocapture
 
 # The node shim and wasm paths every local-node command needs.
@@ -81,7 +81,7 @@ define SBX
 	  pre="$$PWD/target/fdshim.so"; \
 	fi; \
 	export LD_PRELOAD="$$pre" JOB_WASM=$(CURDIR)/$(OUT)/hire_tree_job.wasm USDC_WASM=$(CURDIR)/$(OUT)/mock_usdc.wasm \
-	  FACTORY_WASM=$(CURDIR)/$(OUT)/hire_tree_factory.wasm OUTLAYER_WASM=$(CURDIR)/$(OUT)/mock_outlayer.wasm;
+	  FACTORY_WASM=$(CURDIR)/$(OUT)/hire_tree_factory.wasm OUTLAYER_WASM=$(CURDIR)/$(OUT)/mock_outlayer.wasm POOL_WASM=$(CURDIR)/$(OUT)/hire_tree_pool.wasm;
 endef
 
 HT = cargo run --quiet --locked --bin hiretree --

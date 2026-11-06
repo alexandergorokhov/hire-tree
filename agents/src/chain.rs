@@ -327,6 +327,54 @@ impl Chain {
             .unwrap_or(0)
     }
 
+    /// A new collective-purchase pool `name.<funder>` running the pool
+    /// contract, registered on the token by `organiser`. Its deploy key is
+    /// deleted afterwards, so nobody (not even the operator) can move the
+    /// members' money except through the pool's own methods.
+    pub async fn deploy_pool(
+        &self,
+        organiser: &Acc,
+        name: &str,
+        init: Value,
+    ) -> Result<AccountId, String> {
+        let code = wasm("POOL_WASM", "hire_tree_pool.wasm");
+        let milli = code.len() as u128 / 100 + 400;
+        let pool = self.account_with(name, self.near_for(5, milli)).await;
+        if self.has_code(&pool.id).await {
+            return Err(format!("{} already exists: pools are used once", pool.id));
+        }
+        Contract::deploy(pool.id.clone())
+            .use_code(code)
+            .with_init_call("new", init)
+            .unwrap()
+            .with_signer(pool.signer.clone())
+            .send_to(&self.net)
+            .await
+            .map_err(|e| format!("deploy pool: {e:?}"))?
+            .assert_success();
+        self.call(
+            organiser,
+            &self.usdc,
+            "storage_deposit",
+            json!({ "account_id": pool.id, "registration_only": true }),
+            NearToken::from_millinear(10),
+        )
+        .await?;
+        let pk = pool
+            .signer
+            .get_public_key()
+            .await
+            .map_err(|e| format!("{e:?}"))?;
+        Account(pool.id.clone())
+            .delete_key(pk)
+            .with_signer(pool.signer.clone())
+            .send_to(&self.net)
+            .await
+            .map_err(|e| format!("delete pool key: {e:?}"))?
+            .assert_success();
+        Ok(pool.id)
+    }
+
     /// A funded sub-account of the funder (sandbox: `near` NEAR; testnet:
     /// 1 NEAR). Reused if it already exists.
     pub async fn account(&self, name: &str, near: u128) -> Acc {

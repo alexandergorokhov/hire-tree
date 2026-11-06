@@ -79,6 +79,17 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | Late bid or award before close | refused both ways | `late_bid_refused`, `award_before_close_refused` |
 | Lead bids through another account and awards itself | possible, as with a direct `hire`: the lead already chooses who works. The client's protection is the fixed lead fee, the judge's score and settle (unscored work is not paid unless approved) | not preventable on-chain |
 
+## Pool (collective purchasing)
+| Threat | Answer |
+|---|---|
+| The operator who deployed the pool takes the money | The deploy key is deleted right after `new`; only the pool's methods move tokens |
+| A member is diluted or overpays | Joins keep at most what the target still needs; the excess is refunded in the same transfer |
+| Someone binds the pool to another job | `bind` asks the factory: the job's client must be this pool, with its budget, Posted |
+| Finish counts the refund too early | `finish` reads the balance only after the job account is gone; the job deletes itself only after its refund transfer succeeded |
+| A minority approves bad work early | Approval needs voters holding more than half the stake |
+| The launch fails half way | Any refusal or missing answer is `LaunchFailed`; members claim back what the pool holds |
+| A claim transfer fails | The member's `claimed` flag is restored; claim again |
+
 ## Agents (off-chain)
 | Threat | Answer | Test |
 |---|---|---|
@@ -91,6 +102,10 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | Demo account keys | derived from the operator key held in an env var; nothing written to disk | `Chain::derived` |
 
 ## Known limits
+- Pool: a member cannot leave before the deadline; a pool that misses its
+  target pays back only after `join_secs`. Tokens sent to the pool by
+  anyone else are shared among members. One pool per purchase (a ~1.6 NEAR
+  deploy).
 - One checker and one model for all three dispute panels; panels differ
   only by seed. A judge model that is fooled once may be fooled three times.
   The lead, who pays early, carries that risk, not the client.

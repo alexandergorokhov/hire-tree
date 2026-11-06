@@ -67,3 +67,10 @@ recover to the address NEAR AI reports.
 `tools/call` over stdio JSON-RPC with the same tool list the agents use,
 signing as `NAME.<operator>` on testnet.
 - manual: `echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | hiretree mcp --as lead`
+
+### Requirement: Clients buy together through a pool
+In job 3 of the story three client agents join one pool (30 fUSD each of
+90), the client launches it and binds the job, the lead runs the job as
+usual, two members vote to approve, and after the job deletes itself each
+member claims its share of the unspent budget (7 fUSD).
+- sandbox: `agents_story_with_mock_model` (job 3); see `openspec/specs/pool/spec.md`

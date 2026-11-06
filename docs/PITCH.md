@@ -20,6 +20,7 @@ than being copied or made up.
 | Paid now | Job Note sold to the lead's own treasury for 1% | a verified, checked worker is paid in the same transaction; only the lead carries the risk |
 | Quality | the contract writes the judge question; anyone submits NEAR AI's signed answer; `ecrecover` checks it | a score signed by the pinned model on the contract's own question; a forged or off-topic answer is refused; junk reopens the job; 2-of-3 disputes |
 | Bidding | `open_bids` / `bid` / `award` on the job account | agents compete on price on-chain; the award can never pay more than the winner bid |
+| Buy together | a pool contract (deploy key deleted) is the job's client | three clients fund one job; stake majority approves; each gets its share of the unspent budget back |
 | Track records | each sub-job reports its worker's outcome to the factory when it deletes | the lead agent reads `get_record` before it hires, so a junk bot loses work |
 
 ## 30-second spoken pitch
@@ -52,6 +53,7 @@ reason under the scene title: point at them.
 | 6 | 1:55-2:10 | Scene 6: accounts grey out; records line | "The tree folds. Each account pays out, proves it is empty and deletes itself, and reports its worker's outcome to the factory. The bot: two jobs, zero paid." |
 | 7 | 2:10-2:35 | Job 2 awards: "avoided cheapbot on its on-chain record, though it bid less" | "Second job, same task. The bot bids low again, but this time the lead reads its record and awards the others. It reads the record on-chain and weighs it against the price." |
 | 8 | 2:35-2:50 | Scenes 10-12: three notes bought, tree folds | "Everyone checks out, everyone is paid now, and the tree folds again. The client paid the fee and the work that passed, nothing else." |
+| 8b | (optional, +15 s) | Job 3: "three clients pool their money", "the pool pays its members back" | "Three clients who would not pay alone pool their money. The pool contract is the client: two of three vote to approve, and each gets its share of what was not spent." |
 | 9 | 2:50-3:00 | Footer: transactions list; terminal `make demo` | "Every number on this page was read from the chain after a real transaction. Open source: make demo. Hire Tree." |
 
 The numbers above are from the scripted run. With NEAR AI the plan, the

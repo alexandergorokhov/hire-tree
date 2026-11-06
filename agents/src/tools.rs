@@ -37,6 +37,18 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
         ("settle", "Anyone: settle a job (pay, return the rest, delete at zero).", s(json!({ "job": str_ }), &["job"])),
         ("get_job", "Anyone: a job's state.", s(json!({ "job": str_ }), &["job"])),
         ("get_record", "Anyone: a worker's track record kept by the factory.", s(json!({ "account": str_ }), &["account"])),
+        ("join_pool", "Client: put `amount` into a collective-purchase pool; the pool keeps at most what its target still needs.",
+         s(json!({ "pool": str_, "amount": str_ }), &["pool", "amount"])),
+        ("launch_pool", "Anyone: the target is raised; the pool posts its job through the factory as the client. Attaches 0.06 NEAR.",
+         s(json!({ "pool": str_ }), &["pool"])),
+        ("bind_pool", "Anyone: tell the pool which factory job number is its own (checked against the factory).",
+         s(json!({ "pool": str_, "n": { "type": "integer" } }), &["pool", "n"])),
+        ("vote_approve", "Pool member: vote to approve the pool's job early; more than half the stake approves it.",
+         s(json!({ "pool": str_ }), &["pool"])),
+        ("finish_pool", "Anyone: after the job deleted itself (or the pool failed), the pool counts what came back.",
+         s(json!({ "pool": str_ }), &["pool"])),
+        ("claim_pool", "Pool member: take your pro-rata share of what came back.", s(json!({ "pool": str_ }), &["pool"])),
+        ("get_pool", "Anyone: a pool's state.", s(json!({ "pool": str_ }), &["pool"])),
     ]
 }
 
@@ -72,8 +84,38 @@ impl Tools<'_> {
                 return Err(format!("{j} is not a job of {}", c.hub));
             }
         }
+        if a.get("pool").is_some() {
+            let p = s(a, "pool")?;
+            if !p.starts_with("pool-")
+                || !p.ends_with(&format!(".{}", c.funder.id))
+                || p.matches('.').count() != c.funder.id.as_str().matches('.').count() + 1
+            {
+                return Err(format!("{p} is not a pool of {}", c.funder.id));
+            }
+        }
         let zero = NearToken::from_yoctonear(0);
         match name {
+            "join_pool" => {
+                let amount: u128 = s(a, "amount")?.parse().map_err(|_| "amount")?;
+                c.send(who, &id(a, "pool")?, amount, Some("join")).await
+            }
+            "launch_pool" => {
+                c.call(who, &id(a, "pool")?, "launch", json!({}), NearToken::from_millinear(60))
+                    .await
+            }
+            "bind_pool" => {
+                c.call(who, &id(a, "pool")?, "bind", json!({ "n": a["n"].as_u64().ok_or("missing n")? }), zero)
+                    .await
+            }
+            "vote_approve" | "claim_pool" | "finish_pool" => {
+                let m = match name {
+                    "claim_pool" => "claim",
+                    "finish_pool" => "finish",
+                    m => m,
+                };
+                c.call(who, &id(a, "pool")?, m, json!({}), zero).await
+            }
+            "get_pool" => c.view(&id(a, "pool")?, "get_pool", json!({})).await,
             "post_job" => {
                 let task = s(a, "task")?;
                 let msg = json!({

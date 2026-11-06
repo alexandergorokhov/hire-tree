@@ -47,6 +47,8 @@ pub struct WorkerAgent {
 
 pub struct Team {
     pub client: Acc,
+    /// Two more clients who club together with `client` in the pool job.
+    pub members: Vec<Acc>,
     pub lead: Acc,
     pub treasury: Acc,
     pub keeper: Acc,
@@ -107,6 +109,7 @@ impl<'a> Run<'a> {
         task: &str,
         budget: u128,
         fee: u128,
+        pooled: bool,
     ) -> Result<AccountId, String> {
         let c = self.chain;
         let (client, lead, treasury) = (
@@ -121,16 +124,61 @@ impl<'a> Run<'a> {
         self.story.jobs.clear();
         self.story.job(&format!("job-{n}"), &root);
 
-        // 1. Post.
-        self.tool(&client, "post_job", json!({ "budget": budget.to_string(), "manager": lead.id, "task": task,
-            "window_secs": self.window_secs, "lead_fee": fee.to_string(), "treasury": treasury.id })).await?;
+        // 1. Post: one client, or several clubbing together in a pool.
+        let mut pool: Option<AccountId> = None;
+        let mut buyers = vec![client.clone()];
+        if pooled {
+            buyers.extend(self.team.members.iter().cloned());
+            let p = c
+                .deploy_pool(
+                    &client,
+                    &format!("pool-{next}"),
+                    json!({
+                    "token": c.usdc, "factory": c.hub, "manager": lead.id,
+                    "spec_hash": ht_core::receipt::sha256_hex(task.as_bytes()),
+                    "window_secs": self.window_secs, "lead_fee": fee.to_string(),
+                    "treasury": treasury.id, "target": budget.to_string(), "join_secs": 3600 }),
+                )
+                .await?;
+            self.story.job("pool", &p);
+            let share = budget / buyers.len() as u128;
+            for (i, b) in buyers.iter().enumerate() {
+                let amount = if i + 1 == buyers.len() {
+                    budget - share * i as u128
+                } else {
+                    share
+                };
+                self.tool(
+                    b,
+                    "join_pool",
+                    json!({ "pool": p, "amount": amount.to_string() }),
+                )
+                .await?;
+            }
+            self.story.step(c, &format!("Job {n}: three clients pool their money"),
+                &format!("\"{task}\" None of them wants to pay {:.0} fUSD alone. Each sends its share to the pool contract {p}; it keeps at most what the target still needs. The pool's deploy key is deleted, so only its own rules can move the money.", budget as f64 / 1e6)).await;
+            self.tool(&client, "launch_pool", json!({ "pool": p }))
+                .await?;
+            self.tool(&client, "bind_pool", json!({ "pool": p, "n": next }))
+                .await?;
+            pool = Some(p);
+        } else {
+            self.tool(&client, "post_job", json!({ "budget": budget.to_string(), "manager": lead.id, "task": task,
+                "window_secs": self.window_secs, "lead_fee": fee.to_string(), "treasury": treasury.id })).await?;
+        }
         if !c.alive(&root).await {
             return Err(format!(
                 "the factory refunded the post: {root} was not created (prepaid NEAR? settings?)"
             ));
         }
-        self.story.step(c, &format!("Job {n}: the client posts"),
-            &format!("\"{task}\" One transfer of {:.0} fUSD to the factory creates {root} from the global contract; the lead's fee is {:.0}. The rest comes back to the client at the end.", budget as f64 / 1e6, fee as f64 / 1e6)).await;
+        if let Some(p) = &pool {
+            self.story.step(c, "The pool posts the job",
+                &format!("Target reached: the pool posts the job through the factory as its client, in one transfer. {root} is created from the global contract; the pool checked with the factory that this job is its own. The lead's fee is {:.0} fUSD; the rest comes back to the pool, then to its members.", fee as f64 / 1e6)).await;
+            let _ = p;
+        } else {
+            self.story.step(c, &format!("Job {n}: the client posts"),
+                &format!("\"{task}\" One transfer of {:.0} fUSD to the factory creates {root} from the global contract; the lead's fee is {:.0}. The rest comes back to the client at the end.", budget as f64 / 1e6, fee as f64 / 1e6)).await;
+        }
 
         // 2. Plan.
         let pay_budget = (budget - fee) / USD;
@@ -467,7 +515,17 @@ impl<'a> Run<'a> {
             self.tool(&keeper, "settle", json!({ "job": h.job }))
                 .await?;
         }
-        let _ = self.tool(&client, "approve", json!({ "job": root })).await;
+        match &pool {
+            // Two of the three members (two thirds of the stake) approve.
+            Some(p) => {
+                for b in buyers.iter().take(2) {
+                    let _ = self.tool(b, "vote_approve", json!({ "pool": p })).await;
+                }
+            }
+            None => {
+                let _ = self.tool(&client, "approve", json!({ "job": root })).await;
+            }
+        }
         self.tool(&keeper, "settle", json!({ "job": root })).await?;
         let mut recs = vec![];
         for w in &self.team.workers {
@@ -477,7 +535,23 @@ impl<'a> Run<'a> {
             recs.push(format!("{} {}/{} paid", w.name, r["paid"], r["jobs"]));
         }
         self.story.step(c, "The tree folds; track records update",
-            &format!("Each account pays out, proves its balance is zero and deletes itself; the client gets the unspent budget back. Each finished job reported its worker's outcome to the factory: {}.", recs.join(", "))).await;
+            &format!("Each account pays out, proves its balance is zero and deletes itself; {} gets the unspent budget back. Each finished job reported its worker's outcome to the factory: {}.", if pool.is_some() { "the pool" } else { "the client" }, recs.join(", "))).await;
+        if let Some(p) = &pool {
+            self.tool(&keeper, "finish_pool", json!({ "pool": p }))
+                .await?;
+            let v = self.tool(&client, "get_pool", json!({ "pool": p })).await?;
+            if v["state"] != "Done" {
+                return Err(format!("pool did not finish: {v}"));
+            }
+            let mut got = vec![];
+            for b in &buyers {
+                let before = c.ft(&b.id).await;
+                self.tool(b, "claim_pool", json!({ "pool": p })).await?;
+                got.push(format!("{:.2}", (c.ft(&b.id).await - before) as f64 / 1e6));
+            }
+            self.story.step(c, "The pool pays its members back",
+                &format!("Two of the three members voted to approve the work early, so the pool, as the job's client, approved it. Once the job account was gone, the pool counted what came back ({}) and each member claimed its share pro rata: {} fUSD.", crate::scene::usd(&v["payout"]), got.join(", "))).await;
+        }
         Ok(root)
     }
 
@@ -626,6 +700,7 @@ pub async fn team(c: &Chain) -> Team {
         mk("treasury").await,
         mk("keeper").await,
     );
+    let members = vec![mk("client2").await, mk("client3").await];
     let researcher = mk("researcher").await;
     let translator = mk("translator").await;
     let cheapbot = mk("cheapbot").await;
@@ -639,7 +714,11 @@ pub async fn team(c: &Chain) -> Team {
     ] {
         c.register(a).await;
     }
-    c.mint(&client.id, 200 * USD).await;
+    for m in &members {
+        c.register(m).await;
+        c.mint(&m.id, 40 * USD).await;
+    }
+    c.mint(&client.id, 240 * USD).await;
     c.mint(&treasury.id, 100 * USD).await;
     c.call(
         &client,
@@ -652,6 +731,7 @@ pub async fn team(c: &Chain) -> Team {
     .unwrap();
     Team {
         client,
+        members,
         lead,
         treasury,
         keeper,
@@ -681,12 +761,15 @@ pub async fn team(c: &Chain) -> Team {
     }
 }
 
-/// Two jobs: in job 1 the lead has no records and hires the cheap bot for
-/// one part; in job 2 its record steers the lead away.
+/// Three jobs: in job 1 the lead has no records and hires the cheap bot for
+/// one part; in job 2 its record steers the lead away; in job 3 three
+/// clients pool their money to buy one job together.
 pub async fn story<'a>(c: &'a Chain, llm: &'a Llm) -> Result<Run<'a>, String> {
     let team = team(c).await;
     let mut people = vec![
         ("client".into(), team.client.id.clone()),
+        ("client2".into(), team.members[0].id.clone()),
+        ("client3".into(), team.members[1].id.clone()),
         ("lead".into(), team.lead.id.clone()),
         ("treasury".into(), team.treasury.id.clone()),
     ];
@@ -714,8 +797,11 @@ pub async fn story<'a>(c: &'a Chain, llm: &'a Llm) -> Result<Run<'a>, String> {
         window_secs,
     };
     let task = "Write a short explainer of NEAR global contracts in English and Spanish, plus a one-line summary.";
-    run.job(1, task, 100 * USD, 10 * USD).await?;
-    run.job(2, task, 100 * USD, 10 * USD).await?;
+    run.job(1, task, 100 * USD, 10 * USD, false).await?;
+    run.job(2, task, 100 * USD, 10 * USD, false).await?;
+    // Collective purchasing: three clients club together for one job.
+    let task3 = "Write a short explainer of NEAR sub-accounts in English and Spanish, plus a one-line summary.";
+    run.job(3, task3, 90 * USD, 9 * USD, true).await?;
     Ok(run)
 }
 
