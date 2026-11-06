@@ -10,7 +10,7 @@
   --surface: #f6f5f2; --card: #fcfcfb; --line: #e3e2dd; --grid: #ecebe7;
   --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #77756f;
   --accent: #2a78d6;
-  --s-steady: #2a78d6; --s-lean: #eb6834; --s-greedy: #1baf7a; --s-adaptive: #eda100; --s-junk: #e87ba4; --s-sloppy: #008300; --s-undercut: #6250d6;
+  --s-steady: #2a78d6; --s-lean: #eb6834; --s-greedy: #1baf7a; --s-adaptive: #eda100; --s-junk: #e87ba4; --s-sloppy: #008300; --s-undercut: #6250d6; --s-model: #8a5a2e;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -18,7 +18,7 @@
     --surface: #121211; --card: #1a1a19; --line: #2e2d2b; --grid: #262524;
     --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #9a998f;
     --accent: #3987e5;
-    --s-steady: #3987e5; --s-lean: #d95926; --s-greedy: #199e70; --s-adaptive: #c98500; --s-junk: #d55181; --s-sloppy: #008300; --s-undercut: #9085e9;
+    --s-steady: #3987e5; --s-lean: #d95926; --s-greedy: #199e70; --s-adaptive: #c98500; --s-junk: #d55181; --s-sloppy: #008300; --s-undercut: #9085e9; --s-model: #c08a5a;
   }
 }
 :root[data-theme="dark"] {
@@ -26,7 +26,7 @@
   --surface: #121211; --card: #1a1a19; --line: #2e2d2b; --grid: #262524;
   --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #9a998f;
   --accent: #3987e5;
-  --s-steady: #3987e5; --s-lean: #d95926; --s-greedy: #199e70; --s-adaptive: #c98500; --s-junk: #d55181; --s-sloppy: #008300; --s-undercut: #9085e9;
+  --s-steady: #3987e5; --s-lean: #d95926; --s-greedy: #199e70; --s-adaptive: #c98500; --s-junk: #d55181; --s-sloppy: #008300; --s-undercut: #9085e9; --s-model: #c08a5a;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--surface); color: var(--text-primary);
@@ -80,7 +80,7 @@ a { color: var(--accent); }
 
   <div class="card">
     <h2>Earned by strategy (fUSD, paid early)</h2>
-    <div class="wrap"><svg id="earn" width="100%" height="250" role="img" aria-label="Earnings by strategy"></svg></div>
+    <div class="wrap"><svg id="earn" width="100%" height="280" role="img" aria-label="Earnings by strategy"></svg></div>
   </div>
 
   <div class="card">
@@ -91,7 +91,7 @@ a { color: var(--accent); }
 </main>
 <div id="tip"></div>
 <script>
-const S = ['steady', 'lean', 'greedy', 'adaptive', 'junk', 'sloppy', 'undercut'];
+const S = ['steady', 'lean', 'greedy', 'adaptive', 'junk', 'sloppy', 'undercut', 'model'];
 const col = s => `var(--s-${s})`;
 const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const tip = document.getElementById('tip');
@@ -150,6 +150,7 @@ function render(d) {
     [paid + ' / ' + parts.length, 'parts passed the check and were paid early'],
     [d.junk_respawns ?? 0, 'times a caught junk bot came back under a new account (each quits after 2)'],
     ['+' + (d.final_newcomer_premium ?? 0) + '%', 'newcomer premium the lead learned'],
+    [d.agents.filter(a => a.quit).length, 'agents that left the market (junk never paid, greedy never won)'],
   ].map(([b, s]) => `<div class="stat"><b>${esc(b)}</b><span>${esc(s)}</span></div>`).join('');
   document.getElementById('legend').innerHTML = S.map(s => `<span><i class="sw" style="background:${col(s)}"></i>${s}</span>`).join('');
   const g = document.getElementById('wins');
@@ -157,13 +158,13 @@ function render(d) {
     d.jobs.map(j => `<div class="h">${j.n}</div>` + ['research', 'translate', 'summary'].map(k => {
       const p = j.parts.find(x => x.skill === k);
       if (!p) return '<div class="cell">no award</div>';
-      const bids = p.bids.map(b => `${esc(b.agent)} ${b.price.toFixed(2)}`).join('<br>');
+      const bids = p.bids.map(b => `${esc(b.agent)} ${b.price.toFixed(2)}${b.why ? ` <i>(model: ${esc(b.why)})</i>` : ''}`).join('<br>');
       return `<div class="cell${p.paid ? '' : ' unpaid'}" data-tip="${esc(`<b>${p.winner}</b> won at ${p.price.toFixed(2)}, score ${p.score}/10<br>${bids}`)}"><i class="sw" style="background:${col(p.strategy)}"></i>${esc(p.winner)} ${p.price.toFixed(2)}</div>`;
     }).join('')).join('');
   g.querySelectorAll('[data-tip]').forEach(c => { c.addEventListener('mousemove', e => showTip(e, c.dataset.tip)); c.addEventListener('mouseleave', hideTip); });
   const rows = [...d.agents].sort((a, b) => b.earned - a.earned);
-  document.getElementById('agents').innerHTML = '<tr><th>agent</th><th>strategy</th><th class="n">won</th><th class="n">paid</th><th class="n">earned</th><th class="n">last ask</th></tr>' +
-    rows.map(a => `<tr><td>${esc(a.agent)}</td><td><i class="sw" style="background:${col(a.strategy)}"></i>${esc(a.strategy)}</td><td class="n">${a.wins}</td><td class="n">${a.record.paid ?? 0}</td><td class="n">${a.earned.toFixed(2)}</td><td class="n">${a.final_rate}%</td></tr>`).join('');
+  document.getElementById('agents').innerHTML = '<tr><th>agent</th><th>strategy</th><th class="n">won</th><th class="n">paid</th><th class="n">earned</th><th class="n">last ask</th><th>status</th></tr>' +
+    rows.map(a => `<tr><td>${esc(a.agent)}</td><td><i class="sw" style="background:${col(a.strategy)}"></i>${esc(a.strategy)}</td><td class="n">${a.wins}</td><td class="n">${a.record.paid ?? 0}</td><td class="n">${a.earned.toFixed(2)}</td><td class="n">${a.final_rate}%</td><td>${a.quit ? 'left' : 'active'}</td></tr>`).join('');
   document.getElementById('foot').textContent = 'Regenerate with make swarm (writes web/swarm.json). All money is fake test USD.';
   priceChart(d); earnChart(d);
   addEventListener('resize', () => { priceChart(d); earnChart(d); });

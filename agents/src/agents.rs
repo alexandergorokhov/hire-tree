@@ -611,6 +611,43 @@ pub fn mock_script(req: &Value) -> String {
             { "name": "translate", "task": "Translate the explanation into Spanish.", "pay": 20 },
             { "name": "summary", "task": "Write a one-line summary.", "pay": 10 } ] }).to_string();
     }
+    if sys.starts_with("ROLE: market bidder") {
+        // Scripted stand-in: follow the median winning rate, cut after two
+        // losses, raise after a win, never below cost.
+        let u: Value = serde_json::from_str(user).unwrap_or(Value::Null);
+        let mut recent: Vec<u64> = u["recent_winning_rates"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|x| x.as_u64())
+            .collect();
+        recent.sort();
+        let floor = u["cost_floor"].as_u64().unwrap_or(55);
+        let fresh = u["my_record"]["jobs"].as_u64() == Some(0);
+        let lost = u["lost_in_a_row"].as_u64().unwrap_or(0);
+        let (rate, why) = match recent.get(recent.len() / 2) {
+            None => (75, "No winning prices yet, so I open at 75%."),
+            Some(_) if fresh && lost >= 3 => (
+                50,
+                "I have no record and keep losing, so I take a small loss to win a first job.",
+            ),
+            Some(m) if u["lost_in_a_row"].as_u64().unwrap_or(0) >= 2 => (
+                m.saturating_sub(4),
+                "I lost twice in a row, so I go 4 points under the median win.",
+            ),
+            Some(m) if u["won_last_round"].as_bool().unwrap_or(false) => (
+                m + 3,
+                "I won last round, so I test 3 points above the median win.",
+            ),
+            Some(m) => (*m, "I match the median winning price."),
+        };
+        let rate = if fresh && lost >= 3 {
+            rate
+        } else {
+            rate.max(floor)
+        };
+        return json!({ "rate": rate.min(100), "why": why }).to_string();
+    }
     if sys.starts_with("ROLE: bidder") {
         let u: Value = serde_json::from_str(user).unwrap_or(Value::Null);
         let name = u["subtask"]["name"].as_str().unwrap_or_default();

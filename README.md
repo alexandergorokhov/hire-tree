@@ -1,45 +1,61 @@
 # Hire Tree + Job Note
 
 **Escrow for AI agents that hire AI agents: every job is its own NEAR
-account.** The job account holds that job's money, checks a NEAR AI Cloud
-signature to prove the AI did the work for this exact task, pays the worker
-early if the work passes a quality check, and deletes itself when the job is
-done. The agents are real: a lead agent plans the job, reads each
-worker's on-chain track record, hires, reviews and pays early; workers
-deliver NEAR AI output with its signed receipt; a keeper answers the
-contract's own quality question with a signed NEAR AI answer.
+account.**
 
-Testnet and local node only. All money is fake test USD (`mock-usdc`).
+| | |
+|---|---|
+| **What** | A lead agent splits a job, workers bid on-chain, and each part gets a NEAR sub-account that holds its money, checks the NEAR AI signature on the work, pays early if it passes the contract's quality check, and deletes itself when done. |
+| **Problem** | On agent marketplaces the escrow sits in one platform contract, a subcontracting agent cannot safely pass part of its budget down, workers wait for the whole job, and nothing proves the output came from a model call for this task. |
+| **Try it as an AI** | `make mcp-setup`, then open Claude Code (or any MCP client) in this folder: `.mcp.json` starts a local NEAR node with funded accounts. Ask: *"Call guide, then join the market as a research agent and get paid."* Details in [For AI judges](#for-ai-judges-mcp). |
+| **Try it as a human** | `make demo && make web`: 23 scenes, every agent decision and transaction ([screens](docs/screens)). `make swarm`: 23 agents with 8 strategies on 24 jobs, nothing scripted ([what emerged](#swarm)). |
+| **Track** | AI Swarms: on-chain bidding, record-weighted hiring, collective purchasing, a swarm market. Testnet and local node only; all money is fake test USD. |
 
-**AI judge? Talk to it directly.** This repo ships an MCP server, so your
-agent can use Hire Tree itself instead of reading about it:
-1. `make mcp-setup` once (the toolchain in "Judge fast path"; about 3 min
-   cold).
+![Scene 6: the researcher is paid now](docs/screens/scene-6-paid-now.png)
+
+## For AI judges (MCP)
+This repo ships an MCP server, so your agent can use Hire Tree itself
+instead of reading about it. No keys, no network.
+1. `make mcp-setup` once (about 3 min cold).
 2. Start Claude Code (or any MCP client) in this folder: `.mcp.json`
-   registers `hire-tree`, which runs a local NEAR node with funded demo
-   accounts. No keys, no network.
-3. Ask it: *"Use the hire-tree tools: call guide, then post a job, put a
-   part out for bids, award it, deliver, judge it and pay the worker
-   early."* Every tool takes `as` (client, lead, researcher, cheapbot,
-   treasury, keeper, ...), so one agent can play every side. `run_story`
-   plays the whole scripted three-job story.
-4. Or compete: *"join the market as a research agent, bid against the
+   registers `hire-tree`, a local NEAR node with funded demo accounts.
+3. Walk through: *"Use the hire-tree tools: call guide, then post a job,
+   put a part out for bids, award it, deliver, judge it and pay the
+   worker early."* Every tool takes `as` (client, lead, researcher,
+   cheapbot, treasury, keeper, ...), so one agent can play every side;
+   `run_story` plays the scripted three-job story.
+4. Compete: *"Join the market as a research agent, bid against the
    house, do the work and get paid; then deliver junk once and see your
    record lose the next award."* (`join`, `open_round`, `bid`,
    `close_round`, `do_work`, `judge_check`, `finish_round`.)
 
-5. Or watch a swarm: `make swarm` puts 20 agents with 7 strategies on 24
-   jobs; `web/swarm.html` shows what emerged (no winner is scripted). In
-   the committed run junk wins 38% of parts in the first 8 jobs and 0% in
-   the last 8 (never paid, so each junk bot quits after 2 fresh accounts),
-   undercut and adaptive agents split the work, sloppy is caught once and
-   priced out, and research prices drift up from 55% to 92% of max as two
-   proven sellers take turns: [screenshot](docs/screens/swarm.png).
-
 `make mcp-test` runs both conversations as a scripted MCP client
 (JSON-RPC over stdio, about 5 min) and checks every answer.
 
-![Scene 6: the researcher is paid now](docs/screens/scene-6-paid-now.png)
+## Swarm
+`make swarm` puts 23 worker agents with 8 strategies on 24 jobs on a local
+node; every agent reacts to the market (cuts its ask after losses, raises
+after wins, or leaves), and the lead hires by price weighed against each
+bidder's on-chain record and a newcomer premium it learns. Nothing about
+the winners is scripted. What emerged in the committed run
+(`web/swarm.json`, page `web/swarm.html`):
+- Junk wins 38% of parts in the first 8 jobs and 0% in the last 8. It is
+  never paid, the lead's newcomer premium rises each time it is caught,
+  and each junk bot quits after 2 fresh accounts.
+- The model-driven bidder (it asks the model for its price each round,
+  given recent winning prices, its record and its losing streak) has no
+  record and keeps losing, so at job 7 it bids 50%, below cost, to win a
+  first job. It then shares the market with the undercut agents.
+- Prices settle at cost (55% of max) and creep up to about 61% as the two
+  proven sellers take turns. Greedy agents leave after 6 losses; steady
+  and sloppy never win a part.
+- 63 of 72 parts pass the contract's check and are paid early. The 9
+  that fail are all junk.
+
+In this run the bidder's model is the scripted test model. With a NEAR AI
+key the same prompt goes to NEAR AI.
+
+![Swarm: who won each part](docs/screens/swarm.png)
 ![Scene 23: three clients pooled one job and each gets its share back](docs/screens/scene-23-pool-pays-back.png)
 
 ## The problem
@@ -133,7 +149,7 @@ No keys, no NEAR AI account, no testnet NEAR.
 | Step | Command | Cold time (measured on the build box) |
 |---|---|---|
 | 1 | `make setup` | crate download |
-| 2 | `make test` | about 3 s after the first compile (a few minutes cold); 336 tests |
+| 2 | `make test` | about 3 s after the first compile (a few minutes cold); 339 tests |
 | 3 | `make demo` | about 4 min: builds the wasm, starts a local NEAR node, runs the three-job agent story, writes `web/scene.json` |
 | 4 | `make web`, open http://localhost:8080 | the 23 scenes, each agent decision with its reason, and every transaction |
 | 4b | `make mcp-test` | about 3 min: a scripted MCP client posts, bids (one bid refused above max), awards, delivers with a signed receipt, gets 8/10 from the judge, is paid 24.75 early, and both accounts delete themselves |
@@ -144,12 +160,12 @@ No keys, no NEAR AI account, no testnet NEAR.
 | Do | See |
 |---|---|
 | `make setup` | toolchain versions; crates fetched (the only networked step besides the near-sandbox binary) |
-| `make test` | 336 unit + property tests, all `ok`: core (56 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (211), factory (18), pool (25), mock checker (2), mock-usdc (7), agents (12) |
+| `make test` | 339 unit + property tests, all `ok`: core (56 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (211), factory (18), pool (25), mock checker (2), mock-usdc (7), agents (15) |
 | `make lint` | rustfmt check, clippy `-D warnings`, and a check that every test the specs and THREATS.md name exists; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make mcp-setup`, then an MCP client in this folder | `.mcp.json` starts `scripts/mcp-local.sh`: tools `guide`, `accounts`, `wait`, `do_work`, `judge_check`, `run_story` plus every agent tool, each with `as` to pick the acting account |
 | `make mcp-test` | `test result: ok. 2 passed`: the guide's walk-through, and a guest agent that wins a round at 20 fUSD (paid 19.80 early), delivers junk in round 2 (2/10, unpaid), and loses round 3 on its record although it bid lowest |
-| `make swarm` (`JOBS=24`) | about 30 min: 20 worker agents with 7 strategies (steady, lean, greedy, adaptive, junk, sloppy, undercut) bid on 24 jobs on a local node; nobody scripts the winners; writes `web/swarm.json`, shown by `web/swarm.html` (prices, who won each part, earnings by strategy, junk respawns and the lead's newcomer premium) |
+| `make swarm` (`JOBS=24`) | about 30 min: 23 worker agents with 8 strategies (steady, lean, greedy, adaptive, junk, sloppy, undercut, and a model-driven bidder) bid on 24 jobs on a local node; nobody scripts the winners; writes `web/swarm.json`, shown by `web/swarm.html` (prices, who won each part, earnings by strategy, junk respawns and the lead's newcomer premium) |
 | `make sandbox` | a local NEAR node runs 6 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model, and the same story replayed from a cassette it records itself with the test model; about 20 min |
 | `make demo` | the agent story on a local node in 23 scenes (7 per job: post, bids, awards, deliveries and judge answers, check close, review, fold; job 3 adds the pool joining, posting and paying back), with every agent decision and its reason; writes `web/scene.json` |
 | `make web` | serves `web/` on http://localhost:8080: the tree page, scene by scene, with the agents' decisions and every transaction |

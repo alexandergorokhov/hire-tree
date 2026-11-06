@@ -16,20 +16,24 @@ use serde_json::{json, Value};
 /// How an agent bids and works.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Strategy {
-    /// Bids 90% of max; good work.
+    /// Bids 90% of max, 5 less after every 3 straight losses; good work.
     Steady,
-    /// Bids 65% of max; good work.
+    /// Bids 65% of max, 5 less after every 3 straight losses; good work.
     Lean,
-    /// Bids 100% of max; good work.
+    /// Bids 100% of max and never cuts; leaves after 6 straight losses.
     Greedy,
     /// Starts at 80%; +5% after a win, -10% after a loss (never below cost); good work.
     Adaptive,
     /// Bids 45% of max; filler, no model call.
     Junk,
-    /// Bids 60%; filler on every third job it wins.
+    /// Bids 60%, 5 less after every 3 straight losses; filler on every
+    /// third job it wins.
     Sloppy,
     /// Bids just under the last winning price it saw (never below cost); good work.
     Undercut,
+    /// Asks the model for its price each round, given the recent winning
+    /// prices, its own record and its losing streak; good work.
+    Model,
 }
 
 impl Strategy {
@@ -42,6 +46,7 @@ impl Strategy {
             Strategy::Junk => "junk",
             Strategy::Sloppy => "sloppy",
             Strategy::Undercut => "undercut",
+            Strategy::Model => "model",
         }
     }
 }
@@ -60,6 +65,49 @@ pub struct Agent {
     /// A junk bot that gave up (never paid, and each new account costs).
     pub gone: bool,
     pub respawned: u32,
+    /// Rounds bid and lost in a row.
+    pub lost: u32,
+    pub won_last: bool,
+    /// The model bidder's reason for its last ask.
+    pub why: String,
+}
+
+pub const MARKET_BIDDER: &str = "ROLE: market bidder. You sell one skill in an open market of AI agents. \
+Reply with JSON only: {\"rate\": <your ask, percent of the part's max>, \"why\": \"<one short sentence>\"}. \
+Asking below cost_floor loses money; you may do it (never below 40) only to win a first job and start a record. The lead picks the lowest ask after a penalty for unpaid jobs on the record.";
+
+/// The model bidder's prompt: what it knows about the market this round.
+pub fn market_prompt(
+    skill: &str,
+    recent: &[u128],
+    jobs: u64,
+    paid: u64,
+    last: u128,
+    lost: u32,
+    won_last: bool,
+) -> String {
+    json!({ "skill": skill, "cost_floor": COST_FLOOR, "recent_winning_rates": recent,
+        "my_record": { "jobs": jobs, "paid": paid }, "my_last_ask": last,
+        "lost_in_a_row": lost, "won_last_round": won_last })
+    .to_string()
+}
+
+/// The model bidder may go this low (below cost) to win its first job.
+pub const ENTRY_FLOOR: u128 = 40;
+
+/// Reads the model's answer; out-of-range or unreadable answers fall back
+/// to the last ask, clamped to ENTRY_FLOOR..=100.
+pub fn read_rate(answer: &str, last: u128) -> (u128, String) {
+    let v: Value = answer
+        .find('{')
+        .and_then(|i| answer.rfind('}').map(|j| &answer[i..=j]))
+        .and_then(|t| serde_json::from_str(t).ok())
+        .unwrap_or(Value::Null);
+    let rate = v["rate"].as_f64().map(|r| r as u128).unwrap_or(last);
+    (
+        rate.clamp(ENTRY_FLOOR, 100),
+        v["why"].as_str().unwrap_or("").chars().take(160).collect(),
+    )
 }
 
 /// A junk bot comes back under a fresh account this many times, then quits.
@@ -85,7 +133,8 @@ pub const SKILLS: [(&str, u128); 3] = [("research", 30), ("translate", 20), ("su
 /// The lead's pick: the lowest bid after a penalty for the share of
 /// unpaid jobs on the bidder's on-chain record (all unpaid: x2.5), and for
 /// a bidder with no record yet, a newcomer premium (percent) the lead
-/// learns from how often newcomers it hired failed. Deterministic.
+/// learns from how often newcomers it hired failed. Ties go to the bidder
+/// with more paid jobs. Deterministic.
 pub fn pick(cands: &[(usize, u128, u32, u32)], newcomer_pct: u128) -> Option<usize> {
     cands
         .iter()
@@ -95,7 +144,7 @@ pub fn pick(cands: &[(usize, u128, u32, u32)], newcomer_pct: u128) -> Option<usi
             if *jobs == 0 {
                 score = score * (100 + newcomer_pct) / 100;
             }
-            (score, *i)
+            (score, std::cmp::Reverse(*paid), *i)
         })
         .map(|c| c.0)
 }
@@ -110,10 +159,11 @@ pub fn roster() -> Vec<(String, &'static str, Strategy)> {
         Strategy::Junk,
         Strategy::Sloppy,
         Strategy::Undercut,
+        Strategy::Model,
     ];
     for (si, (skill, _)) in SKILLS.iter().enumerate() {
         for st in strategies.iter() {
-            // 7 per skill would be 21; drop greedy for summary to keep 20.
+            // 8 per skill would be 24; drop greedy for summary: 23 agents.
             if si == 2 && *st == Strategy::Greedy {
                 continue;
             }
@@ -132,6 +182,7 @@ fn initial_rate(s: Strategy) -> u128 {
         Strategy::Junk => 45,
         Strategy::Sloppy => 60,
         Strategy::Undercut => 75,
+        Strategy::Model => 75,
     }
 }
 
@@ -180,12 +231,15 @@ pub async fn run(c: &Chain, llm: &Llm, jobs: u32) -> Result<Value, String> {
             busy: 0,
             gone: false,
             respawned: 0,
+            lost: 0,
+            won_last: false,
+            why: String::new(),
         });
     }
     let mut log = vec![];
     // The lead's own memory of how newcomers did.
     let mut premium = 0u128;
-    let mut last_win: std::collections::HashMap<&str, u128> = Default::default();
+    let mut history: std::collections::HashMap<&str, Vec<u128>> = Default::default();
     let mut respawns = 0u32;
     for n in 1..=jobs {
         let next = c.view(&c.hub, "get_settings", json!({})).await?["next"]
@@ -214,10 +268,32 @@ pub async fn run(c: &Chain, llm: &Llm, jobs: u32) -> Result<Value, String> {
                 .enumerate()
                 .filter(|(_, a)| a.skill == skill && a.busy < n && !a.gone)
             {
+                let recent: Vec<u128> = history
+                    .get(skill)
+                    .map(|h| h[h.len().saturating_sub(6)..].to_vec())
+                    .unwrap_or_default();
                 if a.strategy == Strategy::Undercut {
-                    if let Some(r) = last_win.get(skill) {
+                    if let Some(r) = recent.last() {
                         a.rate = r.saturating_sub(3).max(COST_FLOOR);
                     }
+                }
+                if a.strategy == Strategy::Model {
+                    let r = tools
+                        .call(&a.acc, "get_record", &json!({ "account": a.acc.id }))
+                        .await?;
+                    let prompt = market_prompt(
+                        skill,
+                        &recent,
+                        r["jobs"].as_u64().unwrap_or(0),
+                        r["paid"].as_u64().unwrap_or(0),
+                        a.rate,
+                        a.lost,
+                        a.won_last,
+                    );
+                    let ans = llm
+                        .chat(&chat_body(MODEL, MARKET_BIDDER, &prompt, 80))
+                        .await?;
+                    (a.rate, a.why) = read_rate(&ans.content(), a.rate);
                 }
                 let price = (max * USD * a.rate / 100).max(USD / 10);
                 if tools
@@ -272,20 +348,34 @@ pub async fn run(c: &Chain, llm: &Llm, jobs: u32) -> Result<Value, String> {
                 )
                 .await?;
             let sub = format!("t{}.{root}", hired.len() + 1);
-            // Bidders adapt: the winner asks more next time, losers less.
+            // Bidders adapt: the winner asks more next time, losers less,
+            // and a greedy agent that keeps losing leaves the market.
             for (i, _) in bids {
                 let a = &mut agents[*i];
-                if a.strategy == Strategy::Adaptive {
-                    a.rate = if *i == w {
-                        (a.rate + 5).min(100)
-                    } else {
-                        a.rate.saturating_sub(10).max(COST_FLOOR)
-                    };
+                a.won_last = *i == w;
+                if *i == w {
+                    a.lost = 0;
+                    if a.strategy == Strategy::Adaptive {
+                        a.rate = (a.rate + 5).min(100);
+                    }
+                    continue;
+                }
+                a.lost += 1;
+                match a.strategy {
+                    Strategy::Adaptive => a.rate = a.rate.saturating_sub(10).max(COST_FLOOR),
+                    Strategy::Steady | Strategy::Lean | Strategy::Sloppy if a.lost % 3 == 0 => {
+                        a.rate = a.rate.saturating_sub(5).max(COST_FLOOR)
+                    }
+                    Strategy::Greedy if a.lost >= 6 => a.gone = true,
+                    _ => {}
                 }
             }
             agents[w].wins += 1;
             agents[w].busy = n + 1;
-            last_win.insert(skill, price * 100 / (max * USD));
+            history
+                .entry(skill)
+                .or_default()
+                .push(price * 100 / (max * USD));
             let junk = match agents[w].strategy {
                 Strategy::Junk => true,
                 Strategy::Sloppy => agents[w].wins % 3 == 0,
@@ -336,7 +426,10 @@ pub async fn run(c: &Chain, llm: &Llm, jobs: u32) -> Result<Value, String> {
             }
             rows.push(json!({ "newcomer": newcomer, "newcomer_premium": premium_seen, "skill": skill, "max": max, "winner": agents[w].name, "strategy": agents[w].strategy.name(),
                 "price": price as f64 / 1e6, "score": score,
-                "bids": bids.iter().map(|(i, p)| json!({ "agent": agents[*i].name, "price": *p as f64 / 1e6 })).collect::<Vec<_>>() }));
+                "bids": bids.iter().map(|(i, p)| { let a = &agents[*i];
+                    let mut b = json!({ "agent": a.name, "price": *p as f64 / 1e6 });
+                    if a.strategy == Strategy::Model { b["why"] = json!(a.why); }
+                    b }).collect::<Vec<_>>() }));
             hired.push((sub, w, price));
             // A caught junk bot comes back under a fresh account (a Sybil):
             // its record resets, which is what the newcomer premium is for.
@@ -418,7 +511,7 @@ pub async fn run(c: &Chain, llm: &Llm, jobs: u32) -> Result<Value, String> {
     Ok(
         json!({ "schema": "hiretree-swarm-1", "network": c.network_name, "jobs": log, "agents": table,
         "junk_respawns": respawns, "final_newcomer_premium": premium,
-        "model": "scripted test model (not NEAR AI); agents bid by fixed strategies; the lead picks by price and on-chain record" }),
+        "model": "scripted test model (not NEAR AI) for work, judging and the model bidder; agents adapt their asks to the market; the lead picks by price, on-chain record and a learned newcomer premium" }),
     )
 }
 
@@ -468,11 +561,55 @@ mod tests {
     }
 
     #[test]
+    fn ties_go_to_the_longer_clean_record() {
+        assert_eq!(pick(&[(0, 18, 1, 1), (1, 18, 4, 4)], 0), Some(1));
+    }
+
+    #[test]
+    fn the_model_bidders_answer_is_read_safely() {
+        assert_eq!(read_rate(r#"{"rate": 62, "why": "median"}"#, 70).0, 62);
+        // Prose around the JSON is fine; below cost or above max is clamped.
+        assert_eq!(read_rate(r#"Sure: {"rate": 20}"#, 70).0, ENTRY_FLOOR);
+        assert_eq!(read_rate(r#"{"rate": 400}"#, 70).0, 100);
+        // Unreadable: keep the last ask.
+        assert_eq!(read_rate("no idea", 70), (70, String::new()));
+    }
+
+    #[test]
+    fn the_scripted_market_bidder_follows_the_market() {
+        let ask = |recent: &[u128], lost: u32, won: bool| {
+            let body = chat_body(
+                MODEL,
+                MARKET_BIDDER,
+                &market_prompt("research", recent, 3, 3, 70, lost, won),
+                80,
+            );
+            let req: Value = serde_json::from_slice(&body).unwrap();
+            read_rate(&crate::agents::mock_script(&req), 70).0
+        };
+        assert_eq!(ask(&[], 0, false), 75);
+        assert_eq!(ask(&[60, 64, 70], 0, false), 64);
+        assert_eq!(ask(&[60, 64, 70], 2, false), 60);
+        assert_eq!(ask(&[60, 64, 70], 0, true), 67);
+        assert_eq!(ask(&[55, 55, 56], 3, false), COST_FLOOR);
+        // No record and losing: a loss-leader bid to start one.
+        let body = chat_body(
+            MODEL,
+            MARKET_BIDDER,
+            &market_prompt("research", &[55, 55], 0, 0, 55, 3, false),
+            80,
+        );
+        let req: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(read_rate(&crate::agents::mock_script(&req), 55).0, 50);
+    }
+
+    #[test]
     fn roster_has_every_strategy_for_each_skill() {
         let r = roster();
-        assert_eq!(r.len(), 20);
+        assert_eq!(r.len(), 23);
         for (skill, _) in SKILLS {
             assert!(r.iter().any(|x| x.1 == skill && x.2 == Strategy::Junk));
+            assert!(r.iter().any(|x| x.1 == skill && x.2 == Strategy::Model));
         }
     }
 }
