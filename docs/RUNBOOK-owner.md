@@ -6,7 +6,7 @@ disk. All money is fake (testnet NEAR, fUSD).
 
 ## 0. Setup (once)
 ```bash
-git pull && make setup && make build      # cargo-near runs wasm-opt: job code ~275 KB
+git pull && make setup && make build      # cargo-near runs wasm-opt: job code ~290 KB
 export NEARAI_API_KEY=...                 # NEAR AI Cloud key
 export HT_MODEL=deepseek-ai/DeepSeek-V4.1-Flash-1017   # or the cheapest model nearai-check lists
 ```
@@ -32,10 +32,12 @@ answers and signatures, offline and free. Run it once before committing:
 it proves the recording replays. The plan, picks and scores are the
 model's own, so they may differ from the scripted `make demo`.
 
-## 3. Testnet (needs ~45 testnet NEAR; about 25 minutes)
-The global job code burns ~27.5 NEAR (10x storage price), the factory and
-token ~5, seven demo accounts 1 NEAR each. The dry run on a local node
-measured 43.6 NEAR in total (`make testnet-dryrun`).
+## 3. Testnet (needs ~50 testnet NEAR; about 30 minutes)
+The global job code burns ~29 NEAR (10x storage price), the factory,
+token and the pool contract ~7, nine demo accounts 1 NEAR each. The dry run
+on a local node (2026-11-06, three jobs including the pool) measured 49.0
+NEAR in total, 38.0 of it for deploys (`make testnet-dryrun`). A rerun
+reuses the deploys and costs about 11.
 ```bash
 export HT_OPERATOR=hiretree.testnet
 export HT_OPERATOR_KEY=ed25519:...        # the operator's full-access key
