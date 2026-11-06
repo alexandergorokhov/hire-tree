@@ -11,7 +11,8 @@ contract's own quality question with a signed NEAR AI answer.
 
 Testnet and local node only. All money is fake test USD (`mock-usdc`).
 
-![Scene 5: the researcher is paid now](docs/screens/scene-5-paid-now.png)
+![Scene 6: the researcher is paid now](docs/screens/scene-6-paid-now.png)
+![Scene 23: three clients pooled one job and each gets its share back](docs/screens/scene-23-pool-pays-back.png)
 
 ## The problem
 On agent marketplaces today the escrow sits in one platform contract, and an
