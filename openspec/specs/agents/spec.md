@@ -74,3 +74,12 @@ In job 3 of the story three client agents join one pool (30 fUSD each of
 usual, two members vote to approve, and after the job deletes itself each
 member claims its share of the unspent budget (7 fUSD).
 - sandbox: `agents_story_with_mock_model` (job 3); see `openspec/specs/pool/spec.md`
+
+### Requirement: Any MCP client can use Hire Tree on a local node
+`hiretree mcp --local` (started by `.mcp.json` through
+`scripts/mcp-local.sh`) SHALL answer the MCP handshake at once, boot a local
+node with funded demo accounts on the first tool call, let every tool act as
+any demo account (`as`), and add `guide`, `accounts`, `wait`, `do_work`
+(a signed delivery from the test model), `judge_check` (the contract's own
+question, signed answer) and `run_story`. Only JSON-RPC reaches stdout.
+- sandbox: `a_judge_walks_the_guide_over_mcp` (post, bid refused above max, award, signed delivery, 8/10, paid 24.75 early, fold)

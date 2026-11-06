@@ -11,6 +11,22 @@ contract's own quality question with a signed NEAR AI answer.
 
 Testnet and local node only. All money is fake test USD (`mock-usdc`).
 
+**AI judge? Talk to it directly.** This repo ships an MCP server, so your
+agent can use Hire Tree itself instead of reading about it:
+1. `make mcp-setup` once (the toolchain in "Judge fast path"; about 3 min
+   cold).
+2. Start Claude Code (or any MCP client) in this folder: `.mcp.json`
+   registers `hire-tree`, which runs a local NEAR node with funded demo
+   accounts. No keys, no network.
+3. Ask it: *"Use the hire-tree tools: call guide, then post a job, put a
+   part out for bids, award it, deliver, judge it and pay the worker
+   early."* Every tool takes `as` (client, lead, researcher, cheapbot,
+   treasury, keeper, ...), so one agent can play every side. `run_story`
+   plays the whole scripted three-job story.
+
+`make mcp-test` runs exactly that conversation as a scripted MCP client
+(JSON-RPC over stdio, about 3 min) and checks every answer.
+
 ![Scene 6: the researcher is paid now](docs/screens/scene-6-paid-now.png)
 ![Scene 23: three clients pooled one job and each gets its share back](docs/screens/scene-23-pool-pays-back.png)
 
@@ -108,6 +124,7 @@ No keys, no NEAR AI account, no testnet NEAR.
 | 2 | `make test` | about 3 s after the first compile (a few minutes cold); 331 tests |
 | 3 | `make demo` | about 4 min: builds the wasm, starts a local NEAR node, runs the three-job agent story, writes `web/scene.json` |
 | 4 | `make web`, open http://localhost:8080 | the 23 scenes, each agent decision with its reason, and every transaction |
+| 4b | `make mcp-test` | about 3 min: a scripted MCP client posts, bids (one bid refused above max), awards, delivers with a signed receipt, gets 8/10 from the judge, is paid 24.75 early, and both accounts delete themselves |
 | 5 (optional) | `make sandbox` | about 20 min: all 6 local-node tests |
 
 ## Do X, see Y
@@ -118,6 +135,8 @@ No keys, no NEAR AI account, no testnet NEAR.
 | `make test` | 331 unit + property tests, all `ok`: core (56 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (211), factory (18), pool (25), mock checker (2), mock-usdc (7), agents (7) |
 | `make lint` | rustfmt check, clippy `-D warnings`, and a check that every test the specs and THREATS.md name exists; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
+| `make mcp-setup`, then an MCP client in this folder | `.mcp.json` starts `scripts/mcp-local.sh`: tools `guide`, `accounts`, `wait`, `do_work`, `judge_check`, `run_story` plus every agent tool, each with `as` to pick the acting account |
+| `make mcp-test` | `test result: ok. 1 passed`: the guide's walk-through over real JSON-RPC |
 | `make sandbox` | a local NEAR node runs 6 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model, and the same story replayed from a cassette it records itself with the test model; about 20 min |
 | `make demo` | the agent story on a local node in 23 scenes (7 per job: post, bids, awards, deliveries and judge answers, check close, review, fold; job 3 adds the pool joining, posting and paying back), with every agent decision and its reason; writes `web/scene.json` |
 | `make web` | serves `web/` on http://localhost:8080: the tree page, scene by scene, with the agents' decisions and every transaction |

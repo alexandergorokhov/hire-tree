@@ -6,6 +6,7 @@
 //! hiretree nearai-check            # one tiny signed call; GO / NO-GO
 //! hiretree verify-cassette FILE    # re-check every signature offline
 //! hiretree mcp --as NAME           # stdio MCP server on testnet as NAME.<operator>
+//! hiretree mcp --local             # stdio MCP playground on a local node (no keys)
 //! ```
 //! Env: NEARAI_API_KEY, HT_MODEL, HT_OPERATOR, HT_OPERATOR_KEY, HT_RPC.
 
@@ -170,6 +171,9 @@ async fn nearai_check() {
 }
 
 async fn mcp(args: &[String]) {
+    if args.iter().any(|a| a == "--local") {
+        return hire_tree_agents::judge::serve().await;
+    }
     let c = Chain::testnet_connect().unwrap_or_else(|e| die(e));
     // An outside agent brings its own account and key; demo roles may use
     // keys derived from the operator key, but never the factory or token.
@@ -220,7 +224,9 @@ async fn main() {
         }
         Some("mcp") => mcp(&args).await,
         _ => {
-            eprintln!("usage: hiretree demo|nearai-check|verify-cassette FILE|mcp --as NAME");
+            eprintln!(
+                "usage: hiretree demo|nearai-check|verify-cassette FILE|mcp --as NAME|mcp --local"
+            );
             std::process::exit(2)
         }
     }

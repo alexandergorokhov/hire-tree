@@ -88,6 +88,14 @@ endef
 HT = cargo run --quiet --locked --bin hiretree --
 CASSETTE ?= $(CURDIR)/demo/cassette.json
 
+.PHONY: mcp-setup
+mcp-setup: build ## Build what the MCP playground needs (.mcp.json runs scripts/mcp-local.sh)
+	cd agents && cargo build --locked --bin hiretree
+
+.PHONY: mcp-test
+mcp-test: mcp-setup ## An MCP client session against the playground: post, bid, award, deliver, judge, pay now, settle (about 3 min)
+	cd agents && cargo test --locked --test judge -- --nocapture
+
 .PHONY: demo
 demo: build ## The agent story on a local NEAR node (mock model, free); writes web/scene.json (about 4 min)
 	@$(SBX) $(HT) demo --llm mock --scene $(CURDIR)/web/scene.json

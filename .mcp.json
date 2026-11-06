@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "hire-tree": {
+      "command": "bash",
+      "args": ["scripts/mcp-local.sh"]
+    }
+  }
+}
