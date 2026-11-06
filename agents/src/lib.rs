@@ -9,6 +9,7 @@
 //! - [`agents`]: the agents and the two-job story.
 //! - [`scene`]: writes `out/scene.json` for the web page.
 //! - [`mcp`]: a stdio MCP server exposing [`tools`].
+//! - [`swarm`]: `hiretree swarm`, many strategy agents over many jobs.
 //! - [`judge`]: `hiretree mcp --local`, a playground on a local node for any MCP client.
 
 pub mod agents;
@@ -17,4 +18,5 @@ pub mod judge;
 pub mod llm;
 pub mod mcp;
 pub mod scene;
+pub mod swarm;
 pub mod tools;

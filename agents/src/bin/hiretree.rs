@@ -7,6 +7,7 @@
 //! hiretree verify-cassette FILE    # re-check every signature offline
 //! hiretree mcp --as NAME           # stdio MCP server on testnet as NAME.<operator>
 //! hiretree mcp --local             # stdio MCP playground on a local node (no keys)
+//! hiretree swarm [--jobs N] [--out FILE]   # 17 strategy agents over N jobs on a local node
 //! ```
 //! Env: NEARAI_API_KEY, HT_MODEL, HT_OPERATOR, HT_OPERATOR_KEY, HT_RPC.
 
@@ -223,6 +224,24 @@ async fn main() {
             );
         }
         Some("mcp") => mcp(&args).await,
+        Some("swarm") => {
+            let jobs: u32 = arg(&args, "--jobs")
+                .and_then(|j| j.parse().ok())
+                .unwrap_or(24);
+            let out = arg(&args, "--out").unwrap_or_else(|| format!("{}/swarm.json", out_dir()));
+            let llm = Llm::Mock(Mock::new(
+                hire_tree_agents::judge::MODEL,
+                Box::new(mock_script),
+            ));
+            let c =
+                Chain::sandbox(&llm.signer().unwrap(), Some(hire_tree_agents::judge::MODEL)).await;
+            let v = hire_tree_agents::swarm::run(&c, &llm, jobs)
+                .await
+                .unwrap_or_else(|e| die(e));
+            std::fs::write(&out, serde_json::to_string_pretty(&v).unwrap())
+                .unwrap_or_else(|e| die(e.to_string()));
+            eprintln!("swarm written to {out}");
+        }
         _ => {
             eprintln!(
                 "usage: hiretree demo|nearai-check|verify-cassette FILE|mcp --as NAME|mcp --local"

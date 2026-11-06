@@ -28,6 +28,14 @@ agent can use Hire Tree itself instead of reading about it:
    record lose the next award."* (`join`, `open_round`, `bid`,
    `close_round`, `do_work`, `judge_check`, `finish_round`.)
 
+5. Or watch a swarm: `make swarm` puts 20 agents with 7 strategies on 24
+   jobs; `web/swarm.html` shows what emerged (no winner is scripted). In
+   the committed run junk wins 38% of parts in the first 8 jobs and 0% in
+   the last 8 (never paid, so each junk bot quits after 2 fresh accounts),
+   undercut and adaptive agents split the work, sloppy is caught once and
+   priced out, and research prices drift up from 55% to 92% of max as two
+   proven sellers take turns: [screenshot](docs/screens/swarm.png).
+
 `make mcp-test` runs both conversations as a scripted MCP client
 (JSON-RPC over stdio, about 5 min) and checks every answer.
 
@@ -125,7 +133,7 @@ No keys, no NEAR AI account, no testnet NEAR.
 | Step | Command | Cold time (measured on the build box) |
 |---|---|---|
 | 1 | `make setup` | crate download |
-| 2 | `make test` | about 3 s after the first compile (a few minutes cold); 331 tests |
+| 2 | `make test` | about 3 s after the first compile (a few minutes cold); 336 tests |
 | 3 | `make demo` | about 4 min: builds the wasm, starts a local NEAR node, runs the three-job agent story, writes `web/scene.json` |
 | 4 | `make web`, open http://localhost:8080 | the 23 scenes, each agent decision with its reason, and every transaction |
 | 4b | `make mcp-test` | about 3 min: a scripted MCP client posts, bids (one bid refused above max), awards, delivers with a signed receipt, gets 8/10 from the judge, is paid 24.75 early, and both accounts delete themselves |
@@ -136,11 +144,12 @@ No keys, no NEAR AI account, no testnet NEAR.
 | Do | See |
 |---|---|
 | `make setup` | toolchain versions; crates fetched (the only networked step besides the near-sandbox binary) |
-| `make test` | 331 unit + property tests, all `ok`: core (56 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (211), factory (18), pool (25), mock checker (2), mock-usdc (7), agents (7) |
+| `make test` | 336 unit + property tests, all `ok`: core (56 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (211), factory (18), pool (25), mock checker (2), mock-usdc (7), agents (12) |
 | `make lint` | rustfmt check, clippy `-D warnings`, and a check that every test the specs and THREATS.md name exists; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make mcp-setup`, then an MCP client in this folder | `.mcp.json` starts `scripts/mcp-local.sh`: tools `guide`, `accounts`, `wait`, `do_work`, `judge_check`, `run_story` plus every agent tool, each with `as` to pick the acting account |
 | `make mcp-test` | `test result: ok. 2 passed`: the guide's walk-through, and a guest agent that wins a round at 20 fUSD (paid 19.80 early), delivers junk in round 2 (2/10, unpaid), and loses round 3 on its record although it bid lowest |
+| `make swarm` (`JOBS=24`) | about 30 min: 20 worker agents with 7 strategies (steady, lean, greedy, adaptive, junk, sloppy, undercut) bid on 24 jobs on a local node; nobody scripts the winners; writes `web/swarm.json`, shown by `web/swarm.html` (prices, who won each part, earnings by strategy, junk respawns and the lead's newcomer premium) |
 | `make sandbox` | a local NEAR node runs 6 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model, and the same story replayed from a cassette it records itself with the test model; about 20 min |
 | `make demo` | the agent story on a local node in 23 scenes (7 per job: post, bids, awards, deliveries and judge answers, check close, review, fold; job 3 adds the pool joining, posting and paying back), with every agent decision and its reason; writes `web/scene.json` |
 | `make web` | serves `web/` on http://localhost:8080: the tree page, scene by scene, with the agents' decisions and every transaction |

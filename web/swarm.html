@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hire Tree Swarm</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface: #f6f5f2; --card: #fcfcfb; --line: #e3e2dd; --grid: #ecebe7;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #77756f;
+  --accent: #2a78d6;
+  --s-steady: #2a78d6; --s-lean: #eb6834; --s-greedy: #1baf7a; --s-adaptive: #eda100; --s-junk: #e87ba4; --s-sloppy: #008300; --s-undercut: #6250d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface: #121211; --card: #1a1a19; --line: #2e2d2b; --grid: #262524;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #9a998f;
+    --accent: #3987e5;
+    --s-steady: #3987e5; --s-lean: #d95926; --s-greedy: #199e70; --s-adaptive: #c98500; --s-junk: #d55181; --s-sloppy: #008300; --s-undercut: #9085e9;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: #121211; --card: #1a1a19; --line: #2e2d2b; --grid: #262524;
+  --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #9a998f;
+  --accent: #3987e5;
+  --s-steady: #3987e5; --s-lean: #d95926; --s-greedy: #199e70; --s-adaptive: #c98500; --s-junk: #d55181; --s-sloppy: #008300; --s-undercut: #9085e9;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface); color: var(--text-primary);
+  font: 15px/1.5 -apple-system, "Segoe UI", Inter, system-ui, sans-serif; }
+main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 26px; margin: 0 0 4px; }
+h2 { font-size: 17px; margin: 0 0 4px; }
+.sub { color: var(--text-secondary); margin: 0 0 20px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+.note { color: var(--text-muted); font-size: 13px; margin: 2px 0 12px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.stat b { display: block; font-size: 28px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.stat span { color: var(--text-secondary); font-size: 13px; }
+svg text { fill: var(--text-muted); font-size: 11px; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.grid { display: grid; grid-template-columns: 52px repeat(3, 1fr); gap: 2px; font-size: 12px; }
+.grid div { padding: 4px 6px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grid .h { color: var(--text-muted); }
+.cell { color: var(--text-primary); background: var(--grid); display: flex; gap: 6px; align-items: center; }
+.cell.unpaid { text-decoration: line-through; color: var(--text-muted); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+th { color: var(--text-muted); font-weight: 500; }
+td.n, th.n { text-align: right; }
+.wrap { overflow-x: auto; }
+#tip { position: fixed; pointer-events: none; background: var(--card); color: var(--text-primary); border: 1px solid var(--line);
+  border-radius: 8px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.12); display: none; z-index: 9; }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Hire Tree swarm</h1>
+  <p class="sub" id="sub">Worker agents with different bidding strategies compete for jobs on a local NEAR node.</p>
+  <div class="stats" id="stats"></div>
+
+  <div class="card">
+    <h2>Winning price, % of the part's max</h2>
+    <p class="note">Mean over the three parts of each job. Hover a point for the junk wins and the lead's newcomer premium at that job.</p>
+    <div class="wrap"><svg id="price" width="100%" height="230" role="img" aria-label="Winning price per job"></svg></div>
+  </div>
+
+  <div class="card">
+    <h2>Who won each part</h2>
+    <p class="note">Struck through: the work failed the contract's check and was not paid.</p>
+    <div class="legend" id="legend"></div>
+    <div class="grid" id="wins"></div>
+  </div>
+
+  <div class="card">
+    <h2>Earned by strategy (fUSD, paid early)</h2>
+    <div class="wrap"><svg id="earn" width="100%" height="250" role="img" aria-label="Earnings by strategy"></svg></div>
+  </div>
+
+  <div class="card">
+    <h2>Every agent</h2>
+    <div class="wrap"><table id="agents"></table></div>
+  </div>
+  <p class="note" id="foot"></p>
+</main>
+<div id="tip"></div>
+<script>
+const S = ['steady', 'lean', 'greedy', 'adaptive', 'junk', 'sloppy', 'undercut'];
+const col = s => `var(--s-${s})`;
+const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const tip = document.getElementById('tip');
+function showTip(e, html) { tip.innerHTML = html; tip.style.display = 'block';
+  tip.style.left = Math.min(e.clientX + 12, innerWidth - 200) + 'px'; tip.style.top = (e.clientY + 12) + 'px'; }
+function hideTip() { tip.style.display = 'none'; }
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, parent) { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); parent && parent.appendChild(n); return n; }
+
+function priceChart(d) {
+  const svg = document.getElementById('price'); svg.innerHTML = '';
+  const W = svg.clientWidth || 900, H = 230, L = 36, R = 12, T = 10, B = 26;
+  const pts = d.jobs.map(j => { const ps = j.parts; return { n: j.n, v: ps.reduce((a, p) => a + p.price / p.max, 0) / Math.max(ps.length, 1) * 100,
+    junk: ps.filter(p => p.strategy === 'junk').length, prem: ps.length ? ps[ps.length - 1].newcomer_premium : 0 }; });
+  const x = i => L + (W - L - R) * (pts.length < 2 ? 0.5 : i / (pts.length - 1));
+  const y = v => T + (H - T - B) * (1 - v / 100);
+  for (const g of [0, 25, 50, 75, 100]) { el('line', { x1: L, x2: W - R, y1: y(g), y2: y(g), stroke: 'var(--grid)' }, svg);
+    el('text', { x: L - 6, y: y(g) + 4, 'text-anchor': 'end' }, svg).textContent = g + '%'; }
+  pts.forEach((p, i) => { if (i % Math.ceil(pts.length / 12) === 0) el('text', { x: x(i), y: H - 6, 'text-anchor': 'middle' }, svg).textContent = 'job ' + p.n; });
+  el('path', { d: pts.map((p, i) => (i ? 'L' : 'M') + x(i) + ' ' + y(p.v)).join(''), fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2 }, svg);
+  pts.forEach((p, i) => {
+    el('circle', { cx: x(i), cy: y(p.v), r: 4, fill: 'var(--accent)', stroke: 'var(--card)', 'stroke-width': 2 }, svg);
+    const hit = el('rect', { x: x(i) - 12, y: T, width: 24, height: H - T - B, fill: 'transparent' }, svg);
+    hit.addEventListener('mousemove', e => showTip(e, `<b>Job ${p.n}</b><br>winning price ${p.v.toFixed(0)}% of max<br>junk wins: ${p.junk}<br>newcomer premium: +${p.prem}%`));
+    hit.addEventListener('mouseleave', hideTip);
+  });
+}
+
+function earnChart(d) {
+  const svg = document.getElementById('earn'); svg.innerHTML = '';
+  const W = svg.clientWidth || 900, H = 250, L = 70, R = 60, T = 6, gap = 6;
+  const tot = S.map(s => ({ s, v: d.agents.filter(a => a.strategy === s).reduce((a, x) => a + x.earned, 0),
+    wins: d.agents.filter(a => a.strategy === s).reduce((a, x) => a + x.wins, 0) }));
+  const max = Math.max(...tot.map(t => t.v), 1), bh = (H - T * 2) / S.length - gap;
+  tot.forEach((t, i) => {
+    const yy = T + i * (bh + gap), w = (W - L - R) * t.v / max;
+    el('text', { x: L - 8, y: yy + bh / 2 + 4, 'text-anchor': 'end' }, svg).textContent = t.s;
+    const r = el('rect', { x: L, y: yy, width: Math.max(w, 2), height: bh, rx: 4, fill: col(t.s) }, svg);
+    el('text', { x: L + Math.max(w, 2) + 6, y: yy + bh / 2 + 4 }, svg).textContent = t.v.toFixed(2);
+    r.addEventListener('mousemove', e => showTip(e, `<b>${esc(t.s)}</b><br>${t.v.toFixed(2)} fUSD earned<br>${t.wins} parts won`));
+    r.addEventListener('mouseleave', hideTip);
+  });
+}
+
+function render(d) {
+  const parts = d.jobs.flatMap(j => j.parts);
+  const third = Math.max(1, Math.floor(d.jobs.length / 3));
+  const junkShare = js => { const ps = js.flatMap(j => j.parts); return ps.length ? ps.filter(p => p.strategy === 'junk').length / ps.length * 100 : 0; };
+  const paid = parts.filter(p => p.paid).length;
+  document.getElementById('sub').textContent = `${d.agents.length} worker agents, ${new Set(d.agents.map(a => a.strategy)).size} strategies, ${d.jobs.length} jobs on ${d.network}. ${d.model}.`;
+  document.getElementById('stats').innerHTML = [
+    [d.jobs.length, 'jobs, each its own NEAR account'],
+    [parts.length, 'parts awarded by on-chain bidding'],
+    [junkShare(d.jobs.slice(0, third)).toFixed(0) + '%', `junk wins, first ${third} jobs`],
+    [junkShare(d.jobs.slice(-third)).toFixed(0) + '%', `junk wins, last ${third} jobs`],
+    [paid + ' / ' + parts.length, 'parts passed the check and were paid early'],
+    [d.junk_respawns ?? 0, 'times a caught junk bot came back under a new account (each quits after 2)'],
+    ['+' + (d.final_newcomer_premium ?? 0) + '%', 'newcomer premium the lead learned'],
+  ].map(([b, s]) => `<div class="stat"><b>${esc(b)}</b><span>${esc(s)}</span></div>`).join('');
+  document.getElementById('legend').innerHTML = S.map(s => `<span><i class="sw" style="background:${col(s)}"></i>${s}</span>`).join('');
+  const g = document.getElementById('wins');
+  g.innerHTML = '<div class="h">job</div><div class="h">research (max 30)</div><div class="h">translate (max 20)</div><div class="h">summary (max 10)</div>' +
+    d.jobs.map(j => `<div class="h">${j.n}</div>` + ['research', 'translate', 'summary'].map(k => {
+      const p = j.parts.find(x => x.skill === k);
+      if (!p) return '<div class="cell">no award</div>';
+      const bids = p.bids.map(b => `${esc(b.agent)} ${b.price.toFixed(2)}`).join('<br>');
+      return `<div class="cell${p.paid ? '' : ' unpaid'}" data-tip="${esc(`<b>${p.winner}</b> won at ${p.price.toFixed(2)}, score ${p.score}/10<br>${bids}`)}"><i class="sw" style="background:${col(p.strategy)}"></i>${esc(p.winner)} ${p.price.toFixed(2)}</div>`;
+    }).join('')).join('');
+  g.querySelectorAll('[data-tip]').forEach(c => { c.addEventListener('mousemove', e => showTip(e, c.dataset.tip)); c.addEventListener('mouseleave', hideTip); });
+  const rows = [...d.agents].sort((a, b) => b.earned - a.earned);
+  document.getElementById('agents').innerHTML = '<tr><th>agent</th><th>strategy</th><th class="n">won</th><th class="n">paid</th><th class="n">earned</th><th class="n">last ask</th></tr>' +
+    rows.map(a => `<tr><td>${esc(a.agent)}</td><td><i class="sw" style="background:${col(a.strategy)}"></i>${esc(a.strategy)}</td><td class="n">${a.wins}</td><td class="n">${a.record.paid ?? 0}</td><td class="n">${a.earned.toFixed(2)}</td><td class="n">${a.final_rate}%</td></tr>`).join('');
+  document.getElementById('foot').textContent = 'Regenerate with make swarm (writes web/swarm.json). All money is fake test USD.';
+  priceChart(d); earnChart(d);
+  addEventListener('resize', () => { priceChart(d); earnChart(d); });
+}
+fetch('swarm.json').then(r => r.json()).then(render).catch(e => { document.getElementById('sub').textContent = 'No swarm.json yet: run make swarm. (' + e + ')'; });
+</script>
+</body>
+</html>
