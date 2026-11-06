@@ -17,7 +17,7 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
          s(json!({ "job": str_, "worker": str_, "amount": str_, "task": str_, "sub": str_ }), &["job", "worker", "amount", "task"])),
         ("open_bids", "Manager: put a subtask out for bids on the job account (max = the most it will pay, fUSD units as a string; secs 10..3600). Returns the slot number.",
          s(json!({ "job": str_, "task": str_, "max": str_, "secs": { "type": "integer" } }), &["job", "task", "max", "secs"])),
-        ("bid", "Worker: bid `price` (at most the slot's max) on an open slot; a second bid replaces the first.",
+        ("bid", "Worker: bid `price` (at most the slot's max) on an open slot; a second bid replaces the first. Attaches 0.001 NEAR (the bid's storage).",
          s(json!({ "job": str_, "slot": { "type": "integer" }, "price": str_ }), &["job", "slot", "price"])),
         ("get_bids", "Anyone: a bid slot with its bids and award.", s(json!({ "job": str_, "slot": { "type": "integer" } }), &["job", "slot"])),
         ("award", "Manager: after bidding closes, hire one bidder at its own bid (a new sub-account). Attaches 0.035 NEAR.",
@@ -160,7 +160,7 @@ impl Tools<'_> {
                     &id(a, "job")?,
                     "bid",
                     json!({ "slot": a["slot"].as_u64().ok_or("missing slot")?, "price": s(a, "price")? }),
-                    zero,
+                    NearToken::from_millinear(1),
                 )
                 .await
             }

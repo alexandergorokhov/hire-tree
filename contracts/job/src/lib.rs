@@ -113,6 +113,8 @@ pub const CHECK_WINDOW_SECS: u64 = 300;
 
 /// Bidding: at most this many open-or-awarded slots per job, and bids per slot.
 pub const MAX_BID_SLOTS: usize = 16;
+/// Storage deposit for a new bid (about 100 bytes at 1e19 yocto per byte).
+pub const BID_NEAR: NearToken = NearToken::from_millinear(1);
 pub const MAX_BIDS: usize = 8;
 /// A bid slot stays open between 10 seconds and 1 hour.
 pub const MIN_BID_SECS: u64 = 10;
@@ -764,6 +766,9 @@ impl Job {
 
     /// Any account but the manager and the job: offer to do slot `slot` for
     /// `price` (at most the slot's max). A second bid replaces the first.
+    /// A new bid attaches `BID_NEAR` to pay for its own storage (kept by the
+    /// job, so fake bidders cannot fill the job's storage for free).
+    #[payable]
     pub fn bid(&mut self, slot: u32, price: U128) {
         let me = env::predecessor_account_id();
         require!(me != self.manager, "the manager cannot bid");
@@ -780,6 +785,10 @@ impl Job {
             Some(b) => b.price = price,
             None => {
                 require!(s.bids.len() < MAX_BIDS, "too many bids on this slot");
+                require!(
+                    env::attached_deposit() >= BID_NEAR,
+                    "attach 0.001 NEAR for the bid's storage"
+                );
                 s.bids.push(Bid {
                     worker: me.clone(),
                     price,

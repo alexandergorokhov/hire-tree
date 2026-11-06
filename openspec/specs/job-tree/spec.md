@@ -11,7 +11,7 @@ hash, registers it on the token and funds it.
 Exactly one of client (root) or worker (sub-job); sub-job amount > 0; window
 1 s..30 days; spec hash and signer well-formed; the account must be a
 sub-account of its creator.
-- unit: `root_init_sets_fields`, `sub_init_sets_worker_as_payee`, `init_must_be_called_by_parent_account`, `root_with_amount_refused`, `sub_with_zero_amount_refused`, `client_and_worker_both_refused`, `bad_spec_hash_refused`, `bad_signer_refused`, `window_too_long_refused`
+- unit: `root_init_sets_fields`, `sub_init_sets_worker_as_payee`, `init_must_be_called_by_parent_account`, `root_funding_below_the_fee_refunded`, `sub_with_zero_amount_refused`, `client_and_worker_both_refused`, `bad_spec_hash_refused`, `bad_signer_refused`, `window_too_long_refused`
 
 ### Requirement: Lead fee and client refund
 A root's `amount` SHALL be the lead's fee, set by the client at post. It is

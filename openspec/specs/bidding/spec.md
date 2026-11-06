@@ -20,7 +20,9 @@ closing before the window ends, at most 16 slots.
 `bid(slot, price)` SHALL refuse the manager and the job itself, a price of 0
 or above `max`, a bid after `closes_ns` or on an awarded slot, and more than
 8 bidders; a second bid from the same account replaces its first.
-- unit: `bid_above_max_refused`, `manager_cannot_bid`, `late_bid_refused`, `bid_after_award_refused`, `a_new_bid_replaces_the_bidders_old_one`, `bids_per_slot_are_capped`
+A new bid SHALL attach 0.001 NEAR for its storage (kept by the job);
+replacing one's own bid needs none.
+- unit: `a_new_bid_pays_for_its_storage`, `replacing_a_bid_needs_no_new_deposit`, `bid_above_max_refused`, `manager_cannot_bid`, `late_bid_refused`, `bid_after_award_refused`, `a_new_bid_replaces_the_bidders_old_one`, `bids_per_slot_are_capped`
 
 ### Requirement: Award hires a bidder at its own price, once, after close
 `award(slot, worker, sub)` SHALL be manager-only, after close, once per

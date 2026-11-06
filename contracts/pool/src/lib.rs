@@ -71,7 +71,8 @@ pub struct Member {
     pub account: AccountId,
     pub stake: U128,
     pub voted: bool,
-    pub claimed: bool,
+    /// What this member has been paid back so far.
+    pub claimed: U128,
 }
 
 #[near(serializers = [borsh, json])]
@@ -101,6 +102,10 @@ pub struct Pool {
     approve_sent: bool,
     /// What members share at `Done`: the pool's whole balance then.
     payout: u128,
+    /// Claims sent so far (including ones in flight).
+    paid_out: u128,
+    /// Claim transfers not yet answered; a recount waits for them.
+    in_flight: u32,
     /// State to return to if `finish` cannot complete.
     before_finish: State,
 }
@@ -174,6 +179,8 @@ impl Pool {
             job: None,
             approve_sent: false,
             payout: 0,
+            paid_out: 0,
+            in_flight: 0,
             before_finish: State::Open,
         }
     }
@@ -221,7 +228,7 @@ impl Pool {
                     account: sender_id.clone(),
                     stake: U128(take),
                     voted: false,
-                    claimed: false,
+                    claimed: U128(0),
                 });
             }
         }
@@ -410,6 +417,9 @@ impl Pool {
                 "the pool is still open"
             ),
             State::LaunchFailed => {}
+            // Recount: tokens that arrived after the first count (a late
+            // refund, a gift) are shared too.
+            State::Done => require!(self.in_flight == 0, "claims in flight: try again"),
             State::Posted => require!(self.job.is_some(), "bind the job first"),
             _ => env::panic_str("cannot finish in this state"),
         }
@@ -450,7 +460,9 @@ impl Pool {
     }
 
     /// The job answered: it still exists, so it has not settled. Back to
-    /// Posted. No answer: it deleted itself; read the balance.
+    /// Posted. No answer: it deleted itself; read the balance. (Were the
+    /// call to fail for another reason, tokens arriving later are still
+    /// shared: anyone may `finish` again to recount.)
     #[private]
     pub fn on_job_checked(&mut self) -> Option<Promise> {
         require!(self.state == State::Finishing, "not finishing");
@@ -473,13 +485,16 @@ impl Pool {
             emit("finish_refused", json!({ "reason": "balance unreadable" }));
             return U128(0);
         };
-        self.payout = bal.0;
+        // Everything the pool ever had to share: what it paid out plus what
+        // it holds now.
+        self.payout = self.paid_out + bal.0;
         self.state = State::Done;
-        emit("finished", json!({ "payout": bal }));
-        bal
+        emit("finished", json!({ "payout": U128(self.payout) }));
+        U128(self.payout)
     }
 
-    /// A member takes its share: payout x stake / raised.
+    /// A member takes what it is still owed: payout x stake / raised, less
+    /// what it already claimed. After a recount it may claim again.
     pub fn claim(&mut self) -> Promise {
         require!(self.state == State::Done, "the pool is not finished");
         let who = env::predecessor_account_id();
@@ -488,10 +503,11 @@ impl Pool {
             .iter()
             .position(|m| m.account == who)
             .unwrap_or_else(|| env::panic_str("only members can claim"));
-        require!(!self.members[i].claimed, "already claimed");
         let share = self.share(i);
         require!(share > 0, "nothing to claim");
-        self.members[i].claimed = true;
+        self.members[i].claimed = U128(self.members[i].claimed.0 + share);
+        self.paid_out += share;
+        self.in_flight += 1;
         Promise::new(self.token.clone())
             .function_call(
                 "ft_transfer",
@@ -511,8 +527,11 @@ impl Pool {
     #[private]
     pub fn on_claimed(&mut self, i: u32, share: U128) -> bool {
         let ok = env::promise_result_checked(0, 64).is_ok();
+        self.in_flight -= 1;
         if !ok {
-            self.members[i as usize].claimed = false;
+            let m = &mut self.members[i as usize];
+            m.claimed = U128(m.claimed.0 - share.0);
+            self.paid_out -= share.0;
         }
         emit(
             "claimed",
@@ -525,7 +544,8 @@ impl Pool {
         if self.raised == 0 {
             return 0;
         }
-        self.payout * self.members[i].stake.0 / self.raised
+        (self.payout * self.members[i].stake.0 / self.raised)
+            .saturating_sub(self.members[i].claimed.0)
     }
 
     pub fn get_pool(&self) -> serde_json::Value {
@@ -535,6 +555,7 @@ impl Pool {
             "closes_ns": U64(self.closes_ns), "members": self.members,
             "state": self.state, "job_n": self.job_n, "job": self.job,
             "approve_sent": self.approve_sent, "payout": U128(self.payout),
+            "paid_out": U128(self.paid_out),
         })
     }
 }

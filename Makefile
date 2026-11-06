@@ -31,11 +31,12 @@ test: ## Unit + property tests, offline (PROP_CASES=10000 by default)
 	cd agents && cargo test --locked --offline --lib --bins
 
 .PHONY: lint
-lint: ## rustfmt check + clippy -D warnings
+lint: ## rustfmt check + clippy -D warnings + every test the specs name exists
 	cargo fmt --all -- --check
 	cd agents && cargo fmt -- --check
 	cargo clippy --workspace --all-targets --locked --offline -- -D warnings
 	cd agents && cargo clippy --all-targets --locked --offline -- -D warnings
+	scripts/check-spec-tests.sh
 
 # Plain cargo needs --cfg near (what cargo-near sets). Without it near-sdk's
 # panic_str aborts and every on-chain error reads only "unreachable".
@@ -62,7 +63,7 @@ build: ## Build the contract wasm into out/ with SHA256SUMS (non-reproducible fo
 # Where the hard limit is lower and cannot be raised (some containers), a
 # tiny LD_PRELOAD shim clamps that one request to the hard limit.
 .PHONY: sandbox
-sandbox: build ## near-sandbox tests: G1, G4, tree fold, the agent story with a mock model and from a cassette (about 15 min)
+sandbox: build ## near-sandbox tests: G1, G4, tree fold, the agent story with a mock model and from a cassette (about 20 min)
 	@cd agents && \
 	if ulimit -n 65535 2>/dev/null; then pre=""; else \
 	  echo "sandbox: open-file hard limit is $$(ulimit -Hn), neard asks for 65535; loading fdshim" >&2; \
@@ -106,7 +107,7 @@ nearai-check: ## [NEAR AI key] three small signed calls: receipt format, judge s
 	@cd agents && $(HT) nearai-check
 
 .PHONY: record-cassette
-record-cassette: build ## [NEAR AI key] run the story on a local node with real NEAR AI and save every signed answer (~24 calls, ~$$0.01)
+record-cassette: build ## [NEAR AI key] run the story on a local node with real NEAR AI and save every signed answer (~55 calls, ~$$0.02)
 	@mkdir -p $(dir $(CASSETTE))
 	@rm -f $(CASSETTE).new
 	@$(SBX) $(HT) demo --llm record:$(CASSETTE).new --scene $(CURDIR)/web/scene.json

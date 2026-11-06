@@ -437,6 +437,40 @@ fn a_failed_claim_can_be_retried() {
 }
 
 #[test]
+fn tokens_arriving_after_finish_are_shared_by_a_recount() {
+    let mut p = done(60 * USD);
+    ctx("a.test", 400);
+    p.claim();
+    cb(vec![ok(json!(null))]);
+    assert!(p.on_claimed(0, U128(20 * USD)));
+    // 30 more arrive late; the pool now holds 40 + 30.
+    ctx("anyone.test", 500);
+    p.finish();
+    assert_eq!(calls()[0].1, "ft_balance_of");
+    cb(vec![ok(json!(U128(70 * USD)))]);
+    assert_eq!(p.on_balance(), U128(90 * USD));
+    // a already had 20 of its 30; b gets the full 30.
+    ctx("a.test", 510);
+    p.claim();
+    let a: serde_json::Value = serde_json::from_slice(&calls()[0].2).unwrap();
+    assert_eq!(a["amount"], json!(U128(10 * USD)));
+    ctx("b.test", 510);
+    p.claim();
+    let b: serde_json::Value = serde_json::from_slice(&calls()[0].2).unwrap();
+    assert_eq!(b["amount"], json!(U128(30 * USD)));
+}
+
+#[test]
+#[should_panic(expected = "claims in flight")]
+fn a_recount_waits_for_claims_in_flight() {
+    let mut p = done(60 * USD);
+    ctx("a.test", 400);
+    p.claim();
+    ctx("anyone.test", 410);
+    p.finish();
+}
+
+#[test]
 #[should_panic(expected = "only members can claim")]
 fn outsiders_cannot_claim() {
     let mut p = done(60 * USD);

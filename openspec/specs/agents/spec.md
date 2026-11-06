@@ -19,7 +19,7 @@ without such jobs.
 - GIVEN job 1 where the cheap bot was hired for two parts and paid for none
 - WHEN job 2 is planned
 - THEN the picker hires the translator and the researcher, and says it avoided the bot on its record
-- sandbox: `agents_story_with_mock_model`; unit: `picker_avoids_a_worker_with_unpaid_jobs`
+- sandbox: `agents_story_with_mock_model`; unit: `picker_takes_the_lowest_bid_unless_its_record_is_bad`
 
 ### Requirement: Workers deliver with the job's tag and NEAR AI's signature
 A worker that uses a model SHALL send `HT1:<job>:<spec hash>:1` in its
@@ -38,7 +38,7 @@ it waits for settle or disputes.
 - unit: `reviewer_buys_only_quoted_good_work`
 
 ### Requirement: The run conserves money and folds the tree
-After both jobs: every job account is deleted, the lead holds two fees, the
+After all three jobs: every job account is deleted, the lead holds three fees, the
 client paid only fees and delivered work, and no fUSD was created or lost.
 - sandbox: `agents_story_with_mock_model`, `agents_story_replays_from_a_cassette`
 

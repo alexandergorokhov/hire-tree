@@ -24,7 +24,7 @@ it were real. Each row names the test that shows the answer.
 | A phantom transfer during `resume_settle`'s read makes a paid leg look unpaid (payee paid twice) | surplus never booked; only the manager may resume in the first day, so the payee cannot pick the moment | `resume_never_books_extra_tokens`, `stranger_cannot_resume_in_the_first_day` |
 | A hire's callbacks are lost or the fund result is ambiguous: tree stuck in "children pending" | `resume_hire` after 10 min reads the child's real balance: full opens it, zero rolls back and closes it | `stuck_hire::*`, `fund_failure_waits_then_resume_rolls_back_and_closes_child` |
 | A sub-job runs out of NEAR after ~10 hires and a hire callback aborts | each hire must attach 0.035 NEAR; the job keeps 5 mNEAR for the child's token registration and its own record | `hire_creates_child_from_global_contract` |
-| The root's final payout to an unregistered manager fails forever | the root registers the manager first (refunded if already registered) | `root_registers_the_manager_before_paying_it` |
+| The root's final payout to an unregistered manager fails forever | the root registers the manager first (refunded if already registered) | `root_fee_and_bond_go_to_the_manager_the_rest_back_to_the_client` (asserts `storage_deposit` for the manager first) |
 | Spam posts drain the factory's NEAR | each post uses 0.06 NEAR the client prepaid; budget >= 1 fUSD | factory `post_without_prepaid_near_refunded`, `dust_budget_refunded` |
 | Money rule broken by any sequence | property test over 10,000 random trees with random transfer failures | `core/tests/money_prop.rs` |
 
@@ -78,6 +78,7 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | Bid spam fills a slot | 8 bidders per slot, 16 slots per job; a bidder's second bid replaces its first | `bids_per_slot_are_capped`, `a_new_bid_replaces_the_bidders_old_one` |
 | Late bid or award before close | refused both ways | `late_bid_refused`, `award_before_close_refused` |
 | Lead bids through another account and awards itself | possible, as with a direct `hire`: the lead already chooses who works. The client's protection is the fixed lead fee, the judge's score and settle (unscored work is not paid unless approved) | not preventable on-chain |
+| Fake bidders fill the job's storage for free | a new bid attaches 0.001 NEAR for its own storage; at most 8 bids per slot, 16 slots | `a_new_bid_pays_for_its_storage` |
 
 ## Pool (collective purchasing)
 | Threat | Answer |
@@ -88,7 +89,8 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | Finish counts the refund too early | `finish` reads the balance only after the job account is gone; the job deletes itself only after its refund transfer succeeded |
 | A minority approves bad work early | Approval needs voters holding more than half the stake |
 | The launch fails half way | Any refusal or missing answer is `LaunchFailed`; members claim back what the pool holds |
-| A claim transfer fails | The member's `claimed` flag is restored; claim again |
+| A claim transfer fails | The member's claimed amount is restored; claim again (`a_failed_claim_can_be_retried`) |
+| Tokens arrive after the count (late refund, gift) | Anyone may `finish` again to recount; members claim the difference (`tokens_arriving_after_finish_are_shared_by_a_recount`) |
 
 ## Agents (off-chain)
 | Threat | Answer | Test |
@@ -105,7 +107,10 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 - Pool: a member cannot leave before the deadline; a pool that misses its
   target pays back only after `join_secs`. Tokens sent to the pool by
   anyone else are shared among members. One pool per purchase (a ~1.6 NEAR
-  deploy).
+  deploy). If a launch fails, its 0.06 NEAR stays at the factory as the
+  pool's posting credit (the pool has no withdraw). The pool trusts NEAR to
+  deliver its own callbacks; there is no resume for a pool stuck in
+  `Launching` or `Finishing`.
 - One checker and one model for all three dispute panels; panels differ
   only by seed. A judge model that is fooled once may be fooled three times.
   The lead, who pays early, carries that risk, not the client.

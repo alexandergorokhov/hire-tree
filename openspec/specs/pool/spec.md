@@ -37,8 +37,11 @@ resent by a later vote.
 `finish` SHALL share the pool's balance only when the job account no longer
 exists (it deletes itself after settle, after its refund arrived), or
 joining closed short of the target, or the launch failed. Each member
-`claim`s `payout x stake / raised` once; a failed transfer can be retried.
-- unit: `finish_waits_until_the_job_account_is_gone`, `an_open_pool_cannot_finish_before_joining_closes`, `a_pool_that_missed_its_target_refunds_after_closing`, `an_unreadable_balance_goes_back_to_the_previous_state`, `members_claim_pro_rata_once`, `a_failed_claim_can_be_retried`, `outsiders_cannot_claim`
+`claim`s `payout x stake / raised` less what it already claimed; a failed
+transfer can be retried. Anyone may `finish` again after `Done` (no claim in
+flight) to recount: `payout = paid out + balance now`, so tokens that
+arrive late are shared too.
+- unit: `finish_waits_until_the_job_account_is_gone`, `an_open_pool_cannot_finish_before_joining_closes`, `a_pool_that_missed_its_target_refunds_after_closing`, `an_unreadable_balance_goes_back_to_the_previous_state`, `members_claim_pro_rata_once`, `a_failed_claim_can_be_retried`, `outsiders_cannot_claim`, `tokens_arriving_after_finish_are_shared_by_a_recount`, `a_recount_waits_for_claims_in_flight`
 
 #### Scenario: Three clients buy one job
 - GIVEN three clients each join with 30 of a 90 fUSD target

@@ -105,24 +105,24 @@ No keys, no NEAR AI account, no testnet NEAR.
 | Step | Command | Cold time (measured on the build box) |
 |---|---|---|
 | 1 | `make setup` | crate download |
-| 2 | `make test` | about 3 s after the first compile (a few minutes cold); 327 tests |
+| 2 | `make test` | about 3 s after the first compile (a few minutes cold); 331 tests |
 | 3 | `make demo` | about 4 min: builds the wasm, starts a local NEAR node, runs the three-job agent story, writes `web/scene.json` |
 | 4 | `make web`, open http://localhost:8080 | the 23 scenes, each agent decision with its reason, and every transaction |
-| 5 (optional) | `make sandbox` | about 16 min: all 6 local-node tests |
+| 5 (optional) | `make sandbox` | about 20 min: all 6 local-node tests |
 
 ## Do X, see Y
 
 | Do | See |
 |---|---|
 | `make setup` | toolchain versions; crates fetched (the only networked step besides the near-sandbox binary) |
-| `make test` | 327 unit + property tests, all `ok`: core (56 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (209), factory (18), pool (23), mock checker (2), mock-usdc (7), agents (7) |
-| `make lint` | rustfmt check and clippy `-D warnings`; exit 0 |
+| `make test` | 331 unit + property tests, all `ok`: core (56 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (211), factory (18), pool (25), mock checker (2), mock-usdc (7), agents (7) |
+| `make lint` | rustfmt check, clippy `-D warnings`, and a check that every test the specs and THREATS.md name exists; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
-| `make sandbox` | a local NEAR node runs 6 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model, and the same story replayed from a cassette; about 15 min |
+| `make sandbox` | a local NEAR node runs 6 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model, and the same story replayed from a cassette it records itself with the test model; about 20 min |
 | `make demo` | the agent story on a local node in 23 scenes (7 per job: post, bids, awards, deliveries and judge answers, check close, review, fold; job 3 adds the pool joining, posting and paying back), with every agent decision and its reason; writes `web/scene.json` |
 | `make web` | serves `web/` on http://localhost:8080: the tree page, scene by scene, with the agents' decisions and every transaction |
 | `make nearai-check` | needs `NEARAI_API_KEY`: three small signed calls (receipt format, the contract's judge question, the planner's JSON); GO or NO-GO |
-| `make record-cassette` | needs `NEARAI_API_KEY`: the story with live NEAR AI on a local node (about 24 small calls); saves `demo/cassette.json` |
+| `make record-cassette` | needs `NEARAI_API_KEY`: the story with live NEAR AI on a local node (about 55 small calls); saves `demo/cassette.json` |
 | `make demo-replay`, `make verify-cassette` | **needs `demo/cassette.json`, not committed yet** (the owner records it with `make record-cassette`). Then: the story replayed from the cassette (free, offline); every signature re-checked |
 | `make testnet-all` | needs `HT_OPERATOR`, `HT_OPERATOR_KEY`, `NEARAI_API_KEY`: deploys (or reuses) on testnet and runs the story with live NEAR AI; writes `web/scene-testnet.json` with explorer links |
 

@@ -3178,7 +3178,7 @@ mod bidding {
     }
 
     fn bid(j: &mut Job, who: &str, slot: u32, price: u128) {
-        Ctx::new(ROOT, who).set();
+        Ctx::new(ROOT, who).deposit(BID_NEAR).set();
         j.bid(slot, U128(price));
     }
 
@@ -3188,6 +3188,25 @@ mod bidding {
             .deposit(NearToken::from_millinear(50))
             .set();
         j.award(slot, acc(who), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "attach 0.001 NEAR for the bid's storage")]
+    fn a_new_bid_pays_for_its_storage() {
+        let mut j = funded_root(100 * USD);
+        let s = open(&mut j);
+        Ctx::new(ROOT, WORKER).set();
+        j.bid(s, U128(20 * USD));
+    }
+
+    #[test]
+    fn replacing_a_bid_needs_no_new_deposit() {
+        let mut j = funded_root(100 * USD);
+        let s = open(&mut j);
+        bid(&mut j, WORKER, s, 25 * USD);
+        Ctx::new(ROOT, WORKER).set();
+        j.bid(s, U128(20 * USD));
+        assert_eq!(j.get_bids(s).unwrap().bids[0].price, U128(20 * USD));
     }
 
     #[test]

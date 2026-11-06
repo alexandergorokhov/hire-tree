@@ -22,7 +22,7 @@ make nearai-check
 | `NO-GO: ... (try another HT_MODEL)` | pick another model from the `models served` line, export `HT_MODEL`, rerun |
 | any other `NO-GO` | stop; send the output to the build thread |
 
-## 2. Record the cassette (local node, ~24 small calls, about $0.01)
+## 2. Record the cassette (local node, ~55 small calls, about $0.02)
 ```bash
 make record-cassette        # writes demo/cassette.json, then verifies every signature
 git add demo/cassette.json && git commit -m "Real NEAR AI cassette" && git push
