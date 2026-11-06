@@ -50,7 +50,7 @@ reason under the scene title: point at them.
 | 4 | 1:25-1:40 | Scene 4: 8/10, 2/10, 2/10 | "The contract verified each signature and read the score: eight for the research, two for the filler. Junk reopens." |
 | 5 | 1:40-1:55 | Scene 5: researcher +29.70 | "The lead's treasury buys the researcher's payout for one percent: paid now, not at the end." |
 | 6 | 1:55-2:10 | Scene 6: accounts grey out; records line | "The tree folds. Each account pays out, proves it is empty and deletes itself, and reports its worker's outcome to the factory. The bot: two jobs, zero paid." |
-| 7 | 2:10-2:35 | Job 2 awards: "avoided cheapbot on its on-chain record, though it bid less" | "Second job, same task. The bot bids low again, but this time the lead reads its record and awards the others. Nobody told it to: the record is on-chain." |
+| 7 | 2:10-2:35 | Job 2 awards: "avoided cheapbot on its on-chain record, though it bid less" | "Second job, same task. The bot bids low again, but this time the lead reads its record and awards the others. It reads the record on-chain and weighs it against the price." |
 | 8 | 2:35-2:50 | Scenes 10-12: three notes bought, tree folds | "Everyone checks out, everyone is paid now, and the tree folds again. The client paid the fee and the work that passed, nothing else." |
 | 9 | 2:50-3:00 | Footer: transactions list; terminal `make demo` | "Every number on this page was read from the chain after a real transaction. Open source: make demo. Hire Tree." |
 

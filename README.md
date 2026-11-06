@@ -29,9 +29,8 @@ a deliverable came out of a model call made for this task.
    bids on the job account (`open_bids`, with a maximum price). Worker
    agents bid on-chain; after 60 s the lead awards one bid (`award`),
    weighing price against each bidder's track record. The award (or a
-   direct `hire`) creates a sub-account
-   `t1.job-1...` is created from the same code and receives exactly that
-   job's pay. Sub-jobs can hire in turn (a tree).
+   direct `hire`) creates a sub-account `t1.job-1...` from the same global
+   code, holding exactly the winning bid. Sub-jobs can hire in turn (a tree).
 3. **Deliver with proof.** A worker that used NEAR AI Cloud sends the raw
    request, the response hash and the model's ECDSA signature. The contract
    hashes the request itself, requires the tag `HT1:<this job>:<spec hash>:<delivery #>`
@@ -85,6 +84,21 @@ real NEAR AI answers with their original signatures, recorded once and
 replayed offline (`make demo-replay`). The contract checks the signatures
 again on every replay; `make verify-cassette` checks them offline.
 
+## Judge fast path
+Prerequisites: `rustup` (it installs Rust 1.97.0 and the wasm32 target from
+`rust-toolchain.toml`), a C compiler (`cc`, for a small file-limit shim),
+`python3` (for `make web`), and network access once for `make setup` (crates)
+and the first local-node run (it downloads the `near-sandbox` binary).
+No keys, no NEAR AI account, no testnet NEAR.
+
+| Step | Command | Cold time (measured on the build box) |
+|---|---|---|
+| 1 | `make setup` | crate download |
+| 2 | `make test` | about 3 s after the first compile (a few minutes cold); 304 tests |
+| 3 | `make demo` | about 4 min: builds the wasm, starts a local NEAR node, runs the two-job agent story, writes `web/scene.json` |
+| 4 | `make web`, open http://localhost:8080 | the 14 scenes, each agent decision with its reason, and every transaction |
+| 5 (optional) | `make sandbox` | about 16 min: all 6 local-node tests |
+
 ## Do X, see Y
 
 | Do | See |
@@ -94,11 +108,11 @@ again on every replay; `make verify-cassette` checks them offline.
 | `make lint` | rustfmt check and clippy `-D warnings`; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make sandbox` | a local NEAR node runs 6 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model, and the same story replayed from a cassette; about 15 min |
-| `make demo` | the agent story on a local node in 12 scenes, with every agent decision and its reason; writes `web/scene.json` |
+| `make demo` | the agent story on a local node in 14 scenes (7 per job: post, bids, awards, deliveries and judge answers, check close, review, fold), with every agent decision and its reason; writes `web/scene.json` |
 | `make web` | serves `web/` on http://localhost:8080: the tree page, scene by scene, with the agents' decisions and every transaction |
 | `make nearai-check` | needs `NEARAI_API_KEY`: three small signed calls (receipt format, the contract's judge question, the planner's JSON); GO or NO-GO |
 | `make record-cassette` | needs `NEARAI_API_KEY`: the story with live NEAR AI on a local node (about 24 small calls); saves `demo/cassette.json` |
-| `make demo-replay`, `make verify-cassette` | the story replayed from the cassette (free, offline); every signature re-checked |
+| `make demo-replay`, `make verify-cassette` | **needs `demo/cassette.json`, not committed yet** (the owner records it with `make record-cassette`). Then: the story replayed from the cassette (free, offline); every signature re-checked |
 | `make testnet-all` | needs `HT_OPERATOR`, `HT_OPERATOR_KEY`, `NEARAI_API_KEY`: deploys (or reuses) on testnet and runs the story with live NEAR AI; writes `web/scene-testnet.json` with explorer links |
 
 ## Repo map
@@ -150,8 +164,16 @@ sells AI agent businesses. Hire Tree is about agents hiring agents and
 getting paid per job. Two independent projects (hackathon FAQ Q-015):
 separate repos, no shared code.
 
-## AI tools used
+## AI tools and libraries used
 Claude Code wrote the code, tests and docs under the owner's direction.
+No templates. Libraries (all open source, from crates.io):
+
+| Where | Crates |
+|---|---|
+| Contracts | `near-sdk` 5.30 (with `unstable` for `env::ecrecover`), `near-contract-standards` (mock token), `borsh`, `serde_json`, `hex`, `sha2`, `sha3` |
+| Tests | `proptest` (10,000-tree property test), `secp256k1` (test signer) |
+| Agents | `near-api` 0.8, `near-sandbox` 0.4 (local node), `tokio`, `reqwest`, `serde`, `base64`, `secp256k1` |
+| Build | `cargo-near` when installed, else plain `cargo` + `wasm-opt` (binaryen) |
 
 ## License
 MIT. See `LICENSE`.
