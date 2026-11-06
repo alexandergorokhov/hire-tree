@@ -127,6 +127,17 @@ again on every replay; `make verify-cassette` checks them offline.
 - Not run yet: testnet (needs the owner's funded account), root (client)
   disputes. See `docs/THREATS.md` "Known limits".
 
+## Hackathon
+- Track: `swarms` (AI Swarms). Hints used: MULTI-AGENT SYSTEMS (a lead
+  agent hires worker agents; a keeper answers checks) and SUB-ACCOUNTS
+  (every job and sub-job is its own account, created and deleted by the
+  contract). NEAR Intents is not used.
+- Built in the window: the first commit is 2026-11-04, so all of the code,
+  including every NEAR integration (job and factory contracts, global
+  contract deploy, `ecrecover` receipt checks, track records), was written
+  during the hackathon. There is no pre-hackathon baseline.
+- Network: testnet and a local NEAR node only; all money is fake.
+
 ## Also by me
 [Agent Exit](https://github.com/alexandergorokhov/near-transparent-agent-market)
 sells AI agent businesses. Hire Tree is about agents hiring agents and
