@@ -31,12 +31,13 @@ test: ## Unit + property tests, offline (PROP_CASES=10000 by default)
 	cd agents && cargo test --locked --offline --lib --bins
 
 .PHONY: lint
-lint: ## rustfmt check + clippy -D warnings + every test the specs name exists
+lint: ## rustfmt check + clippy -D warnings + every test the specs name exists + the README's swarm numbers match web/swarm.json
 	cargo fmt --all -- --check
 	cd agents && cargo fmt -- --check
 	cargo clippy --workspace --all-targets --locked --offline -- -D warnings
 	cd agents && cargo clippy --all-targets --locked --offline -- -D warnings
 	scripts/check-spec-tests.sh
+	python3 scripts/swarm-check.py web/swarm.json --readme
 
 # Plain cargo needs --cfg near (what cargo-near sets). Without it near-sdk's
 # panic_str aborts and every on-chain error reads only "unreachable".
@@ -92,12 +93,17 @@ CASSETTE ?= $(CURDIR)/demo/cassette.json
 swarm: build ## recursive labor market: 3 leads, 33 agents, trees 3 levels deep, 12 rounds on a local node; writes web/swarm.json (open web/swarm.html; about 85 min)
 	@$(SBX) $(HT) swarm --rounds $(or $(ROUNDS),12) --out $(or $(SWARM_OUT),$(CURDIR)/web/swarm.json)
 
+.PHONY: swarm-quick
+swarm-quick: build ## 3 rounds of the same market (about 20 min), then checks the run against its rules: every part sold, bonds lost exactly by unpaid winners, sub-parts below their contractor's price, fees
+	@$(SBX) $(HT) swarm --rounds 3 --out $(CURDIR)/out/swarm-quick.json
+	python3 scripts/swarm-check.py out/swarm-quick.json
+
 .PHONY: mcp-setup
 mcp-setup: build ## Build what the MCP playground needs (.mcp.json runs scripts/mcp-local.sh)
 	cd agents && cargo build --locked --bin hiretree
 
 .PHONY: mcp-test
-mcp-test: mcp-setup ## Two MCP client sessions: the guide's walk-through, and a guest agent competing in the open market (about 5 min)
+mcp-test: mcp-setup ## Three MCP client sessions: the guide's walk-through, a guest agent competing in the open market, and a guest agent that becomes a contractor and hires a sub-agent (about 7 min)
 	cd agents && cargo test --locked --test judge -- --nocapture --test-threads=1
 
 .PHONY: demo

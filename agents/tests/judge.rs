@@ -285,3 +285,112 @@ fn a_judges_agent_competes_in_the_open_market() {
         "{r3}"
     );
 }
+
+/// The judge's own agent wins a part, then becomes a contractor: it puts a
+/// piece of its job out for bids out of its own pay, hires a house worker
+/// into a sub-sub-account, keeps the margin, and the tree folds bottom-up.
+#[test]
+fn a_judges_agent_becomes_a_contractor() {
+    let mut c = Client::start();
+    c.rpc("initialize", json!({ "protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": { "name": "judge", "version": "1" } }));
+    let j: Value = serde_json::from_str(&c.ok(
+        "join",
+        json!({ "name": "contractor", "skills": ["research"] }),
+    ))
+    .unwrap();
+    let me = j["account"].as_str().unwrap().to_string();
+    let accts: Value = serde_json::from_str(&c.ok("accounts", json!({}))).unwrap();
+    let researcher = accts["accounts"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|a| a["as"] == "researcher")
+        .unwrap()["account"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    let r: Value = serde_json::from_str(&c.ok("open_round", json!({}))).unwrap();
+    let job = r["job"].as_str().unwrap().to_string();
+    let slot = r["slots"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["skill"] == "research")
+        .unwrap()
+        .clone();
+    let task = slot["task"].as_str().unwrap().to_string();
+    c.ok(
+        "bid",
+        json!({ "as": "contractor", "job": job, "slot": slot["slot"], "price": "20000000" }),
+    );
+    let a: Value = serde_json::from_str(&c.ok("close_round", json!({ "job": job }))).unwrap();
+    let mine = a["awards"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|x| x["skill"] == "research")
+        .unwrap()
+        .clone();
+    assert_eq!(mine["award"], json!(me), "{a}");
+    let part = mine["sub_job"].as_str().unwrap().to_string();
+
+    // A sub-slot paid out of its own 20 fUSD; the house bids at once.
+    let s: Value = serde_json::from_str(&c.ok(
+        "subcontract",
+        json!({ "as": "contractor", "job": part, "task": "List 3 sources for the explainer.",
+            "skill": "research", "max": "8000000" }),
+    ))
+    .unwrap();
+    let bids = s["bids"].as_array().unwrap();
+    assert!(
+        bids.iter().any(|b| b["worker"] == researcher.as_str()),
+        "{s}"
+    );
+    // The worker cannot bid on its own job: the contract refuses it.
+    let (e, err) = c.tool(
+        "bid",
+        json!({ "as": "contractor", "job": part, "slot": s["slot"], "price": "1000000" }),
+    );
+    assert!(err && e.contains("own job"), "{e}");
+    let h: Value = serde_json::from_str(&c.ok(
+        "hire_sub",
+        json!({ "as": "contractor", "job": part, "slot": s["slot"], "worker": researcher }),
+    ))
+    .unwrap();
+    assert_eq!(h["sub_job"], json!(format!("t1.{part}")), "{h}");
+    assert_eq!(h["score"], json!(8), "{h}");
+    let price = h["price_fusd"].as_f64().unwrap();
+    assert!(price > 0.0 && price <= 8.0, "{h}");
+    assert!(
+        (h["margin_fusd"].as_f64().unwrap() - (20.0 - price)).abs() < 1e-6,
+        "{h}"
+    );
+
+    c.ok(
+        "do_work",
+        json!({ "as": "contractor", "job": part, "task": task }),
+    );
+    c.ok("judge_check", json!({ "job": part, "task": task }));
+    let f: Value = serde_json::from_str(&c.ok("finish_round", json!({ "job": job }))).unwrap();
+    let out = f["outcome"].to_string();
+    assert!(out.contains("accepted by its contractor"), "{f}");
+    let fusd = |who: &str| -> f64 {
+        f["workers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|w| w["as"] == who)
+            .unwrap()["fUSD"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap()
+    };
+    // The contractor keeps its margin (less the 1% note fee if paid early).
+    let got = fusd("contractor");
+    assert!(
+        got >= (20.0 - price) * 0.99 - 0.01 && got <= 20.0 - price + 0.01,
+        "{f}"
+    );
+}

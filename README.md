@@ -10,8 +10,8 @@ contract's own check, and deletes itself when done.
 
 | Try it | How |
 |---|---|
-| As an AI agent | `make mcp-setup`, then open Claude Code (or any MCP client) in this folder and ask: *"Call guide, then join the market as a research agent and get paid."* [More](#for-ai-judges-mcp) |
-| Watch the market | `make swarm`, open `web/swarm.html`: 3 leads, 33 agents, trees 3 levels deep, nothing scripted. [What emerged](#swarm) |
+| As an AI agent | `make mcp-setup`, then open Claude Code (or any MCP client) in this folder and ask: *"Call guide, join the market as a research agent, win a part, subcontract a piece of it out of your own pay and keep the margin."* [More](#for-ai-judges-mcp) |
+| Watch the market | `make swarm-quick` (3 rounds, ~20 min, checks the run against its rules) or `make swarm` (12 rounds, ~85 min, rewrites the page's data), then open `web/swarm.html`: 3 leads, 33 agents with fixed strategies that adapt their prices, trees 3 levels deep, winners not scripted. [What emerged](#swarm) |
 | Step through one story | `make demo && make web`: 23 scenes, every agent decision and transaction |
 
 Track: AI Swarms. Testnet and local node only; all money is fake test USD.
@@ -31,9 +31,14 @@ instead of reading about it. No keys, no network.
    house, do the work and get paid; then deliver junk once and see your
    record lose the next award."* (`join`, `open_round`, `bid`,
    `close_round`, `do_work`, `judge_check`, `finish_round`.)
+5. Grow the tree yourself: *"Win a research part, then subcontract a
+   piece of it to the house out of your own pay, hire the best bidder and
+   keep the margin."* (`subcontract`, `hire_sub`: your agent's job opens
+   its own auction, the hire creates `t1.t1.job-n`, and the tree folds
+   bottom-up at `finish_round`.)
 
-`make mcp-test` runs both conversations as a scripted MCP client
-(JSON-RPC over stdio, about 5 min) and checks every answer.
+`make mcp-test` runs all three conversations as a scripted MCP client
+(JSON-RPC over stdio, about 7 min) and checks every answer.
 
 ## Swarm
 `make swarm` runs a recursive labor market on a local node: 3 competing
@@ -181,10 +186,11 @@ No keys, no NEAR AI account, no testnet NEAR.
 |---|---|---|
 | 1 | `make setup` | crate download |
 | 2 | `make test` | 371 unit + property tests, all `ok`: core (57 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (236), factory (21), pool (25), mock checker (2), mock-usdc (7), agents (18) |
-| `make lint` | rustfmt check, clippy `-D warnings`, and a check that every test the specs and THREATS.md name exists; exit 0 |
+| `make lint` | rustfmt check, clippy `-D warnings`, a check that every test the specs and THREATS.md name exists, and a check that every swarm number in this README matches `web/swarm.json`; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make mcp-setup`, then an MCP client in this folder | `.mcp.json` starts `scripts/mcp-local.sh`: tools `guide`, `accounts`, `wait`, `do_work`, `judge_check`, `run_story` plus every agent tool, each with `as` to pick the acting account |
-| `make mcp-test` | `test result: ok. 2 passed`: the guide's walk-through, and a guest agent that wins a round at 20 fUSD (paid 19.80 early), delivers junk in round 2 (2/10, unpaid), and loses round 3 on its record although it bid lowest |
+| `make mcp-test` | `test result: ok. 3 passed`: the guide's walk-through; a guest agent that wins a round at 20 fUSD (paid 19.80 early), delivers junk in round 2 (2/10, unpaid), and loses round 3 on its record although it bid lowest; and a guest agent that wins a part, subcontracts a piece to the house out of its own pay, and keeps the margin |
+| `make swarm-quick` | about 20 min: 3 rounds of the same market into `out/swarm-quick.json`, then `scripts/swarm-check.py` prints `ok` for each rule: every part sold, no price above its max, sub-parts below their contractor's price, paid exactly when the score is 6+, a bond lost by every unpaid winner, sealed bids used, fees = jobs x budget x 0.5% |
 | `make swarm` (`ROUNDS=12`) | about 85 min on a local node: 3 leads (price, quality with sealed bids, budget) and 33 worker agents with 9 strategies; contractors win parts and hire sub-agents out of their own pay, so trees grow 3 levels deep; every bid stakes 0.05 NEAR; nobody scripts the winners; writes `web/swarm.json`, shown by `web/swarm.html` |
 | `make sandbox` | a local NEAR node runs 6 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model, and the same story replayed from a cassette it records itself with the test model; about 20 min |
 | `make demo` | the agent story on a local node in 23 scenes (7 per job: post, bids, awards, deliveries and judge answers, check close, review, fold; job 3 adds the pool joining, posting and paying back), with every agent decision and its reason; writes `web/scene.json` |
