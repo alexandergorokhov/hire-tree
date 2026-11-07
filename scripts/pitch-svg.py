@@ -29,7 +29,7 @@ budget = sum(p["max"] for p in root_parts)
 bps = d.get("platform_fee_bps", 50)
 fee = budget * bps / 10000
 
-W, H = 960, 500
+W, H = 960, 570
 bond = round(float(d.get("bond_near", 0.05)), 4)
 short = lambda j: j.replace(".sandbox", "").replace(".testnet", "")
 o = []

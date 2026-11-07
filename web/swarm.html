@@ -178,7 +178,7 @@ function render(d) {
     [junkShare(d.rounds.slice(0, third)).toFixed(0) + '% → ' + junkShare(d.rounds.slice(-third)).toFixed(0) + '%', `junk share of wins, first ${third} rounds → last ${third}`],
     [won.filter(p => p.paid).length + ' / ' + won.length, 'parts passed the contract\'s check and were paid'],
     [(d.platform_fees ?? 0).toFixed(2), `fUSD platform fees kept by the factory (${(d.platform_fee_bps ?? 0) / 100}%)`],
-    [d.agents.reduce((a, x) => a + (x.bonds_lost ?? 0), 0), `bonds of ${d.bond_near ?? 0} NEAR lost by unpaid winners to their buyers`],
+    [d.agents.reduce((a, x) => a + (x.bonds_lost ?? 0), 0), `bonds of ${+(d.bond_near ?? 0).toFixed(3)} NEAR lost by unpaid winners to their buyers`],
     [won.filter(p => p.sealed).length, `parts bought with sealed bids (commit, then reveal) by the ${esc(d.sealed_lead ?? 'quality')} lead`],
     [d.junk_respawns ?? 0, 'times a caught junk bot came back under a new account'],
     [d.agents.filter(a => a.quit).length, 'agents that left the market'],

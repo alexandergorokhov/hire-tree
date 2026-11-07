@@ -36,24 +36,31 @@ instead of reading about it. No keys, no network.
 (JSON-RPC over stdio, about 5 min) and checks every answer.
 
 ## Swarm
-`make swarm` puts 23 worker agents with 8 strategies on 24 jobs on a local
-node; every agent reacts to the market (cuts its ask after losses, raises
-after wins, or leaves), and the lead hires by price weighed against each
-bidder's on-chain record and a newcomer premium it learns. Nothing about
-the winners is scripted. What emerged in the committed run
+`make swarm` runs a recursive labor market on a local node: 3 competing
+leads (one buys the cheapest after records, one weighs records heavily and
+uses sealed bids, one offers only 75% of the max) buy from 33 worker agents
+with 9 strategies, for 12 rounds. A contractor agent that wins a part can
+put a piece of it out for bids and hire a sub-agent out of its own pay, so
+trees grow 3 levels deep. Every bid stakes 0.05 NEAR, and the factory keeps
+a 0.5% fee. Agents react to the market (cut their ask after losses, raise
+it after wins, or leave); each buyer learns its own newcomer premium.
+Nothing about the winners is scripted. What emerged in the committed run
 (`web/swarm.json`, page `web/swarm.html`):
-- Junk wins 38% of parts in the first 8 jobs and 0% in the last 8. It is
-  never paid, the lead's newcomer premium rises each time it is caught,
+- 129 parts were bought on-chain, 21 of them by contractors out of their
+  own pay; 110 passed the contract's check and were paid early.
+- Contractors kept 87.74 fUSD of margin between what they won and what they
+  paid their sub-agents.
+- Junk took 30% of wins in the first 4 rounds and 9% in the last 4. It is
+  never paid, its 0.05 NEAR bond goes to the buyer every time (19 bonds),
   and each junk bot quits after 2 fresh accounts.
-- The model-driven bidder (it asks the model for its price each round,
-  given recent winning prices, its record and its losing streak) has no
-  record and keeps losing, so at job 7 it bids 50%, below cost, to win a
-  first job. It then shares the market with the undercut agents.
-- Prices settle at cost (55% of max) and creep up to about 61% as the two
-  proven sellers take turns. Greedy agents leave after 6 losses; steady
-  and sloppy never win a part.
-- 63 of 72 parts pass the contract's check and are paid early. The 9
-  that fail are all junk.
+- The deepest level is still being learned at the end: a contractor buying
+  `fetch` for the first time hires a fresh junk account three rounds in a
+  row (every bidder there is a newcomer, and junk is cheapest), and keeps
+  its bond each time.
+- Undercut and lean agents earn the most (315 and 301 fUSD), then
+  contractors (188) and the model-driven bidder (156, which bids below cost
+  once to start a record). Greedy agents leave; steady never wins.
+- The factory kept 12.60 fUSD in platform fees.
 
 In this run the bidder's model is the scripted test model. With a NEAR AI
 key the same prompt goes to NEAR AI.
@@ -178,7 +185,7 @@ No keys, no NEAR AI account, no testnet NEAR.
 | `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make mcp-setup`, then an MCP client in this folder | `.mcp.json` starts `scripts/mcp-local.sh`: tools `guide`, `accounts`, `wait`, `do_work`, `judge_check`, `run_story` plus every agent tool, each with `as` to pick the acting account |
 | `make mcp-test` | `test result: ok. 2 passed`: the guide's walk-through, and a guest agent that wins a round at 20 fUSD (paid 19.80 early), delivers junk in round 2 (2/10, unpaid), and loses round 3 on its record although it bid lowest |
-| `make swarm` (`ROUNDS=12`) | about 80 min on a local node: 3 leads (price, quality with sealed bids, budget) and 33 worker agents with 9 strategies; contractors win parts and hire sub-agents out of their own pay, so trees grow 3 levels deep; every bid stakes 0.05 NEAR; nobody scripts the winners; writes `web/swarm.json`, shown by `web/swarm.html` |
+| `make swarm` (`ROUNDS=12`) | about 85 min on a local node: 3 leads (price, quality with sealed bids, budget) and 33 worker agents with 9 strategies; contractors win parts and hire sub-agents out of their own pay, so trees grow 3 levels deep; every bid stakes 0.05 NEAR; nobody scripts the winners; writes `web/swarm.json`, shown by `web/swarm.html` |
 | `make sandbox` | a local NEAR node runs 6 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model, and the same story replayed from a cassette it records itself with the test model; about 20 min |
 | `make demo` | the agent story on a local node in 23 scenes (7 per job: post, bids, awards, deliveries and judge answers, check close, review, fold; job 3 adds the pool joining, posting and paying back), with every agent decision and its reason; writes `web/scene.json` |
 | `make web` | serves `web/` on http://localhost:8080: the tree page, scene by scene, with the agents' decisions and every transaction |
