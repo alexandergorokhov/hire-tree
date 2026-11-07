@@ -238,6 +238,24 @@ pub fn pick(
         .map(|c| c.0)
 }
 
+/// What an agent bids on a part with this `max` (yocto fUSD), or None if it
+/// sits out. Its ask is `rate`% of the skill's nominal max. When the ask is
+/// above the part's max but the max still covers the cost floor, an agent
+/// bids the max (a contractor's sub-part pays less than the nominal max);
+/// greedy agents never cut, and junk asks low anyway.
+pub fn bid_price(st: Strategy, nominal: u128, rate: u128, max: u128) -> Option<u128> {
+    let price = (nominal * USD * rate / 100).max(USD / 10);
+    if price <= max {
+        return Some(price);
+    }
+    let floor = nominal * USD * COST_FLOOR / 100;
+    match st {
+        Strategy::Greedy | Strategy::Junk => None,
+        _ if max >= floor => Some(max),
+        _ => None,
+    }
+}
+
 pub fn roster() -> Vec<(String, &'static str, Strategy)> {
     use Strategy::*;
     let per: [(&str, &[Strategy]); 6] = [
@@ -515,10 +533,9 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                     if matches!(parts[p].buyer, Buyer::Agent(b) if b == i) {
                         continue;
                     }
-                    let price = (nominal_max(skill) * USD * a.rate / 100).max(USD / 10);
-                    if price > max {
+                    let Some(price) = bid_price(a.strategy, nominal_max(skill), a.rate, max) else {
                         continue;
-                    }
+                    };
                     let placed = if parts[p].sealed {
                         tools
                             .call(
@@ -929,6 +946,19 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn an_agent_bids_the_max_when_it_still_covers_its_cost() {
+        use Strategy::*;
+        // fetch: nominal 5; a contractor's sub-part offers at most 3.24.
+        let max = 324 * USD / 100;
+        assert_eq!(bid_price(Lean, 5, 66, max), Some(max));
+        assert_eq!(bid_price(Lean, 5, 60, max), Some(3 * USD));
+        assert_eq!(bid_price(Greedy, 5, 100, max), None);
+        // Below the cost floor (55% of 5 = 2.75) nobody but junk bids.
+        assert_eq!(bid_price(Steady, 5, 90, 2 * USD), None);
+        assert_eq!(bid_price(Junk, 5, 45, 3 * USD), Some(225 * USD / 100));
+    }
+
     use super::*;
 
     #[test]
