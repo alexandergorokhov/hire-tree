@@ -214,6 +214,9 @@ pub struct Child {
     pub state: ChildState,
     /// When the hire started (for `resume_hire`).
     pub since_ns: u64,
+    /// Hired by this job's own worker out of its pay (contractor mode).
+    #[serde(default)]
+    pub by_worker: bool,
 }
 
 /// The one settle transfer (or balance check) in flight.
@@ -715,21 +718,34 @@ impl Job {
         spec_hash: String,
         sub: Option<U128>,
     ) -> Promise {
-        require!(
-            env::predecessor_account_id() == self.manager,
-            "only the manager can hire"
-        );
-        self.hire_inner(worker, amount, spec_hash, sub)
+        let by_worker = self.hiring_role("hire");
+        self.hire_inner(worker, amount, spec_hash, sub, by_worker)
+    }
+
+    /// The manager may hire in any job. A sub-job's own worker may hire too
+    /// (a contractor): it pays for each sub-hire out of its own pay, the
+    /// sub-job's manager is the worker, and unspent or refunded pay comes
+    /// back to it. Returns true for a worker hire.
+    fn hiring_role(&self, what: &str) -> bool {
+        let caller = env::predecessor_account_id();
+        if caller == self.manager {
+            return false;
+        }
+        if !self.root && self.worker.as_ref() == Some(&caller) {
+            require!(
+                !self.note_sold && !self.note_pending,
+                "the note is sold: the pay is no longer yours to spend"
+            );
+            return true;
+        }
+        env::panic_str(&format!("only the manager or this job's worker can {what}"))
     }
 
     /// Manager only, while the job is open: put a subtask out for bids.
     /// `max` is the most the manager will pay; it must fit the free budget.
     /// Returns the slot number.
     pub fn open_bids(&mut self, spec_hash: String, max: U128, secs: u64) -> u32 {
-        require!(
-            env::predecessor_account_id() == self.manager,
-            "only the manager can open bids"
-        );
+        let by_worker = self.hiring_role("open bids");
         require!(self.status == Status::Open, "job is not open");
         require!(self.window_open(), "window is closed");
         require!(self.bid_slots.len() < MAX_BID_SLOTS, "too many bid slots");
@@ -738,10 +754,17 @@ impl Job {
             "bid time must be 10 s to 1 h"
         );
         require!(max.0 > 0, "max must be greater than zero");
-        require!(
-            max.0 <= self.ledger.unallocated(),
-            "max is more than the job can still hire"
-        );
+        if by_worker {
+            require!(
+                max.0 < self.ledger.amount,
+                "max is more than your pay: a contractor keeps part of it"
+            );
+        } else {
+            require!(
+                max.0 <= self.ledger.unallocated(),
+                "max is more than the job can still hire"
+            );
+        }
         parse_hash32_hex(&spec_hash)
             .unwrap_or_else(|| env::panic_str("spec_hash must be 64 hex chars"));
         let closes_ns = env::block_timestamp() + secs * NS_PER_SEC;
@@ -772,6 +795,10 @@ impl Job {
     pub fn bid(&mut self, slot: u32, price: U128) {
         let me = env::predecessor_account_id();
         require!(me != self.manager, "the manager cannot bid");
+        require!(
+            self.worker.as_ref() != Some(&me),
+            "the job's worker cannot bid on its own job"
+        );
         require!(me != env::current_account_id(), "the job cannot bid");
         let s = self
             .bid_slots
@@ -803,10 +830,7 @@ impl Job {
     /// track records); the price is always the bidder's own.
     #[payable]
     pub fn award(&mut self, slot: u32, worker: AccountId, sub: Option<U128>) -> Promise {
-        require!(
-            env::predecessor_account_id() == self.manager,
-            "only the manager can award"
-        );
+        let by_worker = self.hiring_role("award");
         let s = self
             .bid_slots
             .get(slot as usize)
@@ -828,7 +852,7 @@ impl Job {
             "award",
             json!({ "slot": slot, "worker": worker, "price": price }),
         );
-        self.hire_inner(worker, price, s.spec_hash, sub)
+        self.hire_inner(worker, price, s.spec_hash, sub, by_worker)
     }
 
     /// One bid slot, or null.
@@ -842,6 +866,7 @@ impl Job {
         amount: U128,
         spec_hash: String,
         sub: Option<U128>,
+        by_worker: bool,
     ) -> Promise {
         require!(self.status == Status::Open, "job is not open");
         require!(self.window_open(), "window is closed");
@@ -869,7 +894,13 @@ impl Job {
             .parse()
             .unwrap_or_else(|_| env::panic_str("child account id is invalid or too long"));
 
-        // State before promises.
+        // State before promises. A contractor pays out of its own pay.
+        if by_worker {
+            require!(sub.is_none(), "a contractor hires without a sub-budget");
+            if let Err(e) = self.ledger.carve(total) {
+                fail(e);
+            }
+        }
         if let Err(e) = self.ledger.allocate(total) {
             fail(e);
         }
@@ -879,13 +910,14 @@ impl Job {
             total: U128(total),
             state: ChildState::Creating,
             since_ns: env::block_timestamp(),
+            by_worker,
         });
         self.children_pending += 1;
 
         let remaining_secs = (self.window_end_ns - env::block_timestamp()) / NS_PER_SEC;
         let args = json!({
             "client": null,
-            "manager": self.manager,
+            "manager": if by_worker { self.worker.clone().unwrap() } else { self.manager.clone() },
             "worker": worker,
             "token": self.token,
             "amount": amount,
@@ -1014,6 +1046,11 @@ impl Job {
             if let Err(e) = self.ledger.release(total - used) {
                 fail(e);
             }
+            if self.children[i].by_worker {
+                if let Err(e) = self.ledger.uncarve(total - used) {
+                    fail(e);
+                }
+            }
             self.children[i].total = U128(used);
             emit(
                 "anomaly",
@@ -1114,6 +1151,11 @@ impl Job {
         let total = self.children[i].total.0;
         if let Err(e) = self.ledger.release(total) {
             fail(e);
+        }
+        if self.children[i].by_worker {
+            if let Err(e) = self.ledger.uncarve(total) {
+                fail(e);
+            }
         }
         self.children[i].state = ChildState::Failed;
         self.children_pending -= 1;
@@ -1654,6 +1696,13 @@ impl Job {
         );
     }
 
+    /// The worker hired sub-agents that have not closed yet.
+    pub fn has_open_worker_hires(&self) -> bool {
+        self.children
+            .iter()
+            .any(|c| c.by_worker && c.state != ChildState::Closed && c.state != ChildState::Failed)
+    }
+
     /// Price of this job's note for the lead's treasury, if sellable now.
     /// Needs: Checked, verified receipt, unsold, payee unpaid, a treasury
     /// pinned, no sale in flight. Price: amount minus 1% (fee rounds down).
@@ -1664,6 +1713,9 @@ impl Job {
             || self.treasury.is_none()
             || (self.checker.is_none() && self.judge.is_none())
             || self.failed_checks > 0
+            // A contractor's pay is not final until its sub-jobs close
+            // (refunds come back to it), so its note waits for them.
+            || self.has_open_worker_hires()
         {
             return None;
         }
@@ -2215,7 +2267,12 @@ impl Job {
             .children_open
             .checked_sub(1)
             .unwrap_or_else(|| env::panic_str("children_open underflow"));
-        if let Err(e) = self.ledger.credit(returned.0) {
+        let r = if self.children[i].by_worker {
+            self.ledger.restore(returned.0)
+        } else {
+            self.ledger.credit(returned.0)
+        };
+        if let Err(e) = r {
             fail(e);
         }
         emit(

@@ -60,3 +60,11 @@ Records are evidence, not proof: a lead can hire itself to build one.
 #### Scenario: A stranger writes a record
 - THEN refused
 - factory: `strangers_cannot_write_records`
+
+### Requirement: Platform fee
+The owner SHALL be able to set a platform fee of at most 1% (100 bps). On
+each post the factory SHALL keep the fee and fund the job with the rest;
+a failed post SHALL refund the whole budget, fee included. Only the owner
+withdraws fees; a failed withdrawal puts them back. The fee is 0 unless
+set (the swarm runs at 0.5%).
+- unit: `the_platform_fee_comes_off_the_top_and_is_kept_only_when_posted`, `the_fee_is_capped_at_one_percent`, `only_the_owner_withdraws_fees`

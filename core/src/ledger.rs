@@ -126,6 +126,38 @@ impl Ledger {
         Ok(())
     }
 
+    /// Contractor mode: the worker turns `x` of its own pay into a sub-hire
+    /// budget (its pay drops by `x`, so `unallocated` rises by `x`). It must
+    /// keep part of its pay: `x < amount`.
+    pub fn carve(&mut self, x: u128) -> Result<(), MoneyError> {
+        if x == 0 {
+            return Err(MoneyError::ZeroAmount);
+        }
+        if x >= self.amount {
+            return Err(MoneyError::OverAllocated {
+                requested: x,
+                available: self.amount.saturating_sub(1),
+            });
+        }
+        self.amount = sub(self.amount, x)?;
+        Ok(())
+    }
+
+    /// Undo `carve(x)` after a failed contractor hire (after `release(x)`).
+    pub fn uncarve(&mut self, x: u128) -> Result<(), MoneyError> {
+        self.amount = add(self.amount, x)?;
+        Ok(())
+    }
+
+    /// A contractor's sub-job closed and sent back `x` (its unspent or
+    /// refunded pay): the tokens are back, and they are the worker's pay again.
+    pub fn restore(&mut self, x: u128) -> Result<(), MoneyError> {
+        let amount = add(self.amount, x)?;
+        self.ft_balance = add(self.ft_balance, x)?;
+        self.amount = amount;
+        Ok(())
+    }
+
     /// The price the lead's treasury pays for this job's note, if it may be
     /// sold now: the delivery passed the check (`Checked`), the receipt was
     /// verified, the note was not sold, and no settle attempt has already
@@ -234,6 +266,21 @@ mod tests {
         l.add_bond(50).unwrap();
         assert_eq!(l.unallocated(), 70);
         assert_eq!(l.ft_balance, 150);
+    }
+
+    #[test]
+    fn a_contractor_carves_its_own_pay_and_gets_refunds_back() {
+        let mut l = Ledger::new(20);
+        l.fund(20).unwrap();
+        assert_eq!(l.unallocated(), 0);
+        // It must keep some pay.
+        assert!(l.carve(20).is_err());
+        l.carve(12).unwrap();
+        assert_eq!((l.amount, l.unallocated()), (8, 12));
+        l.allocate(12).unwrap();
+        // The sub-job failed and sent its 12 back: the pay is whole again.
+        l.restore(12).unwrap();
+        assert_eq!((l.amount, l.ft_balance), (20, 20));
     }
 
     #[test]

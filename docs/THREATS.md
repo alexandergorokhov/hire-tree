@@ -27,6 +27,11 @@ it were real. Each row names the test that shows the answer.
 | The root's final payout to an unregistered manager fails forever | the root registers the manager first (refunded if already registered) | `root_fee_and_bond_go_to_the_manager_the_rest_back_to_the_client` (asserts `storage_deposit` for the manager first) |
 | Spam posts drain the factory's NEAR | each post uses 0.06 NEAR the client prepaid; budget >= 1 fUSD | factory `post_without_prepaid_near_refunded`, `dust_budget_refunded` |
 | Money rule broken by any sequence | property test over 10,000 random trees with random transfer failures | `core/tests/money_prop.rs` |
+| A contractor (a sub-job's worker who hires) spends money that is not its own | it hires only out of its own pay (`Ledger::carve`), must keep part of it, cannot add a sub-budget; the lead's unallocated budget is untouched | `a_contractor_carves_its_own_pay_and_gets_refunds_back`, `a_contractor_cannot_bid_out_its_whole_pay` |
+| A contractor's sub-agent fails and the refund goes to the wrong account | a closed sub-job's return becomes the contractor's pay again (`restore`); a failed hire restores it too | `unspent_or_refunded_sub_pay_goes_back_to_the_contractor`, `a_failed_contractor_hire_restores_its_pay` |
+| The treasury buys a contractor's note, then a sub-job refund changes what the contractor is owed | the note is not sellable while the contractor's sub-jobs are open | `a_contractors_note_waits_for_its_sub_jobs` |
+| A contractor bids on its own slot, or a stranger hires in a sub-job | refused | `a_contractor_cannot_bid_on_its_own_slot`, `a_stranger_cannot_hire_in_a_sub_job` |
+| The factory owner sets a confiscatory platform fee | capped at 1%; a failed post refunds the fee too | `the_fee_is_capped_at_one_percent`, `the_platform_fee_comes_off_the_top_and_is_kept_only_when_posted` |
 
 ## Receipts (AI proof)
 | Threat | Answer | Test |

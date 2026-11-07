@@ -21,6 +21,7 @@ const GAS_INIT: Gas = Gas::from_tgas(15);
 const GAS_STORAGE_DEPOSIT: Gas = Gas::from_tgas(10);
 const GAS_FT_TRANSFER_CALL: Gas = Gas::from_tgas(40);
 const GAS_ON_POSTED: Gas = Gas::from_tgas(15);
+const GAS_FT_TRANSFER: Gas = Gas::from_tgas(10);
 /// Least gas `ft_on_transfer` must have left to post a job.
 pub const GAS_POST_MIN: Gas = Gas::from_tgas(110);
 pub const MAX_WINDOW_SECS: u64 = 30 * 24 * 3600;
@@ -91,6 +92,18 @@ pub struct Factory {
     /// Prepaid NEAR per client, in yocto.
     credits: LookupMap<AccountId, u128>,
     records: LookupMap<AccountId, Record>,
+    /// Platform fee on each posted budget, in basis points (max 100 = 1%).
+    fee_bps: u16,
+    /// Fees kept so far and not yet withdrawn.
+    fees: u128,
+}
+
+/// The highest platform fee the owner may set: 1%.
+pub const MAX_FEE_BPS: u16 = 100;
+
+/// The platform fee on a budget, rounded down.
+pub fn platform_fee(budget: u128, bps: u16) -> u128 {
+    budget / 10_000 * bps as u128 + budget % 10_000 * bps as u128 / 10_000
 }
 
 fn emit(event: &str, data: serde_json::Value) {
@@ -124,10 +137,13 @@ impl Factory {
             jobs: LookupMap::new(b"j"),
             credits: LookupMap::new(b"c"),
             records: LookupMap::new(b"r"),
+            fee_bps: 0,
+            fees: 0,
         }
     }
 
     /// Owner only. New jobs use the new values; existing jobs keep theirs.
+    #[allow(clippy::too_many_arguments)]
     pub fn set_settings(
         &mut self,
         code_hash: Option<Base58CryptoHash>,
@@ -136,8 +152,13 @@ impl Factory {
         clear_checker: Option<bool>,
         judge: Option<String>,
         clear_judge: Option<bool>,
+        fee_bps: Option<u16>,
     ) {
         require!(env::predecessor_account_id() == self.owner, "owner only");
+        if let Some(f) = fee_bps {
+            require!(f <= MAX_FEE_BPS, "fee_bps is at most 100 (1%)");
+            self.fee_bps = f;
+        }
         if let Some(h) = code_hash {
             self.code_hash = h.into();
         }
@@ -166,7 +187,7 @@ impl Factory {
         );
         emit(
             "settings",
-            json!({ "signer": self.signer, "checker": self.checker, "judge": self.judge }),
+            json!({ "signer": self.signer, "checker": self.checker, "judge": self.judge, "fee_bps": self.fee_bps }),
         );
     }
 
@@ -215,8 +236,11 @@ impl Factory {
         if parse_hash32_hex(&m.spec_hash).is_none() {
             return self.refund(amount, "spec_hash must be 64 hex chars");
         }
+        // The platform fee comes off the top; the job is funded with the rest.
+        let fee = platform_fee(amount.0, self.fee_bps);
+        let funded = amount.0 - fee;
         let lead_fee = m.lead_fee.map(|f| f.0).unwrap_or(0);
-        if lead_fee > amount.0 {
+        if lead_fee > funded {
             return self.refund(amount, "lead_fee is larger than the budget");
         }
         if m.window_secs == 0 || m.window_secs > MAX_WINDOW_SECS {
@@ -255,7 +279,7 @@ impl Factory {
         });
         emit(
             "post_started",
-            json!({ "n": n, "job": job, "client": sender_id, "budget": amount }),
+            json!({ "n": n, "job": job, "client": sender_id, "budget": amount, "platform_fee": U128(fee) }),
         );
         let create = Promise::new(job.clone())
             .create_account()
@@ -278,7 +302,7 @@ impl Factory {
         // The job accepts root funding from its client or its parent (us).
         let fund = Promise::new(self.token.clone()).function_call(
             "ft_transfer_call",
-            json!({ "receiver_id": job, "amount": amount, "msg": "fund" })
+            json!({ "receiver_id": job, "amount": U128(funded), "msg": "fund" })
                 .to_string()
                 .into_bytes(),
             NearToken::from_yoctonear(1),
@@ -288,7 +312,7 @@ impl Factory {
             create.then(register).then(fund).then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(GAS_ON_POSTED)
-                    .on_posted(n, amount),
+                    .on_posted(n, amount, Some(U128(fee))),
             ),
         )
     }
@@ -296,7 +320,9 @@ impl Factory {
     /// After forwarding the budget. Returns what the token should refund to
     /// the client: 0 if the job kept everything.
     #[private]
-    pub fn on_posted(&mut self, n: u32, amount: U128) -> U128 {
+    pub fn on_posted(&mut self, n: u32, amount: U128, fee: Option<U128>) -> U128 {
+        let fee = fee.map(|f| f.0).unwrap_or(0);
+        let funded = amount.0 - fee;
         require!(
             env::predecessor_account_id() == env::current_account_id(),
             "callback: caller must be this contract"
@@ -309,8 +335,8 @@ impl Factory {
             // Unreadable answer: assume the tokens left, so the factory never
             // refunds the client from other clients' tokens.
             Ok(b) => serde_json::from_slice::<U128>(&b)
-                .map(|u| u.0.min(amount.0))
-                .unwrap_or(amount.0),
+                .map(|u| u.0.min(funded))
+                .unwrap_or(funded),
             Err(_) => 0,
         };
         let mut p = self
@@ -318,7 +344,7 @@ impl Factory {
             .get(&n)
             .cloned()
             .unwrap_or_else(|| env::panic_str("unknown job"));
-        p.state = if used == amount.0 {
+        p.state = if used == funded {
             PostState::Posted
         } else {
             PostState::Failed
@@ -334,8 +360,44 @@ impl Factory {
             "posted",
             json!({ "n": n, "job": p.job, "state": p.state, "used": U128(used) }),
         );
+        // Posted: keep the fee. Failed: refund everything not used, fee too.
+        let keep = if p.state == PostState::Posted { fee } else { 0 };
+        self.fees += keep;
         self.jobs.insert(n, p);
-        U128(amount.0 - used)
+        U128(amount.0 - used - keep)
+    }
+
+    /// Owner only: send the platform fees kept so far to the owner.
+    pub fn withdraw_fees(&mut self) -> Promise {
+        require!(env::predecessor_account_id() == self.owner, "owner only");
+        let x = self.fees;
+        require!(x > 0, "no fees to withdraw");
+        self.fees = 0;
+        Promise::new(self.token.clone())
+            .function_call(
+                "ft_transfer",
+                json!({ "receiver_id": self.owner, "amount": U128(x) })
+                    .to_string()
+                    .into_bytes(),
+                NearToken::from_yoctonear(1),
+                GAS_FT_TRANSFER,
+            )
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_ON_POSTED)
+                    .on_fees_withdrawn(U128(x)),
+            )
+    }
+
+    /// A failed withdrawal puts the fees back.
+    #[private]
+    pub fn on_fees_withdrawn(&mut self, amount: U128) -> bool {
+        let ok = env::promise_result_checked(0, 64).is_ok();
+        if !ok {
+            self.fees += amount.0;
+        }
+        emit("fees_withdrawn", json!({ "amount": amount, "ok": ok }));
+        ok
     }
 
     /// Called by a settled job of this factory's tree (any account under
@@ -384,7 +446,7 @@ impl Factory {
 
     pub fn get_settings(&self) -> serde_json::Value {
         json!({
-            "owner": self.owner, "token": self.token,
+            "owner": self.owner, "token": self.token, "fee_bps": self.fee_bps, "fees": U128(self.fees),
             "code_hash": Base58CryptoHash::from(self.code_hash),
             "signer": self.signer, "checker": self.checker, "judge": self.judge,
             "next": self.next,
@@ -513,7 +575,7 @@ mod tests {
                 format!("\"{BUDGET}\"").into_bytes(),
             )],
         );
-        assert_eq!(f.on_posted(1, U128(BUDGET)), U128(0));
+        assert_eq!(f.on_posted(1, U128(BUDGET), None), U128(0));
         assert_eq!(f.get_job(1).unwrap().state, PostState::Posted);
     }
 
@@ -565,13 +627,13 @@ mod tests {
         ctx(TOKEN, vec![]);
         f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
         ctx(F, vec![PromiseResult::Failed]);
-        assert_eq!(f.on_posted(1, U128(BUDGET)), U128(BUDGET));
+        assert_eq!(f.on_posted(1, U128(BUDGET), None), U128(BUDGET));
         assert_eq!(f.get_job(1).unwrap().state, PostState::Failed);
         // A partial answer refunds the rest.
         ctx(TOKEN, vec![]);
         f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
         ctx(F, vec![PromiseResult::Successful(b"\"0\"".to_vec())]);
-        assert_eq!(f.on_posted(2, U128(BUDGET)), U128(BUDGET));
+        assert_eq!(f.on_posted(2, U128(BUDGET), None), U128(BUDGET));
     }
 
     #[test]
@@ -648,7 +710,7 @@ mod tests {
         ctx(TOKEN, vec![]);
         f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
         ctx(F, vec![PromiseResult::Failed]);
-        f.on_posted(1, U128(BUDGET));
+        f.on_posted(1, U128(BUDGET), None);
         assert_eq!(f.get_credit(acc("client.test")).0, POST_NEAR.as_yoctonear());
     }
 
@@ -658,7 +720,7 @@ mod tests {
         ctx(TOKEN, vec![]);
         f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
         ctx(F, vec![PromiseResult::Successful(b"garbage".to_vec())]);
-        assert_eq!(f.on_posted(1, U128(BUDGET)), U128(0));
+        assert_eq!(f.on_posted(1, U128(BUDGET), None), U128(0));
     }
 
     #[test]
@@ -668,8 +730,8 @@ mod tests {
         ctx(TOKEN, vec![]);
         f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
         ctx(F, vec![PromiseResult::Failed]);
-        f.on_posted(1, U128(BUDGET));
-        f.on_posted(1, U128(BUDGET));
+        f.on_posted(1, U128(BUDGET), None);
+        f.on_posted(1, U128(BUDGET), None);
     }
 
     #[test]
@@ -677,14 +739,22 @@ mod tests {
     fn only_owner_changes_settings() {
         let mut f = factory();
         ctx("eve.test", vec![]);
-        f.set_settings(None, Some("22".repeat(20)), None, None, None, None);
+        f.set_settings(None, Some("22".repeat(20)), None, None, None, None, None);
     }
 
     #[test]
     fn owner_changes_settings_for_new_jobs() {
         let mut f = factory();
         ctx("owner.test", vec![]);
-        f.set_settings(None, Some("22".repeat(20)), None, Some(true), None, None);
+        f.set_settings(
+            None,
+            Some("22".repeat(20)),
+            None,
+            Some(true),
+            None,
+            None,
+            None,
+        );
         assert_eq!(f.get_settings()["signer"], "22".repeat(20));
         assert!(f.get_settings()["checker"].is_null());
     }
@@ -699,6 +769,7 @@ mod tests {
             None,
             Some(true),
             Some("judge-model".into()),
+            None,
             None,
         );
         assert_eq!(f.get_settings()["judge"], "judge-model");
@@ -758,7 +829,15 @@ mod tests {
     fn checker_and_judge_together_refused() {
         let mut f = factory();
         ctx("owner.test", vec![]);
-        f.set_settings(None, None, None, None, Some("judge-model".into()), None);
+        f.set_settings(
+            None,
+            None,
+            None,
+            None,
+            Some("judge-model".into()),
+            None,
+            None,
+        );
     }
 
     #[test]
@@ -766,6 +845,62 @@ mod tests {
     fn on_posted_is_private() {
         let mut f = factory();
         ctx("eve.test", vec![PromiseResult::Failed]);
-        f.on_posted(1, U128(BUDGET));
+        f.on_posted(1, U128(BUDGET), None);
+    }
+
+    #[test]
+    fn the_platform_fee_comes_off_the_top_and_is_kept_only_when_posted() {
+        assert_eq!(platform_fee(70_000_000, 50), 350_000);
+        assert_eq!(platform_fee(1, 100), 0);
+        let mut f = factory();
+        ctx("owner.test", vec![]);
+        f.set_settings(None, None, None, None, None, None, Some(50));
+        ctx(TOKEN, vec![]);
+        f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
+        let fee = platform_fee(BUDGET, 50);
+        let fund = get_created_receipts()
+            .into_iter()
+            .flat_map(|r| r.actions)
+            .find_map(|a| match a {
+                near_sdk::mock::MockAction::FunctionCallWeight {
+                    method_name, args, ..
+                } if method_name == b"ft_transfer_call" => Some(String::from_utf8(args).unwrap()),
+                _ => None,
+            })
+            .unwrap();
+        assert!(fund.contains(&format!("\"{}\"", BUDGET - fee)), "{fund}");
+        // The job kept all it was sent: the factory keeps the fee.
+        ctx(
+            F,
+            vec![PromiseResult::Successful(
+                serde_json::to_vec(&U128(BUDGET - fee)).unwrap(),
+            )],
+        );
+        assert_eq!(f.on_posted(1, U128(BUDGET), Some(U128(fee))), U128(0));
+        assert_eq!(f.get_settings()["fees"], fee.to_string());
+        // A failed post refunds everything, fee included.
+        ctx(TOKEN, vec![]);
+        prepay(&mut f, "client.test", 1);
+        ctx(TOKEN, vec![]);
+        f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
+        ctx(F, vec![PromiseResult::Failed]);
+        assert_eq!(f.on_posted(2, U128(BUDGET), Some(U128(fee))), U128(BUDGET));
+        assert_eq!(f.get_settings()["fees"], fee.to_string());
+    }
+
+    #[test]
+    #[should_panic(expected = "fee_bps is at most 100 (1%)")]
+    fn the_fee_is_capped_at_one_percent() {
+        let mut f = factory();
+        ctx("owner.test", vec![]);
+        f.set_settings(None, None, None, None, None, None, Some(101));
+    }
+
+    #[test]
+    #[should_panic(expected = "owner only")]
+    fn only_the_owner_withdraws_fees() {
+        let mut f = factory();
+        ctx("client.test", vec![]);
+        f.withdraw_fees();
     }
 }

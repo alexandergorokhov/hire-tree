@@ -632,7 +632,7 @@ fn hire_without_storage_deposit_refused() {
 }
 
 #[test]
-#[should_panic(expected = "only the manager can hire")]
+#[should_panic(expected = "only the manager or this job's worker can hire")]
 fn non_manager_cannot_hire() {
     let mut j = funded_root(100 * USD);
     Ctx::new(ROOT, CLIENT).set();
@@ -3242,7 +3242,7 @@ mod bidding {
     }
 
     #[test]
-    #[should_panic(expected = "only the manager can open bids")]
+    #[should_panic(expected = "only the manager or this job's worker can open bids")]
     fn stranger_cannot_open_bids() {
         let mut j = funded_root(100 * USD);
         Ctx::new(ROOT, EVE).set();
@@ -3333,5 +3333,121 @@ mod bidding {
         for i in 0..=MAX_BIDS {
             bid(&mut j, &format!("w{i}.test"), s, 10 * USD);
         }
+    }
+}
+
+// ============================================================ contractor
+
+/// A sub-job's worker hires its own sub-agents out of its pay (a recursive
+/// labor market: any agent that wins work can become a buyer).
+mod contractor {
+    use super::*;
+
+    const GC: &str = "t1.t1.job-1.hiretree.test";
+    const CLOSED: u64 = T0 + 61 * NS_PER_SEC;
+
+    /// t1 (worker WORKER, pay 20) puts a part out for bids and awards
+    /// WORKER2 at 9. Returns t1.
+    fn contracted() -> Job {
+        let mut t1 = funded_sub(20 * USD, 20 * USD);
+        Ctx::new(T1, WORKER).set();
+        let s = t1.open_bids(spec(), U128(12 * USD), 60);
+        Ctx::new(T1, WORKER2).deposit(BID_NEAR).set();
+        t1.bid(s, U128(9 * USD));
+        Ctx::new(T1, WORKER)
+            .at(CLOSED)
+            .deposit(NearToken::from_millinear(50))
+            .set();
+        t1.award(s, acc(WORKER2), None);
+        assert_eq!(
+            call_args("new")["manager"],
+            WORKER,
+            "the contractor manages its sub-job"
+        );
+        Ctx::new(T1, T1).at(CLOSED).results(vec![ok(b"")]).set();
+        t1.on_child_created(0);
+        Ctx::new(T1, T1)
+            .at(CLOSED)
+            .results(vec![ok(&u128_json(9 * USD))])
+            .set();
+        assert!(t1.on_child_funded(0));
+        t1
+    }
+
+    #[test]
+    fn a_worker_hires_sub_agents_out_of_its_own_pay() {
+        let mut t1 = contracted();
+        let v = t1.get_job();
+        assert!(v.children[0].by_worker);
+        assert_eq!(v.children[0].total, U128(9 * USD));
+        assert_eq!(t1.ledger.amount, 11 * USD, "pay 20, spent 9: margin 11");
+        // The sub-job paid its worker and sent nothing back; the contractor
+        // delivers and keeps its margin.
+        Ctx::new(T1, GC).at(CLOSED).set();
+        t1.child_closed(U128(0));
+        Ctx::new(T1, WORKER).at(CLOSED).set();
+        t1.deliver("02".repeat(32), None, None, None, None);
+        Ctx::new(T1, EVE).at(AFTER).set();
+        t1.settle();
+        let args = call_args("ft_transfer");
+        assert_eq!(args["receiver_id"], WORKER);
+        assert_eq!(args["amount"], (11 * USD).to_string());
+    }
+
+    #[test]
+    fn unspent_or_refunded_sub_pay_goes_back_to_the_contractor() {
+        let mut t1 = contracted();
+        // The sub-agent failed: its 9 come back as the contractor's pay.
+        Ctx::new(T1, GC).at(CLOSED).set();
+        t1.child_closed(U128(9 * USD));
+        assert_eq!(t1.ledger.amount, 20 * USD);
+        assert_eq!(t1.get_job().ft_balance.0, 20 * USD);
+    }
+
+    #[test]
+    fn a_contractors_note_waits_for_its_sub_jobs() {
+        let mut t1 = contracted();
+        assert!(t1.has_open_worker_hires());
+        Ctx::new(T1, GC).at(CLOSED).set();
+        t1.child_closed(U128(0));
+        assert!(!t1.has_open_worker_hires());
+    }
+
+    #[test]
+    #[should_panic(expected = "a contractor keeps part of it")]
+    fn a_contractor_cannot_bid_out_its_whole_pay() {
+        let mut t1 = funded_sub(20 * USD, 20 * USD);
+        Ctx::new(T1, WORKER).set();
+        t1.open_bids(spec(), U128(20 * USD), 60);
+    }
+
+    #[test]
+    #[should_panic(expected = "the job's worker cannot bid on its own job")]
+    fn a_contractor_cannot_bid_on_its_own_slot() {
+        let mut t1 = funded_sub(20 * USD, 25 * USD);
+        Ctx::new(T1, LEAD).set();
+        let s = t1.open_bids(spec(), U128(1), 60);
+        Ctx::new(T1, WORKER).deposit(BID_NEAR).set();
+        t1.bid(s, U128(1));
+    }
+
+    #[test]
+    fn a_failed_contractor_hire_restores_its_pay() {
+        let mut t1 = funded_sub(20 * USD, 20 * USD);
+        Ctx::new(T1, WORKER).deposit(HIRE_MIN_NEAR).set();
+        t1.hire(acc(WORKER2), U128(5 * USD), spec(), None);
+        assert_eq!(t1.ledger.amount, 15 * USD);
+        Ctx::new(T1, T1).results(vec![PromiseResult::Failed]).set();
+        t1.on_child_created(0);
+        assert_eq!(t1.ledger.amount, 20 * USD);
+        assert_eq!(t1.get_job().ft_balance.0, 20 * USD);
+    }
+
+    #[test]
+    #[should_panic(expected = "only the manager or this job's worker can hire")]
+    fn a_stranger_cannot_hire_in_a_sub_job() {
+        let mut t1 = funded_sub(20 * USD, 20 * USD);
+        Ctx::new(T1, EVE).deposit(HIRE_MIN_NEAR).set();
+        t1.hire(acc(WORKER2), U128(5 * USD), spec(), None);
     }
 }
