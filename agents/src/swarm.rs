@@ -307,6 +307,8 @@ fn jitter(name: &str) -> i64 {
 
 const BID_SECS: u64 = 300;
 const WINDOW_SECS: u64 = 5400;
+/// fUSD each lead's client posts per round.
+const JOB_BUDGET: u128 = 70;
 /// Platform fee the factory keeps on each posted budget in this run.
 pub const SWARM_FEE_BPS: u16 = 50;
 /// Every slot asks each bidder to stake 0.05 NEAR: back to losers at the
@@ -436,7 +438,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                 "Round {r}, lead {}: explainer, Spanish translation and a summary.",
                 LEADS[l].0
             );
-            tools.call(&leads[l].1, "post_job", &json!({ "budget": (70 * USD).to_string(), "manager": leads[l].0.id,
+            tools.call(&leads[l].1, "post_job", &json!({ "budget": (JOB_BUDGET * USD).to_string(), "manager": leads[l].0.id,
                 "task": task, "window_secs": WINDOW_SECS, "lead_fee": (5 * USD).to_string(), "treasury": treasury.id })).await?;
             for (skill, max) in SKILLS {
                 let max = max * USD * LEADS[l].1.max_pct / 100;
@@ -939,7 +941,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
         "leads": LEADS.iter().enumerate().map(|(l, (n, r))| json!({ "lead": n, "record_weight": r.record_weight,
             "max_pct": r.max_pct, "spent": lead_spent[l] as f64 / 1e6, "unfilled": lead_unfilled[l] })).collect::<Vec<_>>(),
         "junk_respawns": respawns, "premiums": premium,
-        "platform_fee_bps": SWARM_FEE_BPS, "bond_near": BOND_YOCTO as f64 / 1e24, "sealed_lead": "quality", "platform_fees": num(&settings["fees"]) as f64 / 1e6,
+        "platform_fee_bps": SWARM_FEE_BPS, "job_budget": JOB_BUDGET, "bond_near": BOND_YOCTO as f64 / 1e24, "sealed_lead": "quality", "platform_fees": num(&settings["fees"]) as f64 / 1e6,
         "model": "scripted test model (not NEAR AI) for work, judging and the model bidder; agents adapt their asks; buyers pick by price, on-chain record and a learned newcomer premium" }),
     )
 }

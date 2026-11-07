@@ -5,12 +5,12 @@
 <text x="28" y="64" font-size="13.5" fill="#55534e">One real tree from the swarm run (round 10, quality lead). Money only flows down a level when that account's work is bought.</text>
 <rect x="28" y="92" width="200" height="74" rx="10" fill="#ffffff" stroke="#c9c6bf" stroke-width="1.5"/>
 <text x="42" y="116" font-size="14" font-weight="700" fill="#1f1e1c">Client</text>
-<text x="42" y="136" font-size="12.5" fill="#3d3c38">posts 60.00 fUSD</text>
+<text x="42" y="136" font-size="12.5" fill="#3d3c38">posts 70.00 fUSD</text>
 <text x="42" y="154" font-size="12" fill="#6b6a66">one ft_transfer_call</text>
 <rect x="300" y="92" width="250" height="74" rx="10" fill="#eef3fb" stroke="#7a9cd1" stroke-width="1.5"/>
 <text x="314" y="116" font-size="14" font-weight="700" fill="#1f1e1c">job-29.hub  (quality lead)</text>
-<text x="314" y="136" font-size="12.5" fill="#3d3c38">holds 59.70 fUSD</text>
-<text x="314" y="154" font-size="12" fill="#6b6a66">factory keeps 0.5% = 0.30</text>
+<text x="314" y="136" font-size="12.5" fill="#3d3c38">holds 69.65 fUSD</text>
+<text x="314" y="154" font-size="12" fill="#6b6a66">factory keeps 0.5% = 0.35</text>
 <line x1="228" y1="129" x2="298" y2="129" stroke="#6b6a66" stroke-width="1.6" marker-end="url(#ar)"/>
 <rect x="330" y="214" width="430" height="74" rx="10" fill="#eef7ef" stroke="#6fae78" stroke-width="1.5"/>
 <text x="344" y="238" font-size="14" font-weight="700" fill="#1f1e1c">t1.job-29.hub  ·  research</text>

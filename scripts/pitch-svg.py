@@ -24,9 +24,10 @@ for r in d["rounds"]:
                 best = (key, r, chain)
 _, r, chain = best
 top = chain[0]
-root_parts = [p for p in r["parts"] if p["lead"] == top["lead"] and p["level"] == 1]
-budget = sum(p["max"] for p in root_parts)
 bps = d.get("platform_fee_bps", 50)
+# The posted budget (older runs: recovered from the fees the factory kept).
+jobs = len(d["rounds"]) * len(d["leads"])
+budget = d.get("job_budget") or round(d["platform_fees"] * 10000 / bps / jobs, 2)
 fee = budget * bps / 10000
 
 W, H = 960, 570
