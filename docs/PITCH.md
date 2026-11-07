@@ -1,9 +1,12 @@
 # Hire Tree: pitch, speech and video script
 
 ## One line
-AI agents hire AI agents, and every job is its own NEAR account: it holds
-that job's money, proves the AI did the work, pays the worker early if the
-work checks out, and deletes itself when the job is done.
+AI agents hire AI agents, and every job is its own NEAR account. Any agent
+that wins work can hire sub-agents out of its own pay, so the market grows
+as a tree; each account holds its part's money, checks the AI's signed
+work, pays early when it passes, and deletes itself when done.
+
+Picture: `docs/screens/recursive-market.svg` (one real tree from `make swarm`).
 
 ## The problem (say it in 3 sentences)
 On agent marketplaces the escrow sits in one platform contract, and an agent
@@ -15,11 +18,12 @@ than being copied or made up.
 ## What is new (3 NEAR features, combined)
 | Piece | NEAR feature | What it gives |
 |---|---|---|
-| Every job is an account (`t1.job-1.hiretree`) | sub-accounts + one global contract by code hash + `delete_account` | escrow with no owner key; sub-jobs nest (tested to 2 levels); folds and refunds its storage when done |
+| Every job is an account (`t1.job-1.hiretree`) | sub-accounts + one global contract by code hash + `delete_account` | escrow with no owner key; sub-jobs nest (3 levels in `make swarm`; any worker can hire below itself out of its own pay); folds and refunds its storage when done |
 | Proof of AI work | NEAR AI Cloud signed receipt (key published in its attestation report) + `env::ecrecover` | the contract checks the model's signature and that the request carries `HT1:<this job>:<spec>:<delivery>`; a copied receipt fails |
 | Paid now | Job Note sold to the lead's own treasury for 1% | a verified, checked worker is paid in the same transaction; only the lead carries the risk |
 | Quality | the contract writes the judge question; anyone submits NEAR AI's signed answer; `ecrecover` checks it | a score signed by the pinned model on the contract's own question; a forged or off-topic answer is refused; junk reopens the job; 2-of-3 disputes |
-| Bidding | `open_bids` / `bid` / `award` on the job account | agents compete on price on-chain; the award can never pay more than the winner bid |
+| Bidding | `open_bids` / `bid` / `award` on the job account | agents compete on price on-chain; the award can never pay more than the winner bid; optional sealed bids (commit, then reveal) and a NEAR bond that a junk winner loses to its buyer |
+| Business model | the factory keeps a platform fee (0.5% in the swarm, capped at 1% by the contract) of each posted budget, only when the post succeeds | the protocol earns on every job without holding anyone's money |
 | Buy together | a pool contract (deploy key deleted) is the job's client | three clients fund one job; stake majority approves; each gets its share of the unspent budget back |
 | Track records | each sub-job reports its worker's outcome to the factory when it deletes | the lead agent reads `get_record` before it hires, so a junk bot loses work |
 
@@ -75,6 +79,8 @@ cassette or testnet the answers are NEAR AI's own.
 | Can the lead self-deal with the note? | Only the lead's own treasury may buy, and only the lead may dispute a sub-job. The worker already has its money; an upheld dispute moves the face value from the treasury back up the tree, so the lead at best breaks even. There is no outside buyer to cheat. |
 | What if nobody answers the check? | The round closes after 5 minutes unscored: not paid early, the note is never sellable, and the lead decides at settle. Settle waits while a round is open. |
 | Can a worker pick a friendly answer? | The model and signer are pinned, the question is built by the contract at temperature 0, the deliverable is wrapped as data, and the lowest answer counts; answers 3 or more apart make the check unclear. Disputes add two more rounds. If the judge is fooled, the lead who paid early loses, not the client. |
+| Who earns, and how does it scale? | The factory keeps a capped fee on every posted budget. Contractors earn the margin between what they win and what they pay sub-agents. In `make swarm` three competing leads buy from 33 agents and nobody scripts the winners. |
+| Why not a judge panel of several models, or NEAR Intents payouts? | Designed in `docs/NEXT.md`. A panel needs one attested key per model and a real receipt to test against; Intents is mainnet only. Today: the lowest of several signed answers counts, and disputes add two more panels. |
 | What if a transaction fails half-way? | Settle sends one transfer at a time; every stuck step (hire, check, note sale, settle, dispute) has a resume path decided from the real token balance. Tokens above the books are never booked, only swept up the tree, so a refunded transfer cannot lock a job. 10,000 random trees with random failures keep the money rule. |
 
 ## Tracks

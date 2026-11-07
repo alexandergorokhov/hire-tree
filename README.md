@@ -173,23 +173,12 @@ No keys, no NEAR AI account, no testnet NEAR.
 | Step | Command | Cold time (measured on the build box) |
 |---|---|---|
 | 1 | `make setup` | crate download |
-| 2 | `make test` | about 3 s after the first compile (a few minutes cold); 339 tests |
-| 3 | `make demo` | about 4 min: builds the wasm, starts a local NEAR node, runs the three-job agent story, writes `web/scene.json` |
-| 4 | `make web`, open http://localhost:8080 | the 23 scenes, each agent decision with its reason, and every transaction |
-| 4b | `make mcp-test` | about 3 min: a scripted MCP client posts, bids (one bid refused above max), awards, delivers with a signed receipt, gets 8/10 from the judge, is paid 24.75 early, and both accounts delete themselves |
-| 5 (optional) | `make sandbox` | about 20 min: all 6 local-node tests |
-
-## Do X, see Y
-
-| Do | See |
-|---|---|
-| `make setup` | toolchain versions; crates fetched (the only networked step besides the near-sandbox binary) |
-| `make test` | 339 unit + property tests, all `ok`: core (56 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (211), factory (18), pool (25), mock checker (2), mock-usdc (7), agents (15) |
+| 2 | `make test` | 367 unit + property tests, all `ok`: core (57 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (233), factory (21), pool (25), mock checker (2), mock-usdc (7), agents (17) |
 | `make lint` | rustfmt check, clippy `-D warnings`, and a check that every test the specs and THREATS.md name exists; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make mcp-setup`, then an MCP client in this folder | `.mcp.json` starts `scripts/mcp-local.sh`: tools `guide`, `accounts`, `wait`, `do_work`, `judge_check`, `run_story` plus every agent tool, each with `as` to pick the acting account |
 | `make mcp-test` | `test result: ok. 2 passed`: the guide's walk-through, and a guest agent that wins a round at 20 fUSD (paid 19.80 early), delivers junk in round 2 (2/10, unpaid), and loses round 3 on its record although it bid lowest |
-| `make swarm` (`JOBS=24`) | about 30 min: 23 worker agents with 8 strategies (steady, lean, greedy, adaptive, junk, sloppy, undercut, and a model-driven bidder) bid on 24 jobs on a local node; nobody scripts the winners; writes `web/swarm.json`, shown by `web/swarm.html` (prices, who won each part, earnings by strategy, junk respawns and the lead's newcomer premium) |
+| `make swarm` (`ROUNDS=12`) | about 80 min on a local node: 3 leads (price, quality with sealed bids, budget) and 33 worker agents with 9 strategies; contractors win parts and hire sub-agents out of their own pay, so trees grow 3 levels deep; every bid stakes 0.05 NEAR; nobody scripts the winners; writes `web/swarm.json`, shown by `web/swarm.html` |
 | `make sandbox` | a local NEAR node runs 6 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model, and the same story replayed from a cassette it records itself with the test model; about 20 min |
 | `make demo` | the agent story on a local node in 23 scenes (7 per job: post, bids, awards, deliveries and judge answers, check close, review, fold; job 3 adds the pool joining, posting and paying back), with every agent decision and its reason; writes `web/scene.json` |
 | `make web` | serves `web/` on http://localhost:8080: the tree page, scene by scene, with the agents' decisions and every transaction |
@@ -212,6 +201,8 @@ No keys, no NEAR AI account, no testnet NEAR.
 | `web/` | static tree page |
 | `docs/THREATS.md` | every threat and the test that answers it |
 | `docs/PITCH.md` | pitch, 30 s speech, 3 min video script, judge Q&A |
+| `docs/NEXT.md` | designed, not built: a multi-model judge panel, a NEAR Intents payout leg |
+| `scripts/pitch-svg.py` | draws the top picture from one real tree in `web/swarm.json` |
 
 ## What is real and what is mocked
 - Real on the local node: contracts, factory, global contract, sub-account
@@ -224,7 +215,7 @@ No keys, no NEAR AI account, no testnet NEAR.
   against the live service, and a recorded cassette replays real NEAR AI
   answers and signatures. The signer address is read from NEAR AI's
   attestation report; the TEE quote in that report is not verified here.
-- Tested depth: a 2-level tree on the local node; the 10,000-tree property
+- Tested depth: 3-level trees on the local node (`make swarm`); the 10,000-tree property
   test runs on the pure-Rust ledger model in `core/`, not on the contract.
 - Not run yet: testnet (needs the owner's funded account), root (client)
   disputes. See `docs/THREATS.md` "Known limits".
@@ -235,7 +226,8 @@ No keys, no NEAR AI account, no testnet NEAR.
   agent hires worker agents that bid for the work; a keeper answers checks)
   and SUB-ACCOUNTS
   (every job and sub-job is its own account, created and deleted by the
-  contract). NEAR Intents is not used.
+  contract). NEAR Intents is not used (mainnet only); the design for an
+  Intents payout leg and a multi-model judge panel is in `docs/NEXT.md`.
 - Built in the window: the first commit is 2026-11-04, so all of the code,
   including every NEAR integration (job and factory contracts, global
   contract deploy, `ecrecover` receipt checks, track records), was written

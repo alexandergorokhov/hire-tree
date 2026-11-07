@@ -3237,7 +3237,8 @@ mod bidding {
             vec![Bid {
                 worker: acc(WORKER),
                 price: U128(20 * USD),
-                bond: U128(0),
+                // The second call's deposit is not kept: it joins the bond.
+                bond: U128(BID_NEAR.as_yoctonear()),
                 commit: None
             }]
         );
@@ -3548,6 +3549,23 @@ mod bonds {
     }
 
     #[test]
+    fn a_deposit_on_a_rebid_is_added_to_the_bond() {
+        let mut j = funded_root(100 * USD);
+        let s = with_bond(&mut j);
+        bid_bonded(&mut j, WORKER, s, 25 * USD);
+        Ctx::new(ROOT, WORKER)
+            .deposit(NearToken::from_millinear(7))
+            .set();
+        j.bid(s, U128(24 * USD));
+        let b = j.get_bids(s).unwrap();
+        assert_eq!(
+            b.bids[0].bond,
+            U128(BOND.as_yoctonear() + NearToken::from_millinear(7).as_yoctonear())
+        );
+        assert_eq!(b.bids[0].price, U128(24 * USD));
+    }
+
+    #[test]
     fn a_paid_worker_gets_its_bond_back() {
         let mut j = awarded();
         Ctx::new(ROOT, T1).at(CLOSED).set();
@@ -3638,7 +3656,7 @@ mod sealed {
     }
 
     fn seal(j: &mut Job, who: &str, s: u32, price: u128, salt: &str) {
-        Ctx::new(ROOT, who).deposit(BID_NEAR).set();
+        Ctx::new(ROOT, who).deposit(SEALED_BID_NEAR).set();
         j.bid_sealed(s, commit(price, salt, who));
     }
 
@@ -3663,6 +3681,28 @@ mod sealed {
             .set();
         j.award(s, acc(WORKER2), None);
         assert_eq!(j.get_job().children[0].total, U128(18 * USD));
+    }
+
+    #[test]
+    fn a_sealed_bid_pays_for_its_own_storage() {
+        let mut j = funded_root(100 * USD);
+        let s = sealed_slot(&mut j);
+        let before = env::storage_usage();
+        seal(&mut j, WORKER, s, 20 * USD, "a1");
+        let used = (env::storage_usage() - before) as u128;
+        assert!(
+            used * env::storage_byte_cost().as_yoctonear() <= SEALED_BID_NEAR.as_yoctonear(),
+            "a sealed bid uses {used} bytes"
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "attach 0.002 NEAR for the sealed bid's storage")]
+    fn a_sealed_bid_with_the_open_deposit_is_refused() {
+        let mut j = funded_root(100 * USD);
+        let s = sealed_slot(&mut j);
+        Ctx::new(ROOT, WORKER).deposit(BID_NEAR).set();
+        j.bid_sealed(s, commit(20 * USD, "a1", WORKER));
     }
 
     #[test]
@@ -3735,11 +3775,11 @@ mod sealed {
             Some(true),
         );
         Ctx::new(ROOT, WORKER)
-            .deposit(BID_NEAR.saturating_add(bond))
+            .deposit(SEALED_BID_NEAR.saturating_add(bond))
             .set();
         j.bid_sealed(s, commit(20 * USD, "a1", WORKER));
         Ctx::new(ROOT, WORKER2)
-            .deposit(BID_NEAR.saturating_add(bond))
+            .deposit(SEALED_BID_NEAR.saturating_add(bond))
             .set();
         j.bid_sealed(s, commit(18 * USD, "b2", WORKER2));
         Ctx::new(ROOT, WORKER).at(OPEN_END).set();

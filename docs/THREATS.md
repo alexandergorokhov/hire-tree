@@ -112,6 +112,9 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | Demo account keys | derived from the operator key held in an env var; nothing written to disk | `Chain::derived` |
 
 ## Known limits
+- Sealed bids: when no bid on a slot is revealed, nobody can be awarded,
+  and the unrevealed bonds go back to their bidders at settle (the buyer
+  keeps an unrevealed bond only when it awards someone else).
 - Pool: a member cannot leave before the deadline; a pool that misses its
   target pays back only after `join_secs`. Tokens sent to the pool by
   anyone else are shared among members. One pool per purchase (a ~1.6 NEAR

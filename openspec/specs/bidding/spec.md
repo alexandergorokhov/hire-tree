@@ -45,13 +45,15 @@ A slot MAY ask each bidder to stake NEAR (at most 5 NEAR) with its bid.
 Losers SHALL get their bond back at the award; the winner SHALL get it
 back when its work is paid, and the buyer SHALL keep it when the work is
 not paid. A failed hire returns it. Bonds on a slot never awarded SHALL be
-reclaimable after the window and SHALL be returned at settle.
-- unit: `a_bid_without_the_bond_is_refused`, `a_slot_cannot_ask_for_a_huge_bond`, `a_paid_worker_gets_its_bond_back`, `junk_loses_its_bond_to_the_buyer`, `a_failed_hire_returns_the_bond`, `bonds_on_a_slot_never_awarded_come_back`, `a_bond_cannot_be_reclaimed_while_the_job_runs`, `settle_returns_bonds_nobody_reclaimed`
+reclaimable after the window and SHALL be returned at settle. NEAR
+attached to a changed bid SHALL join the bond, not be kept by the job.
+- unit: `a_deposit_on_a_rebid_is_added_to_the_bond`, `a_bid_without_the_bond_is_refused`, `a_slot_cannot_ask_for_a_huge_bond`, `a_paid_worker_gets_its_bond_back`, `junk_loses_its_bond_to_the_buyer`, `a_failed_hire_returns_the_bond`, `bonds_on_a_slot_never_awarded_come_back`, `a_bond_cannot_be_reclaimed_while_the_job_runs`, `settle_returns_bonds_nobody_reclaimed`
 
 ### Requirement: Sealed bids
 A slot MAY be sealed: while bidding is open a bidder SHALL commit only
 `sha256("<price>:<salt>:<bidder>")`; after it closes, for the same length
 of time, it reveals price and salt; the award SHALL wait for the reveal to
 close and SHALL take only a revealed bid. An unrevealed bid's bond SHALL go
-to the buyer. Open bids on a sealed slot are refused.
-- unit: `sealed_bids_hide_the_price_until_the_reveal`, `a_reveal_must_match_the_commit`, `no_reveal_while_bidding_is_open`, `no_award_before_the_reveal_closes`, `an_unrevealed_bid_cannot_win`, `an_open_bid_on_a_sealed_slot_is_refused`, `an_unrevealed_bond_goes_to_the_buyer`
+to the buyer. Open bids on a sealed slot are refused. A sealed bid SHALL
+pay for its own larger storage (0.002 NEAR).
+- unit: `a_sealed_bid_pays_for_its_own_storage`, `a_sealed_bid_with_the_open_deposit_is_refused`, `sealed_bids_hide_the_price_until_the_reveal`, `a_reveal_must_match_the_commit`, `no_reveal_while_bidding_is_open`, `no_award_before_the_reveal_closes`, `an_unrevealed_bid_cannot_win`, `an_open_bid_on_a_sealed_slot_is_refused`, `an_unrevealed_bond_goes_to_the_buyer`

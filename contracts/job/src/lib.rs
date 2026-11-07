@@ -115,6 +115,8 @@ pub const CHECK_WINDOW_SECS: u64 = 300;
 pub const MAX_BID_SLOTS: usize = 16;
 /// Storage deposit for a new bid (about 100 bytes at 1e19 yocto per byte).
 pub const BID_NEAR: NearToken = NearToken::from_millinear(1);
+/// A sealed bid also stores its 32-byte commit (as hex), so it pays more.
+pub const SEALED_BID_NEAR: NearToken = NearToken::from_millinear(2);
 pub const MAX_BIDS: usize = 16;
 /// A bid slot stays open between 10 seconds and 1 hour.
 pub const MIN_BID_SECS: u64 = 10;
@@ -842,8 +844,9 @@ impl Job {
     }
 
     /// Sealed slot, while bidding is open: commit to a price without showing
-    /// it. `commit` = hex sha256 of `"<price>:<salt>:<your account>"`. Same
-    /// deposit as `bid`. Reveal it with `reveal` after bidding closes.
+    /// it. `commit` = hex sha256 of `"<price>:<salt>:<your account>"`. A new
+    /// sealed bid attaches `SEALED_BID_NEAR` (its commit takes more storage)
+    /// plus the slot's bond. Reveal it with `reveal` after bidding closes.
     #[payable]
     pub fn bid_sealed(&mut self, slot: u32, commit: String) {
         parse_hash32_hex(&commit).unwrap_or_else(|| env::panic_str("commit must be 64 hex chars"));
@@ -915,26 +918,33 @@ impl Job {
             require!(price.0 > 0, "price must be greater than zero");
             require!(price.0 <= s.max.0, "bid is above the slot's max");
         }
+        let attached = env::attached_deposit().as_yoctonear();
         match s.bids.iter_mut().find(|b| b.worker == me) {
             Some(b) => {
+                // Storage is already paid; anything attached joins the bond
+                // (it comes back with it) instead of being kept.
                 b.price = price;
                 b.commit = commit.clone();
+                b.bond = U128(b.bond.0 + attached);
             }
             None => {
                 require!(s.bids.len() < MAX_BIDS, "too many bids on this slot");
-                let need = BID_NEAR.as_yoctonear() + s.bond.0;
+                let fee = if sealed { SEALED_BID_NEAR } else { BID_NEAR }.as_yoctonear();
                 require!(
-                    env::attached_deposit().as_yoctonear() >= need,
-                    if s.bond.0 > 0 {
-                        "attach 0.001 NEAR for the bid's storage plus the slot's bond"
-                    } else {
-                        "attach 0.001 NEAR for the bid's storage"
+                    attached >= fee + s.bond.0,
+                    match (sealed, s.bond.0 > 0) {
+                        (false, false) => "attach 0.001 NEAR for the bid's storage",
+                        (false, true) =>
+                            "attach 0.001 NEAR for the bid's storage plus the slot's bond",
+                        (true, false) => "attach 0.002 NEAR for the sealed bid's storage",
+                        (true, true) =>
+                            "attach 0.002 NEAR for the sealed bid's storage plus the slot's bond",
                     }
                 );
                 s.bids.push(Bid {
                     worker: me.clone(),
                     price,
-                    bond: U128(env::attached_deposit().as_yoctonear() - BID_NEAR.as_yoctonear()),
+                    bond: U128(attached - fee),
                     commit: commit.clone(),
                 });
             }
