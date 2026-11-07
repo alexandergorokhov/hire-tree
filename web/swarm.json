@@ -3,8 +3,10 @@
     {
       "agent": "res-steady",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 0.0,
       "final_rate": 70,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 0,
@@ -22,8 +24,10 @@
     {
       "agent": "res-lean",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 92.07,
       "final_rate": 57,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 5,
@@ -41,8 +45,10 @@
     {
       "agent": "res-greedy",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 0.0,
       "final_rate": 97,
+      "made": 0,
       "quit": true,
       "record": {
         "checked": 0,
@@ -60,8 +66,10 @@
     {
       "agent": "res-adaptive",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 32.67,
       "final_rate": 60,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 2,
@@ -79,8 +87,10 @@
     {
       "agent": "res-junk",
       "bonds_lost": 3,
+      "bought": 0,
       "earned": 0.0,
       "final_rate": 45,
+      "made": 0,
       "quit": true,
       "record": {
         "checked": 0,
@@ -98,8 +108,10 @@
     {
       "agent": "res-sloppy",
       "bonds_lost": 1,
+      "bought": 0,
       "earned": 72.468,
       "final_rate": 55,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 4,
@@ -117,8 +129,10 @@
     {
       "agent": "res-undercut",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 184.437,
       "final_rate": 55,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 11,
@@ -136,8 +150,10 @@
     {
       "agent": "res-model",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 65.637,
       "final_rate": 58,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 4,
@@ -155,8 +171,10 @@
     {
       "agent": "res-contractor",
       "bonds_lost": 0,
-      "earned": 75.6,
+      "bought": 3,
+      "earned": 91.323,
       "final_rate": 52,
+      "made": 3,
       "quit": false,
       "record": {
         "checked": 6,
@@ -174,8 +192,10 @@
     {
       "agent": "tra-steady",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 0.0,
       "final_rate": 67,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 0,
@@ -193,8 +213,10 @@
     {
       "agent": "tra-lean",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 91.476,
       "final_rate": 61,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 7,
@@ -212,8 +234,10 @@
     {
       "agent": "tra-greedy",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 0.0,
       "final_rate": 100,
+      "made": 0,
       "quit": true,
       "record": {
         "checked": 0,
@@ -231,8 +255,10 @@
     {
       "agent": "tra-adaptive",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 44.55,
       "final_rate": 60,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 4,
@@ -250,8 +276,10 @@
     {
       "agent": "tra-junk",
       "bonds_lost": 3,
+      "bought": 0,
       "earned": 0.0,
       "final_rate": 42,
+      "made": 0,
       "quit": true,
       "record": {
         "checked": 0,
@@ -269,8 +297,10 @@
     {
       "agent": "tra-undercut",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 54.846,
       "final_rate": 55,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 5,
@@ -288,8 +318,10 @@
     {
       "agent": "tra-model",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 59.004,
       "final_rate": 58,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 5,
@@ -307,8 +339,10 @@
     {
       "agent": "tra-contractor",
       "bonds_lost": 0,
-      "earned": 95.8776,
+      "bought": 6,
+      "earned": 125.8152,
       "final_rate": 53,
+      "made": 6,
       "quit": false,
       "record": {
         "checked": 12,
@@ -326,8 +360,10 @@
     {
       "agent": "sum-steady",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 0.0,
       "final_rate": 67,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 0,
@@ -345,8 +381,10 @@
     {
       "agent": "sum-lean",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 71.874,
       "final_rate": 66,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 11,
@@ -364,8 +402,10 @@
     {
       "agent": "sum-adaptive",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 30.195,
       "final_rate": 70,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 5,
@@ -383,8 +423,10 @@
     {
       "agent": "sum-junk",
       "bonds_lost": 3,
+      "bought": 0,
       "earned": 0.0,
       "final_rate": 42,
+      "made": 0,
       "quit": true,
       "record": {
         "checked": 0,
@@ -402,8 +444,10 @@
     {
       "agent": "sum-undercut",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 75.537,
       "final_rate": 63,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 12,
@@ -421,8 +465,10 @@
     {
       "agent": "sum-model",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 31.284,
       "final_rate": 66,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 5,
@@ -440,8 +486,10 @@
     {
       "agent": "sou-steady",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 0.0,
-      "final_rate": 79,
+      "final_rate": 84,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 0,
@@ -459,8 +507,10 @@
     {
       "agent": "sou-lean",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 0.0,
-      "final_rate": 58,
+      "final_rate": 63,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 0,
@@ -478,8 +528,10 @@
     {
       "agent": "sou-junk",
       "bonds_lost": 3,
+      "bought": 0,
       "earned": 0.0,
       "final_rate": 44,
+      "made": 0,
       "quit": true,
       "record": {
         "checked": 0,
@@ -497,27 +549,31 @@
     {
       "agent": "sou-contractor",
       "bonds_lost": 0,
-      "earned": 16.2,
+      "bought": 0,
+      "earned": 0.0,
       "final_rate": 45,
+      "made": 0,
       "quit": false,
       "record": {
-        "checked": 3,
-        "delivered": 3,
-        "jobs": 3,
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
         "junk": 0,
-        "paid": 3,
-        "score_sum": 24,
-        "scored": 3
+        "paid": 0,
+        "score_sum": 0,
+        "scored": 0
       },
       "skill": "sources",
       "strategy": "contractor",
-      "wins": 3
+      "wins": 0
     },
     {
       "agent": "glo-steady",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 0.0,
-      "final_rate": 69,
+      "final_rate": 79,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 0,
@@ -535,27 +591,31 @@
     {
       "agent": "glo-lean",
       "bonds_lost": 0,
-      "earned": 45.36,
+      "bought": 0,
+      "earned": 15.12,
       "final_rate": 63,
+      "made": 0,
       "quit": false,
       "record": {
-        "checked": 9,
-        "delivered": 9,
-        "jobs": 9,
+        "checked": 3,
+        "delivered": 3,
+        "jobs": 3,
         "junk": 0,
-        "paid": 9,
-        "score_sum": 72,
-        "scored": 9
+        "paid": 3,
+        "score_sum": 24,
+        "scored": 3
       },
       "skill": "glossary",
       "strategy": "lean",
-      "wins": 9
+      "wins": 3
     },
     {
       "agent": "glo-junk",
       "bonds_lost": 3,
+      "bought": 0,
       "earned": 0.0,
       "final_rate": 44,
+      "made": 0,
       "quit": true,
       "record": {
         "checked": 0,
@@ -573,8 +633,10 @@
     {
       "agent": "fet-steady",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 0.0,
-      "final_rate": 88,
+      "final_rate": 93,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 0,
@@ -592,8 +654,10 @@
     {
       "agent": "fet-lean",
       "bonds_lost": 0,
+      "bought": 0,
       "earned": 0.0,
-      "final_rate": 60,
+      "final_rate": 65,
+      "made": 0,
       "quit": false,
       "record": {
         "checked": 0,
@@ -610,26 +674,29 @@
     },
     {
       "agent": "fet-junk",
-      "bonds_lost": 3,
+      "bonds_lost": 0,
+      "bought": 0,
       "earned": 0.0,
       "final_rate": 48,
-      "quit": true,
+      "made": 0,
+      "quit": false,
       "record": {
         "checked": 0,
-        "delivered": 1,
-        "jobs": 1,
+        "delivered": 0,
+        "jobs": 0,
         "junk": 0,
         "paid": 0,
-        "score_sum": 2,
-        "scored": 1
+        "score_sum": 0,
+        "scored": 0
       },
       "skill": "fetch",
       "strategy": "junk",
-      "wins": 3
+      "wins": 0
     }
   ],
   "bond_near": 0.049999999999999996,
-  "junk_respawns": 12,
+  "job_budget": 70,
+  "junk_respawns": 10,
   "leads": [
     {
       "lead": "price",
@@ -653,7 +720,7 @@
       "unfilled": 0
     }
   ],
-  "model": "scripted test model (not NEAR AI) for work, judging and the model bidder; agents adapt their asks; buyers pick by price, on-chain record and a learned newcomer premium",
+  "model": "scripted test model (not NEAR AI) for work, judging, the model bidder and contractors' make-or-buy; agents adapt their asks; buyers pick by price, on-chain record and a learned newcomer premium",
   "network": "near-sandbox (local node)",
   "platform_fee_bps": 50,
   "platform_fees": 12.6,
@@ -661,8 +728,7 @@
     "lead-budget": 0,
     "lead-price": 12,
     "lead-quality": 9,
-    "res-contractor": 48,
-    "sou-contractor": 150,
+    "res-contractor": 76,
     "tra-contractor": 12
   },
   "rounds": [
@@ -718,6 +784,7 @@
           "job": "t1.job-1.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -774,6 +841,7 @@
           "job": "t2.job-1.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 20.0,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -822,6 +890,7 @@
           "job": "t3.job-1.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -882,6 +951,7 @@
           "job": "t1.job-2.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -938,6 +1008,7 @@
           "job": "t2.job-2.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 20.0,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -986,6 +1057,7 @@
           "job": "t3.job-2.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -1042,6 +1114,7 @@
           "job": "t1.job-3.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 22.5,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -1094,6 +1167,11 @@
           "job": "t2.job-3.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": {
+            "buy": true,
+            "share": 60,
+            "why": "Buying costs about 75% with junk risk, below my own 80%."
+          },
           "max": 15.0,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -1142,6 +1220,7 @@
           "job": "t3.job-3.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 7.5,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -1177,6 +1256,7 @@
           "job": "t1.t2.job-3.hub.sandbox",
           "lead": "budget",
           "level": 2,
+          "make_or_buy": null,
           "max": 8.0,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -1247,6 +1327,7 @@
           "job": "t1.job-4.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -1303,6 +1384,7 @@
           "job": "t2.job-4.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 20.0,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -1351,6 +1433,7 @@
           "job": "t3.job-4.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -1407,6 +1490,7 @@
           "job": "t1.job-5.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 22.5,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -1459,6 +1543,7 @@
           "job": "t2.job-5.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 15.0,
           "newcomer": false,
           "newcomer_premium": 0,
@@ -1507,6 +1592,7 @@
           "job": "t3.job-5.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 7.5,
           "newcomer": false,
           "newcomer_premium": 0,
@@ -1567,6 +1653,7 @@
           "job": "t1.job-6.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 150,
@@ -1623,6 +1710,11 @@
           "job": "t2.job-6.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": {
+            "buy": true,
+            "share": 60,
+            "why": "Buying costs about 66% with junk risk, below my own 80%."
+          },
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 150,
@@ -1671,6 +1763,7 @@
           "job": "t3.job-6.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 150,
@@ -1706,6 +1799,7 @@
           "job": "t1.t2.job-6.hub.sandbox",
           "lead": "price",
           "level": 2,
+          "make_or_buy": null,
           "max": 8.0,
           "newcomer": true,
           "newcomer_premium": 100,
@@ -1772,6 +1866,7 @@
           "job": "t1.job-7.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 22.5,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -1824,6 +1919,7 @@
           "job": "t2.job-7.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 15.0,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -1872,6 +1968,7 @@
           "job": "t3.job-7.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 7.5,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -1932,6 +2029,7 @@
           "job": "t1.job-8.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 120,
@@ -1988,6 +2086,11 @@
           "job": "t2.job-8.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": {
+            "buy": true,
+            "share": 60,
+            "why": "Buying costs about 77% with junk risk, below my own 80%."
+          },
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 120,
@@ -2036,6 +2139,7 @@
           "job": "t3.job-8.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 120,
@@ -2096,6 +2200,7 @@
           "job": "t1.job-9.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 150,
@@ -2152,6 +2257,7 @@
           "job": "t2.job-9.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 150,
@@ -2200,6 +2306,7 @@
           "job": "t3.job-9.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 150,
@@ -2235,6 +2342,7 @@
           "job": "t1.t2.job-8.hub.sandbox",
           "lead": "price",
           "level": 2,
+          "make_or_buy": null,
           "max": 7.68,
           "newcomer": true,
           "newcomer_premium": 150,
@@ -2301,6 +2409,7 @@
           "job": "t1.job-10.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 96,
@@ -2353,6 +2462,11 @@
           "job": "t2.job-10.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": {
+            "buy": false,
+            "share": 60,
+            "why": "Sub-agents delivered 0 of my last 3; buying costs about 88%, above my own 80%, so I do it myself."
+          },
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 96,
@@ -2397,6 +2511,7 @@
           "job": "t3.job-10.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 96,
@@ -2453,6 +2568,7 @@
           "job": "t1.job-11.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 120,
@@ -2505,6 +2621,7 @@
           "job": "t2.job-11.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 120,
@@ -2549,6 +2666,7 @@
           "job": "t3.job-11.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 120,
@@ -2601,6 +2719,7 @@
           "job": "t1.job-12.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 22.5,
           "newcomer": false,
           "newcomer_premium": 150,
@@ -2649,6 +2768,7 @@
           "job": "t2.job-12.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 15.0,
           "newcomer": true,
           "newcomer_premium": 150,
@@ -2693,6 +2813,7 @@
           "job": "t3.job-12.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 7.5,
           "newcomer": true,
           "newcomer_premium": 150,
@@ -2707,37 +2828,6 @@
           "skill": "summary",
           "strategy": "model",
           "winner": "sum-model"
-        },
-        {
-          "bids": [
-            {
-              "agent": "glo-steady",
-              "price": 6.72
-            },
-            {
-              "agent": "glo-lean",
-              "price": 5.04
-            }
-          ],
-          "buyer": "tra-contractor",
-          "id": 9,
-          "job": "t1.t2.job-10.hub.sandbox",
-          "lead": "price",
-          "level": 2,
-          "max": 7.56,
-          "newcomer": true,
-          "newcomer_premium": 150,
-          "paid": true,
-          "paid_now": true,
-          "parent": 1,
-          "price": 5.04,
-          "rate": 63,
-          "root": "job-10.hub.sandbox",
-          "score": 8,
-          "sealed": false,
-          "skill": "glossary",
-          "strategy": "lean",
-          "winner": "glo-lean"
         }
       ],
       "round": 4
@@ -2790,6 +2880,7 @@
           "job": "t1.job-13.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 96,
@@ -2842,6 +2933,11 @@
           "job": "t2.job-13.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": {
+            "buy": false,
+            "share": 60,
+            "why": "Sub-agents delivered 0 of my last 3; buying costs about 88%, above my own 80%, so I do it myself."
+          },
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 96,
@@ -2886,6 +2982,7 @@
           "job": "t3.job-13.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 96,
@@ -2938,6 +3035,7 @@
           "job": "t1.job-14.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 22.5,
           "newcomer": false,
           "newcomer_premium": 37,
@@ -2986,6 +3084,7 @@
           "job": "t2.job-14.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 15.0,
           "newcomer": false,
           "newcomer_premium": 37,
@@ -3030,6 +3129,7 @@
           "job": "t3.job-14.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 7.5,
           "newcomer": false,
           "newcomer_premium": 37,
@@ -3086,6 +3186,7 @@
           "job": "t1.job-15.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 76,
@@ -3138,6 +3239,7 @@
           "job": "t2.job-15.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 76,
@@ -3182,6 +3284,7 @@
           "job": "t3.job-15.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 76,
@@ -3196,37 +3299,6 @@
           "skill": "summary",
           "strategy": "model",
           "winner": "sum-model"
-        },
-        {
-          "bids": [
-            {
-              "agent": "glo-steady",
-              "price": 5.64
-            },
-            {
-              "agent": "glo-lean",
-              "price": 5.04
-            }
-          ],
-          "buyer": "tra-contractor",
-          "id": 9,
-          "job": "t1.t2.job-13.hub.sandbox",
-          "lead": "quality",
-          "level": 2,
-          "max": 5.64,
-          "newcomer": false,
-          "newcomer_premium": 75,
-          "paid": true,
-          "paid_now": true,
-          "parent": 1,
-          "price": 5.04,
-          "rate": 63,
-          "root": "job-13.hub.sandbox",
-          "score": 8,
-          "sealed": false,
-          "skill": "glossary",
-          "strategy": "lean",
-          "winner": "glo-lean"
         }
       ],
       "round": 5
@@ -3275,6 +3347,7 @@
           "job": "t1.job-16.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 22.5,
           "newcomer": false,
           "newcomer_premium": 29,
@@ -3323,6 +3396,11 @@
           "job": "t2.job-16.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": {
+            "buy": false,
+            "share": 60,
+            "why": "Sub-agents delivered 0 of my last 3; buying costs about 88%, above my own 80%, so I do it myself."
+          },
           "max": 15.0,
           "newcomer": false,
           "newcomer_premium": 29,
@@ -3367,6 +3445,7 @@
           "job": "t3.job-16.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 7.5,
           "newcomer": false,
           "newcomer_premium": 29,
@@ -3423,6 +3502,7 @@
           "job": "t1.job-17.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 60,
@@ -3475,6 +3555,7 @@
           "job": "t2.job-17.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 60,
@@ -3519,6 +3600,7 @@
           "job": "t3.job-17.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 60,
@@ -3575,6 +3657,7 @@
           "job": "t1.job-18.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": true,
           "newcomer_premium": 76,
@@ -3627,6 +3710,7 @@
           "job": "t2.job-18.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 76,
@@ -3671,6 +3755,7 @@
           "job": "t3.job-18.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 76,
@@ -3685,37 +3770,6 @@
           "skill": "summary",
           "strategy": "model",
           "winner": "sum-model"
-        },
-        {
-          "bids": [
-            {
-              "agent": "glo-steady",
-              "price": 6.72
-            },
-            {
-              "agent": "glo-lean",
-              "price": 5.04
-            }
-          ],
-          "buyer": "tra-contractor",
-          "id": 9,
-          "job": "t1.t2.job-16.hub.sandbox",
-          "lead": "budget",
-          "level": 2,
-          "max": 7.68,
-          "newcomer": false,
-          "newcomer_premium": 60,
-          "paid": true,
-          "paid_now": true,
-          "parent": 1,
-          "price": 5.04,
-          "rate": 63,
-          "root": "job-16.hub.sandbox",
-          "score": 8,
-          "sealed": false,
-          "skill": "glossary",
-          "strategy": "lean",
-          "winner": "glo-lean"
         }
       ],
       "round": 6
@@ -3764,6 +3818,7 @@
           "job": "t1.job-19.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 48,
@@ -3812,6 +3867,7 @@
           "job": "t2.job-19.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 48,
@@ -3856,6 +3912,7 @@
           "job": "t3.job-19.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 48,
@@ -3908,6 +3965,7 @@
           "job": "t1.job-20.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 38,
@@ -3956,6 +4014,11 @@
           "job": "t2.job-20.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": {
+            "buy": true,
+            "share": 60,
+            "why": "I did it myself 3 rounds running; I test the market again."
+          },
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 38,
@@ -4000,6 +4063,7 @@
           "job": "t3.job-20.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 38,
@@ -4052,6 +4116,11 @@
           "job": "t1.job-21.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": {
+            "buy": true,
+            "share": 60,
+            "why": "Buying costs about 75% with junk risk, below my own 80%."
+          },
           "max": 22.5,
           "newcomer": true,
           "newcomer_premium": 23,
@@ -4100,6 +4169,7 @@
           "job": "t2.job-21.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 15.0,
           "newcomer": true,
           "newcomer_premium": 23,
@@ -4144,6 +4214,7 @@
           "job": "t3.job-21.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 7.5,
           "newcomer": true,
           "newcomer_premium": 23,
@@ -4163,7 +4234,7 @@
           "bids": [
             {
               "agent": "glo-steady",
-              "price": 6.32
+              "price": 6.72
             },
             {
               "agent": "glo-lean",
@@ -4175,9 +4246,10 @@
           "job": "t1.t2.job-20.hub.sandbox",
           "lead": "quality",
           "level": 2,
+          "make_or_buy": null,
           "max": 7.92,
-          "newcomer": false,
-          "newcomer_premium": 48,
+          "newcomer": true,
+          "newcomer_premium": 76,
           "paid": true,
           "paid_now": true,
           "parent": 4,
@@ -4214,6 +4286,7 @@
           "job": "t1.t1.job-21.hub.sandbox",
           "lead": "budget",
           "level": 2,
+          "make_or_buy": null,
           "max": 8.46,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -4276,6 +4349,11 @@
           "job": "t1.job-22.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": {
+            "buy": true,
+            "share": 60,
+            "why": "Buying costs about 66% with junk risk, below my own 80%."
+          },
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 30,
@@ -4324,6 +4402,11 @@
           "job": "t2.job-22.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": {
+            "buy": true,
+            "share": 60,
+            "why": "Buying costs about 79% with junk risk, below my own 80%."
+          },
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 30,
@@ -4368,6 +4451,7 @@
           "job": "t3.job-22.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 30,
@@ -4420,6 +4504,7 @@
           "job": "t1.job-23.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 22.5,
           "newcomer": false,
           "newcomer_premium": 2,
@@ -4468,6 +4553,7 @@
           "job": "t2.job-23.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 15.0,
           "newcomer": true,
           "newcomer_premium": 2,
@@ -4512,6 +4598,7 @@
           "job": "t3.job-23.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 7.5,
           "newcomer": false,
           "newcomer_premium": 2,
@@ -4564,6 +4651,7 @@
           "job": "t1.job-24.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 38,
@@ -4612,6 +4700,7 @@
           "job": "t2.job-24.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 38,
@@ -4656,6 +4745,7 @@
           "job": "t3.job-24.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 38,
@@ -4695,6 +4785,7 @@
           "job": "t1.t1.job-22.hub.sandbox",
           "lead": "quality",
           "level": 2,
+          "make_or_buy": null,
           "max": 8.1,
           "newcomer": true,
           "newcomer_premium": 100,
@@ -4726,6 +4817,7 @@
           "job": "t1.t2.job-22.hub.sandbox",
           "lead": "quality",
           "level": 2,
+          "make_or_buy": null,
           "max": 6.24,
           "newcomer": false,
           "newcomer_premium": 38,
@@ -4788,6 +4880,7 @@
           "job": "t1.job-25.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 22.5,
           "newcomer": false,
           "newcomer_premium": 1,
@@ -4836,6 +4929,7 @@
           "job": "t2.job-25.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 15.0,
           "newcomer": false,
           "newcomer_premium": 1,
@@ -4880,6 +4974,7 @@
           "job": "t3.job-25.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 7.5,
           "newcomer": false,
           "newcomer_premium": 1,
@@ -4932,6 +5027,11 @@
           "job": "t1.job-26.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": {
+            "buy": true,
+            "share": 60,
+            "why": "Buying costs about 77% with junk risk, below my own 80%."
+          },
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 30,
@@ -4980,6 +5080,11 @@
           "job": "t2.job-26.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": {
+            "buy": true,
+            "share": 60,
+            "why": "Buying costs about 66% with junk risk, below my own 80%."
+          },
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 30,
@@ -5024,6 +5129,7 @@
           "job": "t3.job-26.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 30,
@@ -5076,6 +5182,7 @@
           "job": "t1.job-27.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 24,
@@ -5124,6 +5231,7 @@
           "job": "t2.job-27.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 24,
@@ -5168,6 +5276,7 @@
           "job": "t3.job-27.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 24,
@@ -5207,6 +5316,7 @@
           "job": "t1.t1.job-26.hub.sandbox",
           "lead": "price",
           "level": 2,
+          "make_or_buy": null,
           "max": 9.9,
           "newcomer": true,
           "newcomer_premium": 150,
@@ -5226,7 +5336,7 @@
           "bids": [
             {
               "agent": "glo-steady",
-              "price": 6.32
+              "price": 6.72
             },
             {
               "agent": "glo-lean",
@@ -5238,6 +5348,7 @@
           "job": "t1.t2.job-26.hub.sandbox",
           "lead": "price",
           "level": 2,
+          "make_or_buy": null,
           "max": 6.84,
           "newcomer": false,
           "newcomer_premium": 30,
@@ -5300,6 +5411,7 @@
           "job": "t1.job-28.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 24,
@@ -5348,6 +5460,11 @@
           "job": "t2.job-28.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": {
+            "buy": false,
+            "share": 60,
+            "why": "Sub-agents delivered 3 of my last 4; buying costs about 81%, above my own 80%, so I do it myself."
+          },
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 24,
@@ -5392,6 +5509,7 @@
           "job": "t3.job-28.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 24,
@@ -5444,11 +5562,16 @@
           "job": "t1.job-29.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": {
+            "buy": false,
+            "share": 60,
+            "why": "Sub-agents delivered 0 of my last 3; buying costs about 88%, above my own 80%, so I do it myself."
+          },
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 19,
           "paid": true,
-          "paid_now": false,
+          "paid_now": true,
           "parent": null,
           "price": 16.5,
           "rate": 55,
@@ -5492,6 +5615,7 @@
           "job": "t2.job-29.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 19,
@@ -5536,6 +5660,7 @@
           "job": "t3.job-29.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 19,
@@ -5588,6 +5713,7 @@
           "job": "t1.job-30.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 22.5,
           "newcomer": true,
           "newcomer_premium": 0,
@@ -5636,6 +5762,7 @@
           "job": "t2.job-30.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 15.0,
           "newcomer": false,
           "newcomer_premium": 0,
@@ -5680,6 +5807,7 @@
           "job": "t3.job-30.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 7.5,
           "newcomer": false,
           "newcomer_premium": 0,
@@ -5694,107 +5822,6 @@
           "skill": "summary",
           "strategy": "model",
           "winner": "sum-model"
-        },
-        {
-          "bids": [
-            {
-              "agent": "glo-steady",
-              "price": 5.92
-            },
-            {
-              "agent": "glo-lean",
-              "price": 5.04
-            }
-          ],
-          "buyer": "tra-contractor",
-          "id": 9,
-          "job": "t1.t2.job-28.hub.sandbox",
-          "lead": "price",
-          "level": 2,
-          "max": 6.48,
-          "newcomer": false,
-          "newcomer_premium": 24,
-          "paid": true,
-          "paid_now": true,
-          "parent": 1,
-          "price": 5.04,
-          "rate": 63,
-          "root": "job-28.hub.sandbox",
-          "score": 8,
-          "sealed": false,
-          "skill": "glossary",
-          "strategy": "lean",
-          "winner": "glo-lean"
-        },
-        {
-          "bids": [
-            {
-              "agent": "sou-steady",
-              "price": 9.9
-            },
-            {
-              "agent": "sou-lean",
-              "price": 7.56
-            },
-            {
-              "agent": "sou-contractor",
-              "price": 5.4
-            }
-          ],
-          "buyer": "res-contractor",
-          "id": 10,
-          "job": "t1.t1.job-29.hub.sandbox",
-          "lead": "quality",
-          "level": 2,
-          "max": 9.9,
-          "newcomer": true,
-          "newcomer_premium": 150,
-          "paid": true,
-          "paid_now": false,
-          "parent": 3,
-          "price": 5.4,
-          "rate": 45,
-          "root": "job-29.hub.sandbox",
-          "score": 8,
-          "sealed": false,
-          "skill": "sources",
-          "strategy": "contractor",
-          "winner": "sou-contractor"
-        },
-        {
-          "bids": [
-            {
-              "agent": "fet-steady",
-              "price": 3.24
-            },
-            {
-              "agent": "fet-lean",
-              "price": 3.24
-            },
-            {
-              "agent": "fet-junk",
-              "price": 2.4
-            }
-          ],
-          "buyer": "sou-contractor",
-          "id": 11,
-          "job": "t1.t1.t1.job-29.hub.sandbox",
-          "lead": "quality",
-          "level": 3,
-          "max": 3.24,
-          "newcomer": true,
-          "newcomer_premium": 0,
-          "paid": false,
-          "paid_now": false,
-          "parent": 10,
-          "price": 2.4,
-          "rate": 48,
-          "root": "job-29.hub.sandbox",
-          "score": 2,
-          "sealed": false,
-          "skill": "fetch",
-          "strategy": "junk",
-          "winner": "fet-junk"
         }
       ],
       "round": 10
@@ -5843,11 +5870,16 @@
           "job": "t1.job-31.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": {
+            "buy": false,
+            "share": 60,
+            "why": "Sub-agents delivered 0 of my last 3; buying costs about 88%, above my own 80%, so I do it myself."
+          },
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 15,
           "paid": true,
-          "paid_now": false,
+          "paid_now": true,
           "parent": null,
           "price": 15.6,
           "rate": 52,
@@ -5891,6 +5923,11 @@
           "job": "t2.job-31.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": {
+            "buy": false,
+            "share": 60,
+            "why": "Sub-agents delivered 3 of my last 4; buying costs about 81%, above my own 80%, so I do it myself."
+          },
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 15,
@@ -5935,6 +5972,7 @@
           "job": "t3.job-31.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 15,
@@ -5987,6 +6025,7 @@
           "job": "t1.job-32.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 22.5,
           "newcomer": false,
           "newcomer_premium": 0,
@@ -6035,6 +6074,7 @@
           "job": "t2.job-32.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 15.0,
           "newcomer": false,
           "newcomer_premium": 0,
@@ -6079,6 +6119,7 @@
           "job": "t3.job-32.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 7.5,
           "newcomer": false,
           "newcomer_premium": 0,
@@ -6131,6 +6172,7 @@
           "job": "t1.job-33.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 19,
@@ -6179,6 +6221,7 @@
           "job": "t2.job-33.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 19,
@@ -6223,6 +6266,7 @@
           "job": "t3.job-33.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 19,
@@ -6237,107 +6281,6 @@
           "skill": "summary",
           "strategy": "lean",
           "winner": "sum-lean"
-        },
-        {
-          "bids": [
-            {
-              "agent": "sou-steady",
-              "price": 9.36
-            },
-            {
-              "agent": "sou-lean",
-              "price": 7.56
-            },
-            {
-              "agent": "sou-contractor",
-              "price": 5.4
-            }
-          ],
-          "buyer": "res-contractor",
-          "id": 9,
-          "job": "t1.t1.job-31.hub.sandbox",
-          "lead": "quality",
-          "level": 2,
-          "max": 9.36,
-          "newcomer": false,
-          "newcomer_premium": 75,
-          "paid": true,
-          "paid_now": false,
-          "parent": 0,
-          "price": 5.4,
-          "rate": 45,
-          "root": "job-31.hub.sandbox",
-          "score": 8,
-          "sealed": false,
-          "skill": "sources",
-          "strategy": "contractor",
-          "winner": "sou-contractor"
-        },
-        {
-          "bids": [
-            {
-              "agent": "glo-steady",
-              "price": 5.92
-            },
-            {
-              "agent": "glo-lean",
-              "price": 5.04
-            }
-          ],
-          "buyer": "tra-contractor",
-          "id": 10,
-          "job": "t1.t2.job-31.hub.sandbox",
-          "lead": "quality",
-          "level": 2,
-          "max": 6.24,
-          "newcomer": false,
-          "newcomer_premium": 19,
-          "paid": true,
-          "paid_now": true,
-          "parent": 1,
-          "price": 5.04,
-          "rate": 63,
-          "root": "job-31.hub.sandbox",
-          "score": 8,
-          "sealed": false,
-          "skill": "glossary",
-          "strategy": "lean",
-          "winner": "glo-lean"
-        },
-        {
-          "bids": [
-            {
-              "agent": "fet-steady",
-              "price": 3.24
-            },
-            {
-              "agent": "fet-lean",
-              "price": 3.24
-            },
-            {
-              "agent": "fet-junk",
-              "price": 2.4
-            }
-          ],
-          "buyer": "sou-contractor",
-          "id": 11,
-          "job": "t1.t1.t1.job-31.hub.sandbox",
-          "lead": "quality",
-          "level": 3,
-          "max": 3.24,
-          "newcomer": true,
-          "newcomer_premium": 100,
-          "paid": false,
-          "paid_now": false,
-          "parent": 9,
-          "price": 2.4,
-          "rate": 48,
-          "root": "job-31.hub.sandbox",
-          "score": 2,
-          "sealed": false,
-          "skill": "fetch",
-          "strategy": "junk",
-          "winner": "fet-junk"
         }
       ],
       "round": 11
@@ -6386,11 +6329,16 @@
           "job": "t1.job-34.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": {
+            "buy": false,
+            "share": 60,
+            "why": "Sub-agents delivered 0 of my last 3; buying costs about 88%, above my own 80%, so I do it myself."
+          },
           "max": 22.5,
           "newcomer": false,
           "newcomer_premium": 0,
           "paid": true,
-          "paid_now": false,
+          "paid_now": true,
           "parent": null,
           "price": 15.6,
           "rate": 52,
@@ -6434,6 +6382,11 @@
           "job": "t2.job-34.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": {
+            "buy": false,
+            "share": 60,
+            "why": "Sub-agents delivered 3 of my last 4; buying costs about 81%, above my own 80%, so I do it myself."
+          },
           "max": 15.0,
           "newcomer": false,
           "newcomer_premium": 0,
@@ -6478,6 +6431,7 @@
           "job": "t3.job-34.hub.sandbox",
           "lead": "budget",
           "level": 1,
+          "make_or_buy": null,
           "max": 7.5,
           "newcomer": false,
           "newcomer_premium": 0,
@@ -6530,6 +6484,7 @@
           "job": "t1.job-35.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 15,
@@ -6578,6 +6533,7 @@
           "job": "t2.job-35.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 15,
@@ -6622,6 +6578,7 @@
           "job": "t3.job-35.hub.sandbox",
           "lead": "price",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 15,
@@ -6674,6 +6631,7 @@
           "job": "t1.job-36.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
           "newcomer_premium": 12,
@@ -6722,6 +6680,7 @@
           "job": "t2.job-36.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 12,
@@ -6766,6 +6725,7 @@
           "job": "t3.job-36.hub.sandbox",
           "lead": "quality",
           "level": 1,
+          "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
           "newcomer_premium": 12,
@@ -6780,107 +6740,6 @@
           "skill": "summary",
           "strategy": "lean",
           "winner": "sum-lean"
-        },
-        {
-          "bids": [
-            {
-              "agent": "sou-steady",
-              "price": 9.36
-            },
-            {
-              "agent": "sou-lean",
-              "price": 7.56
-            },
-            {
-              "agent": "sou-contractor",
-              "price": 5.4
-            }
-          ],
-          "buyer": "res-contractor",
-          "id": 9,
-          "job": "t1.t1.job-34.hub.sandbox",
-          "lead": "budget",
-          "level": 2,
-          "max": 9.36,
-          "newcomer": false,
-          "newcomer_premium": 60,
-          "paid": true,
-          "paid_now": false,
-          "parent": 0,
-          "price": 5.4,
-          "rate": 45,
-          "root": "job-34.hub.sandbox",
-          "score": 8,
-          "sealed": false,
-          "skill": "sources",
-          "strategy": "contractor",
-          "winner": "sou-contractor"
-        },
-        {
-          "bids": [
-            {
-              "agent": "glo-steady",
-              "price": 5.92
-            },
-            {
-              "agent": "glo-lean",
-              "price": 5.04
-            }
-          ],
-          "buyer": "tra-contractor",
-          "id": 10,
-          "job": "t1.t2.job-34.hub.sandbox",
-          "lead": "budget",
-          "level": 2,
-          "max": 6.36,
-          "newcomer": false,
-          "newcomer_premium": 15,
-          "paid": true,
-          "paid_now": true,
-          "parent": 1,
-          "price": 5.04,
-          "rate": 63,
-          "root": "job-34.hub.sandbox",
-          "score": 8,
-          "sealed": false,
-          "skill": "glossary",
-          "strategy": "lean",
-          "winner": "glo-lean"
-        },
-        {
-          "bids": [
-            {
-              "agent": "fet-steady",
-              "price": 3.24
-            },
-            {
-              "agent": "fet-lean",
-              "price": 3.24
-            },
-            {
-              "agent": "fet-junk",
-              "price": 2.4
-            }
-          ],
-          "buyer": "sou-contractor",
-          "id": 11,
-          "job": "t1.t1.t1.job-34.hub.sandbox",
-          "lead": "budget",
-          "level": 3,
-          "max": 3.24,
-          "newcomer": true,
-          "newcomer_premium": 150,
-          "paid": false,
-          "paid_now": false,
-          "parent": 9,
-          "price": 2.4,
-          "rate": 48,
-          "root": "job-34.hub.sandbox",
-          "score": 2,
-          "sealed": false,
-          "skill": "fetch",
-          "strategy": "junk",
-          "winner": "fet-junk"
         }
       ],
       "round": 12

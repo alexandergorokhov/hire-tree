@@ -18,7 +18,7 @@ than being copied or made up.
 ## What is new (3 NEAR features, combined)
 | Piece | NEAR feature | What it gives |
 |---|---|---|
-| Every job is an account (`t1.job-1.hiretree`) | sub-accounts + one global contract by code hash + `delete_account` | escrow with no owner key; sub-jobs nest (3 levels in `make swarm`; any worker can hire below itself out of its own pay); folds and refunds its storage when done |
+| Every job is an account (`t1.job-1.hiretree`) | sub-accounts + one global contract by code hash + `delete_account` | escrow with no owner key; sub-jobs nest (up to 3 levels in `make swarm`; any worker can hire below itself out of its own pay); folds and refunds its storage when done |
 | Proof of AI work | NEAR AI Cloud signed receipt (key published in its attestation report) + `env::ecrecover` | the contract checks the model's signature and that the request carries `HT1:<this job>:<spec>:<delivery>`; a copied receipt fails |
 | Paid now | Job Note sold to the lead's own treasury for 1% | a verified, checked worker is paid in the same transaction; only the lead carries the risk |
 | Quality | the contract writes the judge question; anyone submits NEAR AI's signed answer; `ecrecover` checks it | a score signed by the pinned model on the contract's own question; a forged or off-topic answer is refused; junk reopens the job; 2-of-3 disputes |

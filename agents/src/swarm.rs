@@ -3,7 +3,7 @@
 //! same workers (each worker takes one part per round). Worker agents with
 //! different strategies bid; a contractor that wins a part becomes a buyer
 //! itself: it puts a sub-part out for bids on its own job account, pays for
-//! it out of its own pay and keeps the margin, so trees grow 3 levels deep.
+//! it out of its own pay and keeps the margin, so trees can grow 3 levels deep.
 //! Every bid stakes a small NEAR bond (a junk winner loses it to its
 //! buyer); the quality lead runs sealed bids (commit, then reveal). The
 //! factory keeps a 0.5% platform fee on each posted budget.
