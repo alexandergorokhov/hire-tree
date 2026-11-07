@@ -747,6 +747,15 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                         tools
                             .call(&agents[b].acc, "approve", &json!({ "job": child }))
                             .await?;
+                        // A sub-part that hired below itself settles only
+                        // once its own sub-parts have (a failed one waits
+                        // for its window); until then it is approved, unpaid.
+                        if parts
+                            .iter()
+                            .any(|k| k.parent == Some(p) && k.winner.is_some() && !k.settled)
+                        {
+                            continue;
+                        }
                         tools
                             .call(&keeper, "settle", &json!({ "job": child }))
                             .await?;
