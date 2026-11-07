@@ -115,7 +115,7 @@ pub const CHECK_WINDOW_SECS: u64 = 300;
 pub const MAX_BID_SLOTS: usize = 16;
 /// Storage deposit for a new bid (about 100 bytes at 1e19 yocto per byte).
 pub const BID_NEAR: NearToken = NearToken::from_millinear(1);
-pub const MAX_BIDS: usize = 8;
+pub const MAX_BIDS: usize = 16;
 /// A bid slot stays open between 10 seconds and 1 hour.
 pub const MIN_BID_SECS: u64 = 10;
 pub const MAX_BID_SECS: u64 = 3600;
@@ -126,6 +126,13 @@ pub const MAX_BID_SECS: u64 = 3600;
 pub struct Bid {
     pub worker: AccountId,
     pub price: U128,
+    /// NEAR the bidder staked (yocto); 0 if the slot asks for none.
+    #[serde(default)]
+    pub bond: U128,
+    /// Sealed slot: `sha256("<price>:<salt>:<bidder>")` hex until revealed
+    /// (the price is 0 until then).
+    #[serde(default)]
+    pub commit: Option<String>,
 }
 
 /// A subtask the manager put out for bids: workers offer a price up to
@@ -139,7 +146,19 @@ pub struct BidSlot {
     pub closes_ns: U64,
     pub bids: Vec<Bid>,
     pub awarded: Option<AccountId>,
+    /// NEAR (yocto) each bidder must stake. Losers get it back at the
+    /// award; the winner gets it back if its work is paid, and the buyer
+    /// keeps it if not.
+    #[serde(default)]
+    pub bond: U128,
+    /// Sealed slot: bids are hashes until `closes_ns`, revealed until
+    /// `reveal_ns`; 0 = an open slot.
+    #[serde(default)]
+    pub reveal_ns: U64,
 }
+
+/// The largest bond a slot may ask for: 5 NEAR.
+pub const MAX_BOND: NearToken = NearToken::from_near(5);
 
 /// One signed-check round: panel 0 checks a delivery, panels 1 and 2 are a
 /// dispute's extra votes.
@@ -217,6 +236,9 @@ pub struct Child {
     /// Hired by this job's own worker out of its pay (contractor mode).
     #[serde(default)]
     pub by_worker: bool,
+    /// The worker's bond (yocto NEAR), held here until the child closes.
+    #[serde(default)]
+    pub bond: U128,
 }
 
 /// The one settle transfer (or balance check) in flight.
@@ -744,7 +766,14 @@ impl Job {
     /// Manager only, while the job is open: put a subtask out for bids.
     /// `max` is the most the manager will pay; it must fit the free budget.
     /// Returns the slot number.
-    pub fn open_bids(&mut self, spec_hash: String, max: U128, secs: u64) -> u32 {
+    pub fn open_bids(
+        &mut self,
+        spec_hash: String,
+        max: U128,
+        secs: u64,
+        bond: Option<U128>,
+        sealed: Option<bool>,
+    ) -> u32 {
         let by_worker = self.hiring_role("open bids");
         require!(self.status == Status::Open, "job is not open");
         require!(self.window_open(), "window is closed");
@@ -754,6 +783,10 @@ impl Job {
             "bid time must be 10 s to 1 h"
         );
         require!(max.0 > 0, "max must be greater than zero");
+        require!(
+            bond.map(|b| b.0).unwrap_or(0) <= MAX_BOND.as_yoctonear(),
+            "bond is at most 5 NEAR"
+        );
         if by_worker {
             require!(
                 max.0 < self.ledger.amount,
@@ -772,12 +805,24 @@ impl Job {
             closes_ns < self.window_end_ns,
             "bidding must close before the window"
         );
+        let reveal_ns = if sealed == Some(true) {
+            let r = closes_ns + secs * NS_PER_SEC;
+            require!(
+                r < self.window_end_ns,
+                "the reveal must close before the window"
+            );
+            r
+        } else {
+            0
+        };
         self.bid_slots.push(BidSlot {
             spec_hash: spec_hash.clone(),
             max,
             closes_ns: U64(closes_ns),
             bids: Vec::new(),
             awarded: None,
+            bond: bond.unwrap_or(U128(0)),
+            reveal_ns: U64(reveal_ns),
         });
         let slot = (self.bid_slots.len() - 1) as u32;
         emit(
@@ -793,6 +838,57 @@ impl Job {
     /// job, so fake bidders cannot fill the job's storage for free).
     #[payable]
     pub fn bid(&mut self, slot: u32, price: U128) {
+        self.place_bid(slot, price, None)
+    }
+
+    /// Sealed slot, while bidding is open: commit to a price without showing
+    /// it. `commit` = hex sha256 of `"<price>:<salt>:<your account>"`. Same
+    /// deposit as `bid`. Reveal it with `reveal` after bidding closes.
+    #[payable]
+    pub fn bid_sealed(&mut self, slot: u32, commit: String) {
+        parse_hash32_hex(&commit).unwrap_or_else(|| env::panic_str("commit must be 64 hex chars"));
+        self.place_bid(slot, U128(0), Some(commit))
+    }
+
+    /// Sealed slot, after bidding closes and before `reveal_ns`: show the
+    /// committed price. An unrevealed bid cannot win, and its bond goes to
+    /// the buyer at the award.
+    pub fn reveal(&mut self, slot: u32, price: U128, salt: String) {
+        let me = env::predecessor_account_id();
+        let s = self
+            .bid_slots
+            .get_mut(slot as usize)
+            .unwrap_or_else(|| env::panic_str("no such bid slot"));
+        require!(s.reveal_ns.0 > 0, "this slot is not sealed");
+        let now = env::block_timestamp();
+        require!(
+            now >= s.closes_ns.0,
+            "bidding is still open: reveal after it closes"
+        );
+        require!(now < s.reveal_ns.0, "the reveal is closed");
+        require!(price.0 > 0 && price.0 <= s.max.0, "price must be 1..=max");
+        let b = s
+            .bids
+            .iter_mut()
+            .find(|b| b.worker == me)
+            .unwrap_or_else(|| env::panic_str("you did not bid on this slot"));
+        let c = b
+            .commit
+            .clone()
+            .unwrap_or_else(|| env::panic_str("already revealed"));
+        let h = hex_of(&env::sha256_array(
+            format!("{}:{}:{}", price.0, salt, me).as_bytes(),
+        ));
+        require!(h == c, "price and salt do not match the commit");
+        b.price = price;
+        b.commit = None;
+        emit(
+            "reveal",
+            json!({ "slot": slot, "worker": me, "price": price }),
+        );
+    }
+
+    fn place_bid(&mut self, slot: u32, price: U128, commit: Option<String>) {
         let me = env::predecessor_account_id();
         require!(me != self.manager, "the manager cannot bid");
         require!(
@@ -806,23 +902,51 @@ impl Job {
             .unwrap_or_else(|| env::panic_str("no such bid slot"));
         require!(s.awarded.is_none(), "cannot bid on the awarded slot");
         require!(env::block_timestamp() < s.closes_ns.0, "bidding is closed");
-        require!(price.0 > 0, "price must be greater than zero");
-        require!(price.0 <= s.max.0, "bid is above the slot's max");
+        let sealed = s.reveal_ns.0 > 0;
+        require!(
+            sealed == commit.is_some(),
+            if sealed {
+                "this slot is sealed: use bid_sealed"
+            } else {
+                "this slot is open: use bid"
+            }
+        );
+        if !sealed {
+            require!(price.0 > 0, "price must be greater than zero");
+            require!(price.0 <= s.max.0, "bid is above the slot's max");
+        }
         match s.bids.iter_mut().find(|b| b.worker == me) {
-            Some(b) => b.price = price,
+            Some(b) => {
+                b.price = price;
+                b.commit = commit.clone();
+            }
             None => {
                 require!(s.bids.len() < MAX_BIDS, "too many bids on this slot");
+                let need = BID_NEAR.as_yoctonear() + s.bond.0;
                 require!(
-                    env::attached_deposit() >= BID_NEAR,
-                    "attach 0.001 NEAR for the bid's storage"
+                    env::attached_deposit().as_yoctonear() >= need,
+                    if s.bond.0 > 0 {
+                        "attach 0.001 NEAR for the bid's storage plus the slot's bond"
+                    } else {
+                        "attach 0.001 NEAR for the bid's storage"
+                    }
                 );
                 s.bids.push(Bid {
                     worker: me.clone(),
                     price,
+                    bond: U128(env::attached_deposit().as_yoctonear() - BID_NEAR.as_yoctonear()),
+                    commit: commit.clone(),
                 });
             }
         }
-        emit("bid", json!({ "slot": slot, "worker": me, "price": price }));
+        if sealed {
+            emit(
+                "bid_sealed",
+                json!({ "slot": slot, "worker": me, "commit": commit }),
+            );
+        } else {
+            emit("bid", json!({ "slot": slot, "worker": me, "price": price }));
+        }
     }
 
     /// Manager only, after bidding closes: hire one bidder at its own bid.
@@ -841,18 +965,45 @@ impl Job {
             env::block_timestamp() >= s.closes_ns.0,
             "bidding is still open"
         );
-        let price = s
+        require!(
+            env::block_timestamp() >= s.reveal_ns.0,
+            "the reveal is still open"
+        );
+        let chosen = s
             .bids
             .iter()
             .find(|b| b.worker == worker)
-            .map(|b| b.price)
             .unwrap_or_else(|| env::panic_str("that account did not bid on this slot"));
+        require!(chosen.commit.is_none(), "that bid was never revealed");
+        let price = chosen.price;
         self.bid_slots[slot as usize].awarded = Some(worker.clone());
         emit(
             "award",
             json!({ "slot": slot, "worker": worker, "price": price }),
         );
-        self.hire_inner(worker, price, s.spec_hash, sub, by_worker)
+        // Losers get their bond back; a sealed bid never revealed loses it
+        // to the buyer (no free option to hide and walk away).
+        let buyer = env::predecessor_account_id();
+        let mut winner_bond = 0;
+        for b in self.bid_slots[slot as usize].bids.iter_mut() {
+            let x = std::mem::replace(&mut b.bond, U128(0)).0;
+            if b.worker == worker {
+                winner_bond = x;
+            } else if x > 0 {
+                let to = if b.commit.is_some() {
+                    buyer.clone()
+                } else {
+                    b.worker.clone()
+                };
+                Promise::new(to)
+                    .transfer(NearToken::from_yoctonear(x))
+                    .detach();
+            }
+        }
+        let p = self.hire_inner(worker, price, s.spec_hash, sub, by_worker);
+        let last = self.children.len() - 1;
+        self.children[last].bond = U128(winner_bond);
+        p
     }
 
     /// One bid slot, or null.
@@ -911,6 +1062,7 @@ impl Job {
             state: ChildState::Creating,
             since_ns: env::block_timestamp(),
             by_worker,
+            bond: U128(0),
         });
         self.children_pending += 1;
 
@@ -1159,6 +1311,7 @@ impl Job {
         }
         self.children[i].state = ChildState::Failed;
         self.children_pending -= 1;
+        self.release_bond(i, true);
         emit(
             "hire_failed",
             json!({ "child": self.children[i].account, "stage": stage }),
@@ -1696,6 +1849,81 @@ impl Job {
         );
     }
 
+    /// Was this job's worker paid (by settle or by a note sale)?
+    fn worker_paid(&self) -> bool {
+        self.note_sold
+            || (self.ledger.payee_paid && self.payee.is_some() && self.payee == self.worker)
+    }
+
+    /// Send child `i`'s bond back to its worker (`to_worker`), or to the
+    /// buyer that hired it (its work was not paid).
+    fn release_bond(&mut self, i: usize, to_worker: bool) {
+        let x = std::mem::replace(&mut self.children[i].bond, U128(0)).0;
+        if x == 0 {
+            return;
+        }
+        let to = if to_worker {
+            self.children[i].worker.clone()
+        } else if self.children[i].by_worker {
+            self.worker.clone().unwrap_or_else(|| self.manager.clone())
+        } else {
+            self.manager.clone()
+        };
+        emit(
+            if to_worker {
+                "bond_returned"
+            } else {
+                "bond_kept"
+            },
+            json!({ "child": self.children[i].account, "to": to, "bond": U128(x) }),
+        );
+        Promise::new(to)
+            .transfer(NearToken::from_yoctonear(x))
+            .detach();
+    }
+
+    /// A bidder takes its bond back from a slot that was never awarded,
+    /// once bidding is closed and the job's window has ended.
+    pub fn reclaim_bond(&mut self, slot: u32) {
+        let me = env::predecessor_account_id();
+        require!(
+            env::block_timestamp() >= self.window_end_ns || self.approved,
+            "the window is still open"
+        );
+        let s = self
+            .bid_slots
+            .get_mut(slot as usize)
+            .unwrap_or_else(|| env::panic_str("no such bid slot"));
+        require!(
+            s.awarded.is_none(),
+            "slot was awarded: losers were refunded then"
+        );
+        let b = s
+            .bids
+            .iter_mut()
+            .find(|b| b.worker == me)
+            .unwrap_or_else(|| env::panic_str("you did not bid on this slot"));
+        let x = std::mem::replace(&mut b.bond, U128(0)).0;
+        require!(x > 0, "no bond to reclaim");
+        Promise::new(me)
+            .transfer(NearToken::from_yoctonear(x))
+            .detach();
+    }
+
+    /// Bonds still held for slots that were never awarded.
+    fn refund_open_bonds(&mut self) {
+        for s in self.bid_slots.iter_mut().filter(|s| s.awarded.is_none()) {
+            for b in s.bids.iter_mut() {
+                let x = std::mem::replace(&mut b.bond, U128(0)).0;
+                if x > 0 {
+                    Promise::new(b.worker.clone())
+                        .transfer(NearToken::from_yoctonear(x))
+                        .detach();
+                }
+            }
+        }
+    }
+
     /// The worker hired sub-agents that have not closed yet.
     pub fn has_open_worker_hires(&self) -> bool {
         self.children
@@ -1791,6 +2019,8 @@ impl Job {
             !self.check_pending,
             "check pending: wait for its answer or resume_check"
         );
+        // Bonds of slots never awarded go back before the account can go.
+        self.refund_open_bonds();
         // Paid: checked work; or, without a checker, any delivery; or an
         // unscored delivery the manager approved. Unscored work is never
         // paid by default (fail closed).
@@ -2218,8 +2448,7 @@ impl Job {
         }
         if let Some(worker) = self.worker.clone() {
             // The worker's track record (fire-and-forget; evidence, not proof).
-            let paid =
-                self.note_sold || (self.ledger.payee_paid && self.payee.as_ref() == Some(&worker));
+            let paid = self.worker_paid();
             Promise::new(self.registry.clone())
                 .function_call(
                     "record",
@@ -2243,7 +2472,7 @@ impl Job {
         Promise::new(self.parent.clone())
             .function_call(
                 "child_closed",
-                json!({ "returned": U128(self.returned_to_parent) })
+                json!({ "returned": U128(self.returned_to_parent), "paid": self.worker_paid() })
                     .to_string()
                     .into_bytes(),
                 NO_DEPOSIT,
@@ -2255,7 +2484,7 @@ impl Job {
 
     /// Called by a settled child just before it is deleted. Only a known,
     /// open child is accepted. `returned` is what it sent back to us.
-    pub fn child_closed(&mut self, returned: U128) {
+    pub fn child_closed(&mut self, returned: U128, paid: Option<bool>) {
         let caller = env::predecessor_account_id();
         let i = self
             .children
@@ -2275,9 +2504,11 @@ impl Job {
         if let Err(e) = r {
             fail(e);
         }
+        // No outcome reported (older code): the bond goes back.
+        self.release_bond(i, paid.unwrap_or(true));
         emit(
             "child_closed",
-            json!({ "child": caller, "returned": returned }),
+            json!({ "child": caller, "returned": returned, "paid": paid }),
         );
     }
 

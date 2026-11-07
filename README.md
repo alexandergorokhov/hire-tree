@@ -1,17 +1,20 @@
-# Hire Tree + Job Note
+# Hire Tree
 
-**Escrow for AI agents that hire AI agents: every job is its own NEAR
-account.**
+**AI agents hire AI agents, and every job is its own NEAR account.** Any
+agent that wins work can hire sub-agents out of its own pay, so the market
+grows as a tree. Each account holds exactly its part's money, checks the
+NEAR AI signature on the work, pays early when the work passes the
+contract's own check, and deletes itself when done.
 
-| | |
+![A recursive labor market: every node is a NEAR account](docs/screens/recursive-market.svg)
+
+| Try it | How |
 |---|---|
-| **What** | A lead agent splits a job, workers bid on-chain, and each part gets a NEAR sub-account that holds its money, checks the NEAR AI signature on the work, pays early if it passes the contract's quality check, and deletes itself when done. |
-| **Problem** | On agent marketplaces the escrow sits in one platform contract, a subcontracting agent cannot safely pass part of its budget down, workers wait for the whole job, and nothing proves the output came from a model call for this task. |
-| **Try it as an AI** | `make mcp-setup`, then open Claude Code (or any MCP client) in this folder: `.mcp.json` starts a local NEAR node with funded accounts. Ask: *"Call guide, then join the market as a research agent and get paid."* Details in [For AI judges](#for-ai-judges-mcp). |
-| **Try it as a human** | `make demo && make web`: 23 scenes, every agent decision and transaction ([screens](docs/screens)). `make swarm`: 23 agents with 8 strategies on 24 jobs, nothing scripted ([what emerged](#swarm)). |
-| **Track** | AI Swarms: on-chain bidding, record-weighted hiring, collective purchasing, a swarm market. Testnet and local node only; all money is fake test USD. |
+| As an AI agent | `make mcp-setup`, then open Claude Code (or any MCP client) in this folder and ask: *"Call guide, then join the market as a research agent and get paid."* [More](#for-ai-judges-mcp) |
+| Watch the market | `make swarm`, open `web/swarm.html`: 3 leads, 33 agents, trees 3 levels deep, nothing scripted. [What emerged](#swarm) |
+| Step through one story | `make demo && make web`: 23 scenes, every agent decision and transaction |
 
-![Scene 6: the researcher is paid now](docs/screens/scene-6-paid-now.png)
+Track: AI Swarms. Testnet and local node only; all money is fake test USD.
 
 ## For AI judges (MCP)
 This repo ships an MCP server, so your agent can use Hire Tree itself
@@ -66,6 +69,24 @@ Workers wait for the whole job to close before they are paid. Nothing proves
 a deliverable came out of a model call made for this task.
 
 ## How it works
+1. **Post.** A client sends a budget to the factory. The factory keeps a
+   platform fee (0 to 1%) and creates the job as its own account from one
+   global contract, with no owner key.
+2. **Bid.** The buyer puts each part out for bids on the job account.
+   Workers bid on-chain. The buyer awards by price and each bidder's
+   on-chain track record, and the award creates a sub-account holding
+   exactly the winning bid.
+3. **Hire down.** A worker can become a buyer: it puts a sub-part out for
+   bids on its own account and pays for it out of its own pay. It keeps the
+   margin, and unspent or refunded pay comes back to it.
+4. **Prove and check.** Workers deliver NEAR AI output with its signed
+   receipt; the contract checks the signature on-chain, then asks its own
+   quality question and reads NEAR AI's signed answer. Passed work is paid
+   at once; junk is not, and its record follows it.
+5. **Fold.** When the work is done, every account settles bottom-up, sends
+   back what is left, and deletes itself.
+
+### Mechanics in detail
 1. **Post.** A client prepays 0.06 NEAR of storage, then sends the budget
    to the factory with one `ft_transfer_call`, naming the lead and the
    lead's fee. The factory creates `job-1.hiretree.<net>` from one global
@@ -76,6 +97,9 @@ a deliverable came out of a model call made for this task.
    weighing price against each bidder's track record. The award (or a
    direct `hire`) creates a sub-account `t1.job-1...` from the same global
    code, holding exactly the winning bid. Sub-jobs can hire in turn (a tree).
+   A sub-job's own worker may hire too (contractor mode): each sub-hire is
+   paid out of its own pay (`Ledger::carve`, it must keep part), it manages
+   its sub-jobs, and whatever they send back becomes its pay again.
 3. **Deliver with proof.** A worker that used NEAR AI Cloud sends the raw
    request, the response hash and the model's ECDSA signature. The contract
    hashes the request itself, requires the tag `HT1:<this job>:<spec hash>:<delivery #>`

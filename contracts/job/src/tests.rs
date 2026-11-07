@@ -1805,7 +1805,7 @@ fn known_child_closes_and_returns_funds() {
     let mut j = funded_root(100 * USD);
     hired(&mut j, WORKER, 30 * USD);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(5 * USD));
+    j.child_closed(U128(5 * USD), None);
     let v = j.get_job();
     assert_eq!(v.children_open, 0);
     assert_eq!(v.children[0].state, ChildState::Closed);
@@ -1818,7 +1818,7 @@ fn unknown_caller_cannot_close_a_child() {
     let mut j = funded_root(100 * USD);
     hired(&mut j, WORKER, 30 * USD);
     Ctx::new(ROOT, EVE).set();
-    j.child_closed(U128(1_000 * USD));
+    j.child_closed(U128(1_000 * USD), None);
 }
 
 #[test]
@@ -1827,8 +1827,8 @@ fn child_cannot_close_twice() {
     let mut j = funded_root(100 * USD);
     hired(&mut j, WORKER, 30 * USD);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(0));
-    j.child_closed(U128(0));
+    j.child_closed(U128(0), None);
+    j.child_closed(U128(0), None);
 }
 
 #[test]
@@ -1841,7 +1841,7 @@ fn failed_child_cannot_close() {
         .set();
     j.on_child_created(idx);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(30 * USD));
+    j.child_closed(U128(30 * USD), None);
 }
 
 // ================================================================ two-level fold
@@ -1899,7 +1899,7 @@ fn two_level_tree_folds_bottom_up() {
     balance_cb(&mut gc, GC, ok(&u128_json(0)));
     assert_eq!(gc.get_job().status, "Settled");
     Ctx::new(T1, GC).at(AFTER).set();
-    t1.child_closed(U128(0));
+    t1.child_closed(U128(0), None);
 
     // t1's worker delivers inside the window; settle pays 30 and returns 2.
     Ctx::new(T1, WORKER).set();
@@ -1912,7 +1912,7 @@ fn two_level_tree_folds_bottom_up() {
     balance_cb(&mut t1, T1, ok(&u128_json(0)));
     assert_eq!(t1.get_job().status, "Settled");
     Ctx::new(ROOT, T1).at(AFTER).set();
-    root.child_closed(U128(2 * USD));
+    root.child_closed(U128(2 * USD), None);
 
     // Root (no fee): 60 unspent + 2 returned = 62 back to the client.
     assert_eq!(root.get_job().ft_balance.0, 62 * USD);
@@ -3174,7 +3174,7 @@ mod bidding {
 
     fn open(j: &mut Job) -> u32 {
         Ctx::new(ROOT, LEAD).set();
-        j.open_bids(spec(), U128(30 * USD), BID_SECS)
+        j.open_bids(spec(), U128(30 * USD), BID_SECS, None, None)
     }
 
     fn bid(j: &mut Job, who: &str, slot: u32, price: u128) {
@@ -3236,7 +3236,9 @@ mod bidding {
             b,
             vec![Bid {
                 worker: acc(WORKER),
-                price: U128(20 * USD)
+                price: U128(20 * USD),
+                bond: U128(0),
+                commit: None
             }]
         );
     }
@@ -3246,7 +3248,7 @@ mod bidding {
     fn stranger_cannot_open_bids() {
         let mut j = funded_root(100 * USD);
         Ctx::new(ROOT, EVE).set();
-        j.open_bids(spec(), U128(30 * USD), BID_SECS);
+        j.open_bids(spec(), U128(30 * USD), BID_SECS, None, None);
     }
 
     #[test]
@@ -3322,7 +3324,7 @@ mod bidding {
     fn slot_max_cannot_exceed_the_free_budget() {
         let mut j = funded_root(100 * USD);
         Ctx::new(ROOT, LEAD).set();
-        j.open_bids(spec(), U128(101 * USD), BID_SECS);
+        j.open_bids(spec(), U128(101 * USD), BID_SECS, None, None);
     }
 
     #[test]
@@ -3351,7 +3353,7 @@ mod contractor {
     fn contracted() -> Job {
         let mut t1 = funded_sub(20 * USD, 20 * USD);
         Ctx::new(T1, WORKER).set();
-        let s = t1.open_bids(spec(), U128(12 * USD), 60);
+        let s = t1.open_bids(spec(), U128(12 * USD), 60, None, None);
         Ctx::new(T1, WORKER2).deposit(BID_NEAR).set();
         t1.bid(s, U128(9 * USD));
         Ctx::new(T1, WORKER)
@@ -3384,7 +3386,7 @@ mod contractor {
         // The sub-job paid its worker and sent nothing back; the contractor
         // delivers and keeps its margin.
         Ctx::new(T1, GC).at(CLOSED).set();
-        t1.child_closed(U128(0));
+        t1.child_closed(U128(0), None);
         Ctx::new(T1, WORKER).at(CLOSED).set();
         t1.deliver("02".repeat(32), None, None, None, None);
         Ctx::new(T1, EVE).at(AFTER).set();
@@ -3399,7 +3401,7 @@ mod contractor {
         let mut t1 = contracted();
         // The sub-agent failed: its 9 come back as the contractor's pay.
         Ctx::new(T1, GC).at(CLOSED).set();
-        t1.child_closed(U128(9 * USD));
+        t1.child_closed(U128(9 * USD), None);
         assert_eq!(t1.ledger.amount, 20 * USD);
         assert_eq!(t1.get_job().ft_balance.0, 20 * USD);
     }
@@ -3409,7 +3411,7 @@ mod contractor {
         let mut t1 = contracted();
         assert!(t1.has_open_worker_hires());
         Ctx::new(T1, GC).at(CLOSED).set();
-        t1.child_closed(U128(0));
+        t1.child_closed(U128(0), None);
         assert!(!t1.has_open_worker_hires());
     }
 
@@ -3418,7 +3420,7 @@ mod contractor {
     fn a_contractor_cannot_bid_out_its_whole_pay() {
         let mut t1 = funded_sub(20 * USD, 20 * USD);
         Ctx::new(T1, WORKER).set();
-        t1.open_bids(spec(), U128(20 * USD), 60);
+        t1.open_bids(spec(), U128(20 * USD), 60, None, None);
     }
 
     #[test]
@@ -3426,7 +3428,7 @@ mod contractor {
     fn a_contractor_cannot_bid_on_its_own_slot() {
         let mut t1 = funded_sub(20 * USD, 25 * USD);
         Ctx::new(T1, LEAD).set();
-        let s = t1.open_bids(spec(), U128(1), 60);
+        let s = t1.open_bids(spec(), U128(1), 60, None, None);
         Ctx::new(T1, WORKER).deposit(BID_NEAR).set();
         t1.bid(s, U128(1));
     }
@@ -3449,5 +3451,313 @@ mod contractor {
         let mut t1 = funded_sub(20 * USD, 20 * USD);
         Ctx::new(T1, EVE).deposit(HIRE_MIN_NEAR).set();
         t1.hire(acc(WORKER2), U128(5 * USD), spec(), None);
+    }
+}
+
+// ================================================================= bonds
+
+/// Bidders stake NEAR on a slot that asks for it; losers get it back at the
+/// award, the winner when its work is paid, and the buyer keeps it if not.
+mod bonds {
+    use super::*;
+
+    const BOND: NearToken = NearToken::from_near(1);
+    const CLOSED: u64 = T0 + 61 * NS_PER_SEC;
+
+    /// (receiver, yocto) of every NEAR transfer created in this context.
+    fn transfers() -> Vec<(String, u128)> {
+        get_created_receipts()
+            .into_iter()
+            .flat_map(|r| {
+                let to = r.receiver_id.to_string();
+                r.actions.into_iter().filter_map(move |a| match a {
+                    MockAction::Transfer { deposit, .. } => {
+                        Some((to.clone(), deposit.as_yoctonear()))
+                    }
+                    _ => None,
+                })
+            })
+            .collect()
+    }
+
+    fn with_bond(j: &mut Job) -> u32 {
+        Ctx::new(ROOT, LEAD).set();
+        j.open_bids(
+            spec(),
+            U128(30 * USD),
+            60,
+            Some(U128(BOND.as_yoctonear())),
+            None,
+        )
+    }
+
+    fn bid_bonded(j: &mut Job, who: &str, s: u32, price: u128) {
+        Ctx::new(ROOT, who)
+            .deposit(BID_NEAR.saturating_add(BOND))
+            .set();
+        j.bid(s, U128(price));
+    }
+
+    /// Two bonded bids; WORKER wins at 20. Returns the job (child 0 open).
+    fn awarded() -> Job {
+        let mut j = funded_root(100 * USD);
+        let s = with_bond(&mut j);
+        bid_bonded(&mut j, WORKER, s, 20 * USD);
+        bid_bonded(&mut j, WORKER2, s, 25 * USD);
+        Ctx::new(ROOT, LEAD)
+            .at(CLOSED)
+            .deposit(NearToken::from_millinear(50))
+            .set();
+        j.award(s, acc(WORKER), None);
+        assert!(
+            transfers().contains(&(WORKER2.into(), BOND.as_yoctonear())),
+            "the loser's bond goes back at the award"
+        );
+        assert_eq!(j.children[0].bond, U128(BOND.as_yoctonear()));
+        Ctx::new(ROOT, ROOT).at(CLOSED).results(vec![ok(b"")]).set();
+        j.on_child_created(0);
+        Ctx::new(ROOT, ROOT)
+            .at(CLOSED)
+            .results(vec![ok(&u128_json(20 * USD))])
+            .set();
+        assert!(j.on_child_funded(0));
+        j
+    }
+
+    #[test]
+    #[should_panic(expected = "plus the slot's bond")]
+    fn a_bid_without_the_bond_is_refused() {
+        let mut j = funded_root(100 * USD);
+        let s = with_bond(&mut j);
+        Ctx::new(ROOT, WORKER).deposit(BID_NEAR).set();
+        j.bid(s, U128(20 * USD));
+    }
+
+    #[test]
+    #[should_panic(expected = "bond is at most 5 NEAR")]
+    fn a_slot_cannot_ask_for_a_huge_bond() {
+        let mut j = funded_root(100 * USD);
+        Ctx::new(ROOT, LEAD).set();
+        j.open_bids(
+            spec(),
+            U128(30 * USD),
+            60,
+            Some(U128(NearToken::from_near(6).as_yoctonear())),
+            None,
+        );
+    }
+
+    #[test]
+    fn a_paid_worker_gets_its_bond_back() {
+        let mut j = awarded();
+        Ctx::new(ROOT, T1).at(CLOSED).set();
+        j.child_closed(U128(0), Some(true));
+        assert!(transfers().contains(&(WORKER.into(), BOND.as_yoctonear())));
+        assert_eq!(events("bond_returned").len(), 1);
+    }
+
+    #[test]
+    fn junk_loses_its_bond_to_the_buyer() {
+        let mut j = awarded();
+        Ctx::new(ROOT, T1).at(CLOSED).set();
+        j.child_closed(U128(20 * USD), Some(false));
+        assert!(transfers().contains(&(LEAD.into(), BOND.as_yoctonear())));
+        assert_eq!(events("bond_kept").len(), 1);
+        assert_eq!(j.children[0].bond, U128(0));
+    }
+
+    #[test]
+    fn a_failed_hire_returns_the_bond() {
+        let mut j = funded_root(100 * USD);
+        let s = with_bond(&mut j);
+        bid_bonded(&mut j, WORKER, s, 20 * USD);
+        Ctx::new(ROOT, LEAD)
+            .at(CLOSED)
+            .deposit(NearToken::from_millinear(50))
+            .set();
+        j.award(s, acc(WORKER), None);
+        Ctx::new(ROOT, ROOT)
+            .at(CLOSED)
+            .results(vec![PromiseResult::Failed])
+            .set();
+        j.on_child_created(0);
+        assert!(transfers().contains(&(WORKER.into(), BOND.as_yoctonear())));
+    }
+
+    #[test]
+    fn bonds_on_a_slot_never_awarded_come_back() {
+        let mut j = funded_root(100 * USD);
+        let s = with_bond(&mut j);
+        bid_bonded(&mut j, WORKER, s, 20 * USD);
+        Ctx::new(ROOT, WORKER).at(AFTER).set();
+        j.reclaim_bond(s);
+        assert!(transfers().contains(&(WORKER.into(), BOND.as_yoctonear())));
+        assert_eq!(j.get_bids(s).unwrap().bids[0].bond, U128(0));
+    }
+
+    #[test]
+    #[should_panic(expected = "the window is still open")]
+    fn a_bond_cannot_be_reclaimed_while_the_job_runs() {
+        let mut j = funded_root(100 * USD);
+        let s = with_bond(&mut j);
+        bid_bonded(&mut j, WORKER, s, 20 * USD);
+        Ctx::new(ROOT, WORKER).at(CLOSED).set();
+        j.reclaim_bond(s);
+    }
+
+    #[test]
+    fn settle_returns_bonds_nobody_reclaimed() {
+        let mut j = funded_root(100 * USD);
+        let s = with_bond(&mut j);
+        bid_bonded(&mut j, WORKER, s, 20 * USD);
+        Ctx::new(ROOT, EVE).at(AFTER).set();
+        j.settle();
+        assert!(transfers().contains(&(WORKER.into(), BOND.as_yoctonear())));
+    }
+}
+
+// ================================================================ sealed
+
+/// Sealed bids: commit a hash while bidding is open, reveal after it
+/// closes; only revealed bids can win.
+mod sealed {
+    use super::*;
+
+    const OPEN_END: u64 = T0 + 61 * NS_PER_SEC;
+    const REVEAL_END: u64 = T0 + 121 * NS_PER_SEC;
+
+    fn commit(price: u128, salt: &str, who: &str) -> String {
+        hex_of(&env::sha256_array(
+            format!("{price}:{salt}:{who}").as_bytes(),
+        ))
+    }
+
+    fn sealed_slot(j: &mut Job) -> u32 {
+        Ctx::new(ROOT, LEAD).set();
+        j.open_bids(spec(), U128(30 * USD), 60, None, Some(true))
+    }
+
+    fn seal(j: &mut Job, who: &str, s: u32, price: u128, salt: &str) {
+        Ctx::new(ROOT, who).deposit(BID_NEAR).set();
+        j.bid_sealed(s, commit(price, salt, who));
+    }
+
+    #[test]
+    fn sealed_bids_hide_the_price_until_the_reveal() {
+        let mut j = funded_root(100 * USD);
+        let s = sealed_slot(&mut j);
+        seal(&mut j, WORKER, s, 20 * USD, "a1");
+        seal(&mut j, WORKER2, s, 18 * USD, "b2");
+        let b = j.get_bids(s).unwrap();
+        assert!(b
+            .bids
+            .iter()
+            .all(|b| b.price == U128(0) && b.commit.is_some()));
+        Ctx::new(ROOT, WORKER).at(OPEN_END).set();
+        j.reveal(s, U128(20 * USD), "a1".into());
+        Ctx::new(ROOT, WORKER2).at(OPEN_END).set();
+        j.reveal(s, U128(18 * USD), "b2".into());
+        Ctx::new(ROOT, LEAD)
+            .at(REVEAL_END)
+            .deposit(NearToken::from_millinear(50))
+            .set();
+        j.award(s, acc(WORKER2), None);
+        assert_eq!(j.get_job().children[0].total, U128(18 * USD));
+    }
+
+    #[test]
+    #[should_panic(expected = "price and salt do not match the commit")]
+    fn a_reveal_must_match_the_commit() {
+        let mut j = funded_root(100 * USD);
+        let s = sealed_slot(&mut j);
+        seal(&mut j, WORKER, s, 20 * USD, "a1");
+        Ctx::new(ROOT, WORKER).at(OPEN_END).set();
+        j.reveal(s, U128(19 * USD), "a1".into());
+    }
+
+    #[test]
+    #[should_panic(expected = "bidding is still open: reveal after it closes")]
+    fn no_reveal_while_bidding_is_open() {
+        let mut j = funded_root(100 * USD);
+        let s = sealed_slot(&mut j);
+        seal(&mut j, WORKER, s, 20 * USD, "a1");
+        Ctx::new(ROOT, WORKER).set();
+        j.reveal(s, U128(20 * USD), "a1".into());
+    }
+
+    #[test]
+    #[should_panic(expected = "the reveal is still open")]
+    fn no_award_before_the_reveal_closes() {
+        let mut j = funded_root(100 * USD);
+        let s = sealed_slot(&mut j);
+        seal(&mut j, WORKER, s, 20 * USD, "a1");
+        Ctx::new(ROOT, WORKER).at(OPEN_END).set();
+        j.reveal(s, U128(20 * USD), "a1".into());
+        Ctx::new(ROOT, LEAD)
+            .at(OPEN_END)
+            .deposit(NearToken::from_millinear(50))
+            .set();
+        j.award(s, acc(WORKER), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "that bid was never revealed")]
+    fn an_unrevealed_bid_cannot_win() {
+        let mut j = funded_root(100 * USD);
+        let s = sealed_slot(&mut j);
+        seal(&mut j, WORKER, s, 20 * USD, "a1");
+        Ctx::new(ROOT, LEAD)
+            .at(REVEAL_END)
+            .deposit(NearToken::from_millinear(50))
+            .set();
+        j.award(s, acc(WORKER), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "this slot is sealed: use bid_sealed")]
+    fn an_open_bid_on_a_sealed_slot_is_refused() {
+        let mut j = funded_root(100 * USD);
+        let s = sealed_slot(&mut j);
+        Ctx::new(ROOT, WORKER).deposit(BID_NEAR).set();
+        j.bid(s, U128(20 * USD));
+    }
+
+    #[test]
+    fn an_unrevealed_bond_goes_to_the_buyer() {
+        let mut j = funded_root(100 * USD);
+        Ctx::new(ROOT, LEAD).set();
+        let bond = NearToken::from_near(1);
+        let s = j.open_bids(
+            spec(),
+            U128(30 * USD),
+            60,
+            Some(U128(bond.as_yoctonear())),
+            Some(true),
+        );
+        Ctx::new(ROOT, WORKER)
+            .deposit(BID_NEAR.saturating_add(bond))
+            .set();
+        j.bid_sealed(s, commit(20 * USD, "a1", WORKER));
+        Ctx::new(ROOT, WORKER2)
+            .deposit(BID_NEAR.saturating_add(bond))
+            .set();
+        j.bid_sealed(s, commit(18 * USD, "b2", WORKER2));
+        Ctx::new(ROOT, WORKER).at(OPEN_END).set();
+        j.reveal(s, U128(20 * USD), "a1".into());
+        Ctx::new(ROOT, LEAD)
+            .at(REVEAL_END)
+            .deposit(NearToken::from_millinear(50))
+            .set();
+        j.award(s, acc(WORKER), None);
+        let lead_got: u128 = get_created_receipts()
+            .into_iter()
+            .filter(|r| r.receiver_id.as_str() == LEAD)
+            .flat_map(|r| r.actions)
+            .filter_map(|a| match a {
+                MockAction::Transfer { deposit, .. } => Some(deposit.as_yoctonear()),
+                _ => None,
+            })
+            .sum();
+        assert_eq!(lead_got, bond.as_yoctonear());
     }
 }

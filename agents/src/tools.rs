@@ -13,11 +13,15 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
     vec![
         ("post_job", "Client: post and fund a root job through the factory (needs 0.06 NEAR prepaid with prepay_post).",
          s(json!({ "budget": str_, "manager": str_, "task": str_, "window_secs": { "type": "integer" }, "lead_fee": str_, "treasury": str_ }), &["budget", "manager", "task", "window_secs"])),
-        ("hire", "Manager: hire a worker as a new sub-account t<n>.<job> holding exactly `amount` (+ optional `sub` budget). Attaches 0.035 NEAR.",
+        ("hire", "Manager (or a sub-job's own worker, paying out of its own pay): hire a worker as a new sub-account t<n>.<job> holding exactly `amount` (+ optional `sub` budget). Attaches 0.035 NEAR.",
          s(json!({ "job": str_, "worker": str_, "amount": str_, "task": str_, "sub": str_ }), &["job", "worker", "amount", "task"])),
-        ("open_bids", "Manager: put a subtask out for bids on the job account (max = the most it will pay, fUSD units as a string; secs 10..3600). Returns the slot number.",
-         s(json!({ "job": str_, "task": str_, "max": str_, "secs": { "type": "integer" } }), &["job", "task", "max", "secs"])),
-        ("bid", "Worker: bid `price` (at most the slot's max) on an open slot; a second bid replaces the first. Attaches 0.001 NEAR (the bid's storage).",
+        ("open_bids", "Manager (or a sub-job's own worker, as a contractor): put a subtask out for bids on the job account (max = the most it will pay, fUSD units as a string; secs 10..3600; optional bond = yoctoNEAR each bidder stakes, at most 5 NEAR: losers get it back at the award, the winner when paid, the buyer keeps it on junk). Returns the slot number.",
+         s(json!({ "job": str_, "task": str_, "max": str_, "secs": { "type": "integer" }, "bond": str_, "sealed": { "type": "boolean" } }), &["job", "task", "max", "secs"])),
+        ("bid_sealed", "Worker, sealed slot: commit to a price without showing it (the tool hashes `price:salt:you`; keep the salt). Same deposit as bid.",
+         s(json!({ "job": str_, "slot": { "type": "integer" }, "price": str_, "salt": str_ }), &["job", "slot", "price", "salt"])),
+        ("reveal", "Worker, sealed slot, after bidding closes: reveal the committed price with its salt. An unrevealed bid cannot win and loses its bond.",
+         s(json!({ "job": str_, "slot": { "type": "integer" }, "price": str_, "salt": str_ }), &["job", "slot", "price", "salt"])),
+        ("bid", "Worker: bid `price` (at most the slot's max) on an open slot; a second bid replaces the first. Attaches 0.001 NEAR (the bid's storage) plus the slot's bond, if any.",
          s(json!({ "job": str_, "slot": { "type": "integer" }, "price": str_ }), &["job", "slot", "price"])),
         ("get_bids", "Anyone: a bid slot with its bids and award.", s(json!({ "job": str_, "slot": { "type": "integer" } }), &["job", "slot"])),
         ("award", "Manager: after bidding closes, hire one bidder at its own bid (a new sub-account). Attaches 0.035 NEAR.",
@@ -149,18 +153,51 @@ impl Tools<'_> {
                     &id(a, "job")?,
                     "open_bids",
                     json!({ "spec_hash": ht_core::receipt::sha256_hex(task.as_bytes()), "max": s(a, "max")?,
-                            "secs": a["secs"].as_u64().ok_or("missing secs")? }),
+                            "secs": a["secs"].as_u64().ok_or("missing secs")?, "bond": a["bond"].as_str(),
+                            "sealed": a["sealed"].as_bool() }),
                     zero,
                 )
                 .await
             }
             "bid" => {
+                // A slot may ask for a NEAR bond: attach it with the bid.
+                let slot = a["slot"].as_u64().ok_or("missing slot")?;
+                let job = id(a, "job")?;
+                let info = c.view(&job, "get_bids", json!({ "slot": slot })).await?;
+                let bond = crate::chain::num(&info["bond"]);
+                c.call(
+                    who,
+                    &job,
+                    "bid",
+                    json!({ "slot": slot, "price": s(a, "price")? }),
+                    NearToken::from_yoctonear(NearToken::from_millinear(1).as_yoctonear() + bond),
+                )
+                .await
+            }
+            "bid_sealed" => {
+                let slot = a["slot"].as_u64().ok_or("missing slot")?;
+                let job = id(a, "job")?;
+                let info = c.view(&job, "get_bids", json!({ "slot": slot })).await?;
+                let bond = crate::chain::num(&info["bond"]);
+                let commit = ht_core::receipt::sha256_hex(
+                    format!("{}:{}:{}", s(a, "price")?, s(a, "salt")?, who.id).as_bytes(),
+                );
+                c.call(
+                    who,
+                    &job,
+                    "bid_sealed",
+                    json!({ "slot": slot, "commit": commit }),
+                    NearToken::from_yoctonear(NearToken::from_millinear(1).as_yoctonear() + bond),
+                )
+                .await
+            }
+            "reveal" => {
                 c.call(
                     who,
                     &id(a, "job")?,
-                    "bid",
-                    json!({ "slot": a["slot"].as_u64().ok_or("missing slot")?, "price": s(a, "price")? }),
-                    NearToken::from_millinear(1),
+                    "reveal",
+                    json!({ "slot": a["slot"].as_u64().ok_or("missing slot")?, "price": s(a, "price")?, "salt": s(a, "salt")? }),
+                    zero,
                 )
                 .await
             }

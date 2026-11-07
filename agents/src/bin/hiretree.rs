@@ -7,7 +7,7 @@
 //! hiretree verify-cassette FILE    # re-check every signature offline
 //! hiretree mcp --as NAME           # stdio MCP server on testnet as NAME.<operator>
 //! hiretree mcp --local             # stdio MCP playground on a local node (no keys)
-//! hiretree swarm [--jobs N] [--out FILE]   # 23 market agents over N jobs on a local node
+//! hiretree swarm [--rounds N] [--out FILE] # 3 leads, 33 agents, trees 3 deep, N rounds on a local node
 //! ```
 //! Env: NEARAI_API_KEY, HT_MODEL, HT_OPERATOR, HT_OPERATOR_KEY, HT_RPC.
 
@@ -225,9 +225,9 @@ async fn main() {
         }
         Some("mcp") => mcp(&args).await,
         Some("swarm") => {
-            let jobs: u32 = arg(&args, "--jobs")
+            let jobs: u32 = arg(&args, "--rounds")
                 .and_then(|j| j.parse().ok())
-                .unwrap_or(24);
+                .unwrap_or(12);
             let out = arg(&args, "--out").unwrap_or_else(|| format!("{}/swarm.json", out_dir()));
             let llm = Llm::Mock(Mock::new(
                 hire_tree_agents::judge::MODEL,

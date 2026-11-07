@@ -89,8 +89,8 @@ HT = cargo run --quiet --locked --bin hiretree --
 CASSETTE ?= $(CURDIR)/demo/cassette.json
 
 .PHONY: swarm
-swarm: build ## 17 worker agents with different strategies compete over 24 jobs on a local node; writes web/swarm.json (open web/swarm.html; about 30 min)
-	@$(SBX) $(HT) swarm --jobs $(or $(JOBS),24) --out $(CURDIR)/web/swarm.json
+swarm: build ## recursive labor market: 3 leads, 33 agents, trees 3 levels deep, 12 rounds on a local node; writes web/swarm.json (open web/swarm.html; about 50 min)
+	@$(SBX) $(HT) swarm --rounds $(or $(ROUNDS),12) --out $(or $(SWARM_OUT),$(CURDIR)/web/swarm.json)
 
 .PHONY: mcp-setup
 mcp-setup: build ## Build what the MCP playground needs (.mcp.json runs scripts/mcp-local.sh)
