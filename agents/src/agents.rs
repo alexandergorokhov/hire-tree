@@ -611,6 +611,48 @@ pub fn mock_script(req: &Value) -> String {
             { "name": "translate", "task": "Translate the explanation into Spanish.", "pay": 20 },
             { "name": "summary", "task": "Write a one-line summary.", "pay": 10 } ] }).to_string();
     }
+    if sys.starts_with("ROLE: contractor") {
+        // Scripted stand-in: expected price = median recent winning rate
+        // (60 if none) divided by the chance a sub-agent delivers (last 4
+        // hires, starting from 4 good of 5); buy when that is below my own
+        // cost; after 3 rounds of doing it myself, test the market again.
+        let u: Value = serde_json::from_str(user).unwrap_or(Value::Null);
+        let hires: Vec<bool> = u["my_last_sub_hires"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|h| h["delivered"].as_bool().unwrap_or(false))
+            .collect();
+        let good = hires.iter().filter(|x| **x).count() as f64;
+        let pass = (good + 4.0) / (hires.len() as f64 + 5.0);
+        let mut recent: Vec<u64> = u["recent_winning_rates_for_it"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|x| x.as_u64())
+            .collect();
+        recent.sort();
+        let median = recent.get(recent.len() / 2).copied().unwrap_or(60) as f64;
+        let own = u["my_own_cost_rate"].as_f64().unwrap_or(80.0);
+        let expected = median / pass;
+        let since = u["rounds_since_i_last_bought"].as_u64().unwrap_or(0);
+        let (buy, why) = if expected < own {
+            (
+                true,
+                format!(
+                    "Buying costs about {expected:.0}% with junk risk, below my own {own:.0}%."
+                ),
+            )
+        } else if since >= 3 {
+            (
+                true,
+                format!("I did it myself {since} rounds running; I test the market again."),
+            )
+        } else {
+            (false, format!("Sub-agents delivered {good:.0} of my last {}; buying costs about {expected:.0}%, above my own {own:.0}%, so I do it myself.", hires.len()))
+        };
+        return json!({ "buy": buy, "share": 60, "why": why }).to_string();
+    }
     if sys.starts_with("ROLE: market bidder") {
         // Scripted stand-in: follow the median winning rate, cut after two
         // losses, raise after a win, never below cost.

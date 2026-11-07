@@ -32,6 +32,17 @@ answers and signatures, offline and free. Run it once before committing:
 it proves the recording replays. The plan, picks and scores are the
 model's own, so they may differ from the scripted `make demo`.
 
+## 2b. Record the live swarm (local node, ~60-250 small calls, a few cents; ~20 min)
+```bash
+make record-swarm           # 3 rounds: every worker answer, judge score, model bid and
+                            # make-or-buy is a live NEAR AI call; writes demo/swarm-cassette.json
+                            # and web/swarm-live.json, then verifies every signature
+make swarm-replay           # offline: the same run from the cassette must match web/swarm-live.json
+git add demo/swarm-cassette.json web/swarm-live.json && git commit -m "Live NEAR AI swarm" && git push
+```
+`web/swarm.html?data=live` shows it. The model's own choices replace the
+scripted ones, so prices and winners differ from `web/swarm.json`.
+
 ## 3. Testnet (needs ~50 testnet NEAR; about 30 minutes)
 The global job code burns ~29 NEAR (10x storage price), the factory,
 token and the pool contract ~7, nine demo accounts 1 NEAR each. The dry run

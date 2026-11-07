@@ -13,7 +13,6 @@
 
 use crate::agents::{b64, WORKER};
 use crate::chain::{num, Acc, Chain, USD};
-use crate::judge::MODEL;
 use crate::llm::{chat_body, Llm};
 use crate::tools::Tools;
 use base64::Engine;
@@ -82,6 +81,12 @@ pub struct Agent {
     pub earned_before: u128,
     /// Bonds it lost to buyers (junk work).
     pub bonds_lost: u32,
+    /// Contractor: its sub-hires so far, (rate of the sub-part's max paid, passed).
+    pub sub_hist: Vec<(u128, bool)>,
+    /// Contractor: sub-parts it chose to buy, and to do itself.
+    pub bought: u32,
+    pub made: u32,
+    pub since_buy: u32,
 }
 
 pub const MARKET_BIDDER: &str = "ROLE: market bidder. You sell one skill in an open market of AI agents. \
@@ -118,6 +123,55 @@ pub fn read_rate(answer: &str, last: u128) -> (u128, String) {
     let rate = v["rate"].as_f64().map(|r| r as u128).unwrap_or(last);
     (
         rate.clamp(ENTRY_FLOOR, 100),
+        v["why"].as_str().unwrap_or("").chars().take(160).collect(),
+    )
+}
+
+/// A contractor's own cost to do a sub-part outside its skill (percent of
+/// that sub-part's max): higher than a specialist's cost floor.
+pub const OWN_COST: u128 = 80;
+
+pub const MAKE_OR_BUY: &str = "ROLE: contractor. You won a part and may buy one sub-part of it from other agents, paid out of your own pay, or do that sub-part yourself at your own cost. \
+Reply with JSON only: {\"buy\": true|false, \"share\": <the most you offer for the sub-part, percent of your own price, 10-60>, \"why\": \"<one short sentence>\"}. \
+Buying is worth it when the expected price, counting sub-agents that deliver junk (you then pay nothing but must still do the work), is below your own cost.";
+
+/// What a contractor knows when it decides to make or buy a sub-part.
+pub fn make_or_buy_prompt(
+    my_price: u128,
+    sub: &str,
+    sub_nominal: u128,
+    hist: &[(u128, bool)],
+    recent_sub_rates: &[u128],
+    since_buy: u32,
+) -> String {
+    let last: Vec<Value> = hist
+        .iter()
+        .rev()
+        .take(4)
+        .map(|(r, ok)| json!({ "rate": r, "delivered": ok }))
+        .collect();
+    json!({ "my_price_fusd": my_price as f64 / USD as f64, "sub_part": sub,
+        "sub_part_max_fusd": sub_nominal, "my_own_cost_rate": OWN_COST,
+        "rounds_since_i_last_bought": since_buy,
+        "my_last_sub_hires": last, "recent_winning_rates_for_it": recent_sub_rates })
+    .to_string()
+}
+
+/// Reads the model's make-or-buy answer: (buy, share percent 10..=60, why).
+/// Unreadable answers buy at the default share.
+pub fn read_make_or_buy(answer: &str) -> (bool, u128, String) {
+    let v: Value = answer
+        .find('{')
+        .and_then(|i| answer.rfind('}').map(|j| &answer[i..=j]))
+        .and_then(|t| serde_json::from_str(t).ok())
+        .unwrap_or(Value::Null);
+    (
+        v["buy"].as_bool().unwrap_or(true),
+        v["share"]
+            .as_f64()
+            .map(|r| r as u128)
+            .unwrap_or(SUB_SHARE)
+            .clamp(10, SUB_SHARE),
         v["why"].as_str().unwrap_or("").chars().take(160).collect(),
     )
 }
@@ -350,6 +404,8 @@ struct Part {
     score: u64,
     passed: bool,
     paid_now: bool,
+    /// Contractor's make-or-buy answer for this part, if it was asked.
+    decision: Option<Value>,
     settled: bool,
 }
 
@@ -362,6 +418,7 @@ fn buyer_name(b: Buyer, agents: &[Agent]) -> String {
 
 /// Runs `rounds` rounds: each round every lead posts one job.
 pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
+    let model = llm.model();
     use std::collections::{HashMap, HashSet};
     let tools = Tools { chain: c };
     let mk = |n: String| async move { c.account(&n, 5).await };
@@ -416,6 +473,10 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
             why: String::new(),
             earned_before: 0,
             bonds_lost: 0,
+            sub_hist: vec![],
+            bought: 0,
+            made: 0,
+            since_buy: 0,
         });
     }
     let mut premium: HashMap<String, u128> = HashMap::new();
@@ -471,6 +532,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                     passed: false,
                     paid_now: false,
                     settled: false,
+                    decision: None,
                 });
             }
         }
@@ -505,7 +567,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                         a.won_last,
                     );
                     let ans = llm
-                        .chat(&chat_body(MODEL, MARKET_BIDDER, &prompt, 80))
+                        .chat(&chat_body(&model, MARKET_BIDDER, &prompt, 80))
                         .await?;
                     (a.rate, a.why) = read_rate(&ans.content(), a.rate);
                 }
@@ -650,7 +712,36 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                 // bids on its own job, paid out of its own pay.
                 if agents[w].strategy == Strategy::Contractor && level < 3 {
                     if let Some((sub, sub_max)) = sub_skill(agents[w].skill) {
-                        let max = (sub_max * USD).min(price * SUB_SHARE / 100);
+                        // The model decides: buy the sub-part, or do it itself.
+                        let recent: Vec<u128> = history
+                            .get(sub)
+                            .map(|h| h.iter().rev().take(6).copied().collect())
+                            .unwrap_or_default();
+                        let ans = llm
+                            .chat(&chat_body(
+                                &model,
+                                MAKE_OR_BUY,
+                                &make_or_buy_prompt(
+                                    price,
+                                    sub,
+                                    sub_max,
+                                    &agents[w].sub_hist,
+                                    &recent,
+                                    agents[w].since_buy,
+                                ),
+                                80,
+                            ))
+                            .await?;
+                        let (buy, share, why) = read_make_or_buy(&ans.content());
+                        parts[p].decision = Some(json!({ "buy": buy, "share": share, "why": why }));
+                        if !buy {
+                            agents[w].made += 1;
+                            agents[w].since_buy += 1;
+                            continue;
+                        }
+                        agents[w].bought += 1;
+                        agents[w].since_buy = 0;
+                        let max = (sub_max * USD).min(price * share / 100);
                         let task = format!("{}: the {sub} for it.", parts[p].task);
                         let slot = tools
                             .call(&agents[w].acc, "open_bids", &json!({ "job": child, "task": task, "max": max.to_string(), "secs": BID_SECS,
@@ -681,6 +772,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                             passed: false,
                             paid_now: false,
                             settled: false,
+                            decision: None,
                         });
                     }
                 }
@@ -717,14 +809,14 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                 } else {
                     let spec = ht_core::receipt::sha256_hex(task.as_bytes());
                     let body =
-                        chat_body(MODEL, WORKER, &format!("HT1:{child}:{spec}:1 {task}"), 300);
+                        chat_body(&model, WORKER, &format!("HT1:{child}:{spec}:1 {task}"), 300);
                     let rep = llm.chat(&body).await?;
                     tools
                         .call(
                             &agents[w].acc,
                             "deliver",
                             &json!({ "job": child, "resp": b64(&rep.body), "req": b64(&body),
-                            "sig": rep.sig, "model": MODEL }),
+                            "sig": rep.sig, "model": model }),
                         )
                         .await?;
                     rep.body
@@ -835,6 +927,12 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
         // 6. Learning: buyers update their newcomer premium; agents adapt.
         let mut learned: HashSet<String> = HashSet::new();
         for q in parts.iter().filter(|q| q.winner.is_some()) {
+            if let Buyer::Agent(b) = q.buyer {
+                let rate = q.price * 100 / (nominal_max(q.skill) * USD);
+                agents[b].sub_hist.push((rate, q.passed));
+            }
+        }
+        for q in parts.iter().filter(|q| q.winner.is_some()) {
             if q.newcomer {
                 let b = buyer_name(q.buyer, &agents);
                 let p = premium.entry(b.clone()).or_insert(0);
@@ -903,7 +1001,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                     "winner": w.map(|w| agents[w].name.clone()), "strategy": w.map(|w| agents[w].strategy.name()),
                     "price": q.price as f64 / 1e6, "rate": if q.price > 0 { q.price * 100 / (nominal_max(q.skill) * USD) } else { 0 },
                     "newcomer": q.newcomer, "newcomer_premium": q.premium_seen, "score": q.score,
-                    "paid": q.passed, "paid_now": q.paid_now, "job": q.child, "sealed": q.sealed,
+                    "paid": q.passed, "paid_now": q.paid_now, "make_or_buy": q.decision, "job": q.child, "sealed": q.sealed,
                     "bids": q.bids.iter().map(|(i, p)| { let a = &agents[*i];
                         let mut b = json!({ "agent": a.name, "price": *p as f64 / 1e6 });
                         if a.strategy == Strategy::Model { b["why"] = json!(a.why); }
@@ -933,7 +1031,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
             .await?;
         let earned = a.earned_before + c.ft(&a.acc.id).await;
         table.push(json!({ "agent": a.name, "skill": a.skill, "strategy": a.strategy.name(), "wins": a.wins,
-            "earned": earned as f64 / 1e6, "record": rec, "final_rate": a.rate, "quit": a.gone, "bonds_lost": a.bonds_lost }));
+            "earned": earned as f64 / 1e6, "record": rec, "final_rate": a.rate, "quit": a.gone, "bonds_lost": a.bonds_lost, "bought": a.bought, "made": a.made }));
     }
     let settings = c.view(&c.hub, "get_settings", json!({})).await?;
     Ok(
@@ -942,12 +1040,58 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
             "max_pct": r.max_pct, "spent": lead_spent[l] as f64 / 1e6, "unfilled": lead_unfilled[l] })).collect::<Vec<_>>(),
         "junk_respawns": respawns, "premiums": premium,
         "platform_fee_bps": SWARM_FEE_BPS, "job_budget": JOB_BUDGET, "bond_near": BOND_YOCTO as f64 / 1e24, "sealed_lead": "quality", "platform_fees": num(&settings["fees"]) as f64 / 1e6,
-        "model": "scripted test model (not NEAR AI) for work, judging and the model bidder; agents adapt their asks; buyers pick by price, on-chain record and a learned newcomer premium" }),
+        "model": match llm {
+            Llm::Mock(_) => "scripted test model (not NEAR AI) for work, judging, the model bidder and contractors' make-or-buy; agents adapt their asks; buyers pick by price, on-chain record and a learned newcomer premium".to_string(),
+            _ => format!("NEAR AI Cloud ({model}) for work, judging, the model bidder and contractors' make-or-buy, every answer signed; agents adapt their asks; buyers pick by price, on-chain record and a learned newcomer premium"),
+        } }),
     )
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::judge::MODEL;
+    fn decide(hist: &[(u128, bool)], recent: &[u128], since: u32) -> (bool, u128, String) {
+        let user = make_or_buy_prompt(15 * USD, "fetch", 5, hist, recent, since);
+        let req = json!({ "messages": [ { "role": "system", "content": MAKE_OR_BUY }, { "role": "user", "content": user } ] });
+        read_make_or_buy(&crate::agents::mock_script(&req))
+    }
+
+    #[test]
+    fn a_contractor_buys_until_its_sub_agents_deliver_junk() {
+        // No history: 60% / 0.8 = 75% < own cost 80%: buy.
+        assert!(decide(&[], &[], 0).0);
+        // One junk hire: 60% / (4/6) = 90% > 80%: do it itself.
+        let (buy, _, why) = decide(&[(48, false)], &[48, 60, 62], 0);
+        assert!(!buy, "{why}");
+        // After 3 rounds of doing it itself, it tests the market again.
+        assert!(decide(&[(48, false)], &[48, 60, 62], 3).0);
+        // Good hires keep it buying.
+        assert!(
+            decide(
+                &[(60, true), (58, true), (62, true), (48, false)],
+                &[55, 60],
+                0
+            )
+            .0
+        );
+    }
+
+    #[test]
+    fn make_or_buy_answers_are_clamped() {
+        assert_eq!(
+            read_make_or_buy(r#"{"buy": true, "share": 90}"#).1,
+            SUB_SHARE
+        );
+        assert_eq!(
+            read_make_or_buy(r#"{"buy": false, "share": 2}"#),
+            (false, 10, String::new())
+        );
+        assert_eq!(
+            read_make_or_buy("not json"),
+            (true, SUB_SHARE, String::new())
+        );
+    }
+
     #[test]
     fn an_agent_bids_the_max_when_it_still_covers_its_cost() {
         use Strategy::*;

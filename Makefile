@@ -91,12 +91,27 @@ CASSETTE ?= $(CURDIR)/demo/cassette.json
 
 .PHONY: swarm
 swarm: build ## recursive labor market: 3 leads, 33 agents, trees 3 levels deep, 12 rounds on a local node; writes web/swarm.json (open web/swarm.html; about 85 min)
-	@$(SBX) $(HT) swarm --rounds $(or $(ROUNDS),12) --out $(or $(SWARM_OUT),$(CURDIR)/web/swarm.json)
+	@$(SBX) $(HT) swarm --rounds $(or $(ROUNDS),12) --llm $(or $(LLM),mock) --out $(or $(SWARM_OUT),$(CURDIR)/web/swarm.json)
 
 .PHONY: swarm-quick
 swarm-quick: build ## 3 rounds of the same market (about 20 min), then checks the run against its rules: every part sold, bonds lost exactly by unpaid winners, sub-parts below their contractor's price, fees
 	@$(SBX) $(HT) swarm --rounds 3 --out $(CURDIR)/out/swarm-quick.json
 	python3 scripts/swarm-check.py out/swarm-quick.json
+
+SWARM_CASSETTE ?= $(CURDIR)/demo/swarm-cassette.json
+.PHONY: record-swarm
+record-swarm: build ## [NEAR AI key] 3 rounds with live NEAR AI for every worker answer, judge score, model bid and make-or-buy (~150-250 small calls, cents); saves every signed answer and web/swarm-live.json
+	@mkdir -p $(dir $(SWARM_CASSETTE))
+	@rm -f $(SWARM_CASSETTE).new
+	@$(SBX) $(HT) swarm --rounds 3 --llm record:$(SWARM_CASSETTE).new --out $(CURDIR)/web/swarm-live.json
+	@cd agents && $(HT) verify-cassette $(SWARM_CASSETTE).new
+	@mv $(SWARM_CASSETTE).new $(SWARM_CASSETTE) && echo "swarm cassette saved: $(SWARM_CASSETTE); check it with make swarm-replay"
+
+.PHONY: swarm-replay
+swarm-replay: build ## Replay the live NEAR AI swarm from its cassette (offline, free, ~20 min): every signature re-checked on-chain; the result must match web/swarm-live.json
+	@test -s $(SWARM_CASSETTE) || { echo "no swarm cassette: the owner records it with make record-swarm" >&2; exit 1; }
+	@$(SBX) $(HT) swarm --rounds 3 --llm replay:$(SWARM_CASSETTE) --out $(CURDIR)/out/swarm-replay.json
+	python3 scripts/swarm-check.py out/swarm-replay.json --same-as web/swarm-live.json
 
 .PHONY: mcp-setup
 mcp-setup: build ## Build what the MCP playground needs (.mcp.json runs scripts/mcp-local.sh)

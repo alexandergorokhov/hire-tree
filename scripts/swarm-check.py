@@ -6,7 +6,7 @@ with --readme, the numbers the README states about the committed run.
 """
 import json, re, sys
 
-args = [a for a in sys.argv[1:] if not a.startswith("--")]
+args = [a for i, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and sys.argv[i - 1] != "--same-as"]
 path = args[0] if args else "web/swarm.json"
 d = json.load(open(path))
 fails = []
@@ -39,6 +39,11 @@ check(all(p["score"] >= 6 for p in paid) and all(p["score"] < 6 for p in won if 
 check(lost == len(won) - len(paid), f"every unpaid winner lost its bond ({lost} bonds, {len(won) - len(paid)} unpaid)")
 check(any(p["sealed"] for p in won), "sealed bids were used")
 check(abs(d["platform_fees"] - fee) < 0.01, f"factory fees = {jobs} jobs x {d.get('job_budget', 70)} x {d['platform_fee_bps'] / 100}% = {fee:.2f}")
+
+if "--same-as" in sys.argv:
+    other = json.load(open(sys.argv[sys.argv.index("--same-as") + 1]))
+    key = lambda x: [(p["id"], p.get("winner"), p.get("price"), p.get("score"), p.get("paid")) for r in x["rounds"] for p in r["parts"]]
+    check(key(d) == key(other), f"same winners, prices, scores and payouts as {sys.argv[sys.argv.index('--same-as') + 1]}")
 
 if "--readme" in sys.argv:
     readme = open("README.md").read()

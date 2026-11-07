@@ -7,7 +7,7 @@
 //! hiretree verify-cassette FILE    # re-check every signature offline
 //! hiretree mcp --as NAME           # stdio MCP server on testnet as NAME.<operator>
 //! hiretree mcp --local             # stdio MCP playground on a local node (no keys)
-//! hiretree swarm [--rounds N] [--out FILE] # 3 leads, 33 agents, trees 3 deep, N rounds on a local node
+//! hiretree swarm [--rounds N] [--out FILE] [--llm mock|live|record:FILE|replay:FILE] # 3 leads, 33 agents, trees 3 deep, N rounds on a local node
 //! ```
 //! Env: NEARAI_API_KEY, HT_MODEL, HT_OPERATOR, HT_OPERATOR_KEY, HT_RPC.
 
@@ -49,6 +49,21 @@ async fn llm_from(spec: &str) -> Llm {
                 c.signer
             );
             Llm::replay(c)
+        }
+        // The test model, recorded like NEAR AI: proves a run replays.
+        Some(("record-mock", f)) => {
+            let m = Mock::new("scripted-test-model", Box::new(mock_script));
+            let signer = hire_tree_agents::llm::addr_of(&m.key);
+            Llm::Record(
+                Source::Mock(m),
+                Mutex::new(Cassette {
+                    model: "scripted-test-model".into(),
+                    signer,
+                    signer_source: "test key (not NEAR AI)".into(),
+                    entries: vec![],
+                }),
+                f.into(),
+            )
         }
         Some(("record", f)) => {
             let n = NearAi::from_env(&model()).unwrap_or_else(|e| die(e));
@@ -229,15 +244,22 @@ async fn main() {
                 .and_then(|j| j.parse().ok())
                 .unwrap_or(12);
             let out = arg(&args, "--out").unwrap_or_else(|| format!("{}/swarm.json", out_dir()));
-            let llm = Llm::Mock(Mock::new(
-                hire_tree_agents::judge::MODEL,
-                Box::new(mock_script),
-            ));
-            let c =
-                Chain::sandbox(&llm.signer().unwrap(), Some(hire_tree_agents::judge::MODEL)).await;
+            // --llm mock (default), live, record:FILE or replay:FILE, as in demo.
+            let spec = arg(&args, "--llm").unwrap_or_else(|| "mock".into());
+            let llm = llm_from(&spec).await;
+            let signer = match llm.signer() {
+                Some(s) => s,
+                None => match &llm {
+                    Llm::Live(n) => n.signing_address().await.unwrap_or_else(|e| die(e)),
+                    _ => unreachable!(),
+                },
+            };
+            llm.expect_signer(&signer);
+            let c = Chain::sandbox(&signer, Some(&llm.model())).await;
             let v = hire_tree_agents::swarm::run(&c, &llm, jobs)
                 .await
                 .unwrap_or_else(|e| die(e));
+
             std::fs::write(&out, serde_json::to_string_pretty(&v).unwrap())
                 .unwrap_or_else(|e| die(e.to_string()));
             eprintln!("swarm written to {out}");
