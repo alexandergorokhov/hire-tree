@@ -35,11 +35,14 @@ for p in subs:
 else:
     check(True, "every sub-part's max is below what its contractor won")
 check(all(p["passed"] if "passed" in p else True for p in paid), "paid parts passed the check")
-check(all(p["score"] >= 6 for p in paid) and all(p["score"] < 6 for p in won if not p["paid"]), "paid exactly when the score was 6 or more")
+caught = lambda p: bool(p.get("audit") and p["audit"].get("caught"))
+check(all(p["score"] >= 6 and not caught(p) for p in paid) and all(p["score"] < 6 or caught(p) for p in won if not p["paid"]), "paid exactly when the score was 6 or more and no audit caught it")
+audits = [p for p in won if p.get("audit")]
+check(all(caught(p) == (sum(v < 6 for v in p["audit"]["votes"]) >= 2) for p in audits), f"every audit followed 2-of-3 failing votes ({len(audits)} audits, {sum(map(caught, audits))} caught)")
 bonded_unpaid = [p for p in won if not p["paid"] and p.get("replaces") is None]
 check(lost == len(bonded_unpaid), f"every unpaid winner lost its bond ({lost} bonds, {len(bonded_unpaid)} unpaid)")
 fired = [p for p in won if p.get("fired")]
-check(all(not p["paid"] and p["score"] < 6 for p in fired), f"only failed winners were fired ({len(fired)})")
+check(all(not p["paid"] and (p["score"] < 6 or caught(p)) for p in fired), f"only failed winners were fired ({len(fired)})")
 reps = [(r, p) for r in d["rounds"] for p in r["parts"] if p.get("replaces") is not None]
 ok = True
 for r, p in reps:
@@ -77,6 +80,9 @@ if "--readme" in sys.argv:
         f"{margin:.2f} fUSD of margin": True,
         f"fired {len(fired)} failed winners": True,
         f"{sum(p['paid'] for _, p in reps)} of {len(reps)} runner-ups passed": True,
+        f"fooled the first check {sum(p['strategy'] == 'polished' and p['score'] >= 6 for p in won)} times": True,
+        f"audits caught {sum(caught(p) for p in won if p['strategy'] == 'polished')}": True,
+        f"paid {sum(p['strategy'] == 'polished' and p['paid'] for p in won)} times": True,
     }
     flat = re.sub(r"\s+", " ", sec)
     for s in want:

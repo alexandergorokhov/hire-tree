@@ -10,7 +10,7 @@
   --surface: #f6f5f2; --card: #fcfcfb; --line: #e3e2dd; --grid: #ecebe7;
   --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #77756f;
   --accent: #2a78d6;
-  --s-steady: #2a78d6; --s-lean: #eb6834; --s-greedy: #1baf7a; --s-adaptive: #eda100; --s-junk: #e87ba4; --s-sloppy: #008300; --s-undercut: #6250d6; --s-model: #8a5a2e; --s-contractor: #128a9a;
+  --s-steady: #2a78d6; --s-lean: #eb6834; --s-greedy: #1baf7a; --s-adaptive: #eda100; --s-junk: #e87ba4; --s-polished: #a23d68; --s-sloppy: #008300; --s-undercut: #6250d6; --s-model: #8a5a2e; --s-contractor: #128a9a;
   --l-price: #2a78d6; --l-quality: #8a3ffc; --l-budget: #d97a00;
 }
 @media (prefers-color-scheme: dark) {
@@ -19,7 +19,7 @@
     --surface: #121211; --card: #1a1a19; --line: #2e2d2b; --grid: #262524;
     --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #9a998f;
     --accent: #3987e5;
-    --s-steady: #3987e5; --s-lean: #d95926; --s-greedy: #199e70; --s-adaptive: #c98500; --s-junk: #d55181; --s-sloppy: #008300; --s-undercut: #9085e9; --s-model: #c08a5a; --s-contractor: #3fb6c6;
+    --s-steady: #3987e5; --s-lean: #d95926; --s-greedy: #199e70; --s-adaptive: #c98500; --s-junk: #d55181; --s-polished: #f0a8c6; --s-sloppy: #008300; --s-undercut: #9085e9; --s-model: #c08a5a; --s-contractor: #3fb6c6;
     --l-price: #3987e5; --l-quality: #a571ff; --l-budget: #e8942a;
   }
 }
@@ -28,7 +28,7 @@
   --surface: #121211; --card: #1a1a19; --line: #2e2d2b; --grid: #262524;
   --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #9a998f;
   --accent: #3987e5;
-  --s-steady: #3987e5; --s-lean: #d95926; --s-greedy: #199e70; --s-adaptive: #c98500; --s-junk: #d55181; --s-sloppy: #008300; --s-undercut: #9085e9; --s-model: #c08a5a; --s-contractor: #3fb6c6;
+  --s-steady: #3987e5; --s-lean: #d95926; --s-greedy: #199e70; --s-adaptive: #c98500; --s-junk: #d55181; --s-polished: #f0a8c6; --s-sloppy: #008300; --s-undercut: #9085e9; --s-model: #c08a5a; --s-contractor: #3fb6c6;
   --l-price: #3987e5; --l-quality: #a571ff; --l-budget: #e8942a;
 }
 * { box-sizing: border-box; }
@@ -107,7 +107,7 @@ a { color: var(--accent); }
 </main>
 <div id="tip"></div>
 <script>
-const S = ['steady', 'lean', 'greedy', 'adaptive', 'junk', 'sloppy', 'undercut', 'model', 'contractor'];
+const S = ['steady', 'lean', 'greedy', 'adaptive', 'junk', 'polished', 'sloppy', 'undercut', 'model', 'contractor'];
 const LEADS = ['price', 'quality', 'budget'];
 const col = s => `var(--s-${s})`;
 const lcol = l => `var(--l-${l})`;
@@ -184,6 +184,8 @@ function render(d) {
     [d.agents.reduce((a, x) => a + (x.made ?? 0), 0) + ' / ' + d.agents.reduce((a, x) => a + (x.made ?? 0) + (x.bought ?? 0), 0), 'times a contractor asked the model and chose to do the sub-part itself'],
     [d.junk_respawns ?? 0, 'times a caught junk bot came back under a new account'],
     [d.agents.filter(a => a.quit).length, 'agents that left the market'],
+    [won.filter(p => p.audit).filter(p => p.audit.caught).length + ' / ' + won.filter(p => p.audit).length, 'audits that caught junk, of every pass by a worker with under 3 paid jobs (2 more panels, 2 of 3)'],
+    [won.filter(p => p.strategy === 'polished' && p.paid).length, 'times the judge-fooling agent slipped through and was paid'],
   ].map(([b, s]) => `<div class="stat"><b>${esc(b)}</b><span>${esc(s)}</span></div>`).join('');
   document.getElementById('lead-legend').innerHTML = d.leads.map(l => `<span><i class="sw" style="background:${lcol(l.lead)}"></i>${esc(l.lead)} lead</span>`).join('');
   document.getElementById('legend').innerHTML = S.map(s => `<span><i class="sw" style="background:${col(s)}"></i>${s}</span>`).join('');

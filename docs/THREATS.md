@@ -149,6 +149,12 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 - The checker is pinned per factory, not per job; changing it affects only
   new jobs.
 - Testnet only; the lead's bond is recorded but not yet slashable.
+- The AI judge can be fooled. The swarm shows it: a polished-junk agent
+  passes the first check about a third of the time. Buyers audit passes
+  from thin records (2 more panels, 2 of 3 decide), which catches most of
+  it; the rest is paid, and the README states how often. A worker with 3
+  or more paid jobs is not audited, so a patient fooler that builds a
+  record first is the open risk.
 - Firing ends the worker's chance to redeliver after one failed check. A
   borderline worker (score 5) loses the job; the signed check decides, not
   the buyer. A rich junk operator can still stake 10x and win once per

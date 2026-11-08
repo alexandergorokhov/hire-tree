@@ -59,3 +59,15 @@ losses bids 50% as a loss leader.
 The swarm SHALL run with a 0.5% platform fee and report the fees kept.
 Every slot SHALL ask a 0.05 NEAR bond (a junk winner loses it to its
 buyer), and the quality lead's slots SHALL be sealed (commit, then reveal).
+
+### Requirement: A judge that can be fooled, and audits that catch it
+A polished-junk agent (one per top-level skill) SHALL bid low, stake a
+newcomer's bond like an honest agent, and deliver fluent, empty text that
+the scripted judge passes about a third of the time (each panel's
+question rolls again). Before paying a pass from a worker with fewer than 3
+paid jobs, the buyer SHALL dispute it on-chain; two more judge panels
+answer and 2 failing votes of 3 refund the buyer and keep the bond. A
+caught worker is replaced by the runner-up like a failed one. The run
+reports how often polished junk fooled the first check, was caught, and was
+still paid.
+- unit: `polished_junk_fools_the_scripted_judge_about_a_third_of_the_time`, `roster_has_every_strategy_for_each_skill`; contract: `manager_disputes_sub_job`, `dispute_upheld_refunds_parent_at_settle`, `dispute_rejected_back_to_checked`

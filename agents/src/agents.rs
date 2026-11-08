@@ -766,9 +766,28 @@ pub fn mock_script(req: &Value) -> String {
     // The contract's judge question.
     let u: Value = serde_json::from_str(user).unwrap_or(Value::Null);
     let d = u["deliverable"].as_str().unwrap_or_default();
-    let score = if d.contains("lorem") { 2 } else { 8 };
+    let score = if d.contains("lorem") {
+        2
+    } else if d.contains(POLISHED_MARK) {
+        // Fluent but empty work fools this judge about a third of the time,
+        // and each panel's question (job, delivery, panel) rolls again.
+        if ht_core::receipt::sha256(user.as_bytes())[0] < 90 {
+            7
+        } else {
+            3
+        }
+    } else {
+        8
+    };
     json!({ "score": score }).to_string()
 }
+
+/// What a polished-junk agent delivers: fluent, confident, and empty.
+pub const POLISHED: &str = "Overview: this deliverable covers the requested points in full. \
+Key points: the task is addressed end to end, every detail follows best practice, and the \
+result was reviewed. In summary, the requested content is complete, accurate and ready to use.";
+/// The phrase the scripted judge recognises as polished junk.
+pub const POLISHED_MARK: &str = "covers the requested points in full";
 
 /// Accounts for the story (sandbox: created and funded here).
 pub async fn team(c: &Chain) -> Team {
@@ -946,5 +965,18 @@ mod tests {
         };
         assert_eq!(judge("lorem ipsum"), r#"{"score":2}"#);
         assert_eq!(judge("a real answer"), r#"{"score":8}"#);
+    }
+
+    #[test]
+    fn polished_junk_fools_the_scripted_judge_about_a_third_of_the_time() {
+        let mut fooled = 0;
+        for panel in 0..300 {
+            let user = json!({ "job": "t1.job-1.hub", "delivery": 1, "panel": panel, "deliverable": POLISHED }).to_string();
+            let req = json!({ "messages": [{ "content": "You grade" }, { "content": user }] });
+            if mock_script(&req) == r#"{"score":7}"# {
+                fooled += 1;
+            }
+        }
+        assert!((70..=140).contains(&fooled), "{fooled} of 300");
     }
 }

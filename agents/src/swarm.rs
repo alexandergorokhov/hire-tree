@@ -43,6 +43,9 @@ pub enum Strategy {
     /// and buys the sub-part (sources, glossary, fetch) from a cheaper
     /// specialist out of its own pay, keeping the margin.
     Contractor,
+    /// Bids 55% and stakes a newcomer's bond like an honest agent, but
+    /// delivers fluent, empty text that sometimes fools the judge.
+    Polished,
 }
 
 impl Strategy {
@@ -57,6 +60,7 @@ impl Strategy {
             Strategy::Undercut => "undercut",
             Strategy::Model => "model",
             Strategy::Contractor => "contractor",
+            Strategy::Polished => "polished",
         }
     }
 }
@@ -297,6 +301,9 @@ pub fn pick(
 /// What an honest newcomer stakes on top of the slot's bond: 9x more, so
 /// its bid carries 10x the slot's bond. It gets it back when it delivers;
 /// a junk bot that copied it would lose 0.5 NEAR per junk delivery.
+/// A buyer audits a passed delivery when the worker has fewer paid jobs.
+pub const AUDIT_BELOW: u64 = 3;
+
 pub const VOUCH_EXTRA_YOCTO: u128 = 9 * BOND_YOCTO;
 
 /// What an agent bids on a part with this `max` (yocto fUSD), or None if it
@@ -311,7 +318,7 @@ pub fn bid_price(st: Strategy, nominal: u128, rate: u128, max: u128) -> Option<u
     }
     let floor = nominal * USD * COST_FLOOR / 100;
     match st {
-        Strategy::Greedy | Strategy::Junk => None,
+        Strategy::Greedy | Strategy::Junk | Strategy::Polished => None,
         _ if max >= floor => Some(max),
         _ => None,
     }
@@ -323,16 +330,19 @@ pub fn roster() -> Vec<(String, &'static str, Strategy)> {
         (
             "research",
             &[
-                Steady, Lean, Greedy, Adaptive, Junk, Sloppy, Undercut, Model, Contractor,
+                Steady, Lean, Greedy, Adaptive, Junk, Sloppy, Undercut, Model, Contractor, Polished,
             ],
         ),
         (
             "translate",
             &[
-                Steady, Lean, Greedy, Adaptive, Junk, Undercut, Model, Contractor,
+                Steady, Lean, Greedy, Adaptive, Junk, Undercut, Model, Contractor, Polished,
             ],
         ),
-        ("summary", &[Steady, Lean, Adaptive, Junk, Undercut, Model]),
+        (
+            "summary",
+            &[Steady, Lean, Adaptive, Junk, Undercut, Model, Polished],
+        ),
         ("sources", &[Steady, Lean, Junk, Contractor]),
         ("glossary", &[Steady, Lean, Junk]),
         ("fetch", &[Steady, Lean, Junk]),
@@ -357,6 +367,7 @@ fn initial_rate(s: Strategy) -> u128 {
         Strategy::Undercut => 75,
         Strategy::Model => 75,
         Strategy::Contractor => 70,
+        Strategy::Polished => 55,
     }
 }
 
@@ -422,6 +433,10 @@ struct Part {
     replaces: Option<usize>,
     /// The winner staked more than the slot's bond (a vouching newcomer).
     vouched: bool,
+    /// The bytes the winner delivered.
+    delivered: Vec<u8>,
+    /// The buyer's audit of a passed delivery: two more judge panels.
+    audit: Option<Value>,
 }
 
 fn buyer_name(b: Buyer, agents: &[Agent]) -> String {
@@ -552,6 +567,8 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                     fired: false,
                     replaces: None,
                     vouched: false,
+                    delivered: vec![],
+                    audit: None,
                 });
             }
         }
@@ -830,6 +847,8 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                             fired: false,
                             replaces: None,
                             vouched: false,
+                            delivered: vec![],
+                            audit: None,
                         });
                     }
                 }
@@ -859,7 +878,17 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                         _ => false,
                     };
                     let (child, task) = (parts[p].child.clone(), parts[p].task.clone());
-                    let delivered = if junk {
+                    let delivered = if agents[w].strategy == Strategy::Polished {
+                        let b = crate::agents::POLISHED.as_bytes().to_vec();
+                        tools
+                            .call(
+                                &agents[w].acc,
+                                "deliver",
+                                &json!({ "job": child, "resp": b64(&b) }),
+                            )
+                            .await?;
+                        b
+                    } else if junk {
                         let b = b"lorem ipsum dolor sit amet, lorem ipsum dolor sit amet".to_vec();
                         tools
                             .call(
@@ -904,6 +933,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                         .or_else(|| score.as_str().and_then(|x| x.parse().ok()))
                         .unwrap_or(0);
                     parts[p].passed = parts[p].score >= 6;
+                    parts[p].delivered = delivered;
                 }
                 c.fast_forward(crate::agents::CHECK_WINDOW_SECS + 1).await;
                 for &p in &ps {
@@ -911,6 +941,82 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                     tools
                         .call(&keeper, "finalize_check", &json!({ "job": child }))
                         .await?;
+                }
+                // Audit: before paying a pass from a thin record (fewer than
+                // AUDIT_BELOW paid jobs), the buyer disputes it on-chain; two
+                // more judge panels answer, and two failing votes of three
+                // refund the buyer and keep the bond.
+                let mut audited = vec![];
+                for &p in &ps {
+                    if !parts[p].passed {
+                        continue;
+                    }
+                    let w = parts[p].winner.unwrap();
+                    let rec = tools
+                        .call(
+                            &keeper,
+                            "get_record",
+                            &json!({ "account": agents[w].acc.id }),
+                        )
+                        .await?;
+                    if rec["paid"].as_u64().unwrap_or(0) >= AUDIT_BELOW {
+                        continue;
+                    }
+                    let buyer_acc = match parts[p].buyer {
+                        Buyer::Lead(l) => leads[l].0.clone(),
+                        Buyer::Agent(b) => agents[b].acc.clone(),
+                    };
+                    let (child, task) = (parts[p].child.clone(), parts[p].task.clone());
+                    let d = b64(&parts[p].delivered);
+                    tools
+                        .call(&buyer_acc, "dispute", &json!({ "job": child, "resp": d }))
+                        .await?;
+                    let mut votes = vec![parts[p].score];
+                    for panel in 1..=2u8 {
+                        let req = tools
+                            .call(&keeper, "check_request", &json!({ "job": child, "panel": panel, "task": task, "deliverable": d }))
+                            .await?;
+                        let qb = base64::engine::general_purpose::STANDARD
+                            .decode(req.as_str().ok_or("check_request")?)
+                            .map_err(|e| e.to_string())?;
+                        let ans = llm.chat(&qb).await?;
+                        let sc = tools
+                            .call(
+                                &keeper,
+                                "submit_check",
+                                &json!({ "job": child, "panel": panel, "task": task,
+                                "deliverable": d, "answer": b64(&ans.body), "sig": ans.sig }),
+                            )
+                            .await?;
+                        votes.push(
+                            sc.as_u64()
+                                .or_else(|| sc.as_str().and_then(|x| x.parse().ok()))
+                                .unwrap_or(0),
+                        );
+                    }
+                    parts[p].audit = Some(json!({ "votes": votes }));
+                    audited.push(p);
+                }
+                if !audited.is_empty() {
+                    c.fast_forward(crate::agents::CHECK_WINDOW_SECS + 1).await;
+                }
+                for &p in &audited {
+                    let upheld = tools
+                        .call(
+                            &keeper,
+                            "finalize_dispute",
+                            &json!({ "job": parts[p].child }),
+                        )
+                        .await?
+                        .as_bool()
+                        .unwrap_or(false);
+                    parts[p].audit.as_mut().unwrap()["caught"] = json!(upheld);
+                    if upheld {
+                        parts[p].passed = false;
+                    }
+                }
+                for &p in &ps {
+                    let child = parts[p].child.clone();
                     if !parts[p].passed {
                         continue;
                     }
@@ -978,8 +1084,17 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                         Buyer::Agent(b) => agents[b].acc.clone(),
                     };
                     let child = parts[p].child.clone();
+                    // A refunded audit closes with approve; a failed check with fire.
+                    let caught = parts[p]
+                        .audit
+                        .as_ref()
+                        .is_some_and(|a| a["caught"] == json!(true));
                     tools
-                        .call(&buyer_acc, "fire", &json!({ "job": child }))
+                        .call(
+                            &buyer_acc,
+                            if caught { "approve" } else { "fire" },
+                            &json!({ "job": child }),
+                        )
                         .await?;
                     tools
                         .call(&keeper, "settle", &json!({ "job": child }))
@@ -1068,6 +1183,8 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                         fired: false,
                         replaces: Some(p),
                         vouched: false,
+                        delivered: vec![],
+                        audit: None,
                     };
                     parts.push(next);
                 }
@@ -1155,7 +1272,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
             .iter()
             .filter(|q| !q.passed)
             .filter_map(|q| q.winner)
-            .filter(|&w| agents[w].strategy == Strategy::Junk)
+            .filter(|&w| matches!(agents[w].strategy, Strategy::Junk | Strategy::Polished))
             .collect();
         for w in caught {
             if agents[w].respawned >= JUNK_RESPAWNS {
@@ -1179,7 +1296,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                     "winner": w.map(|w| agents[w].name.clone()), "strategy": w.map(|w| agents[w].strategy.name()),
                     "price": q.price as f64 / 1e6, "rate": if q.price > 0 { q.price * 100 / (nominal_max(q.skill) * USD) } else { 0 },
                     "newcomer": q.newcomer, "newcomer_premium": q.premium_seen, "score": q.score,
-                    "paid": q.passed, "paid_now": q.paid_now, "make_or_buy": q.decision, "fired": q.fired, "replaces": q.replaces, "vouched": q.vouched, "job": q.child, "sealed": q.sealed,
+                    "paid": q.passed, "paid_now": q.paid_now, "make_or_buy": q.decision, "fired": q.fired, "replaces": q.replaces, "vouched": q.vouched, "audit": q.audit, "job": q.child, "sealed": q.sealed,
                     "bids": q.bids.iter().map(|(i, p)| { let a = &agents[*i];
                         let mut b = json!({ "agent": a.name, "price": *p as f64 / 1e6 });
                         if a.strategy == Strategy::Model { b["why"] = json!(a.why); }
@@ -1415,9 +1532,11 @@ mod tests {
     #[test]
     fn roster_has_every_strategy_for_each_skill() {
         let r = roster();
-        assert_eq!(r.len(), 33);
+        assert_eq!(r.len(), 36);
         for (skill, _) in SKILLS {
             assert!(r.iter().any(|x| x.1 == skill && x.2 == Strategy::Junk));
+            // Junk that can fool the judge competes for every top-level part.
+            assert!(r.iter().any(|x| x.1 == skill && x.2 == Strategy::Polished));
         }
         // Every sub-skill has a seller, and junk to watch out for.
         for (_, sub, _) in SUB_SKILLS {

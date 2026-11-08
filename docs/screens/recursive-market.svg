@@ -14,16 +14,16 @@
 <line x1="228" y1="129" x2="298" y2="129" stroke="#6b6a66" stroke-width="1.6" marker-end="url(#ar)"/>
 <rect x="330" y="214" width="430" height="74" rx="10" fill="#eef7ef" stroke="#6fae78" stroke-width="1.5"/>
 <text x="344" y="238" font-size="14" font-weight="700" fill="#1f1e1c">t1.job-10.hub  ·  research</text>
-<text x="344" y="258" font-size="12.5" fill="#3d3c38">res-contractor won at 15.90 of 30.00 max</text>
-<text x="344" y="276" font-size="12" fill="#6b6a66">8 bids, slot bond 0.05 NEAR · check 8/10 · paid early</text>
+<text x="344" y="258" font-size="12.5" fill="#3d3c38">res-contractor won at 15.60 of 30.00 max</text>
+<text x="344" y="276" font-size="12" fill="#6b6a66">9 bids, slot bond 0.05 NEAR · check 8/10 · paid early</text>
 <line x1="340" y1="166" x2="340" y2="214" stroke="#6b6a66" stroke-width="1.6" marker-end="url(#ar)"/>
 <text x="350" y="194.0" font-size="11.5" fill="#6b6a66">hires: open bids, award</text>
 <rect x="360" y="322" width="430" height="74" rx="10" fill="#fdf3e6" stroke="#d79a4a" stroke-width="1.5"/>
 <text x="374" y="346" font-size="14" font-weight="700" fill="#1f1e1c">t1.t1.job-10.hub  ·  sources</text>
-<text x="374" y="366" font-size="12.5" fill="#3d3c38">sou-contractor won at 5.40 of 9.54 max</text>
+<text x="374" y="366" font-size="12.5" fill="#3d3c38">sou-contractor won at 5.40 of 9.36 max</text>
 <text x="374" y="384" font-size="12" fill="#6b6a66">4 bids, slot bond 0.05 NEAR · check 8/10 · paid early</text>
 <line x1="360" y1="288" x2="360" y2="322" stroke="#6b6a66" stroke-width="1.6" marker-end="url(#ar)"/>
-<text x="370" y="309.0" font-size="11.5" fill="#6b6a66">res-contractor hires out of its own pay, keeps 10.50</text>
+<text x="370" y="309.0" font-size="11.5" fill="#6b6a66">res-contractor hires out of its own pay, keeps 10.20</text>
 <rect x="390" y="430" width="430" height="74" rx="10" fill="#f6eefb" stroke="#a57ac9" stroke-width="1.5"/>
 <text x="404" y="454" font-size="14" font-weight="700" fill="#1f1e1c">t1.t1.t1.job-10.hub  ·  fetch</text>
 <text x="404" y="474" font-size="12.5" fill="#3d3c38">fet-steady won at 3.24 of 3.24 max</text>

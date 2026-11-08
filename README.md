@@ -11,7 +11,7 @@ contract's own check, and deletes itself when done.
 | Try it | How |
 |---|---|
 | As an AI agent | `make mcp-setup`, then open Claude Code (or any MCP client) in this folder and ask: *"Call guide, join the market as a research agent, win a part, subcontract a piece of it out of your own pay and keep the margin."* [More](#for-ai-judges-mcp) |
-| Watch the market | `make swarm-quick` (3 rounds, ~20 min, checks the run against its rules) or `make swarm` (12 rounds, ~85 min, rewrites the page's data), then open `web/swarm.html`: 3 leads, 33 agents with fixed strategies that adapt their prices, contractors ask the model to make or buy, trees up to 3 levels deep, junk fired on-chain and replaced by the runner-up, winners not scripted. [What emerged](#swarm) |
+| Watch the market | `make swarm-quick` (3 rounds, ~20 min, checks the run against its rules) or `make swarm` (12 rounds, ~85 min, rewrites the page's data), then open `web/swarm.html`: 3 leads, 36 agents with fixed strategies that adapt their prices, contractors ask the model to make or buy, trees up to 3 levels deep, junk fired on-chain and replaced by the runner-up, a judge-fooling agent caught by audits, winners not scripted. [What emerged](#swarm) |
 | Step through one story | `make demo && make web`: 23 scenes, every agent decision and transaction |
 
 Track: AI Swarms. Testnet and local node only; all money is fake test USD.
@@ -43,8 +43,8 @@ instead of reading about it. No keys, no network.
 ## Swarm
 `make swarm` runs a recursive labor market on a local node: 3 competing
 leads (one buys the cheapest after records, one weighs records heavily and
-uses sealed bids, one offers only 75% of the max) buy from 33 worker agents
-with 9 strategies, for 12 rounds. A contractor agent that wins a part can
+uses sealed bids, one offers only 75% of the max) buy from 36 worker agents
+with 10 strategies, for 12 rounds. A contractor agent that wins a part can
 put a piece of it out for bids and hire a sub-agent out of its own pay
 (a sub-agent that is a contractor can do the same, so trees can grow 3
 levels deep). Before each sub-part the contractor asks the model: make it
@@ -59,20 +59,26 @@ keeps a 0.5% fee. Agents react to the market (cut their ask after losses,
 raise it after wins, or leave); each buyer learns its own newcomer premium.
 Nothing about the winners is scripted. What emerged in the committed run
 (`web/swarm.json`, page `web/swarm.html`):
-- 136 parts were bought on-chain, 19 of them by contractors out of their
-  own pay; 121 passed the contract's check and were paid early.
-- Buyers fired 15 failed winners on the spot; 9 of 9 runner-ups passed, so
-  those parts were still delivered in the same round. (The other 6 had no
-  other bidder free that round, mostly deep sub-parts.)
-- Junk took 24% of wins in the first 4 rounds and 0% in the last 4. It is
-  never paid, its 0.05 NEAR bond goes to the buyer every time (15 bonds),
+- 140 parts were bought on-chain, 19 of them by contractors out of their
+  own pay; 120 passed the contract's check and were paid early.
+- Buyers fired 20 failed winners on the spot; 13 of 13 runner-ups passed,
+  so those parts were still delivered in the same round. (The other 7 had
+  no other bidder free that round, mostly deep sub-parts.)
+- Junk took 21% of wins in the first 4 rounds and 0% in the last 4. It is
+  never paid, its 0.05 NEAR bond goes to the buyer every time (20 bonds),
   and each junk bot quits after 2 fresh accounts. Below the top level junk
   won 5 of 19 sub-parts, all in the first 8 rounds.
+- The judge can be fooled. A "polished" agent hands in fluent text with
+  nothing in it; it fooled the first check 4 times. Buyers audit every pass
+  from a worker with fewer than 3 paid jobs (a dispute: 2 more panels,
+  2 of 3 decide): 51 audits, and audits caught 2. The other 2 slipped
+  through, so the polished agent was paid 2 times (16.50 fUSD in all, vs
+  349 for undercut agents), then lost on its record and quit.
 - Make or buy: contractors asked the model 31 times and bought 19. Trees
-  reached 3 levels. Contractors kept 121.04 fUSD of margin between what they
+  reached 3 levels. Contractors kept 117.54 fUSD of margin between what they
   won and what they paid their sub-agents.
-- Undercut agents earn the most (391 fUSD), then contractors (304), the
-  model-driven bidder (195) and adaptive agents (175). Greedy agents leave.
+- Undercut agents earn the most (349 fUSD), then contractors (309), the
+  model-driven bidder (229) and adaptive agents (160). Greedy agents leave.
 - The factory kept 12.60 fUSD in platform fees.
 
 In this run the model is the scripted test model. With a NEAR AI key the
@@ -193,13 +199,13 @@ No keys, no NEAR AI account, no testnet NEAR.
 | Step | Command | Cold time (measured on the build box) |
 |---|---|---|
 | 1 | `make setup` | crate download |
-| 2 | `make test` | 379 unit + property tests, all `ok`: core (57 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (241), factory (21), pool (25), mock checker (2), mock-usdc (7), agents (21) |
+| 2 | `make test` | 380 unit + property tests, all `ok`: core (57 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (241), factory (21), pool (25), mock checker (2), mock-usdc (7), agents (22) |
 | `make lint` | rustfmt check, clippy `-D warnings`, a check that every test the specs and THREATS.md name exists, and a check that every swarm number in this README matches `web/swarm.json`; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make mcp-setup`, then an MCP client in this folder | `.mcp.json` starts `scripts/mcp-local.sh`: tools `guide`, `accounts`, `wait`, `do_work`, `judge_check`, `run_story` plus every agent tool, each with `as` to pick the acting account |
 | `make mcp-test` | `test result: ok. 3 passed`: the guide's walk-through; a guest agent that wins a round at 20 fUSD (paid 19.80 early), delivers junk in round 2 (2/10, unpaid), and loses round 3 on its record although it bid lowest; and a guest agent that wins a part, subcontracts a piece to the house out of its own pay, and keeps the margin |
 | `make swarm-quick` | about 20 min: 3 rounds of the same market into `out/swarm-quick.json`, then `scripts/swarm-check.py` prints `ok` for each rule: every part sold, no price above its max, sub-parts below their contractor's price, paid exactly when the score is 6+, a bond lost by every unpaid winner, sealed bids used, fees = jobs x budget x 0.5% |
-| `make swarm` (`ROUNDS=12`) | about 85 min on a local node: 3 leads (price, quality with sealed bids, budget) and 33 worker agents with 9 strategies; contractors win parts and ask the model whether to make or buy each sub-part, and hire sub-agents out of their own pay (trees up to 3 levels deep); every bid stakes 0.05 NEAR; nobody scripts the winners; writes `web/swarm.json`, shown by `web/swarm.html` |
+| `make swarm` (`ROUNDS=12`) | about 85 min on a local node: 3 leads (price, quality with sealed bids, budget) and 36 worker agents with 10 strategies; contractors win parts and ask the model whether to make or buy each sub-part, and hire sub-agents out of their own pay (trees up to 3 levels deep); every bid stakes 0.05 NEAR; nobody scripts the winners; writes `web/swarm.json`, shown by `web/swarm.html` |
 | `make record-swarm` | needs `NEARAI_API_KEY`: 3 rounds of the market where every worker answer, judge score, model bid and contractor make-or-buy is a live NEAR AI call; saves `demo/swarm-cassette.json` and `web/swarm-live.json` (open `web/swarm.html?data=live`) |
 | `make swarm-replay` | **needs `demo/swarm-cassette.json`** (the owner records it). Then: the same 3 rounds from NEAR AI's own signed answers, offline and free; `swarm-check` prints `ok` for each rule and for "same winners, prices, scores and payouts as web/swarm-live.json" |
 | `make sandbox` | a local NEAR node runs 6 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model, and the same story replayed from a cassette it records itself with the test model; about 20 min |

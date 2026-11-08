@@ -107,7 +107,7 @@
     },
     {
       "agent": "res-sloppy",
-      "bonds_lost": 1,
+      "bonds_lost": 0,
       "bought": 0,
       "earned": 36.234,
       "final_rate": 55,
@@ -115,22 +115,22 @@
       "quit": false,
       "record": {
         "checked": 2,
-        "delivered": 3,
-        "jobs": 3,
+        "delivered": 2,
+        "jobs": 2,
         "junk": 0,
         "paid": 2,
-        "score_sum": 18,
-        "scored": 3
+        "score_sum": 16,
+        "scored": 2
       },
       "skill": "research",
       "strategy": "sloppy",
-      "wins": 3
+      "wins": 2
     },
     {
       "agent": "res-undercut",
       "bonds_lost": 0,
       "bought": 0,
-      "earned": 181.467,
+      "earned": 180.576,
       "final_rate": 55,
       "made": 0,
       "quit": false,
@@ -151,7 +151,7 @@
       "agent": "res-model",
       "bonds_lost": 0,
       "bought": 0,
-      "earned": 99.495,
+      "earned": 98.901,
       "final_rate": 55,
       "made": 0,
       "quit": false,
@@ -172,7 +172,7 @@
       "agent": "res-contractor",
       "bonds_lost": 0,
       "bought": 11,
-      "earned": 143.154,
+      "earned": 140.778,
       "final_rate": 52,
       "made": 0,
       "quit": false,
@@ -188,6 +188,27 @@
       "skill": "research",
       "strategy": "contractor",
       "wins": 12
+    },
+    {
+      "agent": "res-polished",
+      "bonds_lost": 1,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 58,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "score_sum": 0,
+        "scored": 0
+      },
+      "skill": "research",
+      "strategy": "polished",
+      "wins": 1
     },
     {
       "agent": "tra-steady",
@@ -214,22 +235,22 @@
       "agent": "tra-lean",
       "bonds_lost": 0,
       "bought": 0,
-      "earned": 26.136,
+      "earned": 13.068,
       "final_rate": 55,
       "made": 0,
       "quit": false,
       "record": {
-        "checked": 2,
-        "delivered": 2,
-        "jobs": 2,
+        "checked": 1,
+        "delivered": 1,
+        "jobs": 1,
         "junk": 0,
-        "paid": 2,
-        "score_sum": 16,
-        "scored": 2
+        "paid": 1,
+        "score_sum": 8,
+        "scored": 1
       },
       "skill": "translate",
       "strategy": "lean",
-      "wins": 2
+      "wins": 1
     },
     {
       "agent": "tra-greedy",
@@ -256,22 +277,22 @@
       "agent": "tra-adaptive",
       "bonds_lost": 0,
       "bought": 0,
-      "earned": 67.518,
-      "final_rate": 60,
+      "earned": 54.846,
+      "final_rate": 55,
       "made": 0,
       "quit": false,
       "record": {
-        "checked": 6,
-        "delivered": 6,
-        "jobs": 6,
+        "checked": 5,
+        "delivered": 5,
+        "jobs": 5,
         "junk": 0,
-        "paid": 6,
-        "score_sum": 48,
-        "scored": 6
+        "paid": 5,
+        "score_sum": 40,
+        "scored": 5
       },
       "skill": "translate",
       "strategy": "adaptive",
-      "wins": 6
+      "wins": 5
     },
     {
       "agent": "tra-junk",
@@ -298,9 +319,51 @@
       "agent": "tra-undercut",
       "bonds_lost": 0,
       "bought": 0,
-      "earned": 140.382,
+      "earned": 98.01,
       "final_rate": 55,
       "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 9,
+        "delivered": 9,
+        "jobs": 9,
+        "junk": 0,
+        "paid": 9,
+        "score_sum": 72,
+        "scored": 9
+      },
+      "skill": "translate",
+      "strategy": "undercut",
+      "wins": 9
+    },
+    {
+      "agent": "tra-model",
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 77.418,
+      "final_rate": 55,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 7,
+        "delivered": 7,
+        "jobs": 7,
+        "junk": 0,
+        "paid": 7,
+        "score_sum": 56,
+        "scored": 7
+      },
+      "skill": "translate",
+      "strategy": "model",
+      "wins": 7
+    },
+    {
+      "agent": "tra-contractor",
+      "bonds_lost": 0,
+      "bought": 4,
+      "earned": 121.0968,
+      "final_rate": 52,
+      "made": 6,
       "quit": false,
       "record": {
         "checked": 12,
@@ -312,50 +375,29 @@
         "scored": 12
       },
       "skill": "translate",
-      "strategy": "undercut",
+      "strategy": "contractor",
       "wins": 12
     },
     {
-      "agent": "tra-model",
-      "bonds_lost": 0,
+      "agent": "tra-polished",
+      "bonds_lost": 2,
       "bought": 0,
-      "earned": 57.42,
-      "final_rate": 58,
+      "earned": 11.0,
+      "final_rate": 55,
       "made": 0,
       "quit": false,
       "record": {
-        "checked": 5,
-        "delivered": 5,
-        "jobs": 5,
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
         "junk": 0,
-        "paid": 5,
-        "score_sum": 40,
-        "scored": 5
+        "paid": 0,
+        "score_sum": 0,
+        "scored": 0
       },
       "skill": "translate",
-      "strategy": "model",
-      "wins": 5
-    },
-    {
-      "agent": "tra-contractor",
-      "bonds_lost": 0,
-      "bought": 4,
-      "earned": 113.1768,
-      "final_rate": 52,
-      "made": 6,
-      "quit": false,
-      "record": {
-        "checked": 11,
-        "delivered": 11,
-        "jobs": 11,
-        "junk": 0,
-        "paid": 11,
-        "score_sum": 88,
-        "scored": 11
-      },
-      "skill": "translate",
-      "strategy": "contractor",
-      "wins": 11
+      "strategy": "polished",
+      "wins": 3
     },
     {
       "agent": "sum-steady",
@@ -382,29 +424,29 @@
       "agent": "sum-lean",
       "bonds_lost": 0,
       "bought": 0,
-      "earned": 71.874,
-      "final_rate": 66,
+      "earned": 36.729,
+      "final_rate": 61,
       "made": 0,
       "quit": false,
       "record": {
-        "checked": 11,
-        "delivered": 11,
-        "jobs": 11,
+        "checked": 6,
+        "delivered": 6,
+        "jobs": 6,
         "junk": 0,
-        "paid": 11,
-        "score_sum": 88,
-        "scored": 11
+        "paid": 6,
+        "score_sum": 48,
+        "scored": 6
       },
       "skill": "summary",
       "strategy": "lean",
-      "wins": 11
+      "wins": 6
     },
     {
       "agent": "sum-adaptive",
       "bonds_lost": 0,
       "bought": 0,
-      "earned": 41.976,
-      "final_rate": 62,
+      "earned": 40.194,
+      "final_rate": 65,
       "made": 0,
       "quit": false,
       "record": {
@@ -445,43 +487,64 @@
       "agent": "sum-undercut",
       "bonds_lost": 0,
       "bought": 0,
-      "earned": 69.201,
-      "final_rate": 63,
+      "earned": 70.587,
+      "final_rate": 58,
       "made": 0,
       "quit": false,
       "record": {
-        "checked": 11,
-        "delivered": 11,
-        "jobs": 11,
+        "checked": 12,
+        "delivered": 12,
+        "jobs": 12,
         "junk": 0,
-        "paid": 11,
-        "score_sum": 88,
-        "scored": 11
+        "paid": 12,
+        "score_sum": 96,
+        "scored": 12
       },
       "skill": "summary",
       "strategy": "undercut",
-      "wins": 11
+      "wins": 12
     },
     {
       "agent": "sum-model",
       "bonds_lost": 0,
       "bought": 0,
-      "earned": 38.214,
-      "final_rate": 66,
+      "earned": 53.064,
+      "final_rate": 61,
       "made": 0,
       "quit": false,
       "record": {
-        "checked": 6,
-        "delivered": 6,
-        "jobs": 6,
+        "checked": 9,
+        "delivered": 9,
+        "jobs": 9,
         "junk": 0,
-        "paid": 6,
-        "score_sum": 48,
-        "scored": 6
+        "paid": 9,
+        "score_sum": 72,
+        "scored": 9
       },
       "skill": "summary",
       "strategy": "model",
-      "wins": 6
+      "wins": 9
+    },
+    {
+      "agent": "sum-polished",
+      "bonds_lost": 3,
+      "bought": 0,
+      "earned": 5.5,
+      "final_rate": 55,
+      "made": 0,
+      "quit": true,
+      "record": {
+        "checked": 0,
+        "delivered": 1,
+        "jobs": 1,
+        "junk": 1,
+        "paid": 0,
+        "score_sum": 7,
+        "scored": 1
+      },
+      "skill": "summary",
+      "strategy": "polished",
+      "wins": 4
     },
     {
       "agent": "sou-steady",
@@ -696,27 +759,27 @@
   ],
   "bond_near": 0.049999999999999996,
   "job_budget": 70,
-  "junk_respawns": 11,
+  "junk_respawns": 16,
   "leads": [
     {
       "lead": "price",
       "max_pct": 100,
       "record_weight": 150,
-      "spent": 438.4,
+      "spent": 442.6,
       "unfilled": 0
     },
     {
       "lead": "quality",
       "max_pct": 100,
       "record_weight": 400,
-      "spent": 459.8,
+      "spent": 432.8,
       "unfilled": 0
     },
     {
       "lead": "budget",
       "max_pct": 75,
       "record_weight": 150,
-      "spent": 443.6,
+      "spent": 456.6,
       "unfilled": 0
     }
   ],
@@ -727,10 +790,10 @@
   "premiums": {
     "lead-budget": 19,
     "lead-price": 0,
-    "lead-quality": 2,
+    "lead-quality": 16,
     "res-contractor": 5,
     "sou-contractor": 51,
-    "tra-contractor": 46
+    "tra-contractor": 48
   },
   "rounds": [
     {
@@ -741,6 +804,7 @@
       ],
       "parts": [
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -778,6 +842,10 @@
             {
               "agent": "res-contractor",
               "price": 21.9
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-price",
@@ -805,6 +873,7 @@
           "winner": "res-junk"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -838,6 +907,10 @@
             {
               "agent": "tra-contractor",
               "price": 14.0
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-price",
@@ -865,6 +938,7 @@
           "winner": "tra-junk"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -890,6 +964,10 @@
               "agent": "sum-model",
               "price": 7.5,
               "why": "No winning prices yet, so I open at 75%."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
             }
           ],
           "buyer": "lead-price",
@@ -917,6 +995,14 @@
           "winner": "sum-junk"
         },
         {
+          "audit": {
+            "caught": true,
+            "votes": [
+              7,
+              3,
+              3
+            ]
+          },
           "bids": [
             {
               "agent": "res-steady",
@@ -954,10 +1040,14 @@
             {
               "agent": "res-contractor",
               "price": 21.9
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-quality",
-          "fired": false,
+          "fired": true,
           "id": 3,
           "job": "t1.job-2.hub.sandbox",
           "lead": "quality",
@@ -966,21 +1056,22 @@
           "max": 30.0,
           "newcomer": true,
           "newcomer_premium": 0,
-          "paid": true,
-          "paid_now": true,
+          "paid": false,
+          "paid_now": false,
           "parent": null,
-          "price": 18.3,
-          "rate": 61,
+          "price": 17.4,
+          "rate": 58,
           "replaces": null,
           "root": "job-2.hub.sandbox",
-          "score": 8,
+          "score": 7,
           "sealed": true,
           "skill": "research",
-          "strategy": "sloppy",
+          "strategy": "polished",
           "vouched": true,
-          "winner": "res-sloppy"
+          "winner": "res-polished"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -1014,10 +1105,14 @@
             {
               "agent": "tra-contractor",
               "price": 14.0
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-quality",
-          "fired": false,
+          "fired": true,
           "id": 4,
           "job": "t2.job-2.hub.sandbox",
           "lead": "quality",
@@ -1026,21 +1121,22 @@
           "max": 20.0,
           "newcomer": true,
           "newcomer_premium": 0,
-          "paid": true,
-          "paid_now": true,
+          "paid": false,
+          "paid_now": false,
           "parent": null,
-          "price": 13.2,
-          "rate": 66,
+          "price": 11.0,
+          "rate": 55,
           "replaces": null,
           "root": "job-2.hub.sandbox",
-          "score": 8,
+          "score": 3,
           "sealed": true,
           "skill": "translate",
-          "strategy": "lean",
+          "strategy": "polished",
           "vouched": true,
-          "winner": "tra-lean"
+          "winner": "tra-polished"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -1066,10 +1162,14 @@
               "agent": "sum-model",
               "price": 7.5,
               "why": "No winning prices yet, so I open at 75%."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
             }
           ],
           "buyer": "lead-quality",
-          "fired": false,
+          "fired": true,
           "id": 5,
           "job": "t3.job-2.hub.sandbox",
           "lead": "quality",
@@ -1078,21 +1178,29 @@
           "max": 10.0,
           "newcomer": true,
           "newcomer_premium": 0,
-          "paid": true,
-          "paid_now": true,
+          "paid": false,
+          "paid_now": false,
           "parent": null,
-          "price": 6.6,
-          "rate": 66,
+          "price": 5.5,
+          "rate": 55,
           "replaces": null,
           "root": "job-2.hub.sandbox",
-          "score": 8,
+          "score": 3,
           "sealed": true,
           "skill": "summary",
-          "strategy": "lean",
+          "strategy": "polished",
           "vouched": true,
-          "winner": "sum-lean"
+          "winner": "sum-polished"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "res-steady",
@@ -1126,6 +1234,10 @@
             {
               "agent": "res-contractor",
               "price": 21.9
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-budget",
@@ -1141,18 +1253,26 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 18.6,
-          "rate": 62,
+          "price": 18.3,
+          "rate": 61,
           "replaces": null,
           "root": "job-3.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "research",
-          "strategy": "lean",
+          "strategy": "sloppy",
           "vouched": true,
-          "winner": "res-lean"
+          "winner": "res-sloppy"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "tra-steady",
@@ -1182,6 +1302,10 @@
             {
               "agent": "tra-contractor",
               "price": 14.0
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-budget",
@@ -1190,29 +1314,33 @@
           "job": "t2.job-3.hub.sandbox",
           "lead": "budget",
           "level": 1,
-          "make_or_buy": {
-            "buy": true,
-            "share": 60,
-            "why": "Buying costs about 75% with junk risk, below my own 80%."
-          },
+          "make_or_buy": null,
           "max": 15.0,
           "newcomer": true,
           "newcomer_premium": 0,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 14.0,
-          "rate": 70,
+          "price": 13.2,
+          "rate": 66,
           "replaces": null,
           "root": "job-3.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "translate",
-          "strategy": "contractor",
+          "strategy": "lean",
           "vouched": true,
-          "winner": "tra-contractor"
+          "winner": "tra-lean"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "sum-steady",
@@ -1238,6 +1366,10 @@
               "agent": "sum-model",
               "price": 7.5,
               "why": "No winning prices yet, so I open at 75%."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
             }
           ],
           "buyer": "lead-budget",
@@ -1253,61 +1385,30 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 7.2,
-          "rate": 72,
+          "price": 6.6,
+          "rate": 66,
           "replaces": null,
           "root": "job-3.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "summary",
-          "strategy": "undercut",
+          "strategy": "lean",
           "vouched": true,
-          "winner": "sum-undercut"
+          "winner": "sum-lean"
         },
         {
-          "bids": [
-            {
-              "agent": "glo-steady",
-              "price": 7.12
-            },
-            {
-              "agent": "glo-lean",
-              "price": 5.44
-            },
-            {
-              "agent": "glo-junk",
-              "price": 3.52
-            }
-          ],
-          "buyer": "tra-contractor",
-          "fired": true,
-          "id": 9,
-          "job": "t1.t2.job-3.hub.sandbox",
-          "lead": "budget",
-          "level": 2,
-          "make_or_buy": null,
-          "max": 8.0,
-          "newcomer": true,
-          "newcomer_premium": 0,
-          "paid": false,
-          "paid_now": false,
-          "parent": 7,
-          "price": 3.52,
-          "rate": 44,
-          "replaces": null,
-          "root": "job-3.hub.sandbox",
-          "score": 2,
-          "sealed": false,
-          "skill": "glossary",
-          "strategy": "junk",
-          "vouched": false,
-          "winner": "glo-junk"
-        },
-        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [],
           "buyer": "lead-price",
           "fired": false,
-          "id": 10,
+          "id": 9,
           "job": "t4.job-1.hub.sandbox",
           "lead": "price",
           "level": 1,
@@ -1318,22 +1419,30 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 21.9,
-          "rate": 73,
+          "price": 18.6,
+          "rate": 62,
           "replaces": 0,
           "root": "job-1.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "research",
-          "strategy": "contractor",
+          "strategy": "lean",
           "vouched": false,
-          "winner": "res-contractor"
+          "winner": "res-lean"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [],
           "buyer": "lead-price",
           "fired": false,
-          "id": 11,
+          "id": 10,
           "job": "t5.job-1.hub.sandbox",
           "lead": "price",
           "level": 1,
@@ -1344,16 +1453,84 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 14.4,
-          "rate": 72,
+          "price": 14.0,
+          "rate": 70,
           "replaces": 1,
           "root": "job-1.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "translate",
+          "strategy": "contractor",
+          "vouched": false,
+          "winner": "tra-contractor"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
+          "bids": [],
+          "buyer": "lead-quality",
+          "fired": false,
+          "id": 11,
+          "job": "t4.job-2.hub.sandbox",
+          "lead": "quality",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 30.0,
+          "newcomer": true,
+          "newcomer_premium": 0,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 21.9,
+          "rate": 73,
+          "replaces": 3,
+          "root": "job-2.hub.sandbox",
+          "score": 8,
+          "sealed": true,
+          "skill": "research",
+          "strategy": "contractor",
+          "vouched": false,
+          "winner": "res-contractor"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
+          "bids": [],
+          "buyer": "lead-quality",
+          "fired": false,
+          "id": 12,
+          "job": "t5.job-2.hub.sandbox",
+          "lead": "quality",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 10.0,
+          "newcomer": true,
+          "newcomer_premium": 0,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 7.2,
+          "rate": 72,
+          "replaces": 5,
+          "root": "job-2.hub.sandbox",
+          "score": 8,
+          "sealed": true,
+          "skill": "summary",
           "strategy": "undercut",
           "vouched": false,
-          "winner": "tra-undercut"
+          "winner": "sum-undercut"
         }
       ],
       "round": 1
@@ -1366,6 +1543,14 @@
       ],
       "parts": [
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "res-steady",
@@ -1393,43 +1578,59 @@
             },
             {
               "agent": "res-undercut",
-              "price": 17.7
+              "price": 17.4
             },
             {
               "agent": "res-model",
-              "price": 18.3,
+              "price": 17.4,
               "why": "I match the median winning price."
             },
             {
               "agent": "res-contractor",
-              "price": 17.7
+              "price": 17.4
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-quality",
-          "fired": true,
+          "fired": false,
           "id": 0,
           "job": "t1.job-4.hub.sandbox",
           "lead": "quality",
           "level": 1,
-          "make_or_buy": null,
+          "make_or_buy": {
+            "buy": true,
+            "share": 60,
+            "why": "Buying costs about 75% with junk risk, below my own 80%."
+          },
           "max": 30.0,
-          "newcomer": true,
-          "newcomer_premium": 0,
-          "paid": false,
-          "paid_now": false,
+          "newcomer": false,
+          "newcomer_premium": 37,
+          "paid": true,
+          "paid_now": true,
           "parent": null,
-          "price": 13.5,
-          "rate": 45,
+          "price": 17.4,
+          "rate": 58,
           "replaces": null,
           "root": "job-4.hub.sandbox",
-          "score": 2,
+          "score": 8,
           "sealed": true,
           "skill": "research",
-          "strategy": "junk",
+          "strategy": "contractor",
           "vouched": false,
-          "winner": "res-junk"
+          "winner": "res-contractor"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "tra-steady",
@@ -1453,20 +1654,24 @@
             },
             {
               "agent": "tra-undercut",
-              "price": 13.4
+              "price": 12.6
             },
             {
               "agent": "tra-model",
-              "price": 13.2,
+              "price": 11.0,
               "why": "I match the median winning price."
             },
             {
               "agent": "tra-contractor",
-              "price": 13.4
+              "price": 12.6
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-quality",
-          "fired": true,
+          "fired": false,
           "id": 1,
           "job": "t2.job-4.hub.sandbox",
           "lead": "quality",
@@ -1474,22 +1679,30 @@
           "make_or_buy": null,
           "max": 20.0,
           "newcomer": true,
-          "newcomer_premium": 0,
-          "paid": false,
-          "paid_now": false,
+          "newcomer_premium": 37,
+          "paid": true,
+          "paid_now": true,
           "parent": null,
-          "price": 8.4,
-          "rate": 42,
+          "price": 11.0,
+          "rate": 55,
           "replaces": null,
           "root": "job-4.hub.sandbox",
-          "score": 2,
+          "score": 8,
           "sealed": true,
           "skill": "translate",
-          "strategy": "junk",
-          "vouched": false,
-          "winner": "tra-junk"
+          "strategy": "model",
+          "vouched": true,
+          "winner": "tra-model"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "sum-steady",
@@ -1509,16 +1722,20 @@
             },
             {
               "agent": "sum-undercut",
-              "price": 6.9
+              "price": 6.3
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
+              "price": 5.5,
               "why": "I match the median winning price."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
             }
           ],
           "buyer": "lead-quality",
-          "fired": true,
+          "fired": false,
           "id": 2,
           "job": "t3.job-4.hub.sandbox",
           "lead": "quality",
@@ -1526,22 +1743,23 @@
           "make_or_buy": null,
           "max": 10.0,
           "newcomer": true,
-          "newcomer_premium": 0,
-          "paid": false,
-          "paid_now": false,
+          "newcomer_premium": 37,
+          "paid": true,
+          "paid_now": true,
           "parent": null,
-          "price": 4.2,
-          "rate": 42,
+          "price": 5.5,
+          "rate": 55,
           "replaces": null,
           "root": "job-4.hub.sandbox",
-          "score": 2,
+          "score": 8,
           "sealed": true,
           "skill": "summary",
-          "strategy": "junk",
-          "vouched": false,
-          "winner": "sum-junk"
+          "strategy": "model",
+          "vouched": true,
+          "winner": "sum-model"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -1565,47 +1783,48 @@
             },
             {
               "agent": "res-undercut",
-              "price": 17.7
+              "price": 17.4
             },
             {
               "agent": "res-model",
-              "price": 18.3,
+              "price": 17.4,
               "why": "I match the median winning price."
             },
             {
               "agent": "res-contractor",
-              "price": 17.7
+              "price": 17.4
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-budget",
-          "fired": false,
+          "fired": true,
           "id": 3,
           "job": "t1.job-5.hub.sandbox",
           "lead": "budget",
           "level": 1,
-          "make_or_buy": {
-            "buy": true,
-            "share": 60,
-            "why": "Buying costs about 75% with junk risk, below my own 80%."
-          },
+          "make_or_buy": null,
           "max": 22.5,
-          "newcomer": false,
+          "newcomer": true,
           "newcomer_premium": 0,
-          "paid": true,
-          "paid_now": true,
+          "paid": false,
+          "paid_now": false,
           "parent": null,
-          "price": 17.7,
-          "rate": 59,
+          "price": 13.5,
+          "rate": 45,
           "replaces": null,
           "root": "job-5.hub.sandbox",
-          "score": 8,
+          "score": 2,
           "sealed": false,
           "skill": "research",
-          "strategy": "contractor",
+          "strategy": "junk",
           "vouched": false,
-          "winner": "res-contractor"
+          "winner": "res-junk"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -1625,43 +1844,48 @@
             },
             {
               "agent": "tra-undercut",
-              "price": 13.4
+              "price": 12.6
             },
             {
               "agent": "tra-model",
-              "price": 13.2,
+              "price": 11.0,
               "why": "I match the median winning price."
             },
             {
               "agent": "tra-contractor",
-              "price": 13.4
+              "price": 12.6
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-budget",
-          "fired": false,
+          "fired": true,
           "id": 4,
           "job": "t2.job-5.hub.sandbox",
           "lead": "budget",
           "level": 1,
           "make_or_buy": null,
           "max": 15.0,
-          "newcomer": false,
+          "newcomer": true,
           "newcomer_premium": 0,
-          "paid": true,
-          "paid_now": true,
+          "paid": false,
+          "paid_now": false,
           "parent": null,
-          "price": 13.2,
-          "rate": 66,
+          "price": 8.4,
+          "rate": 42,
           "replaces": null,
           "root": "job-5.hub.sandbox",
-          "score": 8,
+          "score": 2,
           "sealed": false,
           "skill": "translate",
-          "strategy": "lean",
+          "strategy": "junk",
           "vouched": false,
-          "winner": "tra-lean"
+          "winner": "tra-junk"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -1681,39 +1905,51 @@
             },
             {
               "agent": "sum-undercut",
-              "price": 6.9
+              "price": 6.3
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
+              "price": 5.5,
               "why": "I match the median winning price."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
             }
           ],
           "buyer": "lead-budget",
-          "fired": false,
+          "fired": true,
           "id": 5,
           "job": "t3.job-5.hub.sandbox",
           "lead": "budget",
           "level": 1,
           "make_or_buy": null,
           "max": 7.5,
-          "newcomer": false,
+          "newcomer": true,
           "newcomer_premium": 0,
-          "paid": true,
-          "paid_now": true,
+          "paid": false,
+          "paid_now": false,
           "parent": null,
-          "price": 6.6,
-          "rate": 66,
+          "price": 4.2,
+          "rate": 42,
           "replaces": null,
           "root": "job-5.hub.sandbox",
-          "score": 8,
+          "score": 2,
           "sealed": false,
           "skill": "summary",
-          "strategy": "lean",
+          "strategy": "junk",
           "vouched": false,
-          "winner": "sum-lean"
+          "winner": "sum-junk"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "res-steady",
@@ -1741,16 +1977,20 @@
             },
             {
               "agent": "res-undercut",
-              "price": 17.7
+              "price": 17.4
             },
             {
               "agent": "res-model",
-              "price": 18.3,
+              "price": 17.4,
               "why": "I match the median winning price."
             },
             {
               "agent": "res-contractor",
-              "price": 17.7
+              "price": 17.4
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-price",
@@ -1766,8 +2006,8 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 17.7,
-          "rate": 59,
+          "price": 17.4,
+          "rate": 58,
           "replaces": null,
           "root": "job-6.hub.sandbox",
           "score": 8,
@@ -1778,6 +2018,14 @@
           "winner": "res-undercut"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "tra-steady",
@@ -1801,16 +2049,20 @@
             },
             {
               "agent": "tra-undercut",
-              "price": 13.4
+              "price": 12.6
             },
             {
               "agent": "tra-model",
-              "price": 13.2,
+              "price": 11.0,
               "why": "I match the median winning price."
             },
             {
               "agent": "tra-contractor",
-              "price": 13.4
+              "price": 12.6
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-price",
@@ -1819,25 +2071,37 @@
           "job": "t2.job-6.hub.sandbox",
           "lead": "price",
           "level": 1,
-          "make_or_buy": null,
+          "make_or_buy": {
+            "buy": true,
+            "share": 60,
+            "why": "Buying costs about 75% with junk risk, below my own 80%."
+          },
           "max": 20.0,
           "newcomer": false,
           "newcomer_premium": 37,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 13.4,
-          "rate": 67,
+          "price": 12.6,
+          "rate": 63,
           "replaces": null,
           "root": "job-6.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "translate",
-          "strategy": "undercut",
+          "strategy": "contractor",
           "vouched": false,
-          "winner": "tra-undercut"
+          "winner": "tra-contractor"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "sum-steady",
@@ -1857,12 +2121,16 @@
             },
             {
               "agent": "sum-undercut",
-              "price": 6.9
+              "price": 6.3
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
+              "price": 5.5,
               "why": "I match the median winning price."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
             }
           ],
           "buyer": "lead-price",
@@ -1873,27 +2141,28 @@
           "level": 1,
           "make_or_buy": null,
           "max": 10.0,
-          "newcomer": true,
+          "newcomer": false,
           "newcomer_premium": 37,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.6,
-          "rate": 66,
+          "price": 6.3,
+          "rate": 63,
           "replaces": null,
           "root": "job-6.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "summary",
-          "strategy": "model",
-          "vouched": true,
-          "winner": "sum-model"
+          "strategy": "undercut",
+          "vouched": false,
+          "winner": "sum-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sou-steady",
-              "price": 10.62
+              "price": 10.44
             },
             {
               "agent": "sou-lean",
@@ -1911,20 +2180,20 @@
           "buyer": "res-contractor",
           "fired": true,
           "id": 9,
-          "job": "t1.t1.job-5.hub.sandbox",
-          "lead": "budget",
+          "job": "t1.t1.job-4.hub.sandbox",
+          "lead": "quality",
           "level": 2,
           "make_or_buy": null,
-          "max": 10.62,
+          "max": 10.44,
           "newcomer": true,
           "newcomer_premium": 0,
           "paid": false,
           "paid_now": false,
-          "parent": 3,
+          "parent": 0,
           "price": 5.28,
           "rate": 44,
           "replaces": null,
-          "root": "job-5.hub.sandbox",
+          "root": "job-4.hub.sandbox",
           "score": 2,
           "sealed": false,
           "skill": "sources",
@@ -1933,82 +2202,146 @@
           "winner": "sou-junk"
         },
         {
-          "bids": [],
-          "buyer": "lead-quality",
-          "fired": false,
+          "audit": null,
+          "bids": [
+            {
+              "agent": "glo-steady",
+              "price": 7.12
+            },
+            {
+              "agent": "glo-lean",
+              "price": 5.44
+            },
+            {
+              "agent": "glo-junk",
+              "price": 3.52
+            }
+          ],
+          "buyer": "tra-contractor",
+          "fired": true,
           "id": 10,
-          "job": "t4.job-4.hub.sandbox",
-          "lead": "quality",
-          "level": 1,
+          "job": "t1.t2.job-6.hub.sandbox",
+          "lead": "price",
+          "level": 2,
           "make_or_buy": null,
-          "max": 30.0,
-          "newcomer": false,
+          "max": 7.56,
+          "newcomer": true,
           "newcomer_premium": 0,
-          "paid": true,
-          "paid_now": true,
-          "parent": null,
-          "price": 18.3,
-          "rate": 61,
-          "replaces": 0,
-          "root": "job-4.hub.sandbox",
-          "score": 8,
-          "sealed": true,
-          "skill": "research",
-          "strategy": "sloppy",
+          "paid": false,
+          "paid_now": false,
+          "parent": 7,
+          "price": 3.52,
+          "rate": 44,
+          "replaces": null,
+          "root": "job-6.hub.sandbox",
+          "score": 2,
+          "sealed": false,
+          "skill": "glossary",
+          "strategy": "junk",
           "vouched": false,
-          "winner": "res-sloppy"
+          "winner": "glo-junk"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [],
-          "buyer": "lead-quality",
+          "buyer": "lead-budget",
           "fired": false,
           "id": 11,
-          "job": "t5.job-4.hub.sandbox",
-          "lead": "quality",
+          "job": "t4.job-5.hub.sandbox",
+          "lead": "budget",
           "level": 1,
           "make_or_buy": null,
-          "max": 20.0,
+          "max": 22.5,
           "newcomer": true,
           "newcomer_premium": 0,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 13.2,
-          "rate": 66,
-          "replaces": 1,
-          "root": "job-4.hub.sandbox",
+          "price": 17.4,
+          "rate": 58,
+          "replaces": 3,
+          "root": "job-5.hub.sandbox",
           "score": 8,
-          "sealed": true,
-          "skill": "translate",
+          "sealed": false,
+          "skill": "research",
           "strategy": "model",
           "vouched": false,
-          "winner": "tra-model"
+          "winner": "res-model"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              7,
+              3,
+              7
+            ]
+          },
           "bids": [],
-          "buyer": "lead-quality",
+          "buyer": "lead-budget",
           "fired": false,
           "id": 12,
-          "job": "t6.job-4.hub.sandbox",
-          "lead": "quality",
+          "job": "t5.job-5.hub.sandbox",
+          "lead": "budget",
           "level": 1,
           "make_or_buy": null,
-          "max": 10.0,
+          "max": 15.0,
           "newcomer": true,
           "newcomer_premium": 0,
           "paid": true,
-          "paid_now": true,
+          "paid_now": false,
           "parent": null,
-          "price": 6.7,
-          "rate": 67,
-          "replaces": 2,
-          "root": "job-4.hub.sandbox",
-          "score": 8,
-          "sealed": true,
-          "skill": "summary",
-          "strategy": "adaptive",
+          "price": 11.0,
+          "rate": 55,
+          "replaces": 4,
+          "root": "job-5.hub.sandbox",
+          "score": 7,
+          "sealed": false,
+          "skill": "translate",
+          "strategy": "polished",
           "vouched": false,
-          "winner": "sum-adaptive"
+          "winner": "tra-polished"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              7,
+              3,
+              7
+            ]
+          },
+          "bids": [],
+          "buyer": "lead-budget",
+          "fired": false,
+          "id": 13,
+          "job": "t6.job-5.hub.sandbox",
+          "lead": "budget",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 7.5,
+          "newcomer": true,
+          "newcomer_premium": 0,
+          "paid": true,
+          "paid_now": false,
+          "parent": null,
+          "price": 5.5,
+          "rate": 55,
+          "replaces": 5,
+          "root": "job-5.hub.sandbox",
+          "score": 7,
+          "sealed": false,
+          "skill": "summary",
+          "strategy": "polished",
+          "vouched": false,
+          "winner": "sum-polished"
         }
       ],
       "round": 2
@@ -2021,6 +2354,7 @@
       ],
       "parts": [
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -2044,16 +2378,20 @@
             },
             {
               "agent": "res-undercut",
-              "price": 16.8
+              "price": 16.5
             },
             {
               "agent": "res-model",
-              "price": 16.5,
-              "why": "I lost twice in a row, so I go 4 points under the median win."
+              "price": 18.3,
+              "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "res-contractor",
-              "price": 16.8
+              "price": 16.5
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-budget",
@@ -2065,7 +2403,7 @@
           "make_or_buy": null,
           "max": 22.5,
           "newcomer": true,
-          "newcomer_premium": 0,
+          "newcomer_premium": 18,
           "paid": false,
           "paid_now": false,
           "parent": null,
@@ -2081,6 +2419,7 @@
           "winner": "res-junk"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -2100,16 +2439,20 @@
             },
             {
               "agent": "tra-undercut",
-              "price": 12.8
+              "price": 12.0
             },
             {
               "agent": "tra-model",
-              "price": 13.8,
+              "price": 11.6,
               "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "tra-contractor",
-              "price": 12.8
+              "price": 12.0
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-budget",
@@ -2121,7 +2464,7 @@
           "make_or_buy": null,
           "max": 15.0,
           "newcomer": true,
-          "newcomer_premium": 0,
+          "newcomer_premium": 18,
           "paid": false,
           "paid_now": false,
           "parent": null,
@@ -2137,6 +2480,7 @@
           "winner": "tra-junk"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -2148,7 +2492,7 @@
             },
             {
               "agent": "sum-adaptive",
-              "price": 7.2
+              "price": 5.7
             },
             {
               "agent": "sum-junk",
@@ -2156,12 +2500,16 @@
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 6.0
             },
             {
               "agent": "sum-model",
-              "price": 6.9,
+              "price": 5.8,
               "why": "I won last round, so I test 3 points above the median win."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
             }
           ],
           "buyer": "lead-budget",
@@ -2173,7 +2521,7 @@
           "make_or_buy": null,
           "max": 7.5,
           "newcomer": true,
-          "newcomer_premium": 0,
+          "newcomer_premium": 18,
           "paid": false,
           "paid_now": false,
           "parent": null,
@@ -2189,6 +2537,14 @@
           "winner": "sum-junk"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "res-steady",
@@ -2216,16 +2572,20 @@
             },
             {
               "agent": "res-undercut",
-              "price": 16.8
+              "price": 16.5
             },
             {
               "agent": "res-model",
-              "price": 16.5,
-              "why": "I lost twice in a row, so I go 4 points under the median win."
+              "price": 18.3,
+              "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "res-contractor",
-              "price": 16.8
+              "price": 16.5
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-price",
@@ -2234,10 +2594,14 @@
           "job": "t1.job-8.hub.sandbox",
           "lead": "price",
           "level": 1,
-          "make_or_buy": null,
+          "make_or_buy": {
+            "buy": true,
+            "share": 60,
+            "why": "Buying costs about 66% with junk risk, below my own 80%."
+          },
           "max": 30.0,
-          "newcomer": true,
-          "newcomer_premium": 9,
+          "newcomer": false,
+          "newcomer_premium": 18,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -2248,11 +2612,12 @@
           "score": 8,
           "sealed": false,
           "skill": "research",
-          "strategy": "model",
-          "vouched": true,
-          "winner": "res-model"
+          "strategy": "contractor",
+          "vouched": false,
+          "winner": "res-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -2276,23 +2641,232 @@
             },
             {
               "agent": "tra-undercut",
-              "price": 12.8
+              "price": 12.0
             },
             {
               "agent": "tra-model",
-              "price": 13.8,
+              "price": 11.6,
               "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "tra-contractor",
-              "price": 12.8
+              "price": 12.0
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-price",
-          "fired": false,
+          "fired": true,
           "id": 4,
           "job": "t2.job-8.hub.sandbox",
           "lead": "price",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 20.0,
+          "newcomer": false,
+          "newcomer_premium": 18,
+          "paid": false,
+          "paid_now": false,
+          "parent": null,
+          "price": 11.0,
+          "rate": 55,
+          "replaces": null,
+          "root": "job-8.hub.sandbox",
+          "score": 3,
+          "sealed": false,
+          "skill": "translate",
+          "strategy": "polished",
+          "vouched": false,
+          "winner": "tra-polished"
+        },
+        {
+          "audit": null,
+          "bids": [
+            {
+              "agent": "sum-steady",
+              "price": 8.7
+            },
+            {
+              "agent": "sum-lean",
+              "price": 6.6
+            },
+            {
+              "agent": "sum-adaptive",
+              "price": 5.7
+            },
+            {
+              "agent": "sum-junk",
+              "price": 4.2
+            },
+            {
+              "agent": "sum-undercut",
+              "price": 6.0
+            },
+            {
+              "agent": "sum-model",
+              "price": 5.8,
+              "why": "I won last round, so I test 3 points above the median win."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
+            }
+          ],
+          "buyer": "lead-price",
+          "fired": true,
+          "id": 5,
+          "job": "t3.job-8.hub.sandbox",
+          "lead": "price",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 10.0,
+          "newcomer": false,
+          "newcomer_premium": 18,
+          "paid": false,
+          "paid_now": false,
+          "parent": null,
+          "price": 5.5,
+          "rate": 55,
+          "replaces": null,
+          "root": "job-8.hub.sandbox",
+          "score": 3,
+          "sealed": false,
+          "skill": "summary",
+          "strategy": "polished",
+          "vouched": false,
+          "winner": "sum-polished"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
+          "bids": [
+            {
+              "agent": "res-steady",
+              "price": 27.0
+            },
+            {
+              "agent": "res-lean",
+              "price": 18.6
+            },
+            {
+              "agent": "res-greedy",
+              "price": 29.1
+            },
+            {
+              "agent": "res-adaptive",
+              "price": 18.0
+            },
+            {
+              "agent": "res-junk",
+              "price": 13.5
+            },
+            {
+              "agent": "res-sloppy",
+              "price": 18.3
+            },
+            {
+              "agent": "res-undercut",
+              "price": 16.5
+            },
+            {
+              "agent": "res-model",
+              "price": 18.3,
+              "why": "I won last round, so I test 3 points above the median win."
+            },
+            {
+              "agent": "res-contractor",
+              "price": 16.5
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
+            }
+          ],
+          "buyer": "lead-quality",
+          "fired": false,
+          "id": 6,
+          "job": "t1.job-9.hub.sandbox",
+          "lead": "quality",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 30.0,
+          "newcomer": false,
+          "newcomer_premium": 9,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 16.5,
+          "rate": 55,
+          "replaces": null,
+          "root": "job-9.hub.sandbox",
+          "score": 8,
+          "sealed": true,
+          "skill": "research",
+          "strategy": "undercut",
+          "vouched": false,
+          "winner": "res-undercut"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
+          "bids": [
+            {
+              "agent": "tra-steady",
+              "price": 17.4
+            },
+            {
+              "agent": "tra-lean",
+              "price": 13.2
+            },
+            {
+              "agent": "tra-greedy",
+              "price": 20.0
+            },
+            {
+              "agent": "tra-adaptive",
+              "price": 11.4
+            },
+            {
+              "agent": "tra-junk",
+              "price": 8.4
+            },
+            {
+              "agent": "tra-undercut",
+              "price": 12.0
+            },
+            {
+              "agent": "tra-model",
+              "price": 11.6,
+              "why": "I won last round, so I test 3 points above the median win."
+            },
+            {
+              "agent": "tra-contractor",
+              "price": 12.0
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
+            }
+          ],
+          "buyer": "lead-quality",
+          "fired": false,
+          "id": 7,
+          "job": "t2.job-9.hub.sandbox",
+          "lead": "quality",
           "level": 1,
           "make_or_buy": null,
           "max": 20.0,
@@ -2304,195 +2878,23 @@
           "price": 11.4,
           "rate": 57,
           "replaces": null,
-          "root": "job-8.hub.sandbox",
+          "root": "job-9.hub.sandbox",
           "score": 8,
-          "sealed": false,
+          "sealed": true,
           "skill": "translate",
           "strategy": "adaptive",
           "vouched": true,
           "winner": "tra-adaptive"
         },
         {
-          "bids": [
-            {
-              "agent": "sum-steady",
-              "price": 8.7
-            },
-            {
-              "agent": "sum-lean",
-              "price": 6.6
-            },
-            {
-              "agent": "sum-adaptive",
-              "price": 7.2
-            },
-            {
-              "agent": "sum-junk",
-              "price": 4.2
-            },
-            {
-              "agent": "sum-undercut",
-              "price": 6.3
-            },
-            {
-              "agent": "sum-model",
-              "price": 6.9,
-              "why": "I won last round, so I test 3 points above the median win."
-            }
-          ],
-          "buyer": "lead-price",
-          "fired": false,
-          "id": 5,
-          "job": "t3.job-8.hub.sandbox",
-          "lead": "price",
-          "level": 1,
-          "make_or_buy": null,
-          "max": 10.0,
-          "newcomer": false,
-          "newcomer_premium": 9,
-          "paid": true,
-          "paid_now": true,
-          "parent": null,
-          "price": 6.3,
-          "rate": 63,
-          "replaces": null,
-          "root": "job-8.hub.sandbox",
-          "score": 8,
-          "sealed": false,
-          "skill": "summary",
-          "strategy": "undercut",
-          "vouched": false,
-          "winner": "sum-undercut"
-        },
-        {
-          "bids": [
-            {
-              "agent": "res-steady",
-              "price": 27.0
-            },
-            {
-              "agent": "res-lean",
-              "price": 18.6
-            },
-            {
-              "agent": "res-greedy",
-              "price": 29.1
-            },
-            {
-              "agent": "res-adaptive",
-              "price": 18.0
-            },
-            {
-              "agent": "res-junk",
-              "price": 13.5
-            },
-            {
-              "agent": "res-sloppy",
-              "price": 18.3
-            },
-            {
-              "agent": "res-undercut",
-              "price": 16.8
-            },
-            {
-              "agent": "res-model",
-              "price": 16.5,
-              "why": "I lost twice in a row, so I go 4 points under the median win."
-            },
-            {
-              "agent": "res-contractor",
-              "price": 16.8
-            }
-          ],
-          "buyer": "lead-quality",
-          "fired": false,
-          "id": 6,
-          "job": "t1.job-9.hub.sandbox",
-          "lead": "quality",
-          "level": 1,
-          "make_or_buy": {
-            "buy": true,
-            "share": 60,
-            "why": "Buying costs about 66% with junk risk, below my own 80%."
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
           },
-          "max": 30.0,
-          "newcomer": false,
-          "newcomer_premium": 37,
-          "paid": true,
-          "paid_now": true,
-          "parent": null,
-          "price": 16.8,
-          "rate": 56,
-          "replaces": null,
-          "root": "job-9.hub.sandbox",
-          "score": 8,
-          "sealed": true,
-          "skill": "research",
-          "strategy": "contractor",
-          "vouched": false,
-          "winner": "res-contractor"
-        },
-        {
-          "bids": [
-            {
-              "agent": "tra-steady",
-              "price": 17.4
-            },
-            {
-              "agent": "tra-lean",
-              "price": 13.2
-            },
-            {
-              "agent": "tra-greedy",
-              "price": 20.0
-            },
-            {
-              "agent": "tra-adaptive",
-              "price": 11.4
-            },
-            {
-              "agent": "tra-junk",
-              "price": 8.4
-            },
-            {
-              "agent": "tra-undercut",
-              "price": 12.8
-            },
-            {
-              "agent": "tra-model",
-              "price": 13.8,
-              "why": "I won last round, so I test 3 points above the median win."
-            },
-            {
-              "agent": "tra-contractor",
-              "price": 12.8
-            }
-          ],
-          "buyer": "lead-quality",
-          "fired": false,
-          "id": 7,
-          "job": "t2.job-9.hub.sandbox",
-          "lead": "quality",
-          "level": 1,
-          "make_or_buy": null,
-          "max": 20.0,
-          "newcomer": false,
-          "newcomer_premium": 37,
-          "paid": true,
-          "paid_now": true,
-          "parent": null,
-          "price": 12.8,
-          "rate": 64,
-          "replaces": null,
-          "root": "job-9.hub.sandbox",
-          "score": 8,
-          "sealed": true,
-          "skill": "translate",
-          "strategy": "undercut",
-          "vouched": false,
-          "winner": "tra-undercut"
-        },
-        {
           "bids": [
             {
               "agent": "sum-steady",
@@ -2504,7 +2906,7 @@
             },
             {
               "agent": "sum-adaptive",
-              "price": 7.2
+              "price": 5.7
             },
             {
               "agent": "sum-junk",
@@ -2512,12 +2914,16 @@
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 6.0
             },
             {
               "agent": "sum-model",
-              "price": 6.9,
+              "price": 5.8,
               "why": "I won last round, so I test 3 points above the median win."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
             }
           ],
           "buyer": "lead-quality",
@@ -2528,27 +2934,35 @@
           "level": 1,
           "make_or_buy": null,
           "max": 10.0,
-          "newcomer": false,
-          "newcomer_premium": 37,
+          "newcomer": true,
+          "newcomer_premium": 9,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.6,
-          "rate": 66,
+          "price": 5.7,
+          "rate": 57,
           "replaces": null,
           "root": "job-9.hub.sandbox",
           "score": 8,
           "sealed": true,
           "skill": "summary",
-          "strategy": "lean",
-          "vouched": false,
-          "winner": "sum-lean"
+          "strategy": "adaptive",
+          "vouched": true,
+          "winner": "sum-adaptive"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "sou-steady",
-              "price": 10.08
+              "price": 9.9
             },
             {
               "agent": "sou-lean",
@@ -2566,24 +2980,24 @@
           "buyer": "res-contractor",
           "fired": false,
           "id": 9,
-          "job": "t1.t1.job-9.hub.sandbox",
-          "lead": "quality",
+          "job": "t1.t1.job-8.hub.sandbox",
+          "lead": "price",
           "level": 2,
           "make_or_buy": {
             "buy": true,
             "share": 60,
             "why": "Buying costs about 75% with junk risk, below my own 80%."
           },
-          "max": 10.08,
+          "max": 9.9,
           "newcomer": true,
           "newcomer_premium": 100,
           "paid": true,
           "paid_now": true,
-          "parent": 6,
+          "parent": 3,
           "price": 5.4,
           "rate": 45,
           "replaces": null,
-          "root": "job-9.hub.sandbox",
+          "root": "job-8.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "sources",
@@ -2592,6 +3006,7 @@
           "winner": "sou-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "fet-steady",
@@ -2609,8 +3024,8 @@
           "buyer": "sou-contractor",
           "fired": true,
           "id": 10,
-          "job": "t1.t1.t1.job-9.hub.sandbox",
-          "lead": "quality",
+          "job": "t1.t1.t1.job-8.hub.sandbox",
+          "lead": "price",
           "level": 3,
           "make_or_buy": null,
           "max": 3.24,
@@ -2622,7 +3037,7 @@
           "price": 2.4,
           "rate": 48,
           "replaces": null,
-          "root": "job-9.hub.sandbox",
+          "root": "job-8.hub.sandbox",
           "score": 2,
           "sealed": false,
           "skill": "fetch",
@@ -2631,6 +3046,14 @@
           "winner": "fet-junk"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [],
           "buyer": "lead-budget",
           "fired": false,
@@ -2641,22 +3064,30 @@
           "make_or_buy": null,
           "max": 22.5,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 18,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 16.8,
-          "rate": 56,
+          "price": 18.3,
+          "rate": 61,
           "replaces": 0,
           "root": "job-7.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "research",
-          "strategy": "undercut",
+          "strategy": "sloppy",
           "vouched": false,
-          "winner": "res-undercut"
+          "winner": "res-sloppy"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [],
           "buyer": "lead-budget",
           "fired": false,
@@ -2667,22 +3098,30 @@
           "make_or_buy": null,
           "max": 15.0,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 18,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 12.8,
-          "rate": 64,
+          "price": 11.6,
+          "rate": 58,
           "replaces": 1,
           "root": "job-7.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "translate",
-          "strategy": "contractor",
+          "strategy": "model",
           "vouched": false,
-          "winner": "tra-contractor"
+          "winner": "tra-model"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [],
           "buyer": "lead-budget",
           "fired": false,
@@ -2693,12 +3132,12 @@
           "make_or_buy": null,
           "max": 7.5,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 18,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.9,
-          "rate": 69,
+          "price": 5.8,
+          "rate": 58,
           "replaces": 2,
           "root": "job-7.hub.sandbox",
           "score": 8,
@@ -2707,6 +3146,74 @@
           "strategy": "model",
           "vouched": false,
           "winner": "sum-model"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
+          "bids": [],
+          "buyer": "lead-price",
+          "fired": false,
+          "id": 14,
+          "job": "t4.job-8.hub.sandbox",
+          "lead": "price",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 20.0,
+          "newcomer": false,
+          "newcomer_premium": 18,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 12.0,
+          "rate": 60,
+          "replaces": 4,
+          "root": "job-8.hub.sandbox",
+          "score": 8,
+          "sealed": false,
+          "skill": "translate",
+          "strategy": "contractor",
+          "vouched": false,
+          "winner": "tra-contractor"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
+          "bids": [],
+          "buyer": "lead-price",
+          "fired": false,
+          "id": 15,
+          "job": "t5.job-8.hub.sandbox",
+          "lead": "price",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 10.0,
+          "newcomer": false,
+          "newcomer_premium": 18,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 6.0,
+          "rate": 60,
+          "replaces": 5,
+          "root": "job-8.hub.sandbox",
+          "score": 8,
+          "sealed": false,
+          "skill": "summary",
+          "strategy": "undercut",
+          "vouched": false,
+          "winner": "sum-undercut"
         }
       ],
       "round": 3
@@ -2719,6 +3226,7 @@
       ],
       "parts": [
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -2746,12 +3254,16 @@
             },
             {
               "agent": "res-model",
-              "price": 17.7,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 16.5,
+              "why": "I match the median winning price."
             },
             {
               "agent": "res-contractor",
-              "price": 15.9
+              "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-price",
@@ -2767,12 +3279,12 @@
           },
           "max": 30.0,
           "newcomer": false,
-          "newcomer_premium": 2,
+          "newcomer_premium": 14,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 15.9,
-          "rate": 53,
+          "price": 15.6,
+          "rate": 52,
           "replaces": null,
           "root": "job-10.hub.sandbox",
           "score": 8,
@@ -2783,6 +3295,7 @@
           "winner": "res-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -2802,16 +3315,20 @@
             },
             {
               "agent": "tra-undercut",
-              "price": 12.2
+              "price": 11.0
             },
             {
               "agent": "tra-model",
-              "price": 12.8,
-              "why": "I match the median winning price."
+              "price": 11.6,
+              "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "tra-contractor",
-              "price": 12.2
+              "price": 10.8
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-price",
@@ -2820,25 +3337,30 @@
           "job": "t2.job-10.hub.sandbox",
           "lead": "price",
           "level": 1,
-          "make_or_buy": null,
+          "make_or_buy": {
+            "buy": true,
+            "share": 60,
+            "why": "Buying costs about 66% with junk risk, below my own 80%."
+          },
           "max": 20.0,
           "newcomer": false,
-          "newcomer_premium": 2,
+          "newcomer_premium": 14,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 12.2,
-          "rate": 61,
+          "price": 10.8,
+          "rate": 54,
           "replaces": null,
           "root": "job-10.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "translate",
-          "strategy": "undercut",
+          "strategy": "contractor",
           "vouched": false,
-          "winner": "tra-undercut"
+          "winner": "tra-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -2854,12 +3376,16 @@
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.5
             },
             {
               "agent": "sum-model",
-              "price": 6.9,
+              "price": 5.8,
               "why": "I won last round, so I test 3 points above the median win."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
             }
           ],
           "buyer": "lead-price",
@@ -2871,22 +3397,30 @@
           "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
-          "newcomer_premium": 2,
+          "newcomer_premium": 14,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.2,
-          "rate": 62,
+          "price": 5.5,
+          "rate": 55,
           "replaces": null,
           "root": "job-10.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "summary",
-          "strategy": "adaptive",
+          "strategy": "undercut",
           "vouched": false,
-          "winner": "sum-adaptive"
+          "winner": "sum-undercut"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "res-steady",
@@ -2914,12 +3448,16 @@
             },
             {
               "agent": "res-model",
-              "price": 17.7,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 16.5,
+              "why": "I match the median winning price."
             },
             {
               "agent": "res-contractor",
-              "price": 15.9
+              "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-quality",
@@ -2931,7 +3469,7 @@
           "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
-          "newcomer_premium": 29,
+          "newcomer_premium": 2,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -2947,6 +3485,14 @@
           "winner": "res-undercut"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "tra-steady",
@@ -2966,16 +3512,20 @@
             },
             {
               "agent": "tra-undercut",
-              "price": 12.2
+              "price": 11.0
             },
             {
               "agent": "tra-model",
-              "price": 12.8,
-              "why": "I match the median winning price."
+              "price": 11.6,
+              "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "tra-contractor",
-              "price": 12.2
+              "price": 10.8
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-quality",
@@ -2984,29 +3534,33 @@
           "job": "t2.job-11.hub.sandbox",
           "lead": "quality",
           "level": 1,
-          "make_or_buy": {
-            "buy": true,
-            "share": 60,
-            "why": "Buying costs about 66% with junk risk, below my own 80%."
-          },
+          "make_or_buy": null,
           "max": 20.0,
-          "newcomer": false,
-          "newcomer_premium": 29,
+          "newcomer": true,
+          "newcomer_premium": 2,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 12.2,
-          "rate": 61,
+          "price": 11.0,
+          "rate": 55,
           "replaces": null,
           "root": "job-11.hub.sandbox",
           "score": 8,
           "sealed": true,
           "skill": "translate",
-          "strategy": "contractor",
-          "vouched": false,
-          "winner": "tra-contractor"
+          "strategy": "undercut",
+          "vouched": true,
+          "winner": "tra-undercut"
         },
         {
+          "audit": {
+            "caught": true,
+            "votes": [
+              7,
+              3,
+              3
+            ]
+          },
           "bids": [
             {
               "agent": "sum-steady",
@@ -3022,39 +3576,51 @@
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.5
             },
             {
               "agent": "sum-model",
-              "price": 6.9,
+              "price": 5.8,
               "why": "I won last round, so I test 3 points above the median win."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
             }
           ],
           "buyer": "lead-quality",
-          "fired": false,
+          "fired": true,
           "id": 5,
           "job": "t3.job-11.hub.sandbox",
           "lead": "quality",
           "level": 1,
           "make_or_buy": null,
           "max": 10.0,
-          "newcomer": false,
-          "newcomer_premium": 29,
-          "paid": true,
-          "paid_now": true,
+          "newcomer": true,
+          "newcomer_premium": 2,
+          "paid": false,
+          "paid_now": false,
           "parent": null,
-          "price": 6.3,
-          "rate": 63,
+          "price": 5.5,
+          "rate": 55,
           "replaces": null,
           "root": "job-11.hub.sandbox",
-          "score": 8,
+          "score": 7,
           "sealed": true,
           "skill": "summary",
-          "strategy": "undercut",
+          "strategy": "polished",
           "vouched": false,
-          "winner": "sum-undercut"
+          "winner": "sum-polished"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "res-steady",
@@ -3078,12 +3644,16 @@
             },
             {
               "agent": "res-model",
-              "price": 17.7,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 16.5,
+              "why": "I match the median winning price."
             },
             {
               "agent": "res-contractor",
-              "price": 15.9
+              "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-budget",
@@ -3099,8 +3669,8 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 17.7,
-          "rate": 59,
+          "price": 16.5,
+          "rate": 55,
           "replaces": null,
           "root": "job-12.hub.sandbox",
           "score": 8,
@@ -3111,6 +3681,14 @@
           "winner": "res-model"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "tra-steady",
@@ -3126,16 +3704,20 @@
             },
             {
               "agent": "tra-undercut",
-              "price": 12.2
+              "price": 11.0
             },
             {
               "agent": "tra-model",
-              "price": 12.8,
-              "why": "I match the median winning price."
+              "price": 11.6,
+              "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "tra-contractor",
-              "price": 12.2
+              "price": 10.8
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-budget",
@@ -3151,18 +3733,26 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 12.4,
-          "rate": 62,
+          "price": 11.6,
+          "rate": 58,
           "replaces": null,
           "root": "job-12.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "translate",
-          "strategy": "adaptive",
+          "strategy": "model",
           "vouched": false,
-          "winner": "tra-adaptive"
+          "winner": "tra-model"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "sum-steady",
@@ -3178,12 +3768,16 @@
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.5
             },
             {
               "agent": "sum-model",
-              "price": 6.9,
+              "price": 5.8,
               "why": "I won last round, so I test 3 points above the median win."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
             }
           ],
           "buyer": "lead-budget",
@@ -3199,22 +3793,30 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.6,
-          "rate": 66,
+          "price": 5.8,
+          "rate": 58,
           "replaces": null,
           "root": "job-12.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "summary",
-          "strategy": "lean",
+          "strategy": "model",
           "vouched": false,
-          "winner": "sum-lean"
+          "winner": "sum-model"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "sou-steady",
-              "price": 9.54
+              "price": 9.36
             },
             {
               "agent": "sou-lean",
@@ -3240,7 +3842,7 @@
             "share": 60,
             "why": "Buying costs about 72% with junk risk, below my own 80%."
           },
-          "max": 9.54,
+          "max": 9.36,
           "newcomer": false,
           "newcomer_premium": 50,
           "paid": true,
@@ -3258,10 +3860,18 @@
           "winner": "sou-contractor"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "glo-steady",
-              "price": 7.12
+              "price": 6.48
             },
             {
               "agent": "glo-lean",
@@ -3275,20 +3885,20 @@
           "buyer": "tra-contractor",
           "fired": false,
           "id": 10,
-          "job": "t1.t2.job-11.hub.sandbox",
-          "lead": "quality",
+          "job": "t1.t2.job-10.hub.sandbox",
+          "lead": "price",
           "level": 2,
           "make_or_buy": null,
-          "max": 7.32,
+          "max": 6.48,
           "newcomer": true,
-          "newcomer_premium": 64,
+          "newcomer_premium": 80,
           "paid": true,
           "paid_now": true,
-          "parent": 4,
+          "parent": 1,
           "price": 5.44,
           "rate": 68,
           "replaces": null,
-          "root": "job-11.hub.sandbox",
+          "root": "job-10.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "glossary",
@@ -3297,6 +3907,14 @@
           "winner": "glo-lean"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "fet-steady",
@@ -3334,6 +3952,40 @@
           "strategy": "steady",
           "vouched": true,
           "winner": "fet-steady"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
+          "bids": [],
+          "buyer": "lead-quality",
+          "fired": false,
+          "id": 12,
+          "job": "t4.job-11.hub.sandbox",
+          "lead": "quality",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 10.0,
+          "newcomer": false,
+          "newcomer_premium": 2,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 6.2,
+          "rate": 62,
+          "replaces": 5,
+          "root": "job-11.hub.sandbox",
+          "score": 8,
+          "sealed": true,
+          "skill": "summary",
+          "strategy": "adaptive",
+          "vouched": false,
+          "winner": "sum-adaptive"
         }
       ],
       "round": 4
@@ -3346,6 +3998,7 @@
       ],
       "parts": [
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -3369,7 +4022,7 @@
             },
             {
               "agent": "res-undercut",
-              "price": 16.8
+              "price": 16.5
             },
             {
               "agent": "res-model",
@@ -3378,7 +4031,11 @@
             },
             {
               "agent": "res-contractor",
-              "price": 16.8
+              "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-quality",
@@ -3394,12 +4051,12 @@
           },
           "max": 30.0,
           "newcomer": false,
-          "newcomer_premium": 23,
+          "newcomer_premium": 101,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 16.8,
-          "rate": 56,
+          "price": 15.6,
+          "rate": 52,
           "replaces": null,
           "root": "job-13.hub.sandbox",
           "score": 8,
@@ -3410,6 +4067,7 @@
           "winner": "res-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -3417,7 +4075,7 @@
             },
             {
               "agent": "tra-lean",
-              "price": 13.2
+              "price": 12.2
             },
             {
               "agent": "tra-greedy",
@@ -3425,20 +4083,24 @@
             },
             {
               "agent": "tra-adaptive",
-              "price": 13.4
+              "price": 11.0
             },
             {
               "agent": "tra-undercut",
-              "price": 11.8
+              "price": 11.0
             },
             {
               "agent": "tra-model",
-              "price": 11.4,
-              "why": "I lost twice in a row, so I go 4 points under the median win."
+              "price": 11.6,
+              "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "tra-contractor",
-              "price": 11.8
+              "price": 11.0
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-quality",
@@ -3447,25 +4109,30 @@
           "job": "t2.job-13.hub.sandbox",
           "lead": "quality",
           "level": 1,
-          "make_or_buy": null,
+          "make_or_buy": {
+            "buy": false,
+            "share": 60,
+            "why": "Sub-agents delivered 1 of my last 2; buying costs about 95%, above my own 80%, so I do it myself."
+          },
           "max": 20.0,
           "newcomer": false,
-          "newcomer_premium": 23,
+          "newcomer_premium": 101,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 11.4,
-          "rate": 57,
+          "price": 11.0,
+          "rate": 55,
           "replaces": null,
           "root": "job-13.hub.sandbox",
           "score": 8,
           "sealed": true,
           "skill": "translate",
-          "strategy": "model",
+          "strategy": "contractor",
           "vouched": false,
-          "winner": "tra-model"
+          "winner": "tra-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -3473,7 +4140,7 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
@@ -3481,12 +4148,12 @@
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.5
             },
             {
               "agent": "sum-model",
-              "price": 6.3,
-              "why": "I match the median winning price."
+              "price": 5.8,
+              "why": "I won last round, so I test 3 points above the median win."
             }
           ],
           "buyer": "lead-quality",
@@ -3498,12 +4165,12 @@
           "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
-          "newcomer_premium": 23,
+          "newcomer_premium": 101,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.3,
-          "rate": 63,
+          "price": 5.5,
+          "rate": 55,
           "replaces": null,
           "root": "job-13.hub.sandbox",
           "score": 8,
@@ -3514,6 +4181,7 @@
           "winner": "sum-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -3533,7 +4201,7 @@
             },
             {
               "agent": "res-undercut",
-              "price": 16.8
+              "price": 16.5
             },
             {
               "agent": "res-model",
@@ -3542,7 +4210,11 @@
             },
             {
               "agent": "res-contractor",
-              "price": 16.8
+              "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-budget",
@@ -3558,8 +4230,8 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 16.8,
-          "rate": 56,
+          "price": 16.5,
+          "rate": 55,
           "replaces": null,
           "root": "job-14.hub.sandbox",
           "score": 8,
@@ -3570,6 +4242,14 @@
           "winner": "res-undercut"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "tra-steady",
@@ -3577,24 +4257,28 @@
             },
             {
               "agent": "tra-lean",
-              "price": 13.2
+              "price": 12.2
             },
             {
               "agent": "tra-adaptive",
-              "price": 13.4
+              "price": 11.0
             },
             {
               "agent": "tra-undercut",
-              "price": 11.8
+              "price": 11.0
             },
             {
               "agent": "tra-model",
-              "price": 11.4,
-              "why": "I lost twice in a row, so I go 4 points under the median win."
+              "price": 11.6,
+              "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "tra-contractor",
-              "price": 11.8
+              "price": 11.0
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-budget",
@@ -3610,18 +4294,19 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 11.8,
-          "rate": 59,
+          "price": 11.0,
+          "rate": 55,
           "replaces": null,
           "root": "job-14.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "translate",
-          "strategy": "undercut",
+          "strategy": "adaptive",
           "vouched": false,
-          "winner": "tra-undercut"
+          "winner": "tra-adaptive"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -3629,7 +4314,7 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
@@ -3637,12 +4322,12 @@
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.5
             },
             {
               "agent": "sum-model",
-              "price": 6.3,
-              "why": "I match the median winning price."
+              "price": 5.8,
+              "why": "I won last round, so I test 3 points above the median win."
             }
           ],
           "buyer": "lead-budget",
@@ -3658,8 +4343,8 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.3,
-          "rate": 63,
+          "price": 5.8,
+          "rate": 58,
           "replaces": null,
           "root": "job-14.hub.sandbox",
           "score": 8,
@@ -3670,6 +4355,14 @@
           "winner": "sum-model"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "res-steady",
@@ -3693,7 +4386,7 @@
             },
             {
               "agent": "res-undercut",
-              "price": 16.8
+              "price": 16.5
             },
             {
               "agent": "res-model",
@@ -3702,7 +4395,11 @@
             },
             {
               "agent": "res-contractor",
-              "price": 16.8
+              "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-price",
@@ -3714,7 +4411,7 @@
           "make_or_buy": null,
           "max": 30.0,
           "newcomer": true,
-          "newcomer_premium": 1,
+          "newcomer_premium": 11,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -3730,6 +4427,14 @@
           "winner": "res-adaptive"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "tra-steady",
@@ -3737,7 +4442,7 @@
             },
             {
               "agent": "tra-lean",
-              "price": 13.2
+              "price": 12.2
             },
             {
               "agent": "tra-greedy",
@@ -3745,20 +4450,24 @@
             },
             {
               "agent": "tra-adaptive",
-              "price": 13.4
+              "price": 11.0
             },
             {
               "agent": "tra-undercut",
-              "price": 11.8
+              "price": 11.0
             },
             {
               "agent": "tra-model",
-              "price": 11.4,
-              "why": "I lost twice in a row, so I go 4 points under the median win."
+              "price": 11.6,
+              "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "tra-contractor",
-              "price": 11.8
+              "price": 11.0
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-price",
@@ -3767,29 +4476,33 @@
           "job": "t2.job-15.hub.sandbox",
           "lead": "price",
           "level": 1,
-          "make_or_buy": {
-            "buy": false,
-            "share": 60,
-            "why": "Sub-agents delivered 1 of my last 2; buying costs about 95%, above my own 80%, so I do it myself."
-          },
+          "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
-          "newcomer_premium": 1,
+          "newcomer_premium": 11,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 11.8,
-          "rate": 59,
+          "price": 11.0,
+          "rate": 55,
           "replaces": null,
           "root": "job-15.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "translate",
-          "strategy": "contractor",
+          "strategy": "undercut",
           "vouched": false,
-          "winner": "tra-contractor"
+          "winner": "tra-undercut"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "sum-steady",
@@ -3797,7 +4510,7 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
@@ -3805,12 +4518,12 @@
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.5
             },
             {
               "agent": "sum-model",
-              "price": 6.3,
-              "why": "I match the median winning price."
+              "price": 5.8,
+              "why": "I won last round, so I test 3 points above the median win."
             }
           ],
           "buyer": "lead-price",
@@ -3822,12 +4535,12 @@
           "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
-          "newcomer_premium": 1,
+          "newcomer_premium": 11,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.6,
-          "rate": 66,
+          "price": 6.1,
+          "rate": 61,
           "replaces": null,
           "root": "job-15.hub.sandbox",
           "score": 8,
@@ -3838,10 +4551,18 @@
           "winner": "sum-lean"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "sou-steady",
-              "price": 10.08
+              "price": 9.36
             },
             {
               "agent": "sou-lean",
@@ -3867,7 +4588,7 @@
             "share": 60,
             "why": "Sub-agents delivered 1 of my last 2; buying costs about 90%, above my own 80%, so I do it myself."
           },
-          "max": 10.08,
+          "max": 9.36,
           "newcomer": false,
           "newcomer_premium": 40,
           "paid": true,
@@ -3895,6 +4616,7 @@
       ],
       "parts": [
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -3910,7 +4632,7 @@
             },
             {
               "agent": "res-sloppy",
-              "price": 16.8
+              "price": 18.3
             },
             {
               "agent": "res-undercut",
@@ -3918,12 +4640,16 @@
             },
             {
               "agent": "res-model",
-              "price": 16.8,
+              "price": 16.5,
               "why": "I match the median winning price."
             },
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-budget",
@@ -3955,6 +4681,7 @@
           "winner": "res-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -3966,20 +4693,24 @@
             },
             {
               "agent": "tra-adaptive",
-              "price": 11.4
+              "price": 12.0
             },
             {
               "agent": "tra-undercut",
-              "price": 11.2
+              "price": 11.0
             },
             {
               "agent": "tra-model",
-              "price": 12.8,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 11.0,
+              "why": "I match the median winning price."
             },
             {
               "agent": "tra-contractor",
-              "price": 11.2
+              "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-budget",
@@ -3988,25 +4719,37 @@
           "job": "t2.job-16.hub.sandbox",
           "lead": "budget",
           "level": 1,
-          "make_or_buy": null,
+          "make_or_buy": {
+            "buy": false,
+            "share": 60,
+            "why": "Sub-agents delivered 1 of my last 2; buying costs about 95%, above my own 80%, so I do it myself."
+          },
           "max": 15.0,
           "newcomer": false,
           "newcomer_premium": 96,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 11.2,
-          "rate": 56,
+          "price": 10.4,
+          "rate": 52,
           "replaces": null,
           "root": "job-16.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "translate",
-          "strategy": "undercut",
+          "strategy": "contractor",
           "vouched": false,
-          "winner": "tra-undercut"
+          "winner": "tra-contractor"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "sum-steady",
@@ -4014,7 +4757,7 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
@@ -4022,11 +4765,11 @@
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
+              "price": 6.1,
               "why": "I won last round, so I test 3 points above the median win."
             }
           ],
@@ -4055,6 +4798,7 @@
           "winner": "sum-adaptive"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -4074,7 +4818,7 @@
             },
             {
               "agent": "res-sloppy",
-              "price": 16.8
+              "price": 18.3
             },
             {
               "agent": "res-undercut",
@@ -4082,12 +4826,16 @@
             },
             {
               "agent": "res-model",
-              "price": 16.8,
+              "price": 16.5,
               "why": "I match the median winning price."
             },
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-price",
@@ -4099,7 +4847,7 @@
           "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 5,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -4115,6 +4863,7 @@
           "winner": "res-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -4130,20 +4879,24 @@
             },
             {
               "agent": "tra-adaptive",
-              "price": 11.4
+              "price": 12.0
             },
             {
               "agent": "tra-undercut",
-              "price": 11.2
+              "price": 11.0
             },
             {
               "agent": "tra-model",
-              "price": 12.8,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 11.0,
+              "why": "I match the median winning price."
             },
             {
               "agent": "tra-contractor",
-              "price": 11.2
+              "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-price",
@@ -4152,29 +4905,26 @@
           "job": "t2.job-17.hub.sandbox",
           "lead": "price",
           "level": 1,
-          "make_or_buy": {
-            "buy": false,
-            "share": 60,
-            "why": "Sub-agents delivered 1 of my last 2; buying costs about 95%, above my own 80%, so I do it myself."
-          },
+          "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 5,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 11.2,
-          "rate": 56,
+          "price": 11.0,
+          "rate": 55,
           "replaces": null,
           "root": "job-17.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "translate",
-          "strategy": "contractor",
+          "strategy": "model",
           "vouched": false,
-          "winner": "tra-contractor"
+          "winner": "tra-model"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -4182,7 +4932,7 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
@@ -4190,11 +4940,11 @@
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
+              "price": 6.1,
               "why": "I won last round, so I test 3 points above the median win."
             }
           ],
@@ -4207,12 +4957,12 @@
           "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 5,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.3,
-          "rate": 63,
+          "price": 5.8,
+          "rate": 58,
           "replaces": null,
           "root": "job-17.hub.sandbox",
           "score": 8,
@@ -4223,6 +4973,14 @@
           "winner": "sum-undercut"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "res-steady",
@@ -4242,7 +5000,7 @@
             },
             {
               "agent": "res-sloppy",
-              "price": 16.8
+              "price": 18.3
             },
             {
               "agent": "res-undercut",
@@ -4250,16 +5008,20 @@
             },
             {
               "agent": "res-model",
-              "price": 16.8,
+              "price": 16.5,
               "why": "I match the median winning price."
             },
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-quality",
-          "fired": true,
+          "fired": false,
           "id": 6,
           "job": "t1.job-18.hub.sandbox",
           "lead": "quality",
@@ -4267,22 +5029,30 @@
           "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
-          "newcomer_premium": 18,
-          "paid": false,
-          "paid_now": false,
+          "newcomer_premium": 80,
+          "paid": true,
+          "paid_now": true,
           "parent": null,
-          "price": 16.8,
-          "rate": 56,
+          "price": 16.5,
+          "rate": 55,
           "replaces": null,
           "root": "job-18.hub.sandbox",
-          "score": 2,
+          "score": 8,
           "sealed": true,
           "skill": "research",
-          "strategy": "sloppy",
+          "strategy": "model",
           "vouched": false,
-          "winner": "res-sloppy"
+          "winner": "res-model"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "tra-steady",
@@ -4298,20 +5068,24 @@
             },
             {
               "agent": "tra-adaptive",
-              "price": 11.4
+              "price": 12.0
             },
             {
               "agent": "tra-undercut",
-              "price": 11.2
+              "price": 11.0
             },
             {
               "agent": "tra-model",
-              "price": 12.8,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 11.0,
+              "why": "I match the median winning price."
             },
             {
               "agent": "tra-contractor",
-              "price": 11.2
+              "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-quality",
@@ -4323,22 +5097,23 @@
           "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
-          "newcomer_premium": 18,
+          "newcomer_premium": 80,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 11.4,
-          "rate": 57,
+          "price": 11.0,
+          "rate": 55,
           "replaces": null,
           "root": "job-18.hub.sandbox",
           "score": 8,
           "sealed": true,
           "skill": "translate",
-          "strategy": "adaptive",
+          "strategy": "undercut",
           "vouched": false,
-          "winner": "tra-adaptive"
+          "winner": "tra-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -4346,7 +5121,7 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
@@ -4354,11 +5129,11 @@
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
+              "price": 6.1,
               "why": "I won last round, so I test 3 points above the median win."
             }
           ],
@@ -4371,22 +5146,23 @@
           "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
-          "newcomer_premium": 18,
+          "newcomer_premium": 80,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.6,
-          "rate": 66,
+          "price": 6.1,
+          "rate": 61,
           "replaces": null,
           "root": "job-18.hub.sandbox",
           "score": 8,
           "sealed": true,
           "skill": "summary",
-          "strategy": "lean",
+          "strategy": "model",
           "vouched": false,
-          "winner": "sum-lean"
+          "winner": "sum-model"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sou-steady",
@@ -4432,32 +5208,6 @@
           "strategy": "contractor",
           "vouched": false,
           "winner": "sou-contractor"
-        },
-        {
-          "bids": [],
-          "buyer": "lead-quality",
-          "fired": false,
-          "id": 10,
-          "job": "t4.job-18.hub.sandbox",
-          "lead": "quality",
-          "level": 1,
-          "make_or_buy": null,
-          "max": 30.0,
-          "newcomer": false,
-          "newcomer_premium": 18,
-          "paid": true,
-          "paid_now": true,
-          "parent": null,
-          "price": 16.8,
-          "rate": 56,
-          "replaces": 6,
-          "root": "job-18.hub.sandbox",
-          "score": 8,
-          "sealed": true,
-          "skill": "research",
-          "strategy": "model",
-          "vouched": false,
-          "winner": "res-model"
         }
       ],
       "round": 6
@@ -4470,6 +5220,7 @@
       ],
       "parts": [
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -4493,12 +5244,16 @@
             },
             {
               "agent": "res-model",
-              "price": 17.7,
+              "price": 17.4,
               "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "res-contractor",
-              "price": 15.9
+              "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-price",
@@ -4514,12 +5269,12 @@
           },
           "max": 30.0,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 4,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 15.9,
-          "rate": 53,
+          "price": 15.6,
+          "rate": 52,
           "replaces": null,
           "root": "job-19.hub.sandbox",
           "score": 8,
@@ -4530,6 +5285,7 @@
           "winner": "res-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -4541,7 +5297,7 @@
             },
             {
               "agent": "tra-adaptive",
-              "price": 12.4
+              "price": 11.0
             },
             {
               "agent": "tra-undercut",
@@ -4549,12 +5305,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.4,
-              "why": "I match the median winning price."
+              "price": 11.6,
+              "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "tra-contractor",
-              "price": 10.8
+              "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-price",
@@ -4570,12 +5330,12 @@
           },
           "max": 20.0,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 4,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 10.8,
-          "rate": 54,
+          "price": 10.4,
+          "rate": 52,
           "replaces": null,
           "root": "job-19.hub.sandbox",
           "score": 8,
@@ -4586,6 +5346,7 @@
           "winner": "tra-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -4593,7 +5354,7 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
@@ -4601,12 +5362,12 @@
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.3,
-              "why": "I match the median winning price."
+              "price": 6.1,
+              "why": "I won last round, so I test 3 points above the median win."
             }
           ],
           "buyer": "lead-price",
@@ -4618,22 +5379,23 @@
           "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 4,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.2,
-          "rate": 62,
+          "price": 5.8,
+          "rate": 58,
           "replaces": null,
           "root": "job-19.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "summary",
-          "strategy": "adaptive",
+          "strategy": "undercut",
           "vouched": false,
-          "winner": "sum-adaptive"
+          "winner": "sum-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -4657,12 +5419,16 @@
             },
             {
               "agent": "res-model",
-              "price": 17.7,
+              "price": 17.4,
               "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "res-contractor",
-              "price": 15.9
+              "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-quality",
@@ -4674,7 +5440,7 @@
           "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
-          "newcomer_premium": 14,
+          "newcomer_premium": 64,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -4690,6 +5456,7 @@
           "winner": "res-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -4701,7 +5468,7 @@
             },
             {
               "agent": "tra-adaptive",
-              "price": 12.4
+              "price": 11.0
             },
             {
               "agent": "tra-undercut",
@@ -4709,12 +5476,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.4,
-              "why": "I match the median winning price."
+              "price": 11.6,
+              "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "tra-contractor",
-              "price": 10.8
+              "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-quality",
@@ -4726,7 +5497,7 @@
           "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
-          "newcomer_premium": 14,
+          "newcomer_premium": 64,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -4742,6 +5513,7 @@
           "winner": "tra-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -4749,7 +5521,7 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
@@ -4757,12 +5529,12 @@
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.3,
-              "why": "I match the median winning price."
+              "price": 6.1,
+              "why": "I won last round, so I test 3 points above the median win."
             }
           ],
           "buyer": "lead-quality",
@@ -4774,22 +5546,30 @@
           "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
-          "newcomer_premium": 14,
+          "newcomer_premium": 64,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.3,
-          "rate": 63,
+          "price": 6.1,
+          "rate": 61,
           "replaces": null,
           "root": "job-20.hub.sandbox",
           "score": 8,
           "sealed": true,
           "skill": "summary",
-          "strategy": "undercut",
+          "strategy": "model",
           "vouched": false,
-          "winner": "sum-undercut"
+          "winner": "sum-model"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "res-steady",
@@ -4813,12 +5593,16 @@
             },
             {
               "agent": "res-model",
-              "price": 17.7,
+              "price": 17.4,
               "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "res-contractor",
-              "price": 15.9
+              "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-budget",
@@ -4846,6 +5630,14 @@
           "winner": "res-adaptive"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "tra-steady",
@@ -4857,7 +5649,7 @@
             },
             {
               "agent": "tra-adaptive",
-              "price": 12.4
+              "price": 11.0
             },
             {
               "agent": "tra-undercut",
@@ -4865,12 +5657,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.4,
-              "why": "I match the median winning price."
+              "price": 11.6,
+              "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "tra-contractor",
-              "price": 10.8
+              "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-budget",
@@ -4886,18 +5682,26 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 11.4,
-          "rate": 57,
+          "price": 11.0,
+          "rate": 55,
           "replaces": null,
           "root": "job-21.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "translate",
-          "strategy": "model",
+          "strategy": "adaptive",
           "vouched": false,
-          "winner": "tra-model"
+          "winner": "tra-adaptive"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "sum-steady",
@@ -4905,7 +5709,7 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
@@ -4913,12 +5717,12 @@
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.3,
-              "why": "I match the median winning price."
+              "price": 6.1,
+              "why": "I won last round, so I test 3 points above the median win."
             }
           ],
           "buyer": "lead-budget",
@@ -4934,22 +5738,23 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.3,
-          "rate": 63,
+          "price": 6.1,
+          "rate": 61,
           "replaces": null,
           "root": "job-21.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "summary",
-          "strategy": "model",
+          "strategy": "lean",
           "vouched": false,
-          "winner": "sum-model"
+          "winner": "sum-lean"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sou-steady",
-              "price": 9.54
+              "price": 9.36
             },
             {
               "agent": "sou-lean",
@@ -4975,7 +5780,7 @@
             "share": 60,
             "why": "Sub-agents delivered 1 of my last 2; buying costs about 90%, above my own 80%, so I do it myself."
           },
-          "max": 9.54,
+          "max": 9.36,
           "newcomer": false,
           "newcomer_premium": 25,
           "paid": true,
@@ -5003,6 +5808,7 @@
       ],
       "parts": [
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -5032,6 +5838,10 @@
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-quality",
@@ -5047,7 +5857,7 @@
           },
           "max": 30.0,
           "newcomer": false,
-          "newcomer_premium": 11,
+          "newcomer_premium": 51,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -5063,6 +5873,7 @@
           "winner": "res-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -5070,11 +5881,11 @@
             },
             {
               "agent": "tra-lean",
-              "price": 12.2
+              "price": 11.2
             },
             {
               "agent": "tra-adaptive",
-              "price": 11.0
+              "price": 12.0
             },
             {
               "agent": "tra-undercut",
@@ -5082,12 +5893,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.8,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 11.0,
+              "why": "I match the median winning price."
             },
             {
               "agent": "tra-contractor",
-              "price": 10.8
+              "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-quality",
@@ -5103,12 +5918,12 @@
           },
           "max": 20.0,
           "newcomer": false,
-          "newcomer_premium": 11,
+          "newcomer_premium": 51,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 10.8,
-          "rate": 54,
+          "price": 10.4,
+          "rate": 52,
           "replaces": null,
           "root": "job-22.hub.sandbox",
           "score": 8,
@@ -5119,6 +5934,7 @@
           "winner": "tra-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -5126,19 +5942,19 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
-              "price": 6.7
+              "price": 5.5
             },
             {
               "agent": "sum-undercut",
-              "price": 6.0
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
+              "price": 6.4,
               "why": "I won last round, so I test 3 points above the median win."
             }
           ],
@@ -5151,22 +5967,23 @@
           "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
-          "newcomer_premium": 11,
+          "newcomer_premium": 51,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.0,
-          "rate": 60,
+          "price": 5.5,
+          "rate": 55,
           "replaces": null,
           "root": "job-22.hub.sandbox",
           "score": 8,
           "sealed": true,
           "skill": "summary",
-          "strategy": "undercut",
+          "strategy": "adaptive",
           "vouched": false,
-          "winner": "sum-undercut"
+          "winner": "sum-adaptive"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -5196,6 +6013,10 @@
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-budget",
@@ -5223,6 +6044,7 @@
           "winner": "res-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -5230,11 +6052,11 @@
             },
             {
               "agent": "tra-lean",
-              "price": 12.2
+              "price": 11.2
             },
             {
               "agent": "tra-adaptive",
-              "price": 11.0
+              "price": 12.0
             },
             {
               "agent": "tra-undercut",
@@ -5242,12 +6064,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.8,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 11.0,
+              "why": "I match the median winning price."
             },
             {
               "agent": "tra-contractor",
-              "price": 10.8
+              "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-budget",
@@ -5275,6 +6101,7 @@
           "winner": "tra-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -5282,19 +6109,19 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
-              "price": 6.7
+              "price": 5.5
             },
             {
               "agent": "sum-undercut",
-              "price": 6.0
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
+              "price": 6.4,
               "why": "I won last round, so I test 3 points above the median win."
             }
           ],
@@ -5311,18 +6138,19 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.6,
-          "rate": 66,
+          "price": 5.8,
+          "rate": 58,
           "replaces": null,
           "root": "job-23.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "summary",
-          "strategy": "lean",
+          "strategy": "undercut",
           "vouched": false,
-          "winner": "sum-lean"
+          "winner": "sum-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -5352,6 +6180,10 @@
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-price",
@@ -5363,7 +6195,7 @@
           "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 3,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -5379,6 +6211,7 @@
           "winner": "res-model"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -5386,11 +6219,11 @@
             },
             {
               "agent": "tra-lean",
-              "price": 12.2
+              "price": 11.2
             },
             {
               "agent": "tra-adaptive",
-              "price": 11.0
+              "price": 12.0
             },
             {
               "agent": "tra-undercut",
@@ -5398,12 +6231,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.8,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 11.0,
+              "why": "I match the median winning price."
             },
             {
               "agent": "tra-contractor",
-              "price": 10.8
+              "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-price",
@@ -5415,7 +6252,7 @@
           "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 3,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -5426,11 +6263,12 @@
           "score": 8,
           "sealed": false,
           "skill": "translate",
-          "strategy": "adaptive",
+          "strategy": "model",
           "vouched": false,
-          "winner": "tra-adaptive"
+          "winner": "tra-model"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -5438,19 +6276,19 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
-              "price": 6.7
+              "price": 5.5
             },
             {
               "agent": "sum-undercut",
-              "price": 6.0
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
+              "price": 6.4,
               "why": "I won last round, so I test 3 points above the median win."
             }
           ],
@@ -5463,22 +6301,23 @@
           "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 3,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.6,
-          "rate": 66,
+          "price": 6.1,
+          "rate": 61,
           "replaces": null,
           "root": "job-24.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "summary",
-          "strategy": "model",
+          "strategy": "lean",
           "vouched": false,
-          "winner": "sum-model"
+          "winner": "sum-lean"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sou-steady",
@@ -5526,10 +6365,11 @@
           "winner": "sou-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "glo-steady",
-              "price": 6.48
+              "price": 6.24
             },
             {
               "agent": "glo-lean",
@@ -5547,9 +6387,9 @@
           "lead": "quality",
           "level": 2,
           "make_or_buy": null,
-          "max": 6.48,
+          "max": 6.24,
           "newcomer": true,
-          "newcomer_premium": 16,
+          "newcomer_premium": 20,
           "paid": false,
           "paid_now": false,
           "parent": 1,
@@ -5565,6 +6405,7 @@
           "winner": "glo-junk"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "fet-steady",
@@ -5614,6 +6455,7 @@
       ],
       "parts": [
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -5643,6 +6485,10 @@
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-budget",
@@ -5674,6 +6520,7 @@
           "winner": "res-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -5685,7 +6532,7 @@
             },
             {
               "agent": "tra-adaptive",
-              "price": 12.0
+              "price": 11.0
             },
             {
               "agent": "tra-undercut",
@@ -5693,12 +6540,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.0,
-              "why": "I match the median winning price."
+              "price": 11.6,
+              "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "tra-contractor",
               "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-budget",
@@ -5730,6 +6581,7 @@
           "winner": "tra-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -5737,20 +6589,20 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
-              "price": 5.7
+              "price": 6.0
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 6.1,
+              "why": "I match the median winning price."
             }
           ],
           "buyer": "lead-budget",
@@ -5766,18 +6618,19 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 5.7,
-          "rate": 57,
+          "price": 5.8,
+          "rate": 58,
           "replaces": null,
           "root": "job-25.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "summary",
-          "strategy": "adaptive",
+          "strategy": "undercut",
           "vouched": false,
-          "winner": "sum-adaptive"
+          "winner": "sum-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -5807,6 +6660,10 @@
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-price",
@@ -5818,7 +6675,7 @@
           "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 2,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -5834,6 +6691,7 @@
           "winner": "res-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -5845,7 +6703,7 @@
             },
             {
               "agent": "tra-adaptive",
-              "price": 12.0
+              "price": 11.0
             },
             {
               "agent": "tra-undercut",
@@ -5853,12 +6711,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.0,
-              "why": "I match the median winning price."
+              "price": 11.6,
+              "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "tra-contractor",
               "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-price",
@@ -5870,7 +6732,7 @@
           "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 2,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -5886,6 +6748,7 @@
           "winner": "tra-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -5893,20 +6756,20 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
-              "price": 5.7
+              "price": 6.0
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 6.1,
+              "why": "I match the median winning price."
             }
           ],
           "buyer": "lead-price",
@@ -5918,22 +6781,30 @@
           "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 2,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.3,
-          "rate": 63,
+          "price": 6.0,
+          "rate": 60,
           "replaces": null,
           "root": "job-26.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "summary",
-          "strategy": "undercut",
+          "strategy": "adaptive",
           "vouched": false,
-          "winner": "sum-undercut"
+          "winner": "sum-adaptive"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "res-steady",
@@ -5963,6 +6834,10 @@
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-quality",
@@ -5974,7 +6849,7 @@
           "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
-          "newcomer_premium": 8,
+          "newcomer_premium": 40,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -5990,6 +6865,7 @@
           "winner": "res-adaptive"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -6001,7 +6877,7 @@
             },
             {
               "agent": "tra-adaptive",
-              "price": 12.0
+              "price": 11.0
             },
             {
               "agent": "tra-undercut",
@@ -6009,12 +6885,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.0,
-              "why": "I match the median winning price."
+              "price": 11.6,
+              "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "tra-contractor",
               "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-quality",
@@ -6026,7 +6906,7 @@
           "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
-          "newcomer_premium": 8,
+          "newcomer_premium": 40,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -6037,11 +6917,12 @@
           "score": 8,
           "sealed": true,
           "skill": "translate",
-          "strategy": "model",
+          "strategy": "adaptive",
           "vouched": false,
-          "winner": "tra-model"
+          "winner": "tra-adaptive"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -6049,20 +6930,20 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
-              "price": 5.7
+              "price": 6.0
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 6.1,
+              "why": "I match the median winning price."
             }
           ],
           "buyer": "lead-quality",
@@ -6074,22 +6955,23 @@
           "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
-          "newcomer_premium": 8,
+          "newcomer_premium": 40,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.6,
-          "rate": 66,
+          "price": 6.1,
+          "rate": 61,
           "replaces": null,
           "root": "job-27.hub.sandbox",
           "score": 8,
           "sealed": true,
           "skill": "summary",
-          "strategy": "lean",
+          "strategy": "model",
           "vouched": false,
-          "winner": "sum-lean"
+          "winner": "sum-model"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sou-steady",
@@ -6137,6 +7019,14 @@
           "winner": "sou-contractor"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "glo-steady",
@@ -6160,7 +7050,7 @@
           "make_or_buy": null,
           "max": 6.24,
           "newcomer": false,
-          "newcomer_premium": 116,
+          "newcomer_premium": 120,
           "paid": true,
           "paid_now": true,
           "parent": 1,
@@ -6176,6 +7066,14 @@
           "winner": "glo-lean"
         },
         {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
           "bids": [
             {
               "agent": "fet-steady",
@@ -6225,6 +7123,7 @@
       ],
       "parts": [
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -6254,6 +7153,10 @@
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-price",
@@ -6269,7 +7172,7 @@
           },
           "max": 30.0,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 1,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -6285,6 +7188,7 @@
           "winner": "res-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -6296,7 +7200,7 @@
             },
             {
               "agent": "tra-adaptive",
-              "price": 11.0
+              "price": 12.0
             },
             {
               "agent": "tra-undercut",
@@ -6304,12 +7208,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.6,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 11.0,
+              "why": "I match the median winning price."
             },
             {
               "agent": "tra-contractor",
               "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-price",
@@ -6325,7 +7233,7 @@
           },
           "max": 20.0,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 1,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -6341,6 +7249,7 @@
           "winner": "tra-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -6348,20 +7257,20 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
-              "price": 6.2
+              "price": 6.5
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
-              "why": "I match the median winning price."
+              "price": 6.3,
+              "why": "I won last round, so I test 3 points above the median win."
             }
           ],
           "buyer": "lead-price",
@@ -6373,22 +7282,23 @@
           "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
-          "newcomer_premium": 0,
+          "newcomer_premium": 1,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.2,
-          "rate": 62,
+          "price": 5.8,
+          "rate": 58,
           "replaces": null,
           "root": "job-28.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "summary",
-          "strategy": "adaptive",
+          "strategy": "undercut",
           "vouched": false,
-          "winner": "sum-adaptive"
+          "winner": "sum-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -6418,6 +7328,10 @@
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-quality",
@@ -6429,7 +7343,7 @@
           "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
-          "newcomer_premium": 6,
+          "newcomer_premium": 32,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -6445,6 +7359,7 @@
           "winner": "res-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -6456,7 +7371,7 @@
             },
             {
               "agent": "tra-adaptive",
-              "price": 11.0
+              "price": 12.0
             },
             {
               "agent": "tra-undercut",
@@ -6464,12 +7379,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.6,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 11.0,
+              "why": "I match the median winning price."
             },
             {
               "agent": "tra-contractor",
               "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-quality",
@@ -6481,7 +7400,7 @@
           "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
-          "newcomer_premium": 6,
+          "newcomer_premium": 32,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -6497,6 +7416,7 @@
           "winner": "tra-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -6504,20 +7424,20 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
-              "price": 6.2
+              "price": 6.5
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
-              "why": "I match the median winning price."
+              "price": 6.3,
+              "why": "I won last round, so I test 3 points above the median win."
             }
           ],
           "buyer": "lead-quality",
@@ -6529,22 +7449,23 @@
           "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
-          "newcomer_premium": 6,
+          "newcomer_premium": 32,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.3,
-          "rate": 63,
+          "price": 6.1,
+          "rate": 61,
           "replaces": null,
           "root": "job-29.hub.sandbox",
           "score": 8,
           "sealed": true,
           "skill": "summary",
-          "strategy": "undercut",
+          "strategy": "lean",
           "vouched": false,
-          "winner": "sum-undercut"
+          "winner": "sum-lean"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -6574,6 +7495,10 @@
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-budget",
@@ -6601,6 +7526,7 @@
           "winner": "res-model"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -6612,7 +7538,7 @@
             },
             {
               "agent": "tra-adaptive",
-              "price": 11.0
+              "price": 12.0
             },
             {
               "agent": "tra-undercut",
@@ -6620,12 +7546,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.6,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 11.0,
+              "why": "I match the median winning price."
             },
             {
               "agent": "tra-contractor",
               "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-budget",
@@ -6648,11 +7578,12 @@
           "score": 8,
           "sealed": false,
           "skill": "translate",
-          "strategy": "adaptive",
+          "strategy": "model",
           "vouched": false,
-          "winner": "tra-adaptive"
+          "winner": "tra-model"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -6660,20 +7591,20 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
-              "price": 6.2
+              "price": 6.5
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
-              "why": "I match the median winning price."
+              "price": 6.3,
+              "why": "I won last round, so I test 3 points above the median win."
             }
           ],
           "buyer": "lead-budget",
@@ -6689,18 +7620,19 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.6,
-          "rate": 66,
+          "price": 6.3,
+          "rate": 63,
           "replaces": null,
           "root": "job-30.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "summary",
-          "strategy": "lean",
+          "strategy": "model",
           "vouched": false,
-          "winner": "sum-lean"
+          "winner": "sum-model"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sou-steady",
@@ -6758,6 +7690,7 @@
       ],
       "parts": [
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -6787,6 +7720,10 @@
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-quality",
@@ -6802,7 +7739,7 @@
           },
           "max": 30.0,
           "newcomer": false,
-          "newcomer_premium": 4,
+          "newcomer_premium": 25,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -6818,6 +7755,7 @@
           "winner": "res-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -6825,11 +7763,11 @@
             },
             {
               "agent": "tra-lean",
-              "price": 11.2
+              "price": 11.0
             },
             {
               "agent": "tra-adaptive",
-              "price": 12.0
+              "price": 11.0
             },
             {
               "agent": "tra-undercut",
@@ -6837,12 +7775,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.0,
-              "why": "I match the median winning price."
+              "price": 11.6,
+              "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "tra-contractor",
               "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-quality",
@@ -6858,7 +7800,7 @@
           },
           "max": 20.0,
           "newcomer": false,
-          "newcomer_premium": 4,
+          "newcomer_premium": 25,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -6874,6 +7816,7 @@
           "winner": "tra-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -6881,20 +7824,20 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
-              "price": 6.7
+              "price": 5.5
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 6.0
             },
             {
               "agent": "sum-model",
-              "price": 5.9,
-              "why": "I lost twice in a row, so I go 4 points under the median win."
+              "price": 6.4,
+              "why": "I won last round, so I test 3 points above the median win."
             }
           ],
           "buyer": "lead-quality",
@@ -6906,22 +7849,23 @@
           "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
-          "newcomer_premium": 4,
+          "newcomer_premium": 25,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 5.9,
-          "rate": 59,
+          "price": 5.5,
+          "rate": 55,
           "replaces": null,
           "root": "job-31.hub.sandbox",
           "score": 8,
           "sealed": true,
           "skill": "summary",
-          "strategy": "model",
+          "strategy": "adaptive",
           "vouched": false,
-          "winner": "sum-model"
+          "winner": "sum-adaptive"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -6951,6 +7895,10 @@
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-budget",
@@ -6978,6 +7926,7 @@
           "winner": "res-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -6985,11 +7934,11 @@
             },
             {
               "agent": "tra-lean",
-              "price": 11.2
+              "price": 11.0
             },
             {
               "agent": "tra-adaptive",
-              "price": 12.0
+              "price": 11.0
             },
             {
               "agent": "tra-undercut",
@@ -6997,12 +7946,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.0,
-              "why": "I match the median winning price."
+              "price": 11.6,
+              "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "tra-contractor",
               "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-budget",
@@ -7030,6 +7983,7 @@
           "winner": "tra-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -7037,20 +7991,20 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
-              "price": 6.7
+              "price": 5.5
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 6.0
             },
             {
               "agent": "sum-model",
-              "price": 5.9,
-              "why": "I lost twice in a row, so I go 4 points under the median win."
+              "price": 6.4,
+              "why": "I won last round, so I test 3 points above the median win."
             }
           ],
           "buyer": "lead-budget",
@@ -7066,8 +8020,8 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.3,
-          "rate": 63,
+          "price": 6.0,
+          "rate": 60,
           "replaces": null,
           "root": "job-32.hub.sandbox",
           "score": 8,
@@ -7078,6 +8032,7 @@
           "winner": "sum-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -7107,6 +8062,10 @@
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-price",
@@ -7134,6 +8093,7 @@
           "winner": "res-adaptive"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -7141,11 +8101,11 @@
             },
             {
               "agent": "tra-lean",
-              "price": 11.2
+              "price": 11.0
             },
             {
               "agent": "tra-adaptive",
-              "price": 12.0
+              "price": 11.0
             },
             {
               "agent": "tra-undercut",
@@ -7153,12 +8113,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.0,
-              "why": "I match the median winning price."
+              "price": 11.6,
+              "why": "I won last round, so I test 3 points above the median win."
             },
             {
               "agent": "tra-contractor",
               "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-price",
@@ -7181,11 +8145,12 @@
           "score": 8,
           "sealed": false,
           "skill": "translate",
-          "strategy": "model",
+          "strategy": "adaptive",
           "vouched": false,
-          "winner": "tra-model"
+          "winner": "tra-adaptive"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -7193,20 +8158,20 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
-              "price": 6.7
+              "price": 5.5
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 6.0
             },
             {
               "agent": "sum-model",
-              "price": 5.9,
-              "why": "I lost twice in a row, so I go 4 points under the median win."
+              "price": 6.4,
+              "why": "I won last round, so I test 3 points above the median win."
             }
           ],
           "buyer": "lead-price",
@@ -7222,8 +8187,8 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.6,
-          "rate": 66,
+          "price": 6.1,
+          "rate": 61,
           "replaces": null,
           "root": "job-33.hub.sandbox",
           "score": 8,
@@ -7234,6 +8199,7 @@
           "winner": "sum-lean"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sou-steady",
@@ -7291,6 +8257,7 @@
       ],
       "parts": [
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -7320,6 +8287,10 @@
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-budget",
@@ -7351,6 +8322,7 @@
           "winner": "res-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -7362,7 +8334,7 @@
             },
             {
               "agent": "tra-adaptive",
-              "price": 11.0
+              "price": 12.0
             },
             {
               "agent": "tra-undercut",
@@ -7370,12 +8342,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.6,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 11.0,
+              "why": "I match the median winning price."
             },
             {
               "agent": "tra-contractor",
               "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-budget",
@@ -7407,6 +8383,7 @@
           "winner": "tra-contractor"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -7414,20 +8391,20 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
-              "price": 5.7
+              "price": 6.0
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 6.1,
+              "why": "I match the median winning price."
             }
           ],
           "buyer": "lead-budget",
@@ -7443,18 +8420,19 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 5.7,
-          "rate": 57,
+          "price": 5.8,
+          "rate": 58,
           "replaces": null,
           "root": "job-34.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "summary",
-          "strategy": "adaptive",
+          "strategy": "undercut",
           "vouched": false,
-          "winner": "sum-adaptive"
+          "winner": "sum-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -7484,6 +8462,10 @@
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-price",
@@ -7511,6 +8493,7 @@
           "winner": "res-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -7522,7 +8505,7 @@
             },
             {
               "agent": "tra-adaptive",
-              "price": 11.0
+              "price": 12.0
             },
             {
               "agent": "tra-undercut",
@@ -7530,12 +8513,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.6,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 11.0,
+              "why": "I match the median winning price."
             },
             {
               "agent": "tra-contractor",
               "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-price",
@@ -7563,6 +8550,7 @@
           "winner": "tra-undercut"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -7570,20 +8558,20 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
-              "price": 5.7
+              "price": 6.0
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 6.1,
+              "why": "I match the median winning price."
             }
           ],
           "buyer": "lead-price",
@@ -7599,18 +8587,19 @@
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.3,
-          "rate": 63,
+          "price": 6.0,
+          "rate": 60,
           "replaces": null,
           "root": "job-35.hub.sandbox",
           "score": 8,
           "sealed": false,
           "skill": "summary",
-          "strategy": "undercut",
+          "strategy": "adaptive",
           "vouched": false,
-          "winner": "sum-undercut"
+          "winner": "sum-adaptive"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "res-steady",
@@ -7640,6 +8629,10 @@
             {
               "agent": "res-contractor",
               "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
             }
           ],
           "buyer": "lead-quality",
@@ -7651,7 +8644,7 @@
           "make_or_buy": null,
           "max": 30.0,
           "newcomer": false,
-          "newcomer_premium": 3,
+          "newcomer_premium": 20,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -7667,6 +8660,7 @@
           "winner": "res-model"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "tra-steady",
@@ -7678,7 +8672,7 @@
             },
             {
               "agent": "tra-adaptive",
-              "price": 11.0
+              "price": 12.0
             },
             {
               "agent": "tra-undercut",
@@ -7686,12 +8680,16 @@
             },
             {
               "agent": "tra-model",
-              "price": 11.6,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 11.0,
+              "why": "I match the median winning price."
             },
             {
               "agent": "tra-contractor",
               "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
             }
           ],
           "buyer": "lead-quality",
@@ -7703,7 +8701,7 @@
           "make_or_buy": null,
           "max": 20.0,
           "newcomer": false,
-          "newcomer_premium": 3,
+          "newcomer_premium": 20,
           "paid": true,
           "paid_now": true,
           "parent": null,
@@ -7714,11 +8712,12 @@
           "score": 8,
           "sealed": true,
           "skill": "translate",
-          "strategy": "adaptive",
+          "strategy": "model",
           "vouched": false,
-          "winner": "tra-adaptive"
+          "winner": "tra-model"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sum-steady",
@@ -7726,20 +8725,20 @@
             },
             {
               "agent": "sum-lean",
-              "price": 6.6
+              "price": 6.1
             },
             {
               "agent": "sum-adaptive",
-              "price": 5.7
+              "price": 6.0
             },
             {
               "agent": "sum-undercut",
-              "price": 6.3
+              "price": 5.8
             },
             {
               "agent": "sum-model",
-              "price": 6.6,
-              "why": "I won last round, so I test 3 points above the median win."
+              "price": 6.1,
+              "why": "I match the median winning price."
             }
           ],
           "buyer": "lead-quality",
@@ -7751,22 +8750,23 @@
           "make_or_buy": null,
           "max": 10.0,
           "newcomer": false,
-          "newcomer_premium": 3,
+          "newcomer_premium": 20,
           "paid": true,
           "paid_now": true,
           "parent": null,
-          "price": 6.6,
-          "rate": 66,
+          "price": 6.1,
+          "rate": 61,
           "replaces": null,
           "root": "job-36.hub.sandbox",
           "score": 8,
           "sealed": true,
           "skill": "summary",
-          "strategy": "lean",
+          "strategy": "model",
           "vouched": false,
-          "winner": "sum-lean"
+          "winner": "sum-model"
         },
         {
+          "audit": null,
           "bids": [
             {
               "agent": "sou-steady",
