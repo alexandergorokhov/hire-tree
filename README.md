@@ -193,7 +193,7 @@ No keys, no NEAR AI account, no testnet NEAR.
 | Step | Command | Cold time (measured on the build box) |
 |---|---|---|
 | 1 | `make setup` | crate download |
-| 2 | `make test` | 373 unit + property tests, all `ok`: core (57 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (236), factory (21), pool (25), mock checker (2), mock-usdc (7), agents (20) |
+| 2 | `make test` | 379 unit + property tests, all `ok`: core (57 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (241), factory (21), pool (25), mock checker (2), mock-usdc (7), agents (21) |
 | `make lint` | rustfmt check, clippy `-D warnings`, a check that every test the specs and THREATS.md name exists, and a check that every swarm number in this README matches `web/swarm.json`; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make mcp-setup`, then an MCP client in this folder | `.mcp.json` starts `scripts/mcp-local.sh`: tools `guide`, `accounts`, `wait`, `do_work`, `judge_check`, `run_story` plus every agent tool, each with `as` to pick the acting account |
