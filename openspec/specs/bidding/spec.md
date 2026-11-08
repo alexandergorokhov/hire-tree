@@ -57,3 +57,21 @@ close and SHALL take only a revealed bid. An unrevealed bid's bond SHALL go
 to the buyer. Open bids on a sealed slot are refused. A sealed bid SHALL
 pay for its own larger storage (0.002 NEAR).
 - unit: `a_sealed_bid_pays_for_its_own_storage`, `a_sealed_bid_with_the_open_deposit_is_refused`, `sealed_bids_hide_the_price_until_the_reveal`, `a_reveal_must_match_the_commit`, `no_reveal_while_bidding_is_open`, `no_award_before_the_reveal_closes`, `an_unrevealed_bid_cannot_win`, `an_open_bid_on_a_sealed_slot_is_refused`, `an_unrevealed_bond_goes_to_the_buyer`
+
+### Requirement: Fire a failed worker
+After the signed check fails a sub-job's delivery, and before any
+redelivery, the sub-job's manager MAY fire the worker: the window SHALL end
+at once, settle SHALL pay the worker nothing and return the whole pay to
+the parent, and the worker's bond SHALL go to the buyer. A worker whose
+work passed, or that has not been checked yet, SHALL NOT be fired; only the
+manager can fire, and a fired worker cannot redeliver. The buyer can then
+hire the runner-up in the same window.
+- unit: `the_buyer_fires_a_failed_worker_and_gets_everything_back`, `a_worker_whose_work_passed_cannot_be_fired`, `a_worker_cannot_be_fired_before_any_check`, `only_the_buyer_can_fire`, `a_fired_worker_cannot_redeliver`
+
+### Requirement: Newcomers vouch with a bigger bond
+A bidder MAY attach more than the slot's bond; the job SHALL hold all of
+it as that bid's bond. In the swarm a buyer divides the newcomer premium by
+how many times the slot's bond the bidder staked, read from the bid
+on-chain, so an honest first-timer can outbid a cheaper fresh junk
+account.
+- unit: `a_newcomer_that_stakes_more_bond_pays_less_premium`, `a_deposit_on_a_rebid_is_added_to_the_bond`

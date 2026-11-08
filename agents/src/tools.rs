@@ -7,6 +7,16 @@ use near_api::types::{AccountId, NearToken};
 use serde_json::{json, Value};
 
 /// (name, description, JSON schema of the arguments).
+/// The optional extra bond a bidder stakes on top of the slot's (yoctoNEAR).
+fn stake(a: &Value) -> Result<u128, String> {
+    match a["stake"].as_str() {
+        None => Ok(0),
+        Some(x) => x
+            .parse()
+            .map_err(|_| "stake must be yoctoNEAR as a string".to_string()),
+    }
+}
+
 pub fn list() -> Vec<(&'static str, &'static str, Value)> {
     let s = |props: Value, req: &[&str]| json!({ "type": "object", "properties": props, "required": req });
     let str_ = json!({ "type": "string" });
@@ -17,12 +27,12 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
          s(json!({ "job": str_, "worker": str_, "amount": str_, "task": str_, "sub": str_ }), &["job", "worker", "amount", "task"])),
         ("open_bids", "Manager (or a sub-job's own worker, as a contractor): put a subtask out for bids on the job account (max = the most it will pay, fUSD units as a string; secs 10..3600; optional bond = yoctoNEAR each bidder stakes, at most 5 NEAR: losers get it back at the award, the winner when paid, the buyer keeps it on junk). Returns the slot number.",
          s(json!({ "job": str_, "task": str_, "max": str_, "secs": { "type": "integer" }, "bond": str_, "sealed": { "type": "boolean" } }), &["job", "task", "max", "secs"])),
-        ("bid_sealed", "Worker, sealed slot: commit to a price without showing it (the tool hashes `price:salt:you`; keep the salt). Attaches 0.002 NEAR for storage plus the slot's bond.",
-         s(json!({ "job": str_, "slot": { "type": "integer" }, "price": str_, "salt": str_ }), &["job", "slot", "price", "salt"])),
+        ("bid_sealed", "Worker, sealed slot: commit to a price without showing it (the tool hashes `price:salt:you`; keep the salt). Attaches 0.002 NEAR for storage plus the slot's bond, plus an optional `stake` (yoctoNEAR) on top: a bigger bond vouches for a bidder with no record yet.",
+         s(json!({ "job": str_, "slot": { "type": "integer" }, "price": str_, "salt": str_, "stake": str_ }), &["job", "slot", "price", "salt"])),
         ("reveal", "Worker, sealed slot, after bidding closes: reveal the committed price with its salt. An unrevealed bid cannot win and loses its bond.",
          s(json!({ "job": str_, "slot": { "type": "integer" }, "price": str_, "salt": str_ }), &["job", "slot", "price", "salt"])),
-        ("bid", "Worker: bid `price` (at most the slot's max) on an open slot; a second bid replaces the first. Attaches 0.001 NEAR (the bid's storage) plus the slot's bond, if any.",
-         s(json!({ "job": str_, "slot": { "type": "integer" }, "price": str_ }), &["job", "slot", "price"])),
+        ("bid", "Worker: bid `price` (at most the slot's max) on an open slot; a second bid replaces the first. Attaches 0.001 NEAR (the bid's storage) plus the slot's bond, if any, plus an optional `stake` (yoctoNEAR) on top: a bigger bond vouches for a bidder with no record yet.",
+         s(json!({ "job": str_, "slot": { "type": "integer" }, "price": str_, "stake": str_ }), &["job", "slot", "price"])),
         ("get_bids", "Anyone: a bid slot with its bids and award.", s(json!({ "job": str_, "slot": { "type": "integer" } }), &["job", "slot"])),
         ("award", "Manager: after bidding closes, hire one bidder at its own bid (a new sub-account). Attaches 0.035 NEAR.",
          s(json!({ "job": str_, "slot": { "type": "integer" }, "worker": str_, "sub": str_ }), &["job", "slot", "worker"])),
@@ -38,6 +48,7 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
         ("dispute", "Manager: dispute a sub-job's delivery (resp base64 = the delivered bytes).", s(json!({ "job": str_, "resp": str_ }), &["job", "resp"])),
         ("finalize_dispute", "Anyone: decide a dispute after its rounds close.", s(json!({ "job": str_ }), &["job"])),
         ("approve", "Client (root) or manager (sub-job): approve, so settle may run before the window ends.", s(json!({ "job": str_ }), &["job"])),
+        ("fire", "Manager (sub-job): after the signed check failed the delivery, end the job now: the worker is not paid, its bond goes to you, and the pay comes back so you can hire the runner-up.", s(json!({ "job": str_ }), &["job"])),
         ("settle", "Anyone: settle a job (pay, return the rest, delete at zero).", s(json!({ "job": str_ }), &["job"])),
         ("get_job", "Anyone: a job's state.", s(json!({ "job": str_ }), &["job"])),
         ("get_record", "Anyone: a worker's track record kept by the factory.", s(json!({ "account": str_ }), &["account"])),
@@ -164,7 +175,7 @@ impl Tools<'_> {
                 let slot = a["slot"].as_u64().ok_or("missing slot")?;
                 let job = id(a, "job")?;
                 let info = c.view(&job, "get_bids", json!({ "slot": slot })).await?;
-                let bond = crate::chain::num(&info["bond"]);
+                let bond = crate::chain::num(&info["bond"]) + stake(a)?;
                 c.call(
                     who,
                     &job,
@@ -178,7 +189,7 @@ impl Tools<'_> {
                 let slot = a["slot"].as_u64().ok_or("missing slot")?;
                 let job = id(a, "job")?;
                 let info = c.view(&job, "get_bids", json!({ "slot": slot })).await?;
-                let bond = crate::chain::num(&info["bond"]);
+                let bond = crate::chain::num(&info["bond"]) + stake(a)?;
                 let commit = ht_core::receipt::sha256_hex(
                     format!("{}:{}:{}", s(a, "price")?, s(a, "salt")?, who.id).as_bytes(),
                 );
@@ -250,7 +261,7 @@ impl Tools<'_> {
                 )
                 .await
             }
-            "finalize_check" | "finalize_dispute" | "approve" | "settle" => {
+            "finalize_check" | "finalize_dispute" | "approve" | "fire" | "settle" => {
                 c.call(who, &id(a, "job")?, name, json!({}), zero).await
             }
             "quote_note" => c.view(&id(a, "job")?, "quote_note", json!({})).await,

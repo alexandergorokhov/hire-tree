@@ -68,7 +68,7 @@ for i, p in enumerate(chain):
     title = f"{short(p['job'])}  ·  {p['skill']}"
     sub = f"{p['winner']} won at {p['price']:.2f} of {p['max']:.2f} max"
     nb = len(p.get("bids", []))
-    sub2 = f"{nb} {'sealed ' if p.get('sealed') else ''}bids, {bond:g} NEAR bond each · check {p.get('score', '?')}/10 · {'paid early' if p['paid'] else 'not paid, buyer keeps bond'}"
+    sub2 = f"{nb} {'sealed ' if p.get('sealed') else ''}bids, slot bond {bond:g} NEAR · check {p.get('score', '?')}/10 · {'paid early' if p['paid'] else 'not paid, buyer keeps bond'}"
     box(x, y, 430, 74, title, sub, sub2, fill, stroke)
     if i == 0:
         label = "hires: open bids, award"
@@ -90,7 +90,7 @@ rules = [
     "2  holds the winner's NEAR bond",
     "3  checks the NEAR AI signature on the work",
     "4  pays early when the check passes",
-    "5  junk: buyer keeps the bond, no pay",
+    "5  junk: fired, no pay, bond to the buyer",
     "6  sends the rest up and deletes itself",
 ]
 for i, t in enumerate(rules):

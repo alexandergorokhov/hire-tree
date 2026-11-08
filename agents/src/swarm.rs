@@ -272,25 +272,32 @@ pub const CONTRACTOR_RULES: Rules = Rules {
 /// The buyer's pick: the lowest bid after a penalty for the share of unpaid
 /// jobs on the bidder's on-chain record (`record_weight`: 150 = x2.5 when
 /// all unpaid), and for a bidder with no record yet, a newcomer premium
-/// (percent) the buyer learned. Ties go to the bidder with more paid jobs.
-/// Deterministic.
+/// (percent) the buyer learned, divided by how many times the slot's bond
+/// the bidder staked (`vouch`, read from the bid on-chain): a newcomer that
+/// puts 10x the bond at risk pays a tenth of the premium. Ties go to the
+/// bidder with more paid jobs. Deterministic.
 pub fn pick(
-    cands: &[(usize, u128, u32, u32)],
+    cands: &[(usize, u128, u32, u32, u128)],
     newcomer_pct: u128,
     record_weight: u128,
 ) -> Option<usize> {
     cands
         .iter()
-        .min_by_key(|(i, bid, jobs, paid)| {
+        .min_by_key(|(i, bid, jobs, paid, vouch)| {
             let unpaid = jobs.saturating_sub(*paid) as u128;
             let mut score = bid * (100 + record_weight * unpaid / (*jobs as u128).max(1)) / 100;
             if *jobs == 0 {
-                score = score * (100 + newcomer_pct) / 100;
+                score = score * (100 + newcomer_pct / (*vouch).max(1)) / 100;
             }
             (score, std::cmp::Reverse(*paid), *i)
         })
         .map(|c| c.0)
 }
+
+/// What an honest newcomer stakes on top of the slot's bond: 9x more, so
+/// its bid carries 10x the slot's bond. It gets it back when it delivers;
+/// a junk bot that copied it would lose 0.5 NEAR per junk delivery.
+pub const VOUCH_EXTRA_YOCTO: u128 = 9 * BOND_YOCTO;
 
 /// What an agent bids on a part with this `max` (yocto fUSD), or None if it
 /// sits out. Its ask is `rate`% of the skill's nominal max. When the ask is
@@ -407,6 +414,14 @@ struct Part {
     /// Contractor's make-or-buy answer for this part, if it was asked.
     decision: Option<Value>,
     settled: bool,
+    /// Delivered and checked (each part is worked once).
+    worked: bool,
+    /// The buyer fired this winner after a failed check.
+    fired: bool,
+    /// This part is the runner-up hired after `replaces` was fired.
+    replaces: Option<usize>,
+    /// The winner staked more than the slot's bond (a vouching newcomer).
+    vouched: bool,
 }
 
 fn buyer_name(b: Buyer, agents: &[Agent]) -> String {
@@ -533,6 +548,10 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                     paid_now: false,
                     settled: false,
                     decision: None,
+                    worked: false,
+                    fired: false,
+                    replaces: None,
+                    vouched: false,
                 });
             }
         }
@@ -600,13 +619,21 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                     let Some(price) = bid_price(a.strategy, nominal_max(skill), a.rate, max) else {
                         continue;
                     };
+                    // An honest agent never hired yet vouches for itself with
+                    // a bigger bond; junk keeps the minimum (it expects to
+                    // lose it).
+                    let stake = if a.wins == 0 && a.strategy != Strategy::Junk {
+                        VOUCH_EXTRA_YOCTO
+                    } else {
+                        0
+                    };
                     let placed = if parts[p].sealed {
                         tools
                             .call(
                                 &a.acc,
                                 "bid_sealed",
                                 &json!({ "job": job, "slot": slot, "price": price.to_string(),
-                                "salt": format!("r{r}p{p}a{i}") }),
+                                "salt": format!("r{r}p{p}a{i}"), "stake": stake.to_string() }),
                             )
                             .await
                     } else {
@@ -614,7 +641,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                             .call(
                                 &a.acc,
                                 "bid",
-                                &json!({ "job": job, "slot": slot, "price": price.to_string() }),
+                                &json!({ "job": job, "slot": slot, "price": price.to_string(), "stake": stake.to_string() }),
                             )
                             .await
                     };
@@ -654,11 +681,35 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                     Buyer::Lead(l) => LEADS[l].1,
                     Buyer::Agent(_) => CONTRACTOR_RULES,
                 };
+                // Each bid's bond, as the job account holds it.
+                let slot_info = tools
+                    .call(
+                        &keeper,
+                        "get_bids",
+                        &json!({ "job": parts[p].job, "slot": parts[p].slot }),
+                    )
+                    .await?;
+                let slot_bond = num(&slot_info["bond"]).max(1);
+                let staked: HashMap<String, u128> = slot_info["bids"]
+                    .as_array()
+                    .map(|bs| {
+                        bs.iter()
+                            .map(|b| {
+                                (
+                                    b["worker"].as_str().unwrap_or("").to_string(),
+                                    num(&b["bond"]),
+                                )
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default();
                 let mut cands = vec![];
                 for &(i, price) in &parts[p].bids {
                     if booked.contains(&i) {
                         continue;
                     }
+                    let vouch =
+                        staked.get(agents[i].acc.id.as_str()).copied().unwrap_or(0) / slot_bond;
                     let rec = tools
                         .call(
                             &keeper,
@@ -671,6 +722,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                         price,
                         rec["jobs"].as_u64().unwrap_or(0) as u32,
                         rec["paid"].as_u64().unwrap_or(0) as u32,
+                        vouch,
                     ));
                 }
                 let prem = *premium.get(&bname).unwrap_or(&0);
@@ -680,7 +732,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                     }
                     continue;
                 };
-                let (_, price, jobs, _) = *cands.iter().find(|x| x.0 == w).unwrap();
+                let (_, price, jobs, _, vouch) = *cands.iter().find(|x| x.0 == w).unwrap();
                 let buyer_acc = match buyer {
                     Buyer::Lead(l) => leads[l].0.clone(),
                     Buyer::Agent(b) => agents[b].acc.clone(),
@@ -707,6 +759,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                     q.newcomer = jobs == 0;
                     q.premium_seen = prem;
                     q.child = child.clone();
+                    q.vouched = vouch > 1;
                 }
                 // A contractor becomes a buyer: it puts the sub-part out for
                 // bids on its own job, paid out of its own pay.
@@ -773,6 +826,10 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                             paid_now: false,
                             settled: false,
                             decision: None,
+                            worked: false,
+                            fired: false,
+                            replaces: None,
+                            vouched: false,
                         });
                     }
                 }
@@ -781,127 +838,247 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
         }
         // 4. Work, bottom-up: the deepest parts first, so a contractor's
         // sub-part is judged and paid before it delivers.
+        // A part whose winner fails the check is fired at once and the
+        // runner-up is hired and worked in the same pass (once per part).
         for level in (1..=3u32).rev() {
-            let ps: Vec<usize> = (0..parts.len())
-                .filter(|&p| parts[p].level == level && parts[p].winner.is_some())
-                .collect();
-            if ps.is_empty() {
-                continue;
-            }
-            for &p in &ps {
-                let w = parts[p].winner.unwrap();
-                let junk = match agents[w].strategy {
-                    Strategy::Junk => true,
-                    Strategy::Sloppy => agents[w].wins % 3 == 0,
-                    _ => false,
-                };
-                let (child, task) = (parts[p].child.clone(), parts[p].task.clone());
-                let delivered = if junk {
-                    let b = b"lorem ipsum dolor sit amet, lorem ipsum dolor sit amet".to_vec();
-                    tools
-                        .call(
-                            &agents[w].acc,
-                            "deliver",
-                            &json!({ "job": child, "resp": b64(&b) }),
-                        )
-                        .await?;
-                    b
-                } else {
-                    let spec = ht_core::receipt::sha256_hex(task.as_bytes());
-                    let body =
-                        chat_body(&model, WORKER, &format!("HT1:{child}:{spec}:1 {task}"), 300);
-                    let rep = llm.chat(&body).await?;
-                    tools
-                        .call(
-                            &agents[w].acc,
-                            "deliver",
-                            &json!({ "job": child, "resp": b64(&rep.body), "req": b64(&body),
+            loop {
+                let ps: Vec<usize> = (0..parts.len())
+                    .filter(|&p| {
+                        parts[p].level == level && parts[p].winner.is_some() && !parts[p].worked
+                    })
+                    .collect();
+                if ps.is_empty() {
+                    break;
+                }
+                for &p in &ps {
+                    parts[p].worked = true;
+                    let w = parts[p].winner.unwrap();
+                    let junk = match agents[w].strategy {
+                        Strategy::Junk => true,
+                        Strategy::Sloppy => agents[w].wins % 3 == 0,
+                        _ => false,
+                    };
+                    let (child, task) = (parts[p].child.clone(), parts[p].task.clone());
+                    let delivered = if junk {
+                        let b = b"lorem ipsum dolor sit amet, lorem ipsum dolor sit amet".to_vec();
+                        tools
+                            .call(
+                                &agents[w].acc,
+                                "deliver",
+                                &json!({ "job": child, "resp": b64(&b) }),
+                            )
+                            .await?;
+                        b
+                    } else {
+                        let spec = ht_core::receipt::sha256_hex(task.as_bytes());
+                        let body =
+                            chat_body(&model, WORKER, &format!("HT1:{child}:{spec}:1 {task}"), 300);
+                        let rep = llm.chat(&body).await?;
+                        tools
+                            .call(
+                                &agents[w].acc,
+                                "deliver",
+                                &json!({ "job": child, "resp": b64(&rep.body), "req": b64(&body),
                             "sig": rep.sig, "model": model }),
-                        )
-                        .await?;
-                    rep.body
-                };
-                let req = tools
+                            )
+                            .await?;
+                        rep.body
+                    };
+                    let req = tools
                     .call(&keeper, "check_request", &json!({ "job": child, "panel": 0, "task": task, "deliverable": b64(&delivered) }))
                     .await?;
-                let qb = base64::engine::general_purpose::STANDARD
-                    .decode(req.as_str().ok_or("check_request")?)
-                    .map_err(|e| e.to_string())?;
-                let ans = llm.chat(&qb).await?;
-                let score = tools
-                    .call(
-                        &keeper,
-                        "submit_check",
-                        &json!({ "job": child, "panel": 0, "task": task,
+                    let qb = base64::engine::general_purpose::STANDARD
+                        .decode(req.as_str().ok_or("check_request")?)
+                        .map_err(|e| e.to_string())?;
+                    let ans = llm.chat(&qb).await?;
+                    let score = tools
+                        .call(
+                            &keeper,
+                            "submit_check",
+                            &json!({ "job": child, "panel": 0, "task": task,
                         "deliverable": b64(&delivered), "answer": b64(&ans.body), "sig": ans.sig }),
-                    )
-                    .await?;
-                parts[p].score = score
-                    .as_u64()
-                    .or_else(|| score.as_str().and_then(|x| x.parse().ok()))
-                    .unwrap_or(0);
-                parts[p].passed = parts[p].score >= 6;
-            }
-            c.fast_forward(crate::agents::CHECK_WINDOW_SECS + 1).await;
-            for &p in &ps {
-                let child = parts[p].child.clone();
-                tools
-                    .call(&keeper, "finalize_check", &json!({ "job": child }))
-                    .await?;
-                if !parts[p].passed {
-                    continue;
+                        )
+                        .await?;
+                    parts[p].score = score
+                        .as_u64()
+                        .or_else(|| score.as_str().and_then(|x| x.parse().ok()))
+                        .unwrap_or(0);
+                    parts[p].passed = parts[p].score >= 6;
                 }
-                match parts[p].buyer {
-                    // A contractor accepts its sub-agent's passed work: the
-                    // sub-job settles now and pays it.
-                    Buyer::Agent(b) => {
-                        tools
-                            .call(&agents[b].acc, "approve", &json!({ "job": child }))
-                            .await?;
-                        // A sub-part that hired below itself settles only
-                        // once its own sub-parts have (a failed one waits
-                        // for its window); until then it is approved, unpaid.
-                        if parts
-                            .iter()
-                            .any(|k| k.parent == Some(p) && k.winner.is_some() && !k.settled)
-                        {
-                            continue;
-                        }
-                        tools
-                            .call(&keeper, "settle", &json!({ "job": child }))
-                            .await?;
-                        parts[p].paid_now = true;
-                        parts[p].settled = true;
+                c.fast_forward(crate::agents::CHECK_WINDOW_SECS + 1).await;
+                for &p in &ps {
+                    let child = parts[p].child.clone();
+                    tools
+                        .call(&keeper, "finalize_check", &json!({ "job": child }))
+                        .await?;
+                    if !parts[p].passed {
+                        continue;
                     }
-                    // The lead's treasury buys the note: paid now.
-                    Buyer::Lead(l) => {
-                        let q = tools
-                            .call(&leads[l].0, "quote_note", &json!({ "job": child }))
-                            .await?;
-                        if !q.is_null() {
-                            let price = q
-                                .as_str()
-                                .map(String::from)
-                                .unwrap_or_else(|| q.to_string());
+                    match parts[p].buyer {
+                        // A contractor accepts its sub-agent's passed work: the
+                        // sub-job settles now and pays it.
+                        Buyer::Agent(b) => {
                             tools
-                                .call(
-                                    &treasury,
-                                    "buy_note",
-                                    &json!({ "job": child, "price": price }),
-                                )
+                                .call(&agents[b].acc, "approve", &json!({ "job": child }))
                                 .await?;
+                            // A sub-part that hired below itself settles only
+                            // once its own sub-parts have (a failed one waits
+                            // for its window); until then it is approved, unpaid.
+                            if parts
+                                .iter()
+                                .any(|k| k.parent == Some(p) && k.winner.is_some() && !k.settled)
+                            {
+                                continue;
+                            }
                             tools
-                                .call(&leads[l].0, "approve", &json!({ "job": child }))
+                                .call(&keeper, "settle", &json!({ "job": child }))
                                 .await?;
                             parts[p].paid_now = true;
+                            parts[p].settled = true;
+                        }
+                        // The lead's treasury buys the note: paid now.
+                        Buyer::Lead(l) => {
+                            let q = tools
+                                .call(&leads[l].0, "quote_note", &json!({ "job": child }))
+                                .await?;
+                            if !q.is_null() {
+                                let price = q
+                                    .as_str()
+                                    .map(String::from)
+                                    .unwrap_or_else(|| q.to_string());
+                                tools
+                                    .call(
+                                        &treasury,
+                                        "buy_note",
+                                        &json!({ "job": child, "price": price }),
+                                    )
+                                    .await?;
+                                tools
+                                    .call(&leads[l].0, "approve", &json!({ "job": child }))
+                                    .await?;
+                                parts[p].paid_now = true;
+                            }
                         }
                     }
+                }
+                // Fire failed winners and hire the runner-up at its own bid.
+                for &p in &ps {
+                    if parts[p].passed || parts[p].replaces.is_some() {
+                        continue;
+                    }
+                    if parts
+                        .iter()
+                        .any(|k| k.parent == Some(p) && k.winner.is_some() && !k.settled)
+                    {
+                        continue;
+                    }
+                    let buyer = parts[p].buyer;
+                    let buyer_acc = match buyer {
+                        Buyer::Lead(l) => leads[l].0.clone(),
+                        Buyer::Agent(b) => agents[b].acc.clone(),
+                    };
+                    let child = parts[p].child.clone();
+                    tools
+                        .call(&buyer_acc, "fire", &json!({ "job": child }))
+                        .await?;
+                    tools
+                        .call(&keeper, "settle", &json!({ "job": child }))
+                        .await?;
+                    parts[p].fired = true;
+                    parts[p].settled = true;
+                    let failed = parts[p].winner;
+                    let rules = match buyer {
+                        Buyer::Lead(l) => LEADS[l].1,
+                        Buyer::Agent(_) => CONTRACTOR_RULES,
+                    };
+                    let mut cands = vec![];
+                    for &(i, price) in &parts[p].bids {
+                        if Some(i) == failed || booked.contains(&i) || agents[i].gone {
+                            continue;
+                        }
+                        let rec = tools
+                            .call(
+                                &keeper,
+                                "get_record",
+                                &json!({ "account": agents[i].acc.id }),
+                            )
+                            .await?;
+                        // Losers' bonds went back at the award: no vouching now.
+                        cands.push((
+                            i,
+                            price,
+                            rec["jobs"].as_u64().unwrap_or(0) as u32,
+                            rec["paid"].as_u64().unwrap_or(0) as u32,
+                            1,
+                        ));
+                    }
+                    let bname = buyer_name(buyer, &agents);
+                    let prem = *premium.get(&bname).unwrap_or(&0);
+                    let Some(r2) = pick(&cands, prem, rules.record_weight) else {
+                        continue;
+                    };
+                    let (_, price, jobs, _, _) = *cands.iter().find(|x| x.0 == r2).unwrap();
+                    let job = parts[p].job.clone();
+                    let task = parts[p].task.clone();
+                    if tools
+                        .call(
+                            &buyer_acc,
+                            "hire",
+                            &json!({ "job": job, "worker": agents[r2].acc.id,
+                        "amount": price.to_string(), "task": task }),
+                        )
+                        .await
+                        .is_err()
+                    {
+                        continue;
+                    }
+                    let k = children.entry(job.clone()).or_insert(0);
+                    *k += 1;
+                    let child = format!("t{}.{}", k, job);
+                    booked.insert(r2);
+                    agents[r2].wins += 1;
+                    if let Buyer::Lead(l) = buyer {
+                        lead_spent[l] += price;
+                    }
+                    let q = &parts[p];
+                    let next = Part {
+                        lead: q.lead,
+                        root: q.root.clone(),
+                        job,
+                        level: q.level,
+                        parent: q.parent,
+                        buyer,
+                        skill: q.skill,
+                        max: q.max,
+                        task,
+                        slot: q.slot,
+                        sealed: q.sealed,
+                        bids: vec![],
+                        winner: Some(r2),
+                        price,
+                        newcomer: jobs == 0,
+                        premium_seen: prem,
+                        child,
+                        score: 0,
+                        passed: false,
+                        paid_now: false,
+                        settled: false,
+                        decision: None,
+                        worked: false,
+                        fired: false,
+                        replaces: Some(p),
+                        vouched: false,
+                    };
+                    parts.push(next);
                 }
             }
         }
         // 5. Failed or blocked parts wait for the window; then every job
         // settles bottom-up and the roots close.
-        if parts.iter().any(|q| q.winner.is_some() && !q.paid_now) {
+        if parts
+            .iter()
+            .any(|q| q.winner.is_some() && !q.paid_now && !q.settled)
+        {
             c.fast_forward(WINDOW_SECS + 1).await;
         }
         for level in (1..=3u32).rev() {
@@ -968,7 +1145,8 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
         }
         // A caught junk bot comes back under a fresh account (a Sybil): its
         // record resets, which is what the newcomer premium is for.
-        for q in parts.iter().filter(|q| !q.passed) {
+        // A runner-up hired after a firing staked no bond.
+        for q in parts.iter().filter(|q| !q.passed && q.replaces.is_none()) {
             if let Some(w) = q.winner {
                 agents[w].bonds_lost += 1;
             }
@@ -1001,7 +1179,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                     "winner": w.map(|w| agents[w].name.clone()), "strategy": w.map(|w| agents[w].strategy.name()),
                     "price": q.price as f64 / 1e6, "rate": if q.price > 0 { q.price * 100 / (nominal_max(q.skill) * USD) } else { 0 },
                     "newcomer": q.newcomer, "newcomer_premium": q.premium_seen, "score": q.score,
-                    "paid": q.passed, "paid_now": q.paid_now, "make_or_buy": q.decision, "job": q.child, "sealed": q.sealed,
+                    "paid": q.passed, "paid_now": q.paid_now, "make_or_buy": q.decision, "fired": q.fired, "replaces": q.replaces, "vouched": q.vouched, "job": q.child, "sealed": q.sealed,
                     "bids": q.bids.iter().map(|(i, p)| { let a = &agents[*i];
                         let mut b = json!({ "agent": a.name, "price": *p as f64 / 1e6 });
                         if a.strategy == Strategy::Model { b["why"] = json!(a.why); }
@@ -1110,7 +1288,11 @@ mod tests {
     #[test]
     fn pick_takes_the_lowest_bid_with_a_clean_record() {
         assert_eq!(
-            pick(&[(0, 27, 0, 0), (1, 19, 0, 0), (2, 30, 0, 0)], 0, 150),
+            pick(
+                &[(0, 27, 0, 0, 1), (1, 19, 0, 0, 1), (2, 30, 0, 0, 1)],
+                0,
+                150
+            ),
             Some(1)
         );
     }
@@ -1118,17 +1300,20 @@ mod tests {
     #[test]
     fn unpaid_jobs_cost_more_than_a_low_bid_saves() {
         // 13.5 with 2 of 2 unpaid weighs 54; 27 with a clean record wins.
-        assert_eq!(pick(&[(0, 27, 3, 3), (1, 13, 2, 0)], 0, 150), Some(0));
+        assert_eq!(pick(&[(0, 27, 3, 3, 1), (1, 13, 2, 0, 1)], 0, 150), Some(0));
         // One unpaid job in four is a smaller penalty: 19 weighs ~26 and still wins.
-        assert_eq!(pick(&[(0, 27, 3, 3), (1, 19, 4, 3)], 0, 150), Some(1));
+        assert_eq!(pick(&[(0, 27, 3, 3, 1), (1, 19, 4, 3, 1)], 0, 150), Some(1));
     }
 
     #[test]
     fn burned_leads_charge_newcomers_a_premium() {
         // A fresh account bidding 13 beats 18 with no premium...
-        assert_eq!(pick(&[(0, 18, 5, 5), (1, 13, 0, 0)], 0, 150), Some(1));
+        assert_eq!(pick(&[(0, 18, 5, 5, 1), (1, 13, 0, 0, 1)], 0, 150), Some(1));
         // ...but not once half the newcomers it hired failed (+75%).
-        assert_eq!(pick(&[(0, 18, 5, 5), (1, 13, 0, 0)], 75, 150), Some(0));
+        assert_eq!(
+            pick(&[(0, 18, 5, 5, 1), (1, 13, 0, 0, 1)], 75, 150),
+            Some(0)
+        );
     }
 
     #[test]
@@ -1149,8 +1334,23 @@ mod tests {
     }
 
     #[test]
+    fn a_newcomer_that_stakes_more_bond_pays_less_premium() {
+        // Both new: junk bids 13 at the slot's bond, an honest agent bids 18
+        // and stakes 10x. With a 100% premium junk weighs 26, honest 19.8.
+        assert_eq!(
+            pick(&[(0, 13, 0, 0, 1), (1, 18, 0, 0, 10)], 100, 150),
+            Some(1)
+        );
+        // With no premium learned yet, the cheaper bid still wins.
+        assert_eq!(
+            pick(&[(0, 13, 0, 0, 1), (1, 18, 0, 0, 10)], 0, 150),
+            Some(0)
+        );
+    }
+
+    #[test]
     fn ties_go_to_the_longer_clean_record() {
-        assert_eq!(pick(&[(0, 18, 1, 1), (1, 18, 4, 4)], 0, 150), Some(1));
+        assert_eq!(pick(&[(0, 18, 1, 1, 1), (1, 18, 4, 4, 1)], 0, 150), Some(1));
     }
 
     #[test]
@@ -1196,7 +1396,7 @@ mod tests {
         // 13 with 1 of 8 jobs unpaid vs 16 with a clean record: the price
         // lead weighs 13 as 15.3 and takes it; the quality lead weighs it
         // as 19.5 and pays 16.
-        let c = [(0, 16, 8, 8), (1, 13, 8, 7)];
+        let c = [(0, 16, 8, 8, 1), (1, 13, 8, 7, 1)];
         assert_eq!(pick(&c, 0, 150), Some(1));
         assert_eq!(pick(&c, 0, 400), Some(0));
     }

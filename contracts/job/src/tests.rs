@@ -2891,6 +2891,71 @@ mod signed_check {
         j.deliver(hex::encode(sha256(DELIVERED)), None, None, None, None);
     }
 
+    fn failed(j: &mut Job) {
+        deliver(j, DELIVERED);
+        let a = answer(1, j, 0, DELIVERED, "2", "a");
+        submit(j, EVE, 0, DELIVERED, a);
+        finalize(j);
+    }
+
+    #[test]
+    fn the_buyer_fires_a_failed_worker_and_gets_everything_back() {
+        let mut j = judged_sub();
+        failed(&mut j);
+        Ctx::new(T1, LEAD).at(CHECK_DONE).set();
+        j.fire();
+        // Settle runs now, long before the window, and pays the worker nothing.
+        Ctx::new(T1, EVE).at(CHECK_DONE).set();
+        j.settle();
+        assert_eq!(transfers(), vec![(ROOT.into(), PAY.to_string())]);
+    }
+
+    #[test]
+    #[should_panic(expected = "fire only after a failed check")]
+    fn a_worker_whose_work_passed_cannot_be_fired() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        let a = answer(1, &j, 0, DELIVERED, "8", "a");
+        submit(&mut j, EVE, 0, DELIVERED, a);
+        finalize(&mut j);
+        Ctx::new(T1, LEAD).at(CHECK_DONE).set();
+        j.fire();
+    }
+
+    #[test]
+    #[should_panic(expected = "fire only after a failed check")]
+    fn a_worker_cannot_be_fired_before_any_check() {
+        let mut j = judged_sub();
+        Ctx::new(T1, LEAD).set();
+        j.fire();
+    }
+
+    #[test]
+    #[should_panic(expected = "only the sub-job's manager can fire")]
+    fn only_the_buyer_can_fire() {
+        let mut j = judged_sub();
+        failed(&mut j);
+        Ctx::new(T1, EVE).at(CHECK_DONE).set();
+        j.fire();
+    }
+
+    #[test]
+    #[should_panic(expected = "window is closed")]
+    fn a_fired_worker_cannot_redeliver() {
+        let mut j = judged_sub();
+        failed(&mut j);
+        Ctx::new(T1, LEAD).at(CHECK_DONE).set();
+        j.fire();
+        Ctx::new(T1, WORKER).at(CHECK_DONE + NS_PER_SEC).set();
+        j.deliver(
+            hex::encode(sha256(DELIVERED)),
+            None,
+            None,
+            None,
+            Some(Base64VecU8(DELIVERED.to_vec())),
+        );
+    }
+
     #[test]
     fn unscored_judged_delivery_is_not_paid_without_approval() {
         let mut j = judged_sub();

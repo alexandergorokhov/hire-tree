@@ -179,6 +179,7 @@ function render(d) {
     [won.filter(p => p.paid).length + ' / ' + won.length, 'parts passed the contract\'s check and were paid'],
     [(d.platform_fees ?? 0).toFixed(2), `fUSD platform fees kept by the factory (${(d.platform_fee_bps ?? 0) / 100}%)`],
     [d.agents.reduce((a, x) => a + (x.bonds_lost ?? 0), 0), `bonds of ${+(d.bond_near ?? 0).toFixed(3)} NEAR lost by unpaid winners to their buyers`],
+    [won.filter(p => p.fired).length, 'failed winners fired at once; the runner-up was hired in the same round'],
     [won.filter(p => p.sealed).length, `parts bought with sealed bids (commit, then reveal) by the ${esc(d.sealed_lead ?? 'quality')} lead`],
     [d.agents.reduce((a, x) => a + (x.made ?? 0), 0) + ' / ' + d.agents.reduce((a, x) => a + (x.made ?? 0) + (x.bought ?? 0), 0), 'times a contractor asked the model and chose to do the sub-part itself'],
     [d.junk_respawns ?? 0, 'times a caught junk bot came back under a new account'],
@@ -188,7 +189,7 @@ function render(d) {
   document.getElementById('legend').innerHTML = S.map(s => `<span><i class="sw" style="background:${col(s)}"></i>${s}</span>`).join('');
   const node = (r, p, pad) => {
     const bids = p.bids.map(b => `${esc(b.agent)} ${b.price.toFixed(2)}${b.why ? ` <i>(model: ${esc(b.why)})</i>` : ''}`).join('<br>');
-    const t = `<b>${esc(p.winner)}</b> (${esc(p.strategy)}) won ${esc(p.skill)} at ${p.price.toFixed(2)} from ${esc(p.buyer)}, score ${p.score}/10${p.sealed ? ', sealed bids' : ''}${p.make_or_buy ? `<br>make or buy: ${p.make_or_buy.buy ? 'bought a sub-part' : 'did the sub-part itself'} (model: ${esc(p.make_or_buy.why)})` : ''}${p.newcomer ? `, newcomer (premium +${p.newcomer_premium}%)` : ''}<br>${esc(p.job)}<br>${bids}`;
+    const t = `<b>${esc(p.winner)}</b> (${esc(p.strategy)}) won ${esc(p.skill)} at ${p.price.toFixed(2)} from ${esc(p.buyer)}, score ${p.score}/10${p.sealed ? ', sealed bids' : ''}${p.make_or_buy ? `<br>make or buy: ${p.make_or_buy.buy ? 'bought a sub-part' : 'did the sub-part itself'} (model: ${esc(p.make_or_buy.why)})` : ''}${p.newcomer ? `, newcomer (premium +${p.newcomer_premium}%${p.vouched ? ', staked 10x bond' : ''})` : ''}${p.fired ? '<br>fired after the failed check: no pay, bond to the buyer' : ''}${p.replaces != null ? '<br>runner-up, hired at its own bid after the winner was fired' : ''}<br>${esc(p.job)}<br>${bids}`;
     let h = `<div class="node${p.paid ? '' : ' unpaid'}" style="padding-left:${pad * 12}px" data-tip="${esc(t)}"><i class="sw" style="background:${col(p.strategy)}"></i><span class="sk">${esc(p.skill.slice(0, 3))}</span><span class="who">${esc(p.winner)} ${p.price.toFixed(2)}</span></div>`;
     for (const k of r.parts.filter(q => q.parent === p.id && q.winner)) h += node(r, k, pad + 1);
     return h;

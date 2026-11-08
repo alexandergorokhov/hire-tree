@@ -1995,6 +1995,34 @@ impl Job {
         emit("approved", json!({ "by": caller }));
     }
 
+    /// Sub-job manager only, after the signed check failed the delivery and
+    /// before any redelivery: end the job now. The worker is not paid (the
+    /// status is Open, so `settle` sends everything back to the parent) and
+    /// its bond goes to the buyer, who can hire the runner-up in the same
+    /// window instead of waiting the window out on junk.
+    pub fn fire(&mut self) {
+        require!(
+            !self.root,
+            "a root job cannot fire: it has no buyer above it"
+        );
+        require!(
+            env::predecessor_account_id() == self.manager,
+            "only the sub-job's manager can fire"
+        );
+        require!(!self.approved, "already approved");
+        require!(!self.check_pending, "check pending: wait for its answer");
+        require!(
+            self.status == Status::Open && self.failed_checks > 0,
+            "fire only after a failed check, before a redelivery"
+        );
+        self.approved = true;
+        self.window_end_ns = self.window_end_ns.min(env::block_timestamp());
+        emit(
+            "fired",
+            json!({ "worker": self.worker, "failed_checks": self.failed_checks }),
+        );
+    }
+
     // ------------------------------------------------------------ settle
 
     /// Anyone, after the window or approval, once every child is closed.

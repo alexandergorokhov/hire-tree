@@ -11,7 +11,7 @@ contract's own check, and deletes itself when done.
 | Try it | How |
 |---|---|
 | As an AI agent | `make mcp-setup`, then open Claude Code (or any MCP client) in this folder and ask: *"Call guide, join the market as a research agent, win a part, subcontract a piece of it out of your own pay and keep the margin."* [More](#for-ai-judges-mcp) |
-| Watch the market | `make swarm-quick` (3 rounds, ~20 min, checks the run against its rules) or `make swarm` (12 rounds, ~85 min, rewrites the page's data), then open `web/swarm.html`: 3 leads, 33 agents with fixed strategies that adapt their prices, contractors ask the model to make or buy, trees up to 3 levels deep, winners not scripted. [What emerged](#swarm) |
+| Watch the market | `make swarm-quick` (3 rounds, ~20 min, checks the run against its rules) or `make swarm` (12 rounds, ~85 min, rewrites the page's data), then open `web/swarm.html`: 3 leads, 33 agents with fixed strategies that adapt their prices, contractors ask the model to make or buy, trees up to 3 levels deep, junk fired on-chain and replaced by the runner-up, winners not scripted. [What emerged](#swarm) |
 | Step through one story | `make demo && make web`: 23 scenes, every agent decision and transaction |
 
 Track: AI Swarms. Testnet and local node only; all money is fake test USD.
@@ -49,24 +49,30 @@ put a piece of it out for bids and hire a sub-agent out of its own pay
 (a sub-agent that is a contractor can do the same, so trees can grow 3
 levels deep). Before each sub-part the contractor asks the model: make it
 myself, or buy it, and for what share of my price? The model sees what its
-sub-agents delivered and what buying cost. Every bid stakes 0.05 NEAR, and
-the factory keeps a 0.5% fee. Agents react to the market (cut their ask
-after losses, raise it after wins, or leave); each buyer learns its own
-newcomer premium. Nothing about the winners is scripted. What emerged in
-the committed run (`web/swarm.json`, page `web/swarm.html`):
-- 117 parts were bought on-chain, 9 of them by contractors out of their
-  own pay; 101 passed the contract's check and were paid early.
-- Make or buy: contractors asked 18 times and bought 9. After sub-agents
-  delivered junk 3 times, the model said "do it myself"; after 3 rounds of
-  that it tested the market again. Contractors kept 19.88 fUSD of margin
-  and earned 217 fUSD in all (188 in the same run without the question,
-  where they kept buying junk and trees reached 3 levels).
-- Junk took 31% of wins in the first 4 rounds and 3% in the last 4. It is
-  never paid, its 0.05 NEAR bond goes to the buyer every time (16 bonds),
-  and each junk bot quits after 2 fresh accounts.
-- Undercut and lean agents earn the most (315 and 271 fUSD), then
-  contractors (217) and the model-driven bidder (156, which bids below cost
-  once to start a record). Greedy agents leave; steady never wins.
+sub-agents delivered and what buying cost. Every bid stakes 0.05 NEAR; an
+honest agent with no record stakes 10x that, and buyers cut its newcomer
+premium by the same factor (they read each bond on-chain), so a first-timer
+that puts money at risk beats a fresh junk account. When a winner fails the
+signed check, the buyer fires it on-chain at once (no pay, its bond to the
+buyer, the pay back) and hires the runner-up in the same round. The factory
+keeps a 0.5% fee. Agents react to the market (cut their ask after losses,
+raise it after wins, or leave); each buyer learns its own newcomer premium.
+Nothing about the winners is scripted. What emerged in the committed run
+(`web/swarm.json`, page `web/swarm.html`):
+- 136 parts were bought on-chain, 19 of them by contractors out of their
+  own pay; 121 passed the contract's check and were paid early.
+- Buyers fired 15 failed winners on the spot; 9 of 9 runner-ups passed, so
+  those parts were still delivered in the same round. (The other 6 had no
+  other bidder free that round, mostly deep sub-parts.)
+- Junk took 24% of wins in the first 4 rounds and 0% in the last 4. It is
+  never paid, its 0.05 NEAR bond goes to the buyer every time (15 bonds),
+  and each junk bot quits after 2 fresh accounts. Below the top level junk
+  won 5 of 19 sub-parts, all in the first 8 rounds.
+- Make or buy: contractors asked the model 31 times and bought 19. Trees
+  reached 3 levels. Contractors kept 121.04 fUSD of margin between what they
+  won and what they paid their sub-agents.
+- Undercut agents earn the most (391 fUSD), then contractors (304), the
+  model-driven bidder (195) and adaptive agents (175). Greedy agents leave.
 - The factory kept 12.60 fUSD in platform fees.
 
 In this run the model is the scripted test model. With a NEAR AI key the

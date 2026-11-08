@@ -32,6 +32,8 @@ it were real. Each row names the test that shows the answer.
 | The treasury buys a contractor's note, then a sub-job refund changes what the contractor is owed | the note is not sellable while the contractor's sub-jobs are open | `a_contractors_note_waits_for_its_sub_jobs` |
 | A contractor bids on its own slot, or a stranger hires in a sub-job | refused | `a_contractor_cannot_bid_on_its_own_slot`, `a_stranger_cannot_hire_in_a_sub_job` |
 | A junk bot bids freely and walks away after failing | slots can ask for a NEAR bond; the buyer keeps a junk winner's bond, losers get theirs back at the award | `junk_loses_its_bond_to_the_buyer`, `a_paid_worker_gets_its_bond_back` |
+| Junk wins a part and the buyer has to wait the whole window on it | after a failed signed check the buyer fires the worker (no pay, bond to the buyer, pay back at once) and hires the runner-up in the same window; it cannot fire passed or unchecked work | `the_buyer_fires_a_failed_worker_and_gets_everything_back`, `a_worker_whose_work_passed_cannot_be_fired`, `a_fired_worker_cannot_redeliver` |
+| A fresh junk account looks the same as an honest first-timer | an honest newcomer stakes 10x the slot's bond and the buyer divides its newcomer premium by that; junk that copies it loses 0.5 NEAR per junk delivery | `a_newcomer_that_stakes_more_bond_pays_less_premium` |
 | A bidder watches the open bids and undercuts by one unit at the last second | sealed slots: commit a hash, reveal after bidding closes; the award waits for the reveal | `sealed_bids_hide_the_price_until_the_reveal`, `no_award_before_the_reveal_closes` |
 | A sealed bidder commits, then does not reveal to keep a free option | an unrevealed bid cannot win and its bond goes to the buyer | `an_unrevealed_bid_cannot_win`, `an_unrevealed_bond_goes_to_the_buyer` |
 | The factory owner sets a confiscatory platform fee | capped at 1%; a failed post refunds the fee too | `the_fee_is_capped_at_one_percent`, `the_platform_fee_comes_off_the_top_and_is_kept_only_when_posted` |
@@ -147,3 +149,7 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 - The checker is pinned per factory, not per job; changing it affects only
   new jobs.
 - Testnet only; the lead's bond is recorded but not yet slashable.
+- Firing ends the worker's chance to redeliver after one failed check. A
+  borderline worker (score 5) loses the job; the signed check decides, not
+  the buyer. A rich junk operator can still stake 10x and win once per
+  fresh account; each loss costs it 0.5 NEAR.
