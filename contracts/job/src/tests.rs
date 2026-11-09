@@ -3242,6 +3242,9 @@ fn deleted_sub_reports_the_workers_record_to_the_registry() {
     assert_eq!(r["delivered"], true);
     assert_eq!(r["paid"], true);
     assert_eq!(r["junk"], false);
+    // Weighted by money: the pay at stake and who paid it.
+    assert_eq!(r["amount"], json!(U128(j.get_job().amount.0)));
+    assert_eq!(r["payer"], LEAD);
     let to = get_created_receipts()
         .into_iter()
         .find(|x| {
@@ -3348,7 +3351,10 @@ mod bidding {
                 price: U128(20 * USD),
                 // The second call's deposit is not kept: it joins the bond.
                 bond: U128(BID_NEAR.as_yoctonear()),
-                commit: None
+                commit: None,
+                offer: U128(0),
+                backer: None,
+                backed: U128(0),
             }]
         );
     }
@@ -3707,6 +3713,112 @@ mod bonds {
         assert!(transfers().contains(&(LEAD.into(), BOND.as_yoctonear())));
         assert_eq!(events("bond_kept").len(), 1);
         assert_eq!(j.children[0].bond, U128(0));
+    }
+
+    // ------------------------------------------------------ underwriters
+
+    const BACKING: NearToken = NearToken::from_near(4);
+    const PREMIUM: u128 = BOND.as_yoctonear() / 5;
+
+    /// WORKER bids, seeks a backer for PREMIUM, EVE backs it with 4 NEAR;
+    /// WORKER2 bids too. WORKER wins. Returns the job (child 0 open).
+    fn backed_award() -> Job {
+        let mut j = funded_root(100 * USD);
+        let s = with_bond(&mut j);
+        bid_bonded(&mut j, WORKER, s, 20 * USD);
+        bid_bonded(&mut j, WORKER2, s, 25 * USD);
+        Ctx::new(ROOT, WORKER).set();
+        j.seek_backer(s, U128(PREMIUM));
+        Ctx::new(ROOT, EVE).deposit(BACKING).set();
+        j.back(s, acc(WORKER));
+        let b = j.get_bids(s).unwrap();
+        assert_eq!(b.bids[0].backer.as_ref().map(|a| a.as_str()), Some(EVE));
+        assert_eq!(b.bids[0].backed.0, BACKING.as_yoctonear());
+        Ctx::new(ROOT, LEAD)
+            .at(CLOSED)
+            .deposit(NearToken::from_millinear(50))
+            .set();
+        j.award(s, acc(WORKER), None);
+        Ctx::new(ROOT, ROOT).at(CLOSED).results(vec![ok(b"")]).set();
+        j.on_child_created(0);
+        Ctx::new(ROOT, ROOT)
+            .at(CLOSED)
+            .results(vec![ok(&u128_json(20 * USD))])
+            .set();
+        assert!(j.on_child_funded(0));
+        j
+    }
+
+    #[test]
+    fn a_backer_of_paid_work_gets_its_near_back_plus_the_premium() {
+        let mut j = backed_award();
+        Ctx::new(ROOT, T1).at(CLOSED).set();
+        j.child_closed(U128(0), Some(true));
+        let t = transfers();
+        assert!(t.contains(&(EVE.into(), BACKING.as_yoctonear() + PREMIUM)));
+        assert!(t.contains(&(WORKER.into(), BOND.as_yoctonear() - PREMIUM)));
+        assert_eq!(events("backer_paid").len(), 1);
+    }
+
+    #[test]
+    fn a_backer_of_junk_loses_its_near_to_the_buyer() {
+        let mut j = backed_award();
+        Ctx::new(ROOT, T1).at(CLOSED).set();
+        j.child_closed(U128(20 * USD), Some(false));
+        assert!(transfers().contains(&(LEAD.into(), BOND.as_yoctonear() + BACKING.as_yoctonear())));
+        assert!(!transfers().iter().any(|(to, _)| to == EVE));
+    }
+
+    #[test]
+    fn a_backer_of_a_losing_bid_is_refunded_at_the_award() {
+        let mut j = funded_root(100 * USD);
+        let s = with_bond(&mut j);
+        bid_bonded(&mut j, WORKER, s, 20 * USD);
+        bid_bonded(&mut j, WORKER2, s, 25 * USD);
+        Ctx::new(ROOT, WORKER2).set();
+        j.seek_backer(s, U128(PREMIUM));
+        Ctx::new(ROOT, EVE).deposit(BACKING).set();
+        j.back(s, acc(WORKER2));
+        Ctx::new(ROOT, LEAD)
+            .at(CLOSED)
+            .deposit(NearToken::from_millinear(50))
+            .set();
+        j.award(s, acc(WORKER), None);
+        let t = transfers();
+        assert!(t.contains(&(EVE.into(), BACKING.as_yoctonear())));
+        assert!(t.contains(&(WORKER2.into(), BOND.as_yoctonear())));
+    }
+
+    #[test]
+    #[should_panic(expected = "that bid does not seek a backer")]
+    fn nobody_backs_a_bid_that_did_not_ask() {
+        let mut j = funded_root(100 * USD);
+        let s = with_bond(&mut j);
+        bid_bonded(&mut j, WORKER, s, 20 * USD);
+        Ctx::new(ROOT, EVE).deposit(BACKING).set();
+        j.back(s, acc(WORKER));
+    }
+
+    #[test]
+    #[should_panic(expected = "the premium is at most half your bond")]
+    fn a_premium_above_half_the_bond_is_refused() {
+        let mut j = funded_root(100 * USD);
+        let s = with_bond(&mut j);
+        bid_bonded(&mut j, WORKER, s, 20 * USD);
+        Ctx::new(ROOT, WORKER).set();
+        j.seek_backer(s, U128(BOND.as_yoctonear() / 2 + 1));
+    }
+
+    #[test]
+    #[should_panic(expected = "you cannot back your own bid")]
+    fn a_bidder_cannot_back_itself() {
+        let mut j = funded_root(100 * USD);
+        let s = with_bond(&mut j);
+        bid_bonded(&mut j, WORKER, s, 20 * USD);
+        Ctx::new(ROOT, WORKER).set();
+        j.seek_backer(s, U128(PREMIUM));
+        Ctx::new(ROOT, WORKER).deposit(BACKING).set();
+        j.back(s, acc(WORKER));
     }
 
     #[test]

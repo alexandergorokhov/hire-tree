@@ -14,6 +14,7 @@
 
 pub mod agents;
 pub mod chain;
+pub mod intent;
 pub mod judge;
 pub mod llm;
 pub mod mcp;

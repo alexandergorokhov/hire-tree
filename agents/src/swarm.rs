@@ -13,6 +13,7 @@
 
 use crate::agents::{b64, WORKER};
 use crate::chain::{num, Acc, Chain, USD};
+use crate::intent;
 use crate::llm::{chat_body, Llm};
 use crate::tools::Tools;
 use base64::Engine;
@@ -316,8 +317,27 @@ pub fn pick(
 /// What an honest newcomer stakes on top of the slot's bond: 9x more, so
 /// its bid carries 10x the slot's bond. It gets it back when it delivers;
 /// a junk bot that copied it would lose 0.5 NEAR per junk delivery.
-/// A buyer audits a passed delivery when the worker has fewer paid jobs.
-pub const AUDIT_BELOW: u64 = 3;
+/// A buyer audits a passed delivery unless the worker was paid at least
+/// this much fUSD (`AUDIT_VALUE`) by at least `AUDIT_PAYERS` different
+/// managers: a record pumped by hiring yourself never gets past the audit.
+pub const AUDIT_VALUE: u128 = 30 * USD;
+pub const AUDIT_PAYERS: u64 = 2;
+
+/// A record weighted by money, in 0.01 fUSD: (all pay at stake, pay paid).
+/// Buyers price risk by how much money a worker lost, not how many jobs.
+pub fn weighed(rec: &Value) -> (u32, u32) {
+    let paid = num(&rec["paid_value"]) / (USD / 100);
+    let unpaid = num(&rec["unpaid_value"]) / (USD / 100);
+    (
+        (paid + unpaid).min(u32::MAX as u128) as u32,
+        paid.min(u32::MAX as u128) as u32,
+    )
+}
+
+/// Passes from this worker skip the audit: enough money, from enough payers.
+pub fn trusted(rec: &Value) -> bool {
+    num(&rec["paid_value"]) >= AUDIT_VALUE && rec["payers"].as_u64().unwrap_or(0) >= AUDIT_PAYERS
+}
 
 pub const VOUCH_EXTRA_YOCTO: u128 = 9 * BOND_YOCTO;
 
@@ -394,6 +414,10 @@ fn jitter(name: &str) -> i64 {
 
 const BID_SECS: u64 = 300;
 const WINDOW_SECS: u64 = 5400;
+/// A job intent's life: the lead fee rises from 0 to MAX_LEAD_FEE over it.
+const INTENT_SECS: u64 = 600;
+/// The most a client lets a lead keep of one job (fUSD units).
+const MAX_LEAD_FEE: u128 = 8 * USD;
 /// fUSD each lead's client posts per round.
 const JOB_BUDGET: u128 = 70;
 /// Platform fee the factory keeps on each posted budget in this run.
@@ -502,6 +526,15 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
         c.register(&lead).await;
         c.register(&client).await;
         c.mint(&client.id, 70 * USD * rounds as u128).await;
+        // The client keeps its budget at the factory and signs one job
+        // intent per round; leads compete to fill them.
+        tools
+            .call(
+                &client,
+                "deposit",
+                &json!({ "amount": (JOB_BUDGET * USD * rounds as u128).to_string() }),
+            )
+            .await?;
         c.call(
             &client,
             &c.hub,
@@ -547,24 +580,87 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
         format!("{:?}{}", std::time::SystemTime::now(), std::process::id()).as_bytes(),
     );
     let mut log = vec![];
+    // Each lead's reservation: the lead fee at which it fills an intent.
+    // A lower one fills sooner (the fee rises over the intent's life) and so
+    // picks workers first; leads adapt it every round.
+    let mut reserve: [u128; 3] = [5 * USD, 4 * USD, 6 * USD];
     let mut lead_spent = [0u128; 3];
     let mut lead_unfilled = [0u32; 3];
     for r in 1..=rounds {
         let mut parts: Vec<Part> = vec![];
-        // Leads take turns picking first.
-        let order: Vec<usize> = (0..3).map(|k| (k + r as usize - 1) % 3).collect();
-        // 1. Every lead posts a job and puts its three parts out for bids.
-        for &l in &order {
+        // 1. Intent-based settlement: each client signs a job intent off-chain
+        // (the lead fee rises from 0 to MAX_LEAD_FEE over INTENT_SECS); each
+        // lead fills one when the fee reaches its reservation. The lead that
+        // asks least fills first and picks workers first.
+        let t0 = c.block_time_ns().await;
+        let t1 = t0 + INTENT_SECS * 1_000_000_000;
+        let mut intents = vec![];
+        for (k, (cl, _)) in LEADS.iter().enumerate() {
+            let task =
+                format!("Round {r}, client {cl}: explainer, Spanish translation and a summary.");
+            let i = intent::build(
+                c.hub.as_str(),
+                leads[k].1.id.as_str(),
+                JOB_BUDGET * USD,
+                &ht_core::receipt::sha256_hex(task.as_bytes()),
+                WINDOW_SECS,
+                MAX_LEAD_FEE,
+                t0,
+                t1,
+                r as u128,
+            );
+            if r == 1 {
+                let key = intent::public_key(leads[k].1.id.as_str());
+                c.call(
+                    &leads[k].1,
+                    &c.hub,
+                    "set_intent_key",
+                    json!({ "public_key": key }),
+                    near_api::types::NearToken::from_yoctonear(0),
+                )
+                .await?;
+            }
+            let sig = intent::sign(leads[k].1.id.as_str(), &i);
+            intents.push((i, sig));
+        }
+        let mut order: Vec<usize> = (0..3).collect();
+        order.sort_by_key(|&l| (reserve[l], (l + r as usize) % 3));
+        let mut fills = vec![];
+        let mut fill_roots: Vec<String> = vec![];
+        for (k, &l) in order.iter().enumerate() {
+            let at = intent::fill_time(reserve[l], MAX_LEAD_FEE, t0, t1);
+            let now = c.block_time_ns().await;
+            if at > now {
+                c.fast_forward((at - now).div_ceil(1_000_000_000)).await;
+            }
             let next = c.view(&c.hub, "get_settings", json!({})).await?["next"]
                 .as_u64()
                 .ok_or("next")?;
             let root = format!("job-{next}.{}", c.hub);
-            let task = format!(
-                "Round {r}, lead {}: explainer, Spanish translation and a summary.",
-                LEADS[l].0
-            );
-            tools.call(&leads[l].1, "post_job", &json!({ "budget": (JOB_BUDGET * USD).to_string(), "manager": leads[l].0.id,
-                "task": task, "window_secs": WINDOW_SECS, "lead_fee": (5 * USD).to_string(), "treasury": treasury.id })).await?;
+            let (i, sig) = &intents[k];
+            tools
+                .call(
+                    &leads[l].0,
+                    "fill_intent",
+                    &json!({ "intent": i, "signature": sig, "treasury": treasury.id }),
+                )
+                .await?;
+            let job = c
+                .view(&root.parse().map_err(|_| "root")?, "get_job", json!({}))
+                .await?;
+            fills.push(json!({ "client": LEADS[k].0, "lead": LEADS[l].0, "lead_fee": num(&job["amount"]) as f64 / USD as f64,
+                "reserve": reserve[l] as f64 / USD as f64 }));
+            fill_roots.push(root);
+        }
+        // Leads adapt: the first to fill asks a little more next round, the
+        // last asks less to get workers sooner.
+        let first = order[0];
+        let last = order[2];
+        reserve[first] = (reserve[first] + USD / 2).min(MAX_LEAD_FEE - USD);
+        reserve[last] = reserve[last].saturating_sub(USD / 2).max(USD);
+        // 2. Every lead puts its job's three parts out for bids.
+        for (k, &l) in order.iter().enumerate() {
+            let root = fill_roots[k].clone();
             for (skill, max) in SKILLS {
                 let max = max * USD * LEADS[l].1.max_pct / 100;
                 let ptask = format!("Round {r}, lead {}: the {skill} part.", LEADS[l].0);
@@ -771,13 +867,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                             &json!({ "account": agents[i].acc.id }),
                         )
                         .await?;
-                    cands.push((
-                        i,
-                        price,
-                        rec["jobs"].as_u64().unwrap_or(0) as u32,
-                        rec["paid"].as_u64().unwrap_or(0) as u32,
-                        vouch,
-                    ));
+                    cands.push((i, price, weighed(&rec).0, weighed(&rec).1, vouch));
                 }
                 let (prem, weight) = terms(blind, *premium.get(&bname).unwrap_or(&0), rules);
                 let Some(w) = pick(&cands, prem, weight) else {
@@ -977,8 +1067,8 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                         .call(&keeper, "finalize_check", &json!({ "job": child }))
                         .await?;
                 }
-                // Audit: before paying a pass from a thin record (fewer than
-                // AUDIT_BELOW paid jobs), the buyer disputes it on-chain; two
+                // Audit: before paying a pass from a worker not yet trusted (less than
+                // AUDIT_VALUE paid by AUDIT_PAYERS managers), the buyer disputes it; two
                 // more judge panels answer, and two failing votes of three
                 // refund the buyer and keep the bond.
                 let mut audited = vec![];
@@ -994,7 +1084,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                             &json!({ "account": agents[w].acc.id }),
                         )
                         .await?;
-                    if blind || rec["paid"].as_u64().unwrap_or(0) >= AUDIT_BELOW {
+                    if blind || trusted(&rec) {
                         continue;
                     }
                     let buyer_acc = buyer_acc(parts[p].buyer, &leads, &agents);
@@ -1148,13 +1238,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                             )
                             .await?;
                         // Losers' bonds went back at the award: no vouching now.
-                        cands.push((
-                            i,
-                            price,
-                            rec["jobs"].as_u64().unwrap_or(0) as u32,
-                            rec["paid"].as_u64().unwrap_or(0) as u32,
-                            1,
-                        ));
+                        cands.push((i, price, weighed(&rec).0, weighed(&rec).1, 1));
                     }
                     let bname = buyer_name(buyer, &agents);
                     let (prem, weight) = terms(blind, *premium.get(&bname).unwrap_or(&0), rules);
@@ -1348,7 +1432,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                 .collect::<Vec<_>>()
                 .join(", ")
         );
-        log.push(json!({ "round": r, "order": order.iter().map(|&l| LEADS[l].0).collect::<Vec<_>>(), "parts": rows }));
+        log.push(json!({ "round": r, "order": order.iter().map(|&l| LEADS[l].0).collect::<Vec<_>>(), "intents": fills, "parts": rows }));
     }
     let mut table = vec![];
     for a in &agents {
@@ -1451,6 +1535,24 @@ mod tests {
         assert_eq!(pick(&[(0, 27, 3, 3, 1), (1, 13, 2, 0, 1)], 0, 150), Some(0));
         // One unpaid job in four is a smaller penalty: 19 weighs ~26 and still wins.
         assert_eq!(pick(&[(0, 27, 3, 3, 1), (1, 19, 4, 3, 1)], 0, 150), Some(1));
+    }
+
+    #[test]
+    fn records_are_weighed_by_money_and_payers() {
+        // 9 paid 1-fUSD jobs and one lost 30-fUSD job: by count 90% paid, by
+        // money 23% paid. The buyer prices the money.
+        let rec = json!({ "jobs": 10, "paid": 9, "paid_value": (9 * USD).to_string(),
+                          "unpaid_value": (30 * USD).to_string(), "payers": 3 });
+        assert_eq!(weighed(&rec), (3900, 900));
+        assert!(!trusted(&rec), "9 fUSD paid is below the audit bar");
+        let rich_self = json!({ "paid_value": (500 * USD).to_string(), "payers": 1 });
+        assert!(
+            !trusted(&rich_self),
+            "one payer (or yourself) is never enough"
+        );
+        let ok = json!({ "paid_value": (30 * USD).to_string(), "payers": 2 });
+        assert!(trusted(&ok));
+        assert_eq!(weighed(&json!({})), (0, 0));
     }
 
     #[test]

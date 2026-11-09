@@ -135,6 +135,15 @@ pub struct Bid {
     /// (the price is 0 until then).
     #[serde(default)]
     pub commit: Option<String>,
+    /// Underwriting: the premium (yocto NEAR, out of the bidder's own bond)
+    /// the bidder offers whoever backs it (`seek_backer`).
+    #[serde(default)]
+    pub offer: U128,
+    /// The underwriter that backed this bid, and the NEAR it put at risk.
+    #[serde(default)]
+    pub backer: Option<AccountId>,
+    #[serde(default)]
+    pub backed: U128,
 }
 
 /// A subtask the manager put out for bids: workers offer a price up to
@@ -241,6 +250,14 @@ pub struct Child {
     /// The worker's bond (yocto NEAR), held here until the child closes.
     #[serde(default)]
     pub bond: U128,
+    /// Its underwriter, the NEAR it backed the worker with, and the premium
+    /// it earns out of the worker's bond if the work is paid.
+    #[serde(default)]
+    pub backer: Option<AccountId>,
+    #[serde(default)]
+    pub backed: U128,
+    #[serde(default)]
+    pub premium: U128,
 }
 
 /// The one settle transfer (or balance check) in flight.
@@ -950,6 +967,9 @@ impl Job {
                     price,
                     bond: U128(attached - fee),
                     commit: commit.clone(),
+                    offer: U128(0),
+                    backer: None,
+                    backed: U128(0),
                 });
             }
         }
@@ -961,6 +981,78 @@ impl Job {
         } else {
             emit("bid", json!({ "slot": slot, "worker": me, "price": price }));
         }
+    }
+
+    /// Underwriting, step 1. A bidder offers a premium (yocto NEAR, at most
+    /// half its own bond) to whoever backs its bid with more bond. The
+    /// premium is paid only if the bidder wins and its work is paid.
+    pub fn seek_backer(&mut self, slot: u32, premium: U128) {
+        let me = env::predecessor_account_id();
+        let s = self
+            .bid_slots
+            .get_mut(slot as usize)
+            .unwrap_or_else(|| env::panic_str("no such bid slot"));
+        require!(
+            s.awarded.is_none() && env::block_timestamp() < s.closes_ns.0,
+            "bidding is closed"
+        );
+        let b = s
+            .bids
+            .iter_mut()
+            .find(|b| b.worker == me)
+            .unwrap_or_else(|| env::panic_str("you did not bid on this slot"));
+        require!(b.backer.is_none(), "this bid is already backed");
+        require!(
+            premium.0 <= b.bond.0 / 2,
+            "the premium is at most half your bond"
+        );
+        b.offer = premium;
+        emit(
+            "backer_sought",
+            json!({ "slot": slot, "worker": me, "premium": premium }),
+        );
+    }
+
+    /// Underwriting, step 2. Anyone but the bidder and the buyer backs a bid
+    /// that seeks a backer, attaching NEAR (at most MAX_BOND). Buyers see the
+    /// bid's bond plus the backing. If the bidder wins and is paid, the
+    /// backer gets its NEAR back plus the premium; if its work is junk, the
+    /// buyer keeps both bonds; if it loses the auction, everyone is refunded.
+    #[payable]
+    pub fn back(&mut self, slot: u32, bidder: AccountId) {
+        require!(
+            self.status == Status::Open && self.window_open(),
+            "the job no longer takes bids (approved, fired, delivered or closed)"
+        );
+        let me = env::predecessor_account_id();
+        require!(me != bidder, "you cannot back your own bid");
+        require!(me != self.manager, "the buyer cannot back a bid");
+        let x = env::attached_deposit().as_yoctonear();
+        require!(
+            x > 0 && x <= MAX_BOND.as_yoctonear(),
+            "attach between 1 yocto and 5 NEAR"
+        );
+        let s = self
+            .bid_slots
+            .get_mut(slot as usize)
+            .unwrap_or_else(|| env::panic_str("no such bid slot"));
+        require!(
+            s.awarded.is_none() && env::block_timestamp() < s.closes_ns.0,
+            "bidding is closed"
+        );
+        let b = s
+            .bids
+            .iter_mut()
+            .find(|b| b.worker == bidder)
+            .unwrap_or_else(|| env::panic_str("that account did not bid on this slot"));
+        require!(b.offer.0 > 0, "that bid does not seek a backer");
+        require!(b.backer.is_none(), "this bid is already backed");
+        b.backer = Some(me.clone());
+        b.backed = U128(x);
+        emit(
+            "backed",
+            json!({ "slot": slot, "worker": bidder, "backer": me, "backed": U128(x), "premium": b.offer }),
+        );
     }
 
     /// Manager only, after bidding closes: hire one bidder at its own bid.
@@ -999,11 +1091,21 @@ impl Job {
         // to the buyer (no free option to hide and walk away).
         let buyer = env::predecessor_account_id();
         let mut winner_bond = 0;
+        let mut winner_backing = (None, 0u128, 0u128);
         for b in self.bid_slots[slot as usize].bids.iter_mut() {
             let x = std::mem::replace(&mut b.bond, U128(0)).0;
+            let backed = std::mem::replace(&mut b.backed, U128(0)).0;
             if b.worker == worker {
                 winner_bond = x;
-            } else if x > 0 {
+                winner_backing = (b.backer.clone(), backed, b.offer.0.min(x));
+                continue;
+            }
+            if let (Some(k), true) = (b.backer.clone(), backed > 0) {
+                Promise::new(k)
+                    .transfer(NearToken::from_yoctonear(backed))
+                    .detach();
+            }
+            if x > 0 {
                 let to = if b.commit.is_some() {
                     buyer.clone()
                 } else {
@@ -1017,6 +1119,9 @@ impl Job {
         let p = self.hire_inner(worker, price, s.spec_hash, sub, by_worker);
         let last = self.children.len() - 1;
         self.children[last].bond = U128(winner_bond);
+        self.children[last].backer = winner_backing.0;
+        self.children[last].backed = U128(winner_backing.1);
+        self.children[last].premium = U128(winner_backing.2);
         p
     }
 
@@ -1077,6 +1182,9 @@ impl Job {
             since_ns: env::block_timestamp(),
             by_worker,
             bond: U128(0),
+            backer: None,
+            backed: U128(0),
+            premium: U128(0),
         });
         self.children_pending += 1;
 
@@ -1325,6 +1433,8 @@ impl Job {
         }
         self.children[i].state = ChildState::Failed;
         self.children_pending -= 1;
+        // A hire that never happened earns the backer no premium.
+        self.children[i].premium = U128(0);
         self.release_bond(i, true);
         emit(
             "hire_failed",
@@ -1875,7 +1985,27 @@ impl Job {
     /// Send child `i`'s bond back to its worker (`to_worker`), or to the
     /// buyer that hired it (its work was not paid).
     fn release_bond(&mut self, i: usize, to_worker: bool) {
-        let x = std::mem::replace(&mut self.children[i].bond, U128(0)).0;
+        let mut x = std::mem::replace(&mut self.children[i].bond, U128(0)).0;
+        let backed = std::mem::replace(&mut self.children[i].backed, U128(0)).0;
+        let premium = std::mem::replace(&mut self.children[i].premium, U128(0)).0;
+        if let (Some(k), true) = (self.children[i].backer.clone(), backed > 0) {
+            if to_worker {
+                // Paid work: the backer gets its NEAR back plus the premium,
+                // out of the worker's own bond.
+                let pr = premium.min(x);
+                x -= pr;
+                emit(
+                    "backer_paid",
+                    json!({ "child": self.children[i].account, "backer": k, "backed": U128(backed), "premium": U128(pr) }),
+                );
+                Promise::new(k)
+                    .transfer(NearToken::from_yoctonear(backed + pr))
+                    .detach();
+            } else {
+                // Junk: the backer's NEAR goes to the buyer with the bond.
+                x += backed;
+            }
+        }
         if x == 0 {
             return;
         }
@@ -1915,6 +2045,16 @@ impl Job {
             s.awarded.is_none(),
             "slot was awarded: losers were refunded then"
         );
+        // A backer takes back what it backed the same way.
+        if let Some(b) = s.bids.iter_mut().find(|b| b.backer.as_ref() == Some(&me)) {
+            let x = std::mem::replace(&mut b.backed, U128(0)).0;
+            if x > 0 {
+                Promise::new(me)
+                    .transfer(NearToken::from_yoctonear(x))
+                    .detach();
+                return;
+            }
+        }
         let b = s
             .bids
             .iter_mut()
@@ -1935,6 +2075,12 @@ impl Job {
                 if x > 0 {
                     Promise::new(b.worker.clone())
                         .transfer(NearToken::from_yoctonear(x))
+                        .detach();
+                }
+                let k = std::mem::replace(&mut b.backed, U128(0)).0;
+                if let (Some(to), true) = (b.backer.clone(), k > 0) {
+                    Promise::new(to)
+                        .transfer(NearToken::from_yoctonear(k))
                         .detach();
                 }
             }
@@ -2504,6 +2650,8 @@ impl Job {
                         "junk": prev == Some(Status::Refunded),
                         "paid": paid,
                         "quality": self.quality,
+                        "amount": U128(self.ledger.amount),
+                        "payer": self.manager,
                     })
                     .to_string()
                     .into_bytes(),

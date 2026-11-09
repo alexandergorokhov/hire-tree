@@ -40,6 +40,14 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
     vec![
         ("post_job", "Client: post and fund a root job through the factory (needs 0.06 NEAR prepaid with prepay_post).",
          s(json!({ "budget": str_, "manager": str_, "task": str_, "window_secs": { "type": "integer" }, "lead_fee": str_, "treasury": str_ }), &["budget", "manager", "task", "window_secs"])),
+        ("deposit", "Client: keep `amount` fUSD at the factory for signed job intents (an ft_transfer_call with msg \"deposit\").",
+         s(json!({ "amount": str_ }), &["amount"])),
+        ("sign_intent", "Client: register your intent key (once) and sign a job intent off-chain: get `task` done for `budget`; a lead may keep up to `max_lead_fee`, rising from 0 now to the max after `secs`. Returns {intent, signature} for any lead to fill. No transaction but the key registration.",
+         s(json!({ "budget": str_, "task": str_, "window_secs": { "type": "integer" }, "max_lead_fee": str_, "secs": { "type": "integer" }, "nonce": str_ }), &["budget", "task", "window_secs", "max_lead_fee", "secs", "nonce"])),
+        ("quote_intent", "Anyone: the lead fee a fill would get right now, and whether the intent is still open.",
+         s(json!({ "intent": str_ }), &["intent"])),
+        ("fill_intent", "Lead: fill a signed job intent. The factory checks the client's signature, spends its deposit and posts the job with you as manager and the current lead fee (it rises over time: fill early to win, late to earn more).",
+         s(json!({ "intent": str_, "signature": str_, "treasury": str_ }), &["intent", "signature"])),
         ("hire", "Manager (or a sub-job's own worker, paying out of its own pay): hire a worker as a new sub-account t<n>.<job> holding exactly `amount` (+ optional `sub` budget). Attaches 0.035 NEAR.",
          s(json!({ "job": str_, "worker": str_, "amount": str_, "task": str_, "sub": str_ }), &["job", "worker", "amount", "task"])),
         ("open_bids", "Manager (or a sub-job's own worker, as a contractor): put a subtask out for bids on the job account (max = the most it will pay, fUSD units as a string; secs 10..3600; optional bond = yoctoNEAR each bidder stakes, at most 5 NEAR: losers get it back at the award, the winner when paid, the buyer keeps it on junk). Returns the slot number.",
@@ -148,6 +156,43 @@ impl Tools<'_> {
                 c.call(who, &id(a, "pool")?, m, json!({}), zero).await
             }
             "get_pool" => c.view(&id(a, "pool")?, "get_pool", json!({})).await,
+            "deposit" => {
+                let amount: u128 = s(a, "amount")?.parse().map_err(|_| "amount")?;
+                c.send(who, &c.hub, amount, Some("deposit")).await
+            }
+            "sign_intent" => {
+                let me = who.id.to_string();
+                let key = crate::intent::public_key(&me);
+                let have = c.view(&c.hub, "get_intent_key", json!({ "account_id": me })).await?;
+                if have.as_str() != Some(key.as_str()) {
+                    c.call(who, &c.hub, "set_intent_key", json!({ "public_key": key }), zero).await?;
+                }
+                let now = c.block_time_ns().await;
+                let secs = a["secs"].as_u64().ok_or("missing secs")?.clamp(10, 86_400);
+                let intent = crate::intent::build(
+                    c.hub.as_str(),
+                    &me,
+                    s(a, "budget")?.parse().map_err(|_| "budget")?,
+                    &ht_core::receipt::sha256_hex(s(a, "task")?.as_bytes()),
+                    a["window_secs"].as_u64().ok_or("missing window_secs")?,
+                    s(a, "max_lead_fee")?.parse().map_err(|_| "max_lead_fee")?,
+                    now,
+                    now + secs * 1_000_000_000,
+                    s(a, "nonce")?.parse().map_err(|_| "nonce")?,
+                );
+                Ok(json!({ "signature": crate::intent::sign(&me, &intent), "intent": intent }))
+            }
+            "quote_intent" => c.view(&c.hub, "quote_intent", json!({ "intent": s(a, "intent")? })).await,
+            "fill_intent" => {
+                c.call(
+                    who,
+                    &c.hub,
+                    "fill_intent",
+                    json!({ "intent": s(a, "intent")?, "signature": s(a, "signature")?, "treasury": a["treasury"].as_str() }),
+                    zero,
+                )
+                .await
+            }
             "post_job" => {
                 let task = s(a, "task")?;
                 let msg = json!({

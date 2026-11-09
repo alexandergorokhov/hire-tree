@@ -6,10 +6,10 @@
 //! unused, so the token refunds the client.
 
 use ht_core::binding::{parse_addr20_hex, parse_hash32_hex};
-use near_sdk::json_types::{Base58CryptoHash, U128};
+use near_sdk::json_types::{Base58CryptoHash, U128, U64};
 use near_sdk::serde::Deserialize;
 use near_sdk::serde_json::{self, json};
-use near_sdk::store::LookupMap;
+use near_sdk::store::{LookupMap, LookupSet};
 use near_sdk::{
     env, near, require, AccountId, Gas, NearToken, PanicOnDefault, Promise, PromiseOrValue,
 };
@@ -46,6 +46,93 @@ struct PostMsg {
     lead_fee: Option<U128>,
 }
 
+/// A job intent, signed off-chain by its client (see `fill_intent`).
+#[derive(Deserialize)]
+#[serde(crate = "near_sdk::serde", deny_unknown_fields)]
+struct Intent {
+    /// This factory: an intent cannot be replayed on another one.
+    factory: AccountId,
+    client: AccountId,
+    budget: U128,
+    spec_hash: String,
+    window_secs: u64,
+    max_lead_fee: U128,
+    starts_ns: U64,
+    ends_ns: U64,
+    nonce: U128,
+}
+
+/// The bytes a client signs: a domain tag, then the intent JSON exactly.
+pub fn intent_message(intent: &str) -> Vec<u8> {
+    let mut m = b"hiretree-intent:".to_vec();
+    m.extend_from_slice(intent.as_bytes());
+    m
+}
+
+/// The lead fee of a Dutch auction: 0 at `start`, rising linearly to `max`
+/// at `end` (and `max` after it).
+pub fn dutch_fee(max: u128, start: u64, end: u64, now: u64) -> u128 {
+    let (now, start, end) = (now as u128, start as u128, end as u128);
+    if now <= start || end <= start {
+        return 0;
+    }
+    if now >= end {
+        return max;
+    }
+    // max * elapsed / span without overflow: split max like platform_fee.
+    let (elapsed, span) = (now - start, end - start);
+    max / span * elapsed + max % span * elapsed / span
+}
+
+fn bs58_decode(s: &str) -> Option<Vec<u8>> {
+    const A: &[u8] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    let mut out: Vec<u8> = vec![];
+    for c in s.bytes() {
+        let mut carry = A.iter().position(|&x| x == c)? as u32;
+        for b in out.iter_mut().rev() {
+            carry += (*b as u32) * 58;
+            *b = (carry & 0xff) as u8;
+            carry >>= 8;
+        }
+        while carry > 0 {
+            out.insert(0, (carry & 0xff) as u8);
+            carry >>= 8;
+        }
+    }
+    let zeros = s.bytes().take_while(|&c| c == b'1').count();
+    let mut v = vec![0u8; zeros];
+    v.extend(out);
+    Some(v)
+}
+
+fn bs58_encode(bytes: &[u8]) -> String {
+    const A: &[u8] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    let mut digits: Vec<u8> = vec![];
+    for &b in bytes {
+        let mut carry = b as u32;
+        for d in digits.iter_mut() {
+            carry += (*d as u32) << 8;
+            *d = (carry % 58) as u8;
+            carry /= 58;
+        }
+        while carry > 0 {
+            digits.push((carry % 58) as u8);
+            carry /= 58;
+        }
+    }
+    let zeros = bytes.iter().take_while(|&&b| b == 0).count();
+    let mut s: String = "1".repeat(zeros);
+    s.extend(digits.iter().rev().map(|&d| A[d as usize] as char));
+    s
+}
+
+fn base64_decode(s: &str) -> Option<Vec<u8>> {
+    use near_sdk::base64::Engine;
+    near_sdk::base64::engine::general_purpose::STANDARD
+        .decode(s)
+        .ok()
+}
+
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PostState {
@@ -77,6 +164,16 @@ pub struct Record {
     /// Sum and count of check scores, for an average.
     pub score_sum: u32,
     pub scored: u32,
+    /// fUSD of pay the worker was paid, and of pay it lost (junk, fired):
+    /// a record weighted by money, not by job count.
+    #[serde(default)]
+    pub paid_value: U128,
+    #[serde(default)]
+    pub unpaid_value: U128,
+    /// How many different managers have paid this worker. A record built by
+    /// hiring yourself, or one friend, shows 1.
+    #[serde(default)]
+    pub payers: u32,
 }
 
 #[near(contract_state)]
@@ -99,6 +196,14 @@ pub struct Factory {
     fee_bps: u16,
     /// Fees kept so far and not yet withdrawn.
     fees: u128,
+    /// fUSD each client keeps here for its signed job intents.
+    deposits: LookupMap<AccountId, u128>,
+    /// The ed25519 key each client signs its intents with.
+    intent_keys: LookupMap<AccountId, [u8; 32]>,
+    /// (client, nonce) of every intent filled or cancelled.
+    used_nonces: LookupSet<(AccountId, u128)>,
+    /// (worker, manager) pairs where that manager paid that worker.
+    payers: LookupSet<(AccountId, AccountId)>,
 }
 
 /// The highest platform fee the owner may set: 1%.
@@ -142,6 +247,10 @@ impl Factory {
             records: LookupMap::new(b"r"),
             fee_bps: 0,
             fees: 0,
+            deposits: LookupMap::new(b"d"),
+            intent_keys: LookupMap::new(b"k"),
+            used_nonces: LookupSet::new(b"u"),
+            payers: LookupSet::new(b"p"),
         }
     }
 
@@ -217,7 +326,10 @@ impl Factory {
         PromiseOrValue::Value(amount)
     }
 
-    /// NEP-141 receiver: post a job. Anything not accepted is refunded.
+    /// NEP-141 receiver. `msg` = a post (`{manager, spec_hash, window_secs,
+    /// treasury?, lead_fee?}`): post and fund a job; anything not accepted is
+    /// refunded. `msg` = `"deposit"`: keep the tokens as the sender's intent
+    /// deposit, which a signed job intent spends (`fill_intent`).
     pub fn ft_on_transfer(
         &mut self,
         sender_id: AccountId,
@@ -227,8 +339,14 @@ impl Factory {
         if env::predecessor_account_id() != self.token {
             return self.refund(amount, "wrong token");
         }
-        if amount.0 < MIN_BUDGET {
-            return self.refund(amount, "budget below the minimum (1 fUSD)");
+        if msg == "deposit" {
+            let now = self.deposits.get(&sender_id).copied().unwrap_or(0) + amount.0;
+            self.deposits.insert(sender_id.clone(), now);
+            emit(
+                "deposited",
+                json!({ "account": sender_id, "deposit": U128(now) }),
+            );
+            return PromiseOrValue::Value(U128(0));
         }
         let Ok(m) = serde_json::from_str::<PostMsg>(&msg) else {
             return self.refund(
@@ -236,28 +354,57 @@ impl Factory {
                 "msg must be {manager, spec_hash, window_secs, treasury?, lead_fee?}",
             );
         };
-        if parse_hash32_hex(&m.spec_hash).is_none() {
-            return self.refund(amount, "spec_hash must be 64 hex chars");
+        if let Err(reason) = self.check_post(&sender_id, amount.0, &m) {
+            return self.refund(amount, reason);
         }
-        // The platform fee comes off the top; the job is funded with the rest.
-        let fee = platform_fee(amount.0, self.fee_bps);
-        let funded = amount.0 - fee;
-        let lead_fee = m.lead_fee.map(|f| f.0).unwrap_or(0);
-        if lead_fee > funded {
-            return self.refund(amount, "lead_fee is larger than the budget");
+        PromiseOrValue::Promise(self.launch(sender_id, amount.0, m, false))
+    }
+
+    /// Everything a post must satisfy before the factory spends anything.
+    fn check_post(
+        &self,
+        client: &AccountId,
+        amount: u128,
+        m: &PostMsg,
+    ) -> Result<(), &'static str> {
+        if amount < MIN_BUDGET {
+            return Err("budget below the minimum (1 fUSD)");
+        }
+        if parse_hash32_hex(&m.spec_hash).is_none() {
+            return Err("spec_hash must be 64 hex chars");
+        }
+        let funded = amount - platform_fee(amount, self.fee_bps);
+        if m.lead_fee.map(|f| f.0).unwrap_or(0) > funded {
+            return Err("lead_fee is larger than the budget");
         }
         if m.window_secs < MIN_WINDOW_SECS || m.window_secs > MAX_WINDOW_SECS {
-            return self.refund(amount, "window_secs out of range");
+            return Err("window_secs out of range");
         }
         if env::prepaid_gas().saturating_sub(env::used_gas()) < GAS_POST_MIN {
-            return self.refund(amount, "not enough gas to post (attach 200 Tgas)");
+            return Err("not enough gas to post (attach 200 Tgas)");
         }
-        let credit = self.credits.get(&sender_id).copied().unwrap_or(0);
-        if credit < POST_NEAR.as_yoctonear() {
-            return self.refund(amount, "prepay 0.06 NEAR with prepay_post first");
+        if self.credits.get(client).copied().unwrap_or(0) < POST_NEAR.as_yoctonear() {
+            return Err("prepay 0.06 NEAR with prepay_post first");
         }
+        Ok(())
+    }
+
+    /// Create, register and fund `job-<n>`; `on_posted` settles the money.
+    /// `from_deposit`: the budget came from the client's intent deposit, so
+    /// anything unused goes back to that deposit instead of to the token.
+    fn launch(
+        &mut self,
+        client: AccountId,
+        amount: u128,
+        m: PostMsg,
+        from_deposit: bool,
+    ) -> Promise {
+        let fee = platform_fee(amount, self.fee_bps);
+        let funded = amount - fee;
+        let lead_fee = m.lead_fee.map(|f| f.0).unwrap_or(0);
+        let credit = self.credits.get(&client).copied().unwrap_or(0);
         self.credits
-            .insert(sender_id.clone(), credit - POST_NEAR.as_yoctonear());
+            .insert(client.clone(), credit - POST_NEAR.as_yoctonear());
         let n = self.next;
         self.next += 1;
         let job: AccountId = format!("job-{n}.{}", env::current_account_id())
@@ -267,14 +414,14 @@ impl Factory {
             n,
             Posted {
                 job: job.clone(),
-                client: sender_id.clone(),
+                client: client.clone(),
                 manager: m.manager.clone(),
-                budget: amount,
+                budget: U128(amount),
                 state: PostState::Pending,
             },
         );
         let init = json!({
-            "client": sender_id, "manager": m.manager, "worker": null,
+            "client": client, "manager": m.manager, "worker": null,
             "token": self.token, "amount": U128(lead_fee), "spec_hash": m.spec_hash,
             "window_secs": m.window_secs, "signer": self.signer,
             "code_hash": Base58CryptoHash::from(self.code_hash),
@@ -282,7 +429,7 @@ impl Factory {
         });
         emit(
             "post_started",
-            json!({ "n": n, "job": job, "client": sender_id, "budget": amount, "platform_fee": U128(fee) }),
+            json!({ "n": n, "job": job, "client": client, "budget": U128(amount), "platform_fee": U128(fee) }),
         );
         let create = Promise::new(job.clone())
             .create_account()
@@ -311,19 +458,170 @@ impl Factory {
             NearToken::from_yoctonear(1),
             GAS_FT_TRANSFER_CALL,
         );
-        PromiseOrValue::Promise(
-            create.then(register).then(fund).then(
+        create.then(register).then(fund).then(
+            Self::ext(env::current_account_id())
+                .with_static_gas(GAS_ON_POSTED)
+                .on_posted(n, U128(amount), Some(U128(fee)), Some(from_deposit)),
+        )
+    }
+
+    /// The client registers the ed25519 key it signs job intents with (base58
+    /// or "ed25519:<base58>"). Replacing it voids intents signed with the old one.
+    pub fn set_intent_key(&mut self, public_key: String) {
+        let who = env::predecessor_account_id();
+        let raw = public_key.strip_prefix("ed25519:").unwrap_or(&public_key);
+        let bytes = bs58_decode(raw).unwrap_or_else(|| env::panic_str("public_key must be base58"));
+        let key: [u8; 32] = bytes
+            .try_into()
+            .unwrap_or_else(|_| env::panic_str("public_key must be 32 bytes"));
+        self.intent_keys.insert(who.clone(), key);
+        emit(
+            "intent_key",
+            json!({ "account": who, "public_key": public_key }),
+        );
+    }
+
+    /// Intent-based settlement. A client signs a job intent off-chain (no
+    /// transaction): "get this spec done for `budget`; a lead may keep up to
+    /// `max_lead_fee`". Any lead agent may fill it; the lead's fee rises from 0
+    /// at `starts_ns` to `max_lead_fee` at `ends_ns` (a Dutch auction), so lead
+    /// agents compete on how soon they fill. The first valid fill posts the
+    /// job from the client's deposit with the caller as its manager; the
+    /// nonce is then spent, so an intent fills once.
+    pub fn fill_intent(
+        &mut self,
+        intent: String,
+        signature: String,
+        treasury: Option<AccountId>,
+    ) -> Promise {
+        let lead = env::predecessor_account_id();
+        let i: Intent = serde_json::from_str(&intent)
+            .unwrap_or_else(|_| env::panic_str("intent must be the signed intent JSON"));
+        require!(
+            i.factory == env::current_account_id(),
+            "intent is for another factory"
+        );
+        require!(lead != i.client, "the client cannot fill its own intent");
+        let key = self
+            .intent_keys
+            .get(&i.client)
+            .copied()
+            .unwrap_or_else(|| env::panic_str("the client has no intent key"));
+        let sig: [u8; 64] = base64_decode(&signature)
+            .and_then(|b| b.try_into().ok())
+            .unwrap_or_else(|| env::panic_str("signature must be 64 bytes, base64"));
+        require!(
+            env::ed25519_verify(&sig, &intent_message(&intent), &key),
+            "bad intent signature"
+        );
+        let now = env::block_timestamp();
+        require!(now < i.ends_ns.0, "intent expired");
+        require!(i.starts_ns.0 < i.ends_ns.0, "intent window is empty");
+        let used_key = (i.client.clone(), i.nonce.0);
+        require!(
+            !self.used_nonces.contains(&used_key),
+            "intent already filled or cancelled"
+        );
+        let have = self.deposits.get(&i.client).copied().unwrap_or(0);
+        require!(
+            have >= i.budget.0,
+            "the client's deposit is below the budget"
+        );
+        let lead_fee = dutch_fee(i.max_lead_fee.0, i.starts_ns.0, i.ends_ns.0, now);
+        let m = PostMsg {
+            manager: lead.clone(),
+            spec_hash: i.spec_hash.clone(),
+            window_secs: i.window_secs,
+            treasury,
+            lead_fee: Some(U128(lead_fee)),
+        };
+        if let Err(reason) = self.check_post(&i.client, i.budget.0, &m) {
+            env::panic_str(reason);
+        }
+        self.used_nonces.insert(used_key);
+        self.deposits.insert(i.client.clone(), have - i.budget.0);
+        emit(
+            "intent_filled",
+            json!({ "client": i.client, "nonce": i.nonce, "lead": lead, "lead_fee": U128(lead_fee), "budget": i.budget }),
+        );
+        self.launch(i.client, i.budget.0, m, true)
+    }
+
+    /// The client cancels an intent it signed (before anyone fills it).
+    pub fn cancel_intent(&mut self, nonce: U128) {
+        let who = env::predecessor_account_id();
+        self.used_nonces.insert((who.clone(), nonce.0));
+        emit("intent_cancelled", json!({ "client": who, "nonce": nonce }));
+    }
+
+    /// The client takes back (part of) its intent deposit.
+    pub fn withdraw_deposit(&mut self, amount: U128) -> Promise {
+        let who = env::predecessor_account_id();
+        let have = self.deposits.get(&who).copied().unwrap_or(0);
+        require!(
+            amount.0 > 0 && amount.0 <= have,
+            "amount exceeds the deposit"
+        );
+        self.deposits.insert(who.clone(), have - amount.0);
+        Promise::new(self.token.clone())
+            .function_call(
+                "ft_transfer",
+                json!({ "receiver_id": who, "amount": amount })
+                    .to_string()
+                    .into_bytes(),
+                NearToken::from_yoctonear(1),
+                GAS_FT_TRANSFER,
+            )
+            .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(GAS_ON_POSTED)
-                    .on_posted(n, amount, Some(U128(fee))),
-            ),
-        )
+                    .on_deposit_withdrawn(who, amount),
+            )
+    }
+
+    /// A failed withdrawal goes back to the deposit.
+    #[private]
+    pub fn on_deposit_withdrawn(&mut self, account: AccountId, amount: U128) -> bool {
+        let ok = env::promise_result_checked(0, 64).is_ok();
+        if !ok {
+            let have = self.deposits.get(&account).copied().unwrap_or(0);
+            self.deposits.insert(account, have + amount.0);
+        }
+        ok
+    }
+
+    pub fn get_intent_key(&self, account_id: AccountId) -> Option<String> {
+        self.intent_keys
+            .get(&account_id)
+            .map(|k| format!("ed25519:{}", bs58_encode(k)))
+    }
+
+    pub fn get_deposit(&self, account_id: AccountId) -> U128 {
+        U128(self.deposits.get(&account_id).copied().unwrap_or(0))
+    }
+
+    /// The lead fee a fill would get now, and whether the nonce is still open.
+    pub fn quote_intent(&self, intent: String) -> serde_json::Value {
+        let i: Intent = serde_json::from_str(&intent)
+            .unwrap_or_else(|_| env::panic_str("intent must be the signed intent JSON"));
+        let now = env::block_timestamp();
+        json!({
+            "lead_fee": U128(dutch_fee(i.max_lead_fee.0, i.starts_ns.0, i.ends_ns.0, now)),
+            "open": now < i.ends_ns.0 && !self.used_nonces.contains(&(i.client.clone(), i.nonce.0)),
+            "deposit": U128(self.deposits.get(&i.client).copied().unwrap_or(0)),
+        })
     }
 
     /// After forwarding the budget. Returns what the token should refund to
     /// the client: 0 if the job kept everything.
     #[private]
-    pub fn on_posted(&mut self, n: u32, amount: U128, fee: Option<U128>) -> U128 {
+    pub fn on_posted(
+        &mut self,
+        n: u32,
+        amount: U128,
+        fee: Option<U128>,
+        from_deposit: Option<bool>,
+    ) -> U128 {
         let fee = fee.map(|f| f.0).unwrap_or(0);
         let funded = amount.0 - fee;
         require!(
@@ -366,8 +664,17 @@ impl Factory {
         // Posted: keep the fee. Failed: refund everything not used, fee too.
         let keep = if p.state == PostState::Posted { fee } else { 0 };
         self.fees += keep;
+        let back = amount.0 - used - keep;
+        if from_deposit == Some(true) {
+            // An intent fill: no token call to refund through, so what was
+            // not used goes back to the client's deposit.
+            let have = self.deposits.get(&p.client).copied().unwrap_or(0);
+            self.deposits.insert(p.client.clone(), have + back);
+            self.jobs.insert(n, p);
+            return U128(0);
+        }
         self.jobs.insert(n, p);
-        U128(amount.0 - used - keep)
+        U128(back)
     }
 
     /// Owner only: send the platform fees kept so far to the owner.
@@ -414,6 +721,8 @@ impl Factory {
         junk: bool,
         paid: bool,
         quality: Option<u8>,
+        amount: Option<U128>,
+        payer: Option<AccountId>,
     ) {
         let caller = env::predecessor_account_id();
         require!(
@@ -431,6 +740,17 @@ impl Factory {
         if let Some(q) = quality.filter(|q| *q <= 10) {
             r.score_sum += q as u32;
             r.scored += 1;
+        }
+        let v = amount.map(|a| a.0).unwrap_or(0);
+        if paid {
+            r.paid_value = U128(r.paid_value.0.saturating_add(v));
+            if let Some(p) = payer.filter(|p| *p != worker) {
+                if self.payers.insert((worker.clone(), p)) {
+                    r.payers += 1;
+                }
+            }
+        } else {
+            r.unpaid_value = U128(r.unpaid_value.0.saturating_add(v));
         }
         emit(
             "record",
@@ -578,7 +898,7 @@ mod tests {
                 format!("\"{BUDGET}\"").into_bytes(),
             )],
         );
-        assert_eq!(f.on_posted(1, U128(BUDGET), None), U128(0));
+        assert_eq!(f.on_posted(1, U128(BUDGET), None, None), U128(0));
         assert_eq!(f.get_job(1).unwrap().state, PostState::Posted);
     }
 
@@ -646,13 +966,13 @@ mod tests {
         ctx(TOKEN, vec![]);
         f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
         ctx(F, vec![PromiseResult::Failed]);
-        assert_eq!(f.on_posted(1, U128(BUDGET), None), U128(BUDGET));
+        assert_eq!(f.on_posted(1, U128(BUDGET), None, None), U128(BUDGET));
         assert_eq!(f.get_job(1).unwrap().state, PostState::Failed);
         // A partial answer refunds the rest.
         ctx(TOKEN, vec![]);
         f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
         ctx(F, vec![PromiseResult::Successful(b"\"0\"".to_vec())]);
-        assert_eq!(f.on_posted(2, U128(BUDGET), None), U128(BUDGET));
+        assert_eq!(f.on_posted(2, U128(BUDGET), None, None), U128(BUDGET));
     }
 
     #[test]
@@ -729,7 +1049,7 @@ mod tests {
         ctx(TOKEN, vec![]);
         f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
         ctx(F, vec![PromiseResult::Failed]);
-        f.on_posted(1, U128(BUDGET), None);
+        f.on_posted(1, U128(BUDGET), None, None);
         assert_eq!(f.get_credit(acc("client.test")).0, POST_NEAR.as_yoctonear());
     }
 
@@ -739,7 +1059,7 @@ mod tests {
         ctx(TOKEN, vec![]);
         f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
         ctx(F, vec![PromiseResult::Successful(b"garbage".to_vec())]);
-        assert_eq!(f.on_posted(1, U128(BUDGET), None), U128(0));
+        assert_eq!(f.on_posted(1, U128(BUDGET), None, None), U128(0));
     }
 
     #[test]
@@ -749,8 +1069,8 @@ mod tests {
         ctx(TOKEN, vec![]);
         f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
         ctx(F, vec![PromiseResult::Failed]);
-        f.on_posted(1, U128(BUDGET), None);
-        f.on_posted(1, U128(BUDGET), None);
+        f.on_posted(1, U128(BUDGET), None, None);
+        f.on_posted(1, U128(BUDGET), None, None);
     }
 
     #[test]
@@ -825,6 +1145,8 @@ mod tests {
                 junk,
                 !junk,
                 Some(if junk { 2 } else { 8 }),
+                None,
+                None,
             );
         }
         let r = f.get_record(acc("w.test"));
@@ -840,7 +1162,37 @@ mod tests {
     fn strangers_cannot_write_records() {
         let mut f = factory();
         ctx("hiretree.test.evil.test", vec![]);
-        f.record(acc("w.test"), true, true, false, true, Some(10));
+        f.record(acc("w.test"), true, true, false, true, Some(10), None, None);
+    }
+
+    #[test]
+    fn a_record_counts_money_and_distinct_payers() {
+        let mut f = factory();
+        let jobs = [
+            ("t1.job-1.hiretree.test", true, 20, "lead-a.test"),
+            ("t2.job-1.hiretree.test", true, 30, "lead-a.test"),
+            ("t1.job-2.hiretree.test", true, 10, "lead-b.test"),
+            ("t1.job-3.hiretree.test", false, 15, "lead-b.test"),
+            // Paying yourself never adds a payer.
+            ("t1.job-4.hiretree.test", true, 5, "w.test"),
+        ];
+        for (job, paid, v, payer) in jobs {
+            ctx(job, vec![]);
+            f.record(
+                acc("w.test"),
+                true,
+                paid,
+                !paid,
+                paid,
+                None,
+                Some(U128(v * MIN_BUDGET)),
+                Some(acc(payer)),
+            );
+        }
+        let r = f.get_record(acc("w.test"));
+        assert_eq!(r.paid_value.0, 65 * MIN_BUDGET);
+        assert_eq!(r.unpaid_value.0, 15 * MIN_BUDGET);
+        assert_eq!(r.payers, 2);
     }
 
     #[test]
@@ -864,7 +1216,7 @@ mod tests {
     fn on_posted_is_private() {
         let mut f = factory();
         ctx("eve.test", vec![PromiseResult::Failed]);
-        f.on_posted(1, U128(BUDGET), None);
+        f.on_posted(1, U128(BUDGET), None, None);
     }
 
     #[test]
@@ -895,7 +1247,7 @@ mod tests {
                 serde_json::to_vec(&U128(BUDGET - fee)).unwrap(),
             )],
         );
-        assert_eq!(f.on_posted(1, U128(BUDGET), Some(U128(fee))), U128(0));
+        assert_eq!(f.on_posted(1, U128(BUDGET), Some(U128(fee)), None), U128(0));
         assert_eq!(f.get_settings()["fees"], fee.to_string());
         // A failed post refunds everything, fee included.
         ctx(TOKEN, vec![]);
@@ -903,7 +1255,10 @@ mod tests {
         ctx(TOKEN, vec![]);
         f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
         ctx(F, vec![PromiseResult::Failed]);
-        assert_eq!(f.on_posted(2, U128(BUDGET), Some(U128(fee))), U128(BUDGET));
+        assert_eq!(
+            f.on_posted(2, U128(BUDGET), Some(U128(fee)), None),
+            U128(BUDGET)
+        );
         assert_eq!(f.get_settings()["fees"], fee.to_string());
     }
 
@@ -921,5 +1276,182 @@ mod tests {
         let mut f = factory();
         ctx("client.test", vec![]);
         f.withdraw_fees();
+    }
+
+    // ---------------------------------------------------- signed job intents
+
+    use ed25519_dalek::{Signer, SigningKey};
+
+    const T0: u64 = 1_000_000_000_000;
+    const SPAN: u64 = 600_000_000_000; // 600 s
+
+    fn key() -> SigningKey {
+        SigningKey::from_bytes(&[42u8; 32])
+    }
+
+    fn at(pred: &str, ts: u64) {
+        testing_env!(VMContextBuilder::new()
+            .current_account_id(acc(F))
+            .predecessor_account_id(acc(pred))
+            .prepaid_gas(Gas::from_tgas(300))
+            .block_timestamp(ts)
+            .account_balance(NearToken::from_near(10))
+            .build());
+    }
+
+    fn intent(factory: &str, budget: u128, nonce: u128) -> String {
+        json!({ "factory": factory, "client": "client.test", "budget": U128(budget),
+                "spec_hash": "ab".repeat(32), "window_secs": 3600, "max_lead_fee": U128(10 * MIN_BUDGET),
+                "starts_ns": U64(T0), "ends_ns": U64(T0 + SPAN), "nonce": U128(nonce) })
+        .to_string()
+    }
+
+    fn sign(intent: &str) -> String {
+        use near_sdk::base64::Engine;
+        let sig = key().sign(&intent_message(intent));
+        near_sdk::base64::engine::general_purpose::STANDARD.encode(sig.to_bytes())
+    }
+
+    /// A factory where client.test registered its key and deposited `dep`.
+    fn with_deposit(dep: u128) -> Factory {
+        let mut f = factory();
+        at("client.test", T0);
+        let pk = format!("ed25519:{}", bs58_encode(key().verifying_key().as_bytes()));
+        f.set_intent_key(pk.clone());
+        assert_eq!(f.get_intent_key(acc("client.test")), Some(pk));
+        ctx(TOKEN, vec![]);
+        assert_eq!(
+            value(f.ft_on_transfer(acc("client.test"), U128(dep), "deposit".into())),
+            0
+        );
+        f
+    }
+
+    #[test]
+    fn the_lead_fee_rises_from_zero_to_the_max() {
+        assert_eq!(dutch_fee(100, T0, T0 + SPAN, T0 - 1), 0);
+        assert_eq!(dutch_fee(100, T0, T0 + SPAN, T0), 0);
+        assert_eq!(dutch_fee(100, T0, T0 + SPAN, T0 + SPAN / 4), 25);
+        assert_eq!(dutch_fee(100, T0, T0 + SPAN, T0 + SPAN), 100);
+        assert_eq!(
+            dutch_fee(u128::MAX, T0, T0 + SPAN, T0 + SPAN / 2),
+            u128::MAX / 2
+        );
+    }
+
+    #[test]
+    fn a_lead_fills_a_signed_intent_and_the_job_is_posted() {
+        let mut f = with_deposit(BUDGET);
+        let i = intent(F, BUDGET, 1);
+        // A quarter of the way through, the lead fee is a quarter of the max.
+        at("lead.test", T0 + SPAN / 4);
+        let _ = f.fill_intent(i.clone(), sign(&i), Some(acc("treasury.lead.test")));
+        assert_eq!(f.get_deposit(acc("client.test")).0, 0);
+        let p = f.get_job(1).unwrap();
+        assert_eq!(
+            (p.client.as_str(), p.manager.as_str()),
+            ("client.test", "lead.test")
+        );
+        let init = get_created_receipts()
+            .iter()
+            .find(|r| r.receiver_id == acc("job-1.hiretree.test"))
+            .and_then(|r| {
+                r.actions.iter().find_map(|a| match a {
+                    MockAction::FunctionCallWeight {
+                        method_name, args, ..
+                    } if method_name == b"new" => {
+                        Some(serde_json::from_slice::<serde_json::Value>(args).unwrap())
+                    }
+                    _ => None,
+                })
+            })
+            .expect("job init");
+        assert_eq!(init["amount"], json!(U128(10 * MIN_BUDGET / 4)));
+        assert_eq!(init["manager"], json!("lead.test"));
+        assert_eq!(f.quote_intent(i)["open"], json!(false));
+    }
+
+    #[test]
+    #[should_panic(expected = "intent already filled or cancelled")]
+    fn an_intent_fills_only_once() {
+        let mut f = with_deposit(2 * BUDGET);
+        let i = intent(F, BUDGET, 1);
+        at("lead.test", T0 + 1);
+        let _ = f.fill_intent(i.clone(), sign(&i), None);
+        prepay(&mut f, "client.test", 1);
+        at("lead2.test", T0 + 2);
+        let _ = f.fill_intent(i.clone(), sign(&i), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "bad intent signature")]
+    fn a_tampered_intent_is_refused() {
+        let mut f = with_deposit(2 * BUDGET);
+        let signed = intent(F, BUDGET, 1);
+        let sig = sign(&signed);
+        // Same signature, bigger budget.
+        at("lead.test", T0 + 1);
+        let _ = f.fill_intent(intent(F, 2 * BUDGET, 1), sig, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "intent is for another factory")]
+    fn an_intent_for_another_factory_is_refused() {
+        let mut f = with_deposit(BUDGET);
+        let i = intent("other.test", BUDGET, 1);
+        at("lead.test", T0 + 1);
+        let _ = f.fill_intent(i.clone(), sign(&i), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "intent expired")]
+    fn an_expired_intent_is_refused() {
+        let mut f = with_deposit(BUDGET);
+        let i = intent(F, BUDGET, 1);
+        at("lead.test", T0 + SPAN);
+        let _ = f.fill_intent(i.clone(), sign(&i), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "intent already filled or cancelled")]
+    fn a_cancelled_intent_is_refused() {
+        let mut f = with_deposit(BUDGET);
+        at("client.test", T0);
+        f.cancel_intent(U128(1));
+        let i = intent(F, BUDGET, 1);
+        at("lead.test", T0 + 1);
+        let _ = f.fill_intent(i.clone(), sign(&i), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "the client's deposit is below the budget")]
+    fn an_intent_above_the_deposit_is_refused() {
+        let mut f = with_deposit(BUDGET - 1);
+        let i = intent(F, BUDGET, 1);
+        at("lead.test", T0 + 1);
+        let _ = f.fill_intent(i.clone(), sign(&i), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "the client cannot fill its own intent")]
+    fn the_client_cannot_fill_its_own_intent() {
+        let mut f = with_deposit(BUDGET);
+        let i = intent(F, BUDGET, 1);
+        at("client.test", T0 + 1);
+        let _ = f.fill_intent(i.clone(), sign(&i), None);
+    }
+
+    #[test]
+    fn a_failed_intent_post_goes_back_to_the_deposit() {
+        let mut f = with_deposit(BUDGET);
+        let i = intent(F, BUDGET, 1);
+        at("lead.test", T0 + 1);
+        let _ = f.fill_intent(i.clone(), sign(&i), None);
+        // The fund call failed: nothing used. The token refunds nothing (the
+        // budget came from the deposit), so the deposit gets it all back.
+        ctx(F, vec![PromiseResult::Failed]);
+        assert_eq!(f.on_posted(1, U128(BUDGET), None, Some(true)), U128(0));
+        assert_eq!(f.get_deposit(acc("client.test")).0, BUDGET);
+        assert_eq!(f.get_job(1).unwrap().state, PostState::Failed);
     }
 }

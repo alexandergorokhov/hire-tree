@@ -15,3 +15,4 @@ hire-tree-core = { path = "../../core" }
 
 [dev-dependencies]
 near-sdk = { workspace = true, features = ["unit-testing"] }
+ed25519-dalek = "2"
