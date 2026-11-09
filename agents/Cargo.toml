@@ -21,6 +21,7 @@ hire-tree-core = { path = "../core" }
 serde = { version = "1", features = ["derive"] }
 reqwest = { version = "0.12", default-features = false, features = ["json"] }
 base64 = "0.22"
+futures = "0.3"
 
 [profile.dev]
 debug = false

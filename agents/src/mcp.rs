@@ -45,7 +45,17 @@ pub async fn serve(tools: Tools<'_>, who: Acc) {
     let mut out = tokio::io::stdout();
     while let Ok(Some(line)) = lines.next_line().await {
         let reply = match serde_json::from_str::<Value>(&line) {
-            Ok(m) => handle(&tools, &who, &m).await,
+            Ok(m) => {
+                use futures::FutureExt;
+                // A panic in one call is an error reply, not the end of the server.
+                std::panic::AssertUnwindSafe(handle(&tools, &who, &m))
+                    .catch_unwind()
+                    .await
+                    .unwrap_or_else(|_| {
+                        Some(json!({ "jsonrpc": "2.0", "id": m.get("id").cloned(),
+                                     "error": { "code": -32603, "message": "internal error" } }))
+                    })
+            }
             Err(e) => Some(
                 json!({ "jsonrpc": "2.0", "id": null, "error": { "code": -32700, "message": e.to_string() } }),
             ),

@@ -8,13 +8,30 @@ use serde_json::{json, Value};
 
 /// (name, description, JSON schema of the arguments).
 /// The optional extra bond a bidder stakes on top of the slot's (yoctoNEAR).
+/// The most extra bond a bidder may stake (5 NEAR, the contract's MAX_BOND).
+pub const MAX_STAKE: u128 = 5_000_000_000_000_000_000_000_000;
+
 fn stake(a: &Value) -> Result<u128, String> {
-    match a["stake"].as_str() {
-        None => Ok(0),
+    let x: u128 = match a["stake"].as_str() {
+        None => return Ok(0),
         Some(x) => x
             .parse()
-            .map_err(|_| "stake must be yoctoNEAR as a string".to_string()),
+            .map_err(|_| "stake must be yoctoNEAR as a string".to_string())?,
+    };
+    if x > MAX_STAKE {
+        return Err("stake is at most 5 NEAR".into());
     }
+    Ok(x)
+}
+
+/// The deposit a bid attaches: storage plus the slot's bond plus the stake.
+fn bid_deposit(storage_millinear: u128, bond: u128, stake: u128) -> Result<NearToken, String> {
+    NearToken::from_millinear(storage_millinear)
+        .as_yoctonear()
+        .checked_add(bond)
+        .and_then(|x| x.checked_add(stake))
+        .map(NearToken::from_yoctonear)
+        .ok_or_else(|| "bid deposit overflows".to_string())
 }
 
 pub fn list() -> Vec<(&'static str, &'static str, Value)> {
@@ -175,13 +192,13 @@ impl Tools<'_> {
                 let slot = a["slot"].as_u64().ok_or("missing slot")?;
                 let job = id(a, "job")?;
                 let info = c.view(&job, "get_bids", json!({ "slot": slot })).await?;
-                let bond = crate::chain::num(&info["bond"]) + stake(a)?;
+                let deposit = bid_deposit(1, crate::chain::num(&info["bond"]), stake(a)?)?;
                 c.call(
                     who,
                     &job,
                     "bid",
                     json!({ "slot": slot, "price": s(a, "price")? }),
-                    NearToken::from_yoctonear(NearToken::from_millinear(1).as_yoctonear() + bond),
+                    deposit,
                 )
                 .await
             }
@@ -189,7 +206,7 @@ impl Tools<'_> {
                 let slot = a["slot"].as_u64().ok_or("missing slot")?;
                 let job = id(a, "job")?;
                 let info = c.view(&job, "get_bids", json!({ "slot": slot })).await?;
-                let bond = crate::chain::num(&info["bond"]) + stake(a)?;
+                let deposit = bid_deposit(2, crate::chain::num(&info["bond"]), stake(a)?)?;
                 let commit = ht_core::receipt::sha256_hex(
                     format!("{}:{}:{}", s(a, "price")?, s(a, "salt")?, who.id).as_bytes(),
                 );
@@ -198,7 +215,7 @@ impl Tools<'_> {
                     &job,
                     "bid_sealed",
                     json!({ "slot": slot, "commit": commit }),
-                    NearToken::from_yoctonear(NearToken::from_millinear(2).as_yoctonear() + bond),
+                    deposit,
                 )
                 .await
             }
@@ -284,5 +301,29 @@ impl Tools<'_> {
             }
             other => Err(format!("unknown tool {other}")),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_hostile_stake_is_refused_not_a_crash() {
+        // u128::MAX used to overflow the deposit sum and panic the server.
+        let max = json!({ "stake": u128::MAX.to_string() });
+        assert_eq!(stake(&max), Err("stake is at most 5 NEAR".into()));
+        assert!(stake(&json!({ "stake": "-1" })).is_err());
+        assert_eq!(stake(&json!({})), Ok(0));
+        assert_eq!(
+            stake(&json!({ "stake": MAX_STAKE.to_string() })),
+            Ok(MAX_STAKE)
+        );
+        // Even a slot bond near u128::MAX cannot overflow the deposit.
+        assert!(bid_deposit(1, u128::MAX - 5, MAX_STAKE).is_err());
+        assert_eq!(
+            bid_deposit(1, 7, 3).unwrap().as_yoctonear(),
+            NearToken::from_millinear(1).as_yoctonear() + 10
+        );
     }
 }

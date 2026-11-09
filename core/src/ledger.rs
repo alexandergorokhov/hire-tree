@@ -120,9 +120,15 @@ impl Ledger {
         Ok(())
     }
 
-    /// Tokens a closed child sent back.
-    pub fn credit(&mut self, x: u128) -> Result<(), MoneyError> {
-        self.ft_balance = add(self.ft_balance, x)?;
+    /// A closed child sent back `x` of the `allocation` it was given: the
+    /// tokens are back, and so much of the allocation is free to hire with
+    /// again (a fired worker's runner-up is paid from it). Anything the
+    /// child returns above its allocation is balance only.
+    pub fn credit(&mut self, x: u128, allocation: u128) -> Result<(), MoneyError> {
+        let freed = x.min(allocation).min(self.allocated);
+        let bal = add(self.ft_balance, x)?;
+        self.allocated = sub(self.allocated, freed)?;
+        self.ft_balance = bal;
         Ok(())
     }
 
@@ -151,10 +157,15 @@ impl Ledger {
 
     /// A contractor's sub-job closed and sent back `x` (its unspent or
     /// refunded pay): the tokens are back, and they are the worker's pay again.
-    pub fn restore(&mut self, x: u128) -> Result<(), MoneyError> {
+    /// The allocation is freed as in `credit`, and the freed part becomes
+    /// pay again (undoing the carve), so the contractor can hire again.
+    pub fn restore(&mut self, x: u128, allocation: u128) -> Result<(), MoneyError> {
+        let freed = x.min(allocation).min(self.allocated);
         let amount = add(self.amount, x)?;
-        self.ft_balance = add(self.ft_balance, x)?;
+        let bal = add(self.ft_balance, x)?;
+        self.allocated = sub(self.allocated, freed)?;
         self.amount = amount;
+        self.ft_balance = bal;
         Ok(())
     }
 
@@ -193,11 +204,14 @@ impl Ledger {
     /// The root's split: the manager (payee) gets its fee (`amount`, set by
     /// the client at post) plus its bond back; everything else goes back to
     /// the client.
+    /// A root that was never funded owes no fee (nothing was posted), so it
+    /// can still settle and close.
     pub fn settle_split_root(&self) -> Result<Split, MoneyError> {
+        let fee = if self.funded == 0 { 0 } else { self.amount };
         let to_payee = if self.payee_paid {
             0
         } else {
-            add(self.amount, self.bond)?
+            add(fee, self.bond)?
         };
         if to_payee > self.ft_balance {
             return Err(MoneyError::NotEnoughBalance {
@@ -279,8 +293,28 @@ mod tests {
         assert_eq!((l.amount, l.unallocated()), (8, 12));
         l.allocate(12).unwrap();
         // The sub-job failed and sent its 12 back: the pay is whole again.
-        l.restore(12).unwrap();
+        l.restore(12, 12).unwrap();
         assert_eq!((l.amount, l.ft_balance), (20, 20));
+        // ...and it can carve and hire again (a runner-up).
+        assert_eq!(l.allocated, 0);
+        l.carve(12).unwrap();
+        l.allocate(12).unwrap();
+        assert_eq!((l.amount, l.allocated, l.ft_balance), (8, 12, 8));
+    }
+
+    #[test]
+    fn a_returned_allocation_can_be_hired_again() {
+        let mut l = Ledger::new(0);
+        l.fund(30).unwrap();
+        l.allocate(30).unwrap();
+        assert_eq!(l.unallocated(), 0);
+        // A fired worker's job sent all 30 back: the runner-up can be hired.
+        l.credit(30, 30).unwrap();
+        assert_eq!((l.allocated, l.ft_balance, l.unallocated()), (0, 30, 30));
+        l.allocate(25).unwrap();
+        // A child that paid its worker 20 of 25 returns 5: only 5 is free.
+        l.credit(5, 25).unwrap();
+        assert_eq!((l.allocated, l.ft_balance, l.unallocated()), (20, 10, 10));
     }
 
     #[test]
@@ -403,13 +437,25 @@ mod tests {
     }
 
     #[test]
+    fn a_root_never_funded_settles_without_its_fee() {
+        let l = Ledger::new(10);
+        assert_eq!(
+            l.settle_split_root(),
+            Ok(Split {
+                to_payee: 0,
+                to_rest: 0
+            })
+        );
+    }
+
+    #[test]
     fn root_split_pays_fee_and_bond_to_manager_rest_to_client() {
         let mut l = Ledger::new(10);
         l.fund(100).unwrap();
         l.add_bond(5).unwrap();
         assert_eq!(l.unallocated(), 90, "fee and bond are never hireable");
         l.allocate(60).unwrap();
-        l.credit(20).unwrap(); // a child returned 20
+        l.credit(20, 60).unwrap(); // a child returned 20 of its 60
         let s = l.settle_split_root().unwrap();
         assert_eq!(
             s,

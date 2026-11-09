@@ -1813,6 +1813,22 @@ fn known_child_closes_and_returns_funds() {
 }
 
 #[test]
+fn a_fired_childs_returned_pay_can_hire_the_runner_up() {
+    // The whole budget went to one child; it was fired and sent all 100
+    // back, so the manager can hire the runner-up with it.
+    let mut j = funded_root(100 * USD);
+    hired(&mut j, WORKER, 100 * USD);
+    assert_eq!(j.get_job().unallocated.0, 0);
+    Ctx::new(ROOT, T1).set();
+    j.child_closed(U128(100 * USD), Some(false));
+    assert_eq!(j.get_job().unallocated.0, 100 * USD);
+    hired(&mut j, WORKER2, 90 * USD);
+    // A child that paid its worker keeps that much allocated.
+    let v = j.get_job();
+    assert_eq!((v.allocated.0, v.unallocated.0), (90 * USD, 10 * USD));
+}
+
+#[test]
 #[should_panic(expected = "not an open child")]
 fn unknown_caller_cannot_close_a_child() {
     let mut j = funded_root(100 * USD);
@@ -3145,7 +3161,35 @@ mod signed_check {
         let a = answer(1, &j, 1, DELIVERED, "8", "x");
         Ctx::new(T1, WORKER).at(CHECK_DONE).set();
         j.submit_check(1, TASK.into(), Base64VecU8(DELIVERED.to_vec()), a.0, a.1);
-        // Panel 2 gets no answer: junk. Votes 7, 8, junk: rejected.
+        // Panel 2 gets no answer: it abstains. Votes 7, 8: rejected.
+        assert!(!dispute_done(&mut j));
+        assert_eq!(j.get_job().status, "Checked");
+    }
+
+    #[test]
+    fn a_dispute_with_empty_panels_is_rejected() {
+        // The buyer disputes and leaves both panels unanswered: they abstain,
+        // so the passing first check stands.
+        let mut j = checked_judged();
+        Ctx::new(T1, LEAD).at(CHECK_DONE).set();
+        j.dispute(Base64VecU8(DELIVERED.to_vec()));
+        assert!(!dispute_done(&mut j));
+        assert_eq!(j.get_job().status, "Checked");
+    }
+
+    #[test]
+    fn a_buyer_cannot_win_a_dispute_with_one_low_answer_against_a_high_one() {
+        // Panel 1: the buyer sends 2, the worker sends 9: the answers
+        // disagree, so the panel abstains. Panel 2 says 2. Votes 7, -, 2:
+        // one junk vote, rejected.
+        let mut j = checked_judged();
+        Ctx::new(T1, LEAD).at(CHECK_DONE).set();
+        j.dispute(Base64VecU8(DELIVERED.to_vec()));
+        for (who, p, sc) in [(LEAD, 1u8, "2"), (WORKER, 1, "9"), (LEAD, 2, "2")] {
+            let a = answer(1, &j, p, DELIVERED, sc, "x");
+            Ctx::new(T1, who).at(CHECK_DONE).set();
+            j.submit_check(p, TASK.into(), Base64VecU8(DELIVERED.to_vec()), a.0, a.1);
+        }
         assert!(!dispute_done(&mut j));
         assert_eq!(j.get_job().status, "Checked");
     }
@@ -3518,6 +3562,22 @@ mod contractor {
         Ctx::new(T1, EVE).deposit(HIRE_MIN_NEAR).set();
         t1.hire(acc(WORKER2), U128(5 * USD), spec(), None);
     }
+
+    #[test]
+    fn a_contractor_hires_again_after_a_refunded_sub_job() {
+        // A contractor (pay 20) hired a sub-agent for 9; the sub-job was
+        // fired and sent the 9 back. Its pay is whole and it can hire the
+        // runner-up for the same 9.
+        let mut t1 = contracted();
+        Ctx::new(T1, GC).at(CLOSED).set();
+        t1.child_closed(U128(9 * USD), None);
+        assert_eq!(t1.ledger.amount, 20 * USD);
+        assert_eq!(t1.ledger.allocated, 0);
+        Ctx::new(T1, WORKER).at(CLOSED).deposit(HIRE_MIN_NEAR).set();
+        t1.hire(acc(EVE), U128(9 * USD), spec(), None);
+        assert_eq!(t1.ledger.amount, 11 * USD);
+        assert_eq!(t1.ledger.allocated, 9 * USD);
+    }
 }
 
 // ================================================================= bonds
@@ -3864,5 +3924,76 @@ mod sealed {
             })
             .sum();
         assert_eq!(lead_got, bond.as_yoctonear());
+    }
+}
+
+// ====================================================== review fixes (2026-11-09)
+
+mod late_bids_and_unfunded_roots {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "the job no longer takes bids")]
+    fn a_bid_after_approve_is_refused() {
+        let mut j = funded_root(100 * USD);
+        Ctx::new(ROOT, LEAD).set();
+        let s = j.open_bids(
+            spec(),
+            U128(30 * USD),
+            600,
+            Some(U128(NearToken::from_near(1).as_yoctonear())),
+            None,
+        );
+        Ctx::new(ROOT, CLIENT).set();
+        j.approve();
+        Ctx::new(ROOT, WORKER)
+            .deposit(NearToken::from_millinear(1001))
+            .set();
+        j.bid(s, U128(5 * USD));
+    }
+
+    #[test]
+    #[should_panic(expected = "the job no longer takes bids")]
+    fn a_bid_while_settling_is_refused() {
+        let mut j = funded_root(100 * USD);
+        Ctx::new(ROOT, LEAD).set();
+        let s = j.open_bids(spec(), U128(30 * USD), 600, None, None);
+        Ctx::new(ROOT, CLIENT).set();
+        j.approve();
+        Ctx::new(ROOT, EVE).set();
+        j.settle();
+        Ctx::new(ROOT, WORKER)
+            .deposit(NearToken::from_millinear(1))
+            .set();
+        j.bid(s, U128(5 * USD));
+    }
+
+    #[test]
+    fn a_root_that_was_never_funded_still_settles() {
+        Ctx::new(ROOT, FACTORY).set();
+        let mut j = Job::new(
+            Some(acc(CLIENT)),
+            acc(LEAD),
+            None,
+            acc(TOKEN),
+            U128(10 * USD),
+            spec(),
+            1,
+            signer(),
+            code_hash(),
+            None,
+            None,
+            None,
+            None,
+        );
+        // The fund arrives after the 1 s window and is refused.
+        Ctx::new(ROOT, TOKEN).at(T0 + 2 * NS_PER_SEC).set();
+        assert_eq!(
+            value(j.ft_on_transfer(acc(FACTORY), U128(100 * USD), "fund".into())),
+            100 * USD
+        );
+        Ctx::new(ROOT, EVE).at(AFTER).set();
+        j.settle();
+        assert_ne!(j.get_job().status, "Open");
     }
 }

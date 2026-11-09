@@ -24,6 +24,9 @@ const GAS_ON_POSTED: Gas = Gas::from_tgas(15);
 const GAS_FT_TRANSFER: Gas = Gas::from_tgas(10);
 /// Least gas `ft_on_transfer` must have left to post a job.
 pub const GAS_POST_MIN: Gas = Gas::from_tgas(110);
+/// The shortest window a post may ask for: the fund call lands a few blocks
+/// after the job is created, so a shorter window could close before it.
+pub const MIN_WINDOW_SECS: u64 = 60;
 pub const MAX_WINDOW_SECS: u64 = 30 * 24 * 3600;
 /// NEAR a client prepays per post (`prepay_post`): the root's storage plus
 /// its token registration, with headroom. Without it, anyone could make the
@@ -243,7 +246,7 @@ impl Factory {
         if lead_fee > funded {
             return self.refund(amount, "lead_fee is larger than the budget");
         }
-        if m.window_secs == 0 || m.window_secs > MAX_WINDOW_SECS {
+        if m.window_secs < MIN_WINDOW_SECS || m.window_secs > MAX_WINDOW_SECS {
             return self.refund(amount, "window_secs out of range");
         }
         if env::prepaid_gas().saturating_sub(env::used_gas()) < GAS_POST_MIN {
@@ -577,6 +580,22 @@ mod tests {
         );
         assert_eq!(f.on_posted(1, U128(BUDGET), None), U128(0));
         assert_eq!(f.get_job(1).unwrap().state, PostState::Posted);
+    }
+
+    #[test]
+    fn a_window_shorter_than_a_minute_is_refused() {
+        // The fund lands a few blocks after the job is created: a 1 s window
+        // would close first and leave a root that never got its budget.
+        let mut f = factory();
+        ctx(TOKEN, vec![]);
+        for w in [1u64, MIN_WINDOW_SECS - 1] {
+            let m = json!({ "manager": "l.test", "spec_hash": "ab".repeat(32), "window_secs": w })
+                .to_string();
+            assert_eq!(
+                value(f.ft_on_transfer(acc("c.test"), U128(BUDGET), m)),
+                BUDGET
+            );
+        }
     }
 
     #[test]

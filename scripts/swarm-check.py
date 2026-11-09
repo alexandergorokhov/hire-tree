@@ -34,7 +34,22 @@ for p in subs:
         break
 else:
     check(True, "every sub-part's max is below what its contractor won")
-check(all(p["passed"] if "passed" in p else True for p in paid), "paid parts passed the check")
+# Independent of the run's own flags: every agent's fUSD balance, read on-chain
+# at the end, must equal what the paid flags say it earned (a lead-bought part
+# paid early costs the worker the 1% note fee on what it kept; a contractor
+# pays its paid sub-parts out of its pay).
+exp = {a["agent"]: 0.0 for a in d["agents"]}
+for r in d["rounds"]:
+    for p in r["parts"]:
+        if not p.get("winner") or not p["paid"]:
+            continue
+        kids = sum(k["price"] for k in r["parts"] if k.get("parent") == p["id"] and k.get("winner") and k["paid"])
+        note_fee = 0.01 * (p["price"] - kids) if (p["paid_now"] and p["buyer"].startswith("lead-")) else 0
+        exp[p["winner"]] += p["price"] - note_fee
+        if p.get("parent") is not None:
+            exp[r["parts"][p["parent"]]["winner"]] -= p["price"]
+off = [a["agent"] for a in d["agents"] if abs(exp[a["agent"]] - a["earned"]) > 0.01]
+check(not off, f"every agent's on-chain fUSD balance matches the parts marked paid ({len(d['agents'])} agents{', off: ' + ', '.join(off) if off else ''})")
 caught = lambda p: bool(p.get("audit") and p["audit"].get("caught"))
 check(all(p["score"] >= 6 and not caught(p) for p in paid) and all(p["score"] < 6 or caught(p) for p in won if not p["paid"]), "paid exactly when the score was 6 or more and no audit caught it")
 audits = [p for p in won if p.get("audit")]
@@ -49,6 +64,11 @@ for r, p in reps:
     f = r["parts"][p["replaces"]]
     ok &= f.get("fired") and f["level"] == p["level"] and f.get("parent") == p.get("parent") and f["winner"] != p["winner"]
 check(ok and len(reps) <= len(fired), f"every runner-up replaces a fired winner on the same part ({len(reps)})")
+replaced = {(r["round"], p["replaces"]) for r, p in reps}
+unreplaced = [(r["round"], p) for r in d["rounds"] for p in r["parts"] if p.get("fired") and (r["round"], p["id"]) not in replaced]
+if any("no_runner_up" in p for _, p in unreplaced) or not unreplaced:
+    check(all(p.get("no_runner_up") for _, p in unreplaced), f"every fired winner without a runner-up says why ({len(unreplaced)})")
+    check(not any((p.get("no_runner_up") or "").startswith("hire failed") for _, p in unreplaced), "no runner-up hire failed")
 check(any(p["sealed"] for p in won), "sealed bids were used")
 check(abs(d["platform_fees"] - fee) < 0.01, f"factory fees = {jobs} jobs x {d.get('job_budget', 70)} x {d['platform_fee_bps'] / 100}% = {fee:.2f}")
 
@@ -86,7 +106,9 @@ if "--readme" in sys.argv:
     }
     flat = re.sub(r"\s+", " ", sec)
     for s in want:
-        check(s in flat, f"README states: {s}")
+        # A number must stand alone: "120 passed" is not found in "9120 passed".
+        pat = r"(?<![\d.])" + re.escape(s) + (r"(?![\d])" if s[-1].isdigit() else "")
+        check(re.search(pat, flat) is not None, f"README states: {s}")
 
 print("swarm check:", "all ok" if not fails else f"{len(fails)} failed")
 sys.exit(1 if fails else 0)

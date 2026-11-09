@@ -449,7 +449,11 @@ impl Chain {
                 eprintln!("  {method} on {contract}: ok (tx {tx})");
                 Ok(ok.json::<Value>().unwrap_or(Value::Null))
             }
-            Err(e) => Err(short_error(&format!("{e:?}"))),
+            Err(e) => {
+                let e = short_error(&format!("{e:?}"));
+                eprintln!("  {method} on {contract}: FAILED (tx {tx}): {e}");
+                Err(e)
+            }
         }
     }
 

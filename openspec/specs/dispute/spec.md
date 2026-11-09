@@ -25,9 +25,14 @@ parent). Otherwise it becomes Checked.
 #### Scenario: Rejected
 - unit: `dispute_rejected_back_to_checked`
 
-#### Scenario: A check does not answer (fail closed)
+#### Scenario: A checker callback does not answer (fail closed, checker mode)
 - THEN that vote counts as junk
 - unit: `missing_dispute_votes_count_as_junk`
+
+#### Scenario: A signed panel is empty or split (abstains)
+- WHEN in signed-check mode a panel gets no answer, or answers 3+ points apart
+- THEN that panel abstains and never counts against the worker, so a buyer cannot win a dispute by leaving panels empty or by sending one low answer against the worker's high one
+- unit: `a_dispute_with_empty_panels_is_rejected`, `a_buyer_cannot_win_a_dispute_with_one_low_answer_against_a_high_one`, `dispute_with_one_good_panel_is_rejected`
 
 #### Scenario: Bought note then disputed
 - WHEN the lead's treasury bought the note and the lead disputes

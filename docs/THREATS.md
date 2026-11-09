@@ -25,7 +25,10 @@ it were real. Each row names the test that shows the answer.
 | A hire's callbacks are lost or the fund result is ambiguous: tree stuck in "children pending" | `resume_hire` after 10 min reads the child's real balance: full opens it, zero rolls back and closes it | `stuck_hire::*`, `fund_failure_waits_then_resume_rolls_back_and_closes_child` |
 | A sub-job runs out of NEAR after ~10 hires and a hire callback aborts | each hire must attach 0.035 NEAR; the job keeps 5 mNEAR for the child's token registration and its own record | `hire_creates_child_from_global_contract` |
 | The root's final payout to an unregistered manager fails forever | the root registers the manager first (refunded if already registered) | `root_fee_and_bond_go_to_the_manager_the_rest_back_to_the_client` (asserts `storage_deposit` for the manager first) |
-| Spam posts drain the factory's NEAR | each post uses 0.06 NEAR the client prepaid; budget >= 1 fUSD | factory `post_without_prepaid_near_refunded`, `dust_budget_refunded` |
+| Spam posts drain the factory's NEAR | each post uses 0.06 NEAR the client prepaid; budget >= 1 fUSD; a window under 60 s is refused, and a root that was never funded still settles (no stuck roots) | factory `post_without_prepaid_near_refunded`, `dust_budget_refunded`, `a_window_shorter_than_a_minute_is_refused`; job `a_root_that_was_never_funded_still_settles` |
+| Bids after the job is done strand bonds | `bid` requires an open job with an open window | `a_bid_after_approve_is_refused`, `a_bid_while_settling_is_refused` |
+| A contractor disputes honest sub-work and keeps the pay | signed panels that get no answer or disagree abstain; only two scored junk votes uphold | `a_dispute_with_empty_panels_is_rejected`, `a_buyer_cannot_win_a_dispute_with_one_low_answer_against_a_high_one` |
+| A hostile MCP caller crashes the playground | stake capped at 5 NEAR with checked sums; a panic in one call becomes an error reply | agents `a_hostile_stake_is_refused_not_a_crash` |
 | Money rule broken by any sequence | property test over 10,000 random trees with random transfer failures | `core/tests/money_prop.rs` |
 | A contractor (a sub-job's worker who hires) spends money that is not its own | it hires only out of its own pay (`Ledger::carve`), must keep part of it, cannot add a sub-budget; the lead's unallocated budget is untouched | `a_contractor_carves_its_own_pay_and_gets_refunds_back`, `a_contractor_cannot_bid_out_its_whole_pay` |
 | A contractor's sub-agent fails and the refund goes to the wrong account | a closed sub-job's return becomes the contractor's pay again (`restore`); a failed hire restores it too | `unspent_or_refunded_sub_pay_goes_back_to_the_contractor`, `a_failed_contractor_hire_restores_its_pay` |
@@ -85,7 +88,7 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 |---|---|---|
 | Lead awards above a bid | the award pays exactly the winner's bid, read from state | `manager_opens_workers_bid_manager_awards_at_the_bid_price` |
 | Slot opened for more than the job holds | `max <= unallocated budget` | `slot_max_cannot_exceed_the_free_budget` |
-| Bid spam fills a slot | 8 bidders per slot, 16 slots per job; a bidder's second bid replaces its first | `bids_per_slot_are_capped`, `a_new_bid_replaces_the_bidders_old_one` |
+| Bid spam fills a slot | 16 bidders per slot, 16 slots per job; a bidder's second bid replaces its first | `bids_per_slot_are_capped`, `a_new_bid_replaces_the_bidders_old_one` |
 | Late bid or award before close | refused both ways | `late_bid_refused`, `award_before_close_refused` |
 | Lead bids through another account and awards itself | possible, as with a direct `hire`: the lead already chooses who works. The client's protection is the fixed lead fee, the judge's score and settle (unscored work is not paid unless approved) | not preventable on-chain |
 | Fake bidders fill the job's storage for free | a new bid attaches 0.001 NEAR for its own storage; at most 8 bids per slot, 16 slots | `a_new_bid_pays_for_its_storage` |

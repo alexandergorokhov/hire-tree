@@ -109,8 +109,8 @@ a { color: var(--accent); }
 <script>
 const S = ['steady', 'lean', 'greedy', 'adaptive', 'junk', 'polished', 'sloppy', 'undercut', 'model', 'contractor'];
 const LEADS = ['price', 'quality', 'budget'];
-const col = s => `var(--s-${s})`;
-const lcol = l => `var(--l-${l})`;
+const col = s => `var(--s-${String(s).replace(/[^a-z-]/g, '')})`;
+const lcol = l => `var(--l-${String(l).replace(/[^a-z-]/g, '')})`;
 const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const tip = document.getElementById('tip');
 function showTip(e, html) { tip.innerHTML = html; tip.style.display = 'block';
@@ -191,7 +191,7 @@ function render(d) {
   document.getElementById('legend').innerHTML = S.map(s => `<span><i class="sw" style="background:${col(s)}"></i>${s}</span>`).join('');
   const node = (r, p, pad) => {
     const bids = p.bids.map(b => `${esc(b.agent)} ${b.price.toFixed(2)}${b.why ? ` <i>(model: ${esc(b.why)})</i>` : ''}`).join('<br>');
-    const t = `<b>${esc(p.winner)}</b> (${esc(p.strategy)}) won ${esc(p.skill)} at ${p.price.toFixed(2)} from ${esc(p.buyer)}, score ${p.score}/10${p.sealed ? ', sealed bids' : ''}${p.make_or_buy ? `<br>make or buy: ${p.make_or_buy.buy ? 'bought a sub-part' : 'did the sub-part itself'} (model: ${esc(p.make_or_buy.why)})` : ''}${p.newcomer ? `, newcomer (premium +${p.newcomer_premium}%${p.vouched ? ', staked 10x bond' : ''})` : ''}${p.fired ? '<br>fired after the failed check: no pay, bond to the buyer' : ''}${p.replaces != null ? '<br>runner-up, hired at its own bid after the winner was fired' : ''}<br>${esc(p.job)}<br>${bids}`;
+    const t = `<b>${esc(p.winner)}</b> (${esc(p.strategy)}) won ${esc(p.skill)} at ${p.price.toFixed(2)} from ${esc(p.buyer)}, score ${esc(p.score)}/10${p.sealed ? ', sealed bids' : ''}${p.make_or_buy ? `<br>make or buy: ${p.make_or_buy.buy ? 'bought a sub-part' : 'did the sub-part itself'} (model: ${esc(p.make_or_buy.why)})` : ''}${p.newcomer ? `, newcomer (premium +${esc(p.newcomer_premium)}%${p.vouched ? ', staked 10x bond' : ''})` : ''}${p.fired ? '<br>fired after the failed check: no pay, bond to the buyer' : ''}${p.replaces != null ? '<br>runner-up, hired at its own bid after the winner was fired' : ''}<br>${esc(p.job)}<br>${bids}`;
     let h = `<div class="node${p.paid ? '' : ' unpaid'}" style="padding-left:${pad * 12}px" data-tip="${esc(t)}"><i class="sw" style="background:${col(p.strategy)}"></i><span class="sk">${esc(p.skill.slice(0, 3))}</span><span class="who">${esc(p.winner)} ${p.price.toFixed(2)}</span></div>`;
     for (const k of r.parts.filter(q => q.parent === p.id && q.winner)) h += node(r, k, pad + 1);
     return h;
@@ -206,10 +206,10 @@ function render(d) {
   document.getElementById('leads').innerHTML = '<tr><th>lead</th><th>buying rule</th><th class="n">spent</th><th class="n">mean price</th><th class="n">parts unfilled</th></tr>' +
     d.leads.map(l => { const ps = won.filter(p => p.lead === l.lead && p.level === 1);
       const rule = l.max_pct < 100 ? `offers ${l.max_pct}% of max` : l.record_weight > 150 ? 'weighs records heavily' : 'cheapest after record';
-      return `<tr><td><i class="sw" style="background:${lcol(l.lead)}"></i>${esc(l.lead)}</td><td>${rule}</td><td class="n">${l.spent.toFixed(2)}</td><td class="n">${ps.length ? (ps.reduce((a, p) => a + p.rate, 0) / ps.length).toFixed(0) + '%' : '-'}</td><td class="n">${l.unfilled}</td></tr>`; }).join('');
+      return `<tr><td><i class="sw" style="background:${lcol(l.lead)}"></i>${esc(l.lead)}</td><td>${rule}</td><td class="n">${l.spent.toFixed(2)}</td><td class="n">${ps.length ? (ps.reduce((a, p) => a + p.rate, 0) / ps.length).toFixed(0) + '%' : '-'}</td><td class="n">${esc(l.unfilled)}</td></tr>`; }).join('');
   const rows = [...d.agents].sort((a, b) => b.earned - a.earned);
   document.getElementById('agents').innerHTML = '<tr><th>agent</th><th>skill</th><th>strategy</th><th class="n">won</th><th class="n">paid</th><th class="n">earned</th><th class="n">bonds lost</th><th class="n">last ask</th><th>status</th></tr>' +
-    rows.map(a => `<tr><td>${esc(a.agent)}</td><td>${esc(a.skill)}</td><td><i class="sw" style="background:${col(a.strategy)}"></i>${esc(a.strategy)}</td><td class="n">${a.wins}</td><td class="n">${a.record.paid ?? 0}</td><td class="n">${a.earned.toFixed(2)}</td><td class="n">${a.bonds_lost ?? 0}</td><td class="n">${a.final_rate}%</td><td>${a.quit ? 'left' : 'active'}</td></tr>`).join('');
+    rows.map(a => `<tr><td>${esc(a.agent)}</td><td>${esc(a.skill)}</td><td><i class="sw" style="background:${col(a.strategy)}"></i>${esc(a.strategy)}</td><td class="n">${esc(a.wins)}</td><td class="n">${esc(a.record.paid ?? 0)}</td><td class="n">${a.earned.toFixed(2)}</td><td class="n">${esc(a.bonds_lost ?? 0)}</td><td class="n">${esc(a.final_rate)}%</td><td>${a.quit ? 'left' : 'active'}</td></tr>`).join('');
   document.getElementById('foot').textContent = 'Regenerate with make swarm (writes web/swarm.json). All money is fake test USD.';
   priceChart(d); earnChart(d);
   addEventListener('resize', () => { priceChart(d); earnChart(d); });

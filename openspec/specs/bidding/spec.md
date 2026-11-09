@@ -19,7 +19,7 @@ closing before the window ends, at most 16 slots.
 ### Requirement: Bids are capped, one per bidder, before close
 `bid(slot, price)` SHALL refuse the manager and the job itself, a price of 0
 or above `max`, a bid after `closes_ns` or on an awarded slot, and more than
-8 bidders; a second bid from the same account replaces its first.
+16 bidders; a second bid from the same account replaces its first.
 A new bid SHALL attach 0.001 NEAR for its storage (kept by the job);
 replacing one's own bid needs none.
 - unit: `a_new_bid_pays_for_its_storage`, `replacing_a_bid_needs_no_new_deposit`, `bid_above_max_refused`, `manager_cannot_bid`, `late_bid_refused`, `bid_after_award_refused`, `a_new_bid_replaces_the_bidders_old_one`, `bids_per_slot_are_capped`
@@ -66,6 +66,16 @@ the parent, and the worker's bond SHALL go to the buyer. A worker whose
 work passed, or that has not been checked yet, SHALL NOT be fired; only the
 manager can fire, and a fired worker cannot redeliver. The buyer can then
 hire the runner-up in the same window.
+#### Scenario: The returned pay hires the runner-up
+- WHEN a fired (or refunded) child closes and sends its pay back
+- THEN that much of the parent's allocation is free again, for a manager or a contractor, so the runner-up can be hired with it
+- unit: `a_fired_childs_returned_pay_can_hire_the_runner_up`, `a_contractor_hires_again_after_a_refunded_sub_job`, `a_returned_allocation_can_be_hired_again`
+
+#### Scenario: No bids once the job is done
+- WHEN the job is approved, fired, delivered or settling, or its window closed
+- THEN `bid` and `bid_sealed` are refused, so no bond is stranded on a slot that can never award
+- unit: `a_bid_after_approve_is_refused`, `a_bid_while_settling_is_refused`
+
 - unit: `the_buyer_fires_a_failed_worker_and_gets_everything_back`, `a_worker_whose_work_passed_cannot_be_fired`, `a_worker_cannot_be_fired_before_any_check`, `only_the_buyer_can_fire`, `a_fired_worker_cannot_redeliver`
 
 ### Requirement: Newcomers vouch with a bigger bond

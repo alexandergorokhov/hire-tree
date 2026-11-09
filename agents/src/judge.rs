@@ -867,7 +867,15 @@ pub async fn serve() {
                 }
                 let r = match (&pg, name.as_str()) {
                     (_, "guide") => Ok(json!(GUIDE)),
-                    (Some(p), _) => p.call(&name, &args).await,
+                    // A panic in one call (a hostile argument) is an error
+                    // for that call, not the end of the server.
+                    (Some(p), _) => {
+                        use futures::FutureExt;
+                        std::panic::AssertUnwindSafe(p.call(&name, &args))
+                            .catch_unwind()
+                            .await
+                            .unwrap_or_else(|_| Err(format!("{name} failed: internal error")))
+                    }
                     (None, _) => unreachable!(),
                 };
                 let (text, err) = match r {

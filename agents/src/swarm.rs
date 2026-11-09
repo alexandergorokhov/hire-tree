@@ -273,6 +273,11 @@ pub const CONTRACTOR_RULES: Rules = Rules {
     max_pct: 100,
 };
 
+/// A sealed bid's salt: secret per run, unique per round, part and agent.
+pub fn salt(seed: &str, r: u32, p: usize, i: usize) -> String {
+    ht_core::receipt::sha256_hex(format!("{seed}:r{r}p{p}a{i}").as_bytes())
+}
+
 /// What a buyer charges for a record: (newcomer premium, record weight).
 /// A blind buyer (the control run) charges nothing for either.
 pub fn terms(blind: bool, premium: u128, rules: Rules) -> (u128, u128) {
@@ -408,6 +413,14 @@ enum Buyer {
     Agent(usize),
 }
 
+/// The account that buys for `b`: a lead's own account or a contractor's.
+fn buyer_acc(b: Buyer, leads: &[(Acc, Acc)], agents: &[Agent]) -> Acc {
+    match b {
+        Buyer::Lead(l) => leads[l].0.clone(),
+        Buyer::Agent(i) => agents[i].acc.clone(),
+    }
+}
+
 /// One part put out for bids in a round, at any level of a tree.
 struct Part {
     lead: usize,
@@ -447,6 +460,8 @@ struct Part {
     delivered: Vec<u8>,
     /// The buyer's audit of a passed delivery: two more judge panels.
     audit: Option<Value>,
+    /// Why a fired winner was not replaced (no free bidder, or the hire's error).
+    no_runner_up: Option<String>,
 }
 
 fn buyer_name(b: Buyer, agents: &[Agent]) -> String {
@@ -525,6 +540,12 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
     let mut premium: HashMap<String, u128> = HashMap::new();
     let mut history: HashMap<&str, Vec<u128>> = HashMap::new();
     let mut respawns = 0u32;
+    let mut bid_errors = 0u32;
+    // Sealed-bid salts come from a per-run secret, so nobody can open a
+    // commit by trying prices against a guessable salt.
+    let seed = ht_core::receipt::sha256_hex(
+        format!("{:?}{}", std::time::SystemTime::now(), std::process::id()).as_bytes(),
+    );
     let mut log = vec![];
     let mut lead_spent = [0u128; 3];
     let mut lead_unfilled = [0u32; 3];
@@ -582,6 +603,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                     vouched: false,
                     delivered: vec![],
                     audit: None,
+                    no_runner_up: None,
                 });
             }
         }
@@ -663,7 +685,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                                 &a.acc,
                                 "bid_sealed",
                                 &json!({ "job": job, "slot": slot, "price": price.to_string(),
-                                "salt": format!("r{r}p{p}a{i}"), "stake": stake.to_string() }),
+                                "salt": salt(&seed, r, p, i), "stake": stake.to_string() }),
                             )
                             .await
                     } else {
@@ -678,6 +700,8 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                     if placed.is_ok() {
                         parts[p].bids.push((i, price));
                         bidders.insert(i);
+                    } else {
+                        bid_errors += 1;
                     }
                 }
             }
@@ -696,7 +720,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                             &agents[i].acc,
                             "reveal",
                             &json!({ "job": parts[p].job, "slot": parts[p].slot,
-                            "price": price.to_string(), "salt": format!("r{r}p{p}a{i}") }),
+                            "price": price.to_string(), "salt": salt(&seed, r, p, i) }),
                         )
                         .await?;
                 }
@@ -763,10 +787,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                     continue;
                 };
                 let (_, price, jobs, _, vouch) = *cands.iter().find(|x| x.0 == w).unwrap();
-                let buyer_acc = match buyer {
-                    Buyer::Lead(l) => leads[l].0.clone(),
-                    Buyer::Agent(b) => agents[b].acc.clone(),
-                };
+                let buyer_acc = buyer_acc(buyer, &leads, &agents);
                 tools
                     .call(&buyer_acc, "award", &json!({ "job": parts[p].job, "slot": parts[p].slot, "worker": agents[w].acc.id }))
                     .await?;
@@ -862,6 +883,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                             vouched: false,
                             delivered: vec![],
                             audit: None,
+                            no_runner_up: None,
                         });
                     }
                 }
@@ -975,10 +997,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                     if blind || rec["paid"].as_u64().unwrap_or(0) >= AUDIT_BELOW {
                         continue;
                     }
-                    let buyer_acc = match parts[p].buyer {
-                        Buyer::Lead(l) => leads[l].0.clone(),
-                        Buyer::Agent(b) => agents[b].acc.clone(),
-                    };
+                    let buyer_acc = buyer_acc(parts[p].buyer, &leads, &agents);
                     let (child, task) = (parts[p].child.clone(), parts[p].task.clone());
                     let d = b64(&parts[p].delivered);
                     tools
@@ -1092,10 +1111,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                         continue;
                     }
                     let buyer = parts[p].buyer;
-                    let buyer_acc = match buyer {
-                        Buyer::Lead(l) => leads[l].0.clone(),
-                        Buyer::Agent(b) => agents[b].acc.clone(),
-                    };
+                    let buyer_acc = buyer_acc(buyer, &leads, &agents);
                     let child = parts[p].child.clone();
                     // A refunded audit closes with approve; a failed check with fire.
                     let caught = parts[p]
@@ -1143,12 +1159,13 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                     let bname = buyer_name(buyer, &agents);
                     let (prem, weight) = terms(blind, *premium.get(&bname).unwrap_or(&0), rules);
                     let Some(r2) = pick(&cands, prem, weight) else {
+                        parts[p].no_runner_up = Some("no other bidder free this round".into());
                         continue;
                     };
                     let (_, price, jobs, _, _) = *cands.iter().find(|x| x.0 == r2).unwrap();
                     let job = parts[p].job.clone();
                     let task = parts[p].task.clone();
-                    if tools
+                    if let Err(e) = tools
                         .call(
                             &buyer_acc,
                             "hire",
@@ -1156,8 +1173,8 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                         "amount": price.to_string(), "task": task }),
                         )
                         .await
-                        .is_err()
                     {
+                        parts[p].no_runner_up = Some(format!("hire failed: {e}"));
                         continue;
                     }
                     let k = children.entry(job.clone()).or_insert(0);
@@ -1198,6 +1215,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                         vouched: false,
                         delivered: vec![],
                         audit: None,
+                        no_runner_up: None,
                     };
                     parts.push(next);
                 }
@@ -1309,7 +1327,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                     "winner": w.map(|w| agents[w].name.clone()), "strategy": w.map(|w| agents[w].strategy.name()),
                     "price": q.price as f64 / 1e6, "rate": if q.price > 0 { q.price * 100 / (nominal_max(q.skill) * USD) } else { 0 },
                     "newcomer": q.newcomer, "newcomer_premium": q.premium_seen, "score": q.score,
-                    "paid": q.passed, "paid_now": q.paid_now, "make_or_buy": q.decision, "fired": q.fired, "replaces": q.replaces, "vouched": q.vouched, "audit": q.audit, "job": q.child, "sealed": q.sealed,
+                    "paid": q.passed, "paid_now": q.paid_now, "make_or_buy": q.decision, "fired": q.fired, "replaces": q.replaces, "vouched": q.vouched, "audit": q.audit, "no_runner_up": q.no_runner_up, "job": q.child, "sealed": q.sealed,
                     "bids": q.bids.iter().map(|(i, p)| { let a = &agents[*i];
                         let mut b = json!({ "agent": a.name, "price": *p as f64 / 1e6 });
                         if a.strategy == Strategy::Model { b["why"] = json!(a.why); }
@@ -1346,7 +1364,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
         json!({ "schema": "hiretree-swarm-2", "blind": blind, "network": c.network_name, "rounds": log, "agents": table,
         "leads": LEADS.iter().enumerate().map(|(l, (n, r))| json!({ "lead": n, "record_weight": r.record_weight,
             "max_pct": r.max_pct, "spent": lead_spent[l] as f64 / 1e6, "unfilled": lead_unfilled[l] })).collect::<Vec<_>>(),
-        "junk_respawns": respawns, "premiums": premium,
+        "junk_respawns": respawns, "bid_errors": bid_errors, "premiums": premium,
         "platform_fee_bps": SWARM_FEE_BPS, "job_budget": JOB_BUDGET, "bond_near": BOND_YOCTO as f64 / 1e24, "sealed_lead": "quality", "platform_fees": num(&settings["fees"]) as f64 / 1e6,
         "model": match llm {
             Llm::Mock(_) => "scripted test model (not NEAR AI) for work, judging, the model bidder and contractors' make-or-buy; agents adapt their asks; buyers pick by price, on-chain record and a learned newcomer premium".to_string(),

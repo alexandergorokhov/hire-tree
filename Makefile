@@ -38,6 +38,8 @@ lint: ## rustfmt check + clippy -D warnings + every test the specs name exists +
 	cd agents && cargo clippy --all-targets --locked --offline -- -D warnings
 	scripts/check-spec-tests.sh
 	python3 scripts/swarm-check.py web/swarm.json --readme
+	python3 scripts/test-swarm-check.py
+	@if [ -f web/swarm-blind.json ]; then python3 scripts/swarm-compare.py web/swarm.json web/swarm-blind.json --readme; fi
 
 # Plain cargo needs --cfg near (what cargo-near sets). Without it near-sdk's
 # panic_str aborts and every on-chain error reads only "unreachable".
@@ -111,6 +113,7 @@ record-swarm: build ## [NEAR AI key] 3 rounds with live NEAR AI for every worker
 	@$(SBX) $(HT) swarm --rounds 3 --llm record:$(SWARM_CASSETTE).new --out $(CURDIR)/web/swarm-live.json
 	@cd agents && $(HT) verify-cassette $(SWARM_CASSETTE).new
 	@mv $(SWARM_CASSETTE).new $(SWARM_CASSETTE) && echo "swarm cassette saved: $(SWARM_CASSETTE); check it with make swarm-replay"
+	python3 scripts/swarm-check.py web/swarm-live.json
 
 .PHONY: swarm-replay
 swarm-replay: build ## Replay the live NEAR AI swarm from its cassette (offline, free, ~20 min): every signature re-checked on-chain; the result must match web/swarm-live.json

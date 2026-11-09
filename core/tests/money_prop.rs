@@ -252,7 +252,8 @@ impl World {
             self.nodes[n].closed = true;
             if let Some(p) = self.nodes[n].parent {
                 let returned = self.nodes[n].returned;
-                self.nodes[p].ledger.credit(returned).unwrap();
+                let allocation = self.nodes[n].ledger.funded;
+                self.nodes[p].ledger.credit(returned, allocation).unwrap();
                 self.nodes[p].children_open -= 1;
             }
         } else {

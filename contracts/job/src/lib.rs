@@ -892,6 +892,10 @@ impl Job {
     }
 
     fn place_bid(&mut self, slot: u32, price: U128, commit: Option<String>) {
+        require!(
+            self.status == Status::Open && self.window_open(),
+            "the job no longer takes bids (approved, fired, delivered or closed)"
+        );
         let me = env::predecessor_account_id();
         require!(me != self.manager, "the manager cannot bid");
         require!(
@@ -1803,9 +1807,12 @@ impl Job {
             vote(self.round_outcome(1)),
             vote(self.round_outcome(2)),
         ];
+        // A panel with no answer, or whose answers disagree, abstains: it
+        // never counts against the worker, so a buyer cannot win a dispute
+        // by leaving its panels empty.
         let junk = votes
             .iter()
-            .filter(|v| !matches!(v, Some(s) if *s >= PASS_SCORE))
+            .filter(|v| matches!(v, Some(s) if *s < PASS_SCORE))
             .count();
         self.rounds.clear();
         self.dispute_attempt += 1;
@@ -2534,10 +2541,11 @@ impl Job {
             .children_open
             .checked_sub(1)
             .unwrap_or_else(|| env::panic_str("children_open underflow"));
+        let allocation = self.children[i].total.0;
         let r = if self.children[i].by_worker {
-            self.ledger.restore(returned.0)
+            self.ledger.restore(returned.0, allocation)
         } else {
-            self.ledger.credit(returned.0)
+            self.ledger.credit(returned.0, allocation)
         };
         if let Err(e) = r {
             fail(e);

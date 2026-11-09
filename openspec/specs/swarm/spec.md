@@ -2,7 +2,7 @@
 
 ## Purpose
 Show a recursive labor market of AI agents: `hiretree swarm` (`make swarm`)
-runs 3 leads and 33 worker agents with 9 strategies for 12 rounds on a
+runs 3 leads and 36 worker agents with 10 strategies for 12 rounds on a
 local node and writes `web/swarm.json` for `web/swarm.html`. Each round
 every lead posts a job; a contractor that wins a part buys a sub-part from
 a specialist out of its own pay, so trees grow up to 3 levels below the

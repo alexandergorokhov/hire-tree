@@ -41,6 +41,11 @@ budget SHALL be at least 1 fUSD. A failed post gives the credit back.
 - THEN counted as all used (never refund from other clients' tokens)
 - unit: `unreadable_token_answer_counts_as_all_used`
 
+#### Scenario: A window shorter than a minute is refused
+- WHEN a post asks for `window_secs` below 60
+- THEN the budget is refunded, so no root is created whose window closes before its fund arrives (and a root that was never funded still settles without its fee)
+- unit: `a_window_shorter_than_a_minute_is_refused`, `a_root_that_was_never_funded_still_settles`, `a_root_never_funded_settles_without_its_fee`
+
 ### Requirement: Pinned settings
 Only the owner sets signer, checker and code hash; jobs created later use
 the new values, existing jobs keep theirs.
