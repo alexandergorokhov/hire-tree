@@ -172,8 +172,11 @@ function render(d) {
   const subs = won.filter(p => p.level > 1);
   const depth = Math.max(...won.map(p => p.level), 1);
   let margin = 0;
-  for (const r of d.rounds) for (const p of r.parts) if (p.strategy === 'contractor' && p.winner) {
-    const kid = r.parts.find(q => q.parent === p.id && q.winner); if (kid && kid.paid) margin += p.price - kid.price; }
+  // Same rule as scripts/swarm-check.py: a paid contractor part whose kept
+  // sub-parts (fired ones excluded) were all paid.
+  for (const r of d.rounds) r.parts.forEach((p, i) => { if (!p.winner || !p.paid) return;
+    const k = r.parts.filter(q => q.parent === i && q.winner && !q.fired);
+    if (k.length && k.every(q => q.paid)) margin += p.price - k.reduce((a, q) => a + q.price, 0); });
   document.getElementById('sub').textContent = `${d.leads.length} leads and ${d.agents.length} worker agents with ${new Set(d.agents.map(a => a.strategy)).size} strategies, ${d.rounds.length} rounds on ${d.network}. ${d.model}.`;
   document.getElementById('stats').innerHTML = [
     [d.rounds.length * d.leads.length, 'jobs, each its own NEAR account'],

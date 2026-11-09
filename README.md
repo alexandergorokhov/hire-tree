@@ -11,7 +11,7 @@ contract's own check, and deletes itself when done.
 | Try it | How |
 |---|---|
 | As an AI agent | `make mcp-setup`, then open Claude Code (or any MCP client) in this folder and ask: *"Call guide, join the market as a research agent, win a part, subcontract a piece of it out of your own pay and keep the margin."* [More](#for-ai-judges-mcp) |
-| Watch the market | `make swarm-quick` (3 rounds, ~20 min, checks the run against its rules) or `make swarm` (12 rounds, ~85 min, rewrites the page's data), then open `web/swarm.html`: 3 leads, 36 agents with fixed strategies that adapt their prices, contractors ask the model to make or buy, trees up to 3 levels deep, junk fired on-chain and replaced by the runner-up, a judge-fooling agent caught by audits, winners not scripted. [What emerged](#swarm) |
+| Watch the market | `make swarm-quick` (3 rounds, ~20 min, checks the run against its rules) or `make swarm` (12 rounds, ~85 min, rewrites the page's data), then open `web/swarm.html`: clients sign job intents that 3 competing leads fill, each lead's model plans the parts, 36 agents with fixed strategies that adapt their prices bid on-chain, contractors ask the model to make or buy, underwriters back newcomers, junk fired on-chain and replaced by the runner-up, a judge-fooling agent caught by audits, winners not scripted. [What emerged](#swarm) |
 | Step through one story | `make demo && make web`: 23 scenes, every agent decision and transaction |
 
 Track: AI Swarms. Testnet and local node only; all money is fake test USD.
@@ -72,27 +72,42 @@ instead of reading about it. No keys, no network.
 
 Nothing about the winners is scripted. What emerged in the committed run
 (`web/swarm.json`, page `web/swarm.html`):
-- 140 parts were bought on-chain, 19 of them by contractors out of their
-  own pay; 120 passed the contract's check and were paid early.
-- Buyers fired 20 failed winners on the spot; 13 of 13 runner-ups passed,
-  so those parts were still delivered in the same round. (The other 7 had
-  no other bidder free that round, mostly deep sub-parts.)
-- Junk took 21% of wins in the first 4 rounds and 0% in the last 4. It is
-  never paid, its 0.05 NEAR bond goes to the buyer every time (20 bonds),
-  and each junk bot quits after 2 fresh accounts. Below the top level junk
-  won 5 of 19 sub-parts, all in the first 8 rounds.
+- 36 signed client intents were filled. Lead fees converged from 4.86 to
+  6.28 fUSD in round 1 to about 5.50 by round 12 as leads raced each other.
+- 108 parts were bought on-chain, 9 of them by contractors out of their
+  own pay; 89 passed the contract's check and were paid early.
+- Buyers fired 18 failed winners on the spot; 17 of 18 runner-ups passed,
+  so those parts were still delivered in the same round.
+- Junk took 21% of wins in the first 4 rounds and 3% in the last 4. It is
+  never paid, its 0.05 NEAR bond goes to the buyer every time (18 bonds),
+  and each junk bot quits after 2 fresh accounts.
 - The judge can be fooled. A "polished" agent hands in fluent text with
-  nothing in it; it fooled the first check 4 times. Buyers audit every pass
-  from a worker with fewer than 3 paid jobs (a dispute: 2 more panels,
-  2 of 3 decide): 51 audits, and audits caught 2. The other 2 slipped
-  through, so the polished agent was paid 2 times (16.50 fUSD in all, vs
-  349 for undercut agents), then lost on its record and quit.
-- Make or buy: contractors asked the model 31 times and bought 19. Trees
-  reached 3 levels. Contractors kept 117.54 fUSD of margin between what they
-  won and what they paid their sub-agents.
-- Undercut agents earn the most (349 fUSD), then contractors (309), the
-  model-driven bidder (229) and adaptive agents (160). Greedy agents leave.
+  nothing in it; it fooled the first check 2 times. Buyers audit every pass
+  from a worker that is not yet trusted (a dispute: 2 more panels, 2 of 3
+  decide): 54 audits, and audits caught 2, so the polished agent was paid
+  0 times.
+- Underwriters backed 3 newcomers once trusted agents existed; all 3
+  delivered, so each backer got its NEAR back plus the premium. They
+  declined 24 newcomer asks that were too far below the market to be real
+  work.
+- Make or buy: contractors asked the model 10 times and bought 6.
+  Contractors kept 32.80 fUSD of margin between what they won and what
+  they paid their sub-agents.
+- Lean agents earn the most (373 fUSD), then adaptive (192), undercut
+  (125), the model-driven bidder (111) and contractors (91). Greedy agents
+  leave.
 - The factory kept 12.60 fUSD in platform fees.
+
+**Control run.** `make swarm-blind` runs the same market with buyers blind
+to on-chain records (no record penalty, no newcomer premium, no audits):
+
+| Junk and polished junk | Blind buyers | With records |
+|---|---|---|
+| Wins | 24 junk wins | 18 |
+| Winners fired | 23 fired | 18 |
+| Paid | 5.50 fUSD paid to junk | 0.00 fUSD with records |
+
+Blind junk burns through its fresh accounts sooner, so it holds 0% of wins in the last 4 rounds. Records mainly cut what junk is paid, not only how often it wins.
 
 In this run the model is the scripted test model. With a NEAR AI key the
 same prompts go to NEAR AI (`make record-swarm`).
@@ -212,7 +227,7 @@ No keys, no NEAR AI account, no testnet NEAR.
 | Step | Command | Cold time (measured on the build box) |
 |---|---|---|
 | 1 | `make setup` | crate download |
-| 2 | `make test` | 392 unit + property tests, all `ok`: core (59 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (248), factory (22), pool (25), mock checker (2), mock-usdc (7), agents (24) |
+| 2 | `make test` | 415 unit + property tests, all `ok`: core (59 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (254), factory (33), pool (25), mock checker (2), mock-usdc (7), agents (30) |
 | `make lint` | rustfmt check, clippy `-D warnings`, a check that every test the specs and THREATS.md name exists, and a check that every swarm number in this README matches `web/swarm.json`; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make mcp-setup`, then an MCP client in this folder | `.mcp.json` starts `scripts/mcp-local.sh`: tools `guide`, `accounts`, `wait`, `do_work`, `judge_check`, `run_story` plus every agent tool, each with `as` to pick the acting account |
