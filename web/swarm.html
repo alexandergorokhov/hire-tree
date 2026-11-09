@@ -67,6 +67,8 @@ td.n, th.n { text-align: right; }
 #tip { position: fixed; pointer-events: none; background: var(--card); color: var(--text-primary); border: 1px solid var(--line);
   border-radius: 8px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.12); display: none; z-index: 9; }
 a { color: var(--accent); }
+[hidden] { display: none !important; }
+td .sk { color: var(--text-muted); }
 </style>
 </head>
 <body>
@@ -87,6 +89,12 @@ a { color: var(--accent); }
     <p class="note">Each cell is one job: its own NEAR account, with a sub-account per part. An indented line is a sub-part a contractor bought out of its own pay. Struck through: failed the contract's check, not paid.</p>
     <div class="legend" id="legend"></div>
     <div class="trees" id="trees"></div>
+  </div>
+
+  <div class="card" id="control-card" hidden>
+    <h2>Do on-chain records matter? The same market with blind buyers</h2>
+    <p class="note" id="control-note">Each seed runs the same 12 rounds twice: buyers that read on-chain records, and buyers blind to them (no record penalty, no newcomer premium, no audits). Seeds change the agents' starting asks and the judge's rolls.</p>
+    <div class="wrap"><table id="control"></table></div>
   </div>
 
   <div class="card">
@@ -164,6 +172,15 @@ function roundTip(r) {
   return fills.length || plans.length ? ` data-tip="${esc(`<b>Round ${r.round}</b><br>` + fills.concat(plans).join('<br>'))}"` : '';
 }
 
+function control(c) {
+  const rows = Object.keys(c.mean.records);
+  const cell = (arm, k) => { const v = c[arm].map(m => m[k]);
+    return `${c.mean[arm][k].toFixed(2)} <span class="sk">(${Math.min(...v)} to ${Math.max(...v)})</span>`; };
+  document.getElementById('control').innerHTML = `<tr><th>over ${c.seeds.length} seed${c.seeds.length > 1 ? 's' : ''}, mean (range)</th><th class="n">with records</th><th class="n">blind</th></tr>` +
+    rows.map(k => `<tr><td>${esc(k)}</td><td class="n">${cell('records', k)}</td><td class="n">${cell('blind', k)}</td></tr>`).join('');
+  document.getElementById('control-card').hidden = false;
+}
+
 function render(d) {
   const parts = d.rounds.flatMap(r => r.parts.map(p => ({ ...p, round: r.round })));
   const won = parts.filter(p => p.winner);
@@ -224,6 +241,7 @@ function render(d) {
     rows.map(a => `<tr><td>${esc(a.agent)}</td><td>${esc(a.skill)}</td><td><i class="sw" style="background:${col(a.strategy)}"></i>${esc(a.strategy)}</td><td class="n">${esc(a.wins)}</td><td class="n">${esc(a.record.paid ?? 0)}</td><td class="n">${a.earned.toFixed(2)}</td><td class="n">${esc(a.bonds_lost ?? 0)}</td><td class="n">${esc(a.final_rate)}%</td><td>${a.quit ? 'left' : 'active'}</td></tr>`).join('');
   document.getElementById('foot').textContent = 'Regenerate with make swarm (writes web/swarm.json). All money is fake test USD.';
   priceChart(d); earnChart(d);
+  fetch('swarm-seeds.json').then(r => r.ok ? r.json() : null).then(c => { if (c) control(c); }).catch(() => {});
   addEventListener('resize', () => { priceChart(d); earnChart(d); });
 }
 fetch(new URLSearchParams(location.search).get('data') === 'live' ? 'swarm-live.json' : 'swarm.json').then(r => r.json()).then(render).catch(e => { document.getElementById('sub').textContent = 'No swarm.json yet: run make swarm. (' + e + ')'; });

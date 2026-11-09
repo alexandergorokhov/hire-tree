@@ -1,0 +1,35 @@
+{
+ "seeds": [
+  0
+ ],
+ "records": [
+  {
+   "junk wins": 18,
+   "junk paid fUSD": 0,
+   "fired": 18,
+   "fUSD per delivered part": 13.2
+  }
+ ],
+ "blind": [
+  {
+   "junk wins": 24,
+   "junk paid fUSD": 5.5,
+   "fired": 23,
+   "fUSD per delivered part": 11.8
+  }
+ ],
+ "mean": {
+  "records": {
+   "junk wins": 18.0,
+   "junk paid fUSD": 0.0,
+   "fired": 18.0,
+   "fUSD per delivered part": 13.2
+  },
+  "blind": {
+   "junk wins": 24.0,
+   "junk paid fUSD": 5.5,
+   "fired": 23.0,
+   "fUSD per delivered part": 11.8
+  }
+ }
+}

@@ -100,6 +100,11 @@ swarm-blind: build ## control run: the same 12-round market with buyers blind to
 	@$(SBX) $(HT) swarm --blind --rounds $(or $(ROUNDS),12) --out $(CURDIR)/web/swarm-blind.json
 	python3 scripts/swarm-compare.py web/swarm.json web/swarm-blind.json
 
+.PHONY: swarm-seeds
+swarm-seeds: build ## repeat the control comparison: for each seed in SEEDS (default 1 2 3) run the market with records and blind (other starting asks and judge rolls), RUNS (default 2) at a time, then print mean, min and max per arm with the committed pair as seed 0 (about 90 min per run)
+	@$(SBX) ../scripts/swarm-seeds-run.sh "$(or $(SEEDS),1 2 3)" "$(or $(RUNS),2)"
+	python3 scripts/swarm-seeds.py
+
 .PHONY: swarm-quick
 swarm-quick: build ## 3 rounds of the same market (about 20 min), then checks the run against its rules: every part sold, bonds lost exactly by unpaid winners, sub-parts below their contractor's price, fees
 	@$(SBX) $(HT) swarm --rounds 3 --out $(CURDIR)/out/swarm-quick.json

@@ -501,8 +501,14 @@ fn initial_rate(s: Strategy) -> u128 {
 
 /// A small, fixed per-agent spread (-3..=+3 points) so agents with the same
 /// strategy do not bid in lockstep.
-fn jitter(name: &str) -> i64 {
-    (name.bytes().map(|b| b as i64).sum::<i64>() % 7) - 3
+/// Each agent's starting ask moves by -3..=3 points. Seed 0 is the
+/// committed run; another seed draws other starting asks and other judge
+/// rolls, so a result can be repeated across seeds, not just once.
+pub fn jitter(name: &str, seed: u32) -> i64 {
+    if seed == 0 {
+        return (name.bytes().map(|b| b as i64).sum::<i64>() % 7) - 3;
+    }
+    ht_core::receipt::sha256(format!("{seed}:{name}").as_bytes())[0] as i64 % 7 - 3
 }
 
 const BID_SECS: u64 = 300;
@@ -596,7 +602,13 @@ fn buyer_name(b: Buyer, agents: &[Agent]) -> String {
 /// `blind`: the control run. Buyers ignore on-chain records: no record
 /// penalty, no newcomer premium (so vouching does nothing), no audits. The
 /// contract still checks, fires and keeps bonds.
-pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value, String> {
+pub async fn run(
+    c: &Chain,
+    llm: &Llm,
+    rounds: u32,
+    blind: bool,
+    seed: u32,
+) -> Result<Value, String> {
     let model = llm.model();
     use std::collections::{HashMap, HashSet};
     let tools = Tools { chain: c };
@@ -644,7 +656,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
     }
     let mut agents = vec![];
     for (name, skill, strategy) in roster() {
-        let rate0 = (initial_rate(strategy) as i64 + jitter(&name)).clamp(40, 100) as u128;
+        let rate0 = (initial_rate(strategy) as i64 + jitter(&name, seed)).clamp(40, 100) as u128;
         let acc = mk(format!("w-{name}")).await;
         c.register(&acc).await;
         agents.push(Agent {
@@ -677,7 +689,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
     let mut asks_too_low = 0u32;
     // Sealed-bid salts come from a per-run secret, so nobody can open a
     // commit by trying prices against a guessable salt.
-    let seed = ht_core::receipt::sha256_hex(
+    let salt_key = ht_core::receipt::sha256_hex(
         format!("{:?}{}", std::time::SystemTime::now(), std::process::id()).as_bytes(),
     );
     let mut log = vec![];
@@ -895,7 +907,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                                 &a.acc,
                                 "bid_sealed",
                                 &json!({ "job": job, "slot": slot, "price": price.to_string(),
-                                "salt": salt(&seed, r, p, i), "stake": stake.to_string() }),
+                                "salt": salt(&salt_key, r, p, i), "stake": stake.to_string() }),
                             )
                             .await
                     } else {
@@ -992,7 +1004,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                             &agents[i].acc,
                             "reveal",
                             &json!({ "job": parts[p].job, "slot": parts[p].slot,
-                            "price": price.to_string(), "salt": salt(&seed, r, p, i) }),
+                            "price": price.to_string(), "salt": salt(&salt_key, r, p, i) }),
                         )
                         .await?;
                 }
@@ -1183,7 +1195,10 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                     };
                     let (child, task) = (parts[p].child.clone(), parts[p].task.clone());
                     let delivered = if agents[w].strategy == Strategy::Polished {
-                        let b = crate::agents::POLISHED.as_bytes().to_vec();
+                        let mut b = crate::agents::POLISHED.as_bytes().to_vec();
+                        if seed > 0 {
+                            b.extend(format!(" Ref {seed}.").bytes());
+                        }
                         tools
                             .call(
                                 &agents[w].acc,
@@ -1632,7 +1647,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
     }
     let settings = c.view(&c.hub, "get_settings", json!({})).await?;
     Ok(
-        json!({ "schema": "hiretree-swarm-2", "blind": blind, "network": c.network_name, "rounds": log, "agents": table,
+        json!({ "schema": "hiretree-swarm-2", "blind": blind, "seed": seed, "network": c.network_name, "rounds": log, "agents": table,
         "leads": LEADS.iter().enumerate().map(|(l, (n, r))| json!({ "lead": n, "record_weight": r.record_weight,
             "max_pct": r.max_pct, "spent": lead_spent[l] as f64 / 1e6, "unfilled": lead_unfilled[l] })).collect::<Vec<_>>(),
         "junk_respawns": respawns, "bid_errors": bid_errors, "backer_asks_too_low": asks_too_low, "premiums": premium,
@@ -1722,6 +1737,17 @@ mod tests {
         assert_eq!(pick(&[(0, 27, 3, 3, 1), (1, 13, 2, 0, 1)], 0, 150), Some(0));
         // One unpaid job in four is a smaller penalty: 19 weighs ~26 and still wins.
         assert_eq!(pick(&[(0, 27, 3, 3, 1), (1, 19, 4, 3, 1)], 0, 150), Some(1));
+    }
+
+    #[test]
+    fn seed_zero_keeps_the_committed_run_and_other_seeds_differ() {
+        assert_eq!(jitter("res-lean", 0), jitter("res-lean", 0));
+        let asks: Vec<i64> = (1..=5).map(|s| jitter("res-lean", s)).collect();
+        assert!(asks.iter().all(|j| (-3..=3).contains(j)));
+        assert!(
+            asks.iter().any(|j| *j != asks[0]),
+            "seeds draw different asks"
+        );
     }
 
     #[test]
