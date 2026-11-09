@@ -673,6 +673,8 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
     let mut history: HashMap<&str, Vec<u128>> = HashMap::new();
     let mut respawns = 0u32;
     let mut bid_errors = 0u32;
+    // Newcomer asks no underwriter would back: below 85% of the median win.
+    let mut asks_too_low = 0u32;
     // Sealed-bid salts come from a per-run secret, so nobody can open a
     // commit by trying prices against a guessable salt.
     let seed = ht_core::receipt::sha256_hex(
@@ -928,8 +930,8 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                     }
                 }
             }
-            // Underwriters: a trusted agent of the same skill, not bidding on
-            // the slot itself, backs a seeking newcomer whose ask looks like
+            // Underwriters: a trusted agent of the same skill (often a rival
+            // bidder on the same slot, hedging) backs a seeking newcomer whose ask looks like
             // real work (at least `strict`% of the skill's recent median
             // win). One backing per underwriter per round. A sealed bidder
             // shows its backer the price off-chain.
@@ -937,13 +939,15 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                 let skill = parts[p].skill;
                 let median = median_rate(history.get(skill).map(|h| h.as_slice()).unwrap_or(&[]));
                 let rate = price * 100 / (nominal_max(skill) * USD);
+                if median > 0 && !will_back(rate, median, BACKER_STRICT) {
+                    asks_too_low += 1;
+                }
                 for j in 0..agents.len() {
                     let b = &agents[j];
                     if j == i
                         || b.gone
                         || b.skill != skill
                         || backing.contains(&j)
-                        || parts[p].bids.iter().any(|x| x.0 == j)
                         || matches!(parts[p].buyer, Buyer::Agent(x) if x == j)
                         || !will_back(rate, median, b.strict)
                     {
@@ -1631,7 +1635,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
         json!({ "schema": "hiretree-swarm-2", "blind": blind, "network": c.network_name, "rounds": log, "agents": table,
         "leads": LEADS.iter().enumerate().map(|(l, (n, r))| json!({ "lead": n, "record_weight": r.record_weight,
             "max_pct": r.max_pct, "spent": lead_spent[l] as f64 / 1e6, "unfilled": lead_unfilled[l] })).collect::<Vec<_>>(),
-        "junk_respawns": respawns, "bid_errors": bid_errors, "premiums": premium,
+        "junk_respawns": respawns, "bid_errors": bid_errors, "backer_asks_too_low": asks_too_low, "premiums": premium,
         "platform_fee_bps": SWARM_FEE_BPS, "job_budget": JOB_BUDGET, "bond_near": BOND_YOCTO as f64 / 1e24, "sealed_lead": "quality", "platform_fees": num(&settings["fees"]) as f64 / 1e6,
         "model": match llm {
             Llm::Mock(_) => "scripted test model (not NEAR AI) for work, judging, the model bidder and contractors' make-or-buy; agents adapt their asks; buyers pick by price, on-chain record and a learned newcomer premium".to_string(),

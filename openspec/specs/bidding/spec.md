@@ -96,7 +96,7 @@ paid, the backer gets its NEAR back plus the premium, taken out of the
 worker's bond. If the work is junk, the buyer keeps the bond and the
 backing. A rolled-back hire charges no premium. In the swarm a newcomer
 seeks a backer instead of staking more of its own; a trusted agent of the
-same skill (see records) backs it only if its ask is at least 85% of the
+same skill (see records), often a rival bidder hedging, backs it only if its ask is at least 85% of the
 skill's recent median win, and 5 points stricter after each backed junk.
 
 #### Scenario: Paid, junk, lost

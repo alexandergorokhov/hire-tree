@@ -41,22 +41,35 @@ instead of reading about it. No keys, no network.
 (JSON-RPC over stdio, about 7 min) and checks every answer.
 
 ## Swarm
-`make swarm` runs a recursive labor market on a local node: 3 competing
-leads (one buys the cheapest after records, one weighs records heavily and
-uses sealed bids, one offers only 75% of the max) buy from 36 worker agents
-with 10 strategies, for 12 rounds. A contractor agent that wins a part can
-put a piece of it out for bids and hire a sub-agent out of its own pay
-(a sub-agent that is a contractor can do the same, so trees can grow 3
-levels deep). Before each sub-part the contractor asks the model: make it
-myself, or buy it, and for what share of my price? The model sees what its
-sub-agents delivered and what buying cost. Every bid stakes 0.05 NEAR; an
-honest agent with no record stakes 10x that, and buyers cut its newcomer
-premium by the same factor (they read each bond on-chain), so a first-timer
-that puts money at risk beats a fresh junk account. When a winner fails the
-signed check, the buyer fires it on-chain at once (no pay, its bond to the
-buyer, the pay back) and hires the runner-up in the same round. The factory
-keeps a 0.5% fee. Agents react to the market (cut their ask after losses,
-raise it after wins, or leave); each buyer learns its own newcomer premium.
+`make swarm` runs a recursive labor market on a local node, 12 rounds:
+- **Intents.** Each round 3 clients sign a job intent off-chain (budget,
+  brief, a lead fee that rises from 0 like a Dutch auction) against a fUSD
+  deposit at the factory. Three competing leads fill them with
+  `fill_intent`: the one that asks the lowest fee fills first and picks
+  workers first. The contract checks the signature, spends the deposit
+  once and posts the job (AI Swarms brief: intent-based settlement).
+- **The lead's model plans the tree.** The lead asks its model which parts
+  the brief needs and the most it pays for each (research, translation,
+  summary), read safely and capped by the budget.
+- **On-chain bidding.** 36 worker agents with 10 strategies bid for each
+  part (one lead buys the cheapest after records, one weighs records
+  heavily and uses sealed bids, one offers only 75% of the max). Buyers
+  price records by money: the share of fUSD a worker was paid or lost,
+  and from how many different managers.
+- **Contractors grow the tree.** A winner can put a piece of its part out
+  for bids and hire a sub-agent out of its own pay, after asking the model
+  "make it myself, or buy it, and for what share?"; trees reach 3 levels.
+- **Bonds and underwriters.** Every bid stakes 0.05 NEAR. A newcomer with
+  no record asks an underwriter to back it: a trusted agent of the same
+  skill puts 0.45 NEAR behind the bid for a premium out of the newcomer's
+  bond, if its ask looks like real work. Buyers cut the newcomer premium
+  by the bid's total bond, read on-chain. Junk loses both bonds.
+- **Fire and replace.** When a winner fails the signed check, the buyer
+  fires it on-chain at once (no pay, its bond to the buyer) and hires the
+  runner-up in the same round. Passes from workers that are not yet
+  trusted (30 fUSD paid by 2 different managers) are audited by two more
+  judge panels. The factory keeps a 0.5% fee.
+
 Nothing about the winners is scripted. What emerged in the committed run
 (`web/swarm.json`, page `web/swarm.html`):
 - 140 parts were bought on-chain, 19 of them by contractors out of their
