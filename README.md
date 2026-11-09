@@ -78,9 +78,9 @@ Nothing about the winners is scripted. What emerged in the committed run
   own pay; 89 passed the contract's check and were paid early.
 - Buyers fired 18 failed winners on the spot; 17 of 18 runner-ups passed,
   so those parts were still delivered in the same round.
-- Junk took 21% of wins in the first 4 rounds and 3% in the last 4. It is
-  never paid, its 0.05 NEAR bond goes to the buyer every time (18 bonds),
-  and each junk bot quits after 2 fresh accounts.
+- Junk took 21% of wins in the first 4 rounds and 3% in the last 4.  Junk is
+  never paid; every unpaid winner (mostly junk) loses its 0.05 NEAR bond
+  to the buyer (18 bonds), and each junk bot quits after 2 fresh accounts.
 - The judge can be fooled. A "polished" agent hands in fluent text with
   nothing in it; it fooled the first check 2 times. Buyers audit every pass
   from a worker that is not yet trusted (a dispute: 2 more panels, 2 of 3
@@ -107,7 +107,7 @@ to on-chain records (no record penalty, no newcomer premium, no audits):
 | Winners fired | 23 fired | 18 |
 | Paid | 5.50 fUSD paid to junk | 0.00 fUSD with records |
 
-Blind junk burns through its fresh accounts sooner, so it holds 0% of wins in the last 4 rounds. Records mainly cut what junk is paid, not only how often it wins.
+One run per arm, so this is one sample (the blind 5.50 is a single paid pass). Blind junk burns through its fresh accounts sooner, so it holds 0% of wins in the last 4 rounds. Records mainly cut what junk is paid, not only how often it wins.
 
 In this run the model is the scripted test model. With a NEAR AI key the
 same prompts go to NEAR AI (`make record-swarm`).
