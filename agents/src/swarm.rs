@@ -273,6 +273,16 @@ pub const CONTRACTOR_RULES: Rules = Rules {
     max_pct: 100,
 };
 
+/// What a buyer charges for a record: (newcomer premium, record weight).
+/// A blind buyer (the control run) charges nothing for either.
+pub fn terms(blind: bool, premium: u128, rules: Rules) -> (u128, u128) {
+    if blind {
+        (0, 0)
+    } else {
+        (premium, rules.record_weight)
+    }
+}
+
 /// The buyer's pick: the lowest bid after a penalty for the share of unpaid
 /// jobs on the bidder's on-chain record (`record_weight`: 150 = x2.5 when
 /// all unpaid), and for a bidder with no record yet, a newcomer premium
@@ -447,7 +457,10 @@ fn buyer_name(b: Buyer, agents: &[Agent]) -> String {
 }
 
 /// Runs `rounds` rounds: each round every lead posts one job.
-pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
+/// `blind`: the control run. Buyers ignore on-chain records: no record
+/// penalty, no newcomer premium (so vouching does nothing), no audits. The
+/// contract still checks, fires and keeps bonds.
+pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value, String> {
     let model = llm.model();
     use std::collections::{HashMap, HashSet};
     let tools = Tools { chain: c };
@@ -742,8 +755,8 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                         vouch,
                     ));
                 }
-                let prem = *premium.get(&bname).unwrap_or(&0);
-                let Some(w) = pick(&cands, prem, rules.record_weight) else {
+                let (prem, weight) = terms(blind, *premium.get(&bname).unwrap_or(&0), rules);
+                let Some(w) = pick(&cands, prem, weight) else {
                     if let Buyer::Lead(l) = buyer {
                         lead_unfilled[l] += 1;
                     }
@@ -959,7 +972,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                             &json!({ "account": agents[w].acc.id }),
                         )
                         .await?;
-                    if rec["paid"].as_u64().unwrap_or(0) >= AUDIT_BELOW {
+                    if blind || rec["paid"].as_u64().unwrap_or(0) >= AUDIT_BELOW {
                         continue;
                     }
                     let buyer_acc = match parts[p].buyer {
@@ -1128,8 +1141,8 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
                         ));
                     }
                     let bname = buyer_name(buyer, &agents);
-                    let prem = *premium.get(&bname).unwrap_or(&0);
-                    let Some(r2) = pick(&cands, prem, rules.record_weight) else {
+                    let (prem, weight) = terms(blind, *premium.get(&bname).unwrap_or(&0), rules);
+                    let Some(r2) = pick(&cands, prem, weight) else {
                         continue;
                     };
                     let (_, price, jobs, _, _) = *cands.iter().find(|x| x.0 == r2).unwrap();
@@ -1330,7 +1343,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32) -> Result<Value, String> {
     }
     let settings = c.view(&c.hub, "get_settings", json!({})).await?;
     Ok(
-        json!({ "schema": "hiretree-swarm-2", "network": c.network_name, "rounds": log, "agents": table,
+        json!({ "schema": "hiretree-swarm-2", "blind": blind, "network": c.network_name, "rounds": log, "agents": table,
         "leads": LEADS.iter().enumerate().map(|(l, (n, r))| json!({ "lead": n, "record_weight": r.record_weight,
             "max_pct": r.max_pct, "spent": lead_spent[l] as f64 / 1e6, "unfilled": lead_unfilled[l] })).collect::<Vec<_>>(),
         "junk_respawns": respawns, "premiums": premium,
@@ -1420,6 +1433,18 @@ mod tests {
         assert_eq!(pick(&[(0, 27, 3, 3, 1), (1, 13, 2, 0, 1)], 0, 150), Some(0));
         // One unpaid job in four is a smaller penalty: 19 weighs ~26 and still wins.
         assert_eq!(pick(&[(0, 27, 3, 3, 1), (1, 19, 4, 3, 1)], 0, 150), Some(1));
+    }
+
+    #[test]
+    fn a_blind_buyer_ignores_records_and_premium() {
+        // Junk (all 4 jobs unpaid) bids 13 against an honest 18 (5 of 5 paid),
+        // and a fresh junk account bids 12 under a 100% premium.
+        let c = [(0, 18, 5, 5, 1), (1, 13, 4, 0, 1), (2, 12, 0, 0, 1)];
+        let (p, w) = terms(false, 100, LEADS[0].1);
+        assert_eq!(pick(&c, p, w), Some(0));
+        let (p, w) = terms(true, 100, LEADS[0].1);
+        assert_eq!((p, w), (0, 0));
+        assert_eq!(pick(&c, p, w), Some(2));
     }
 
     #[test]

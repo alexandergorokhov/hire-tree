@@ -71,3 +71,13 @@ caught worker is replaced by the runner-up like a failed one. The run
 reports how often polished junk fooled the first check, was caught, and was
 still paid.
 - unit: `polished_junk_fools_the_scripted_judge_about_a_third_of_the_time`, `roster_has_every_strategy_for_each_skill`; contract: `manager_disputes_sub_job`, `dispute_upheld_refunds_parent_at_settle`, `dispute_rejected_back_to_checked`
+
+### Requirement: A control run with buyers blind to records
+`make swarm-blind` SHALL run the same market with buyers that ignore
+on-chain records: no record penalty, no newcomer premium and no audits.
+The contract still checks every delivery, fires failed winners and keeps
+their bonds. `scripts/swarm-compare.py` SHALL print junk wins, junk share
+in the first and last third of rounds, fired winners and fUSD paid to junk
+for both runs side by side, so the effect of the records is measured, not
+claimed.
+- unit: `a_blind_buyer_ignores_records_and_premium`

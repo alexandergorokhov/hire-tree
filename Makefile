@@ -93,6 +93,11 @@ CASSETTE ?= $(CURDIR)/demo/cassette.json
 swarm: build ## recursive labor market: 3 leads, 36 agents, contractors ask the model to make or buy, trees up to 3 levels deep, 12 rounds on a local node; writes web/swarm.json (open web/swarm.html; about 85 min)
 	@$(SBX) $(HT) swarm --rounds $(or $(ROUNDS),12) --llm $(or $(LLM),mock) --out $(or $(SWARM_OUT),$(CURDIR)/web/swarm.json)
 
+.PHONY: swarm-blind
+swarm-blind: build ## control run: the same 12-round market with buyers blind to on-chain records (no record penalty, no newcomer premium, no audits); writes web/swarm-blind.json, then compares it with web/swarm.json (about 85 min)
+	@$(SBX) $(HT) swarm --blind --rounds $(or $(ROUNDS),12) --out $(CURDIR)/web/swarm-blind.json
+	python3 scripts/swarm-compare.py web/swarm.json web/swarm-blind.json
+
 .PHONY: swarm-quick
 swarm-quick: build ## 3 rounds of the same market (about 20 min), then checks the run against its rules: every part sold, bonds lost exactly by unpaid winners, sub-parts below their contractor's price, fees
 	@$(SBX) $(HT) swarm --rounds 3 --out $(CURDIR)/out/swarm-quick.json
