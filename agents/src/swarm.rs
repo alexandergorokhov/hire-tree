@@ -1501,10 +1501,11 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                 q.settled = true;
             }
         }
-        for &l in &order {
-            let root = parts.iter().find(|q| q.lead == l).unwrap().root.clone();
+        // Lead l filled client k's intent: client k approves that root.
+        for (k, root) in fill_roots.iter().enumerate() {
+            let root = root.clone();
             let _ = tools
-                .call(&leads[l].1, "approve", &json!({ "job": root }))
+                .call(&leads[k].1, "approve", &json!({ "job": root }))
                 .await;
             tools
                 .call(&keeper, "settle", &json!({ "job": root }))
