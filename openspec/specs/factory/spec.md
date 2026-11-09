@@ -66,6 +66,11 @@ Records are evidence, not proof: a lead can hire itself to build one.
 - THEN refused
 - factory: `strangers_cannot_write_records`
 
+#### Scenario: Records weigh money and distinct payers
+- WHEN a job reports its worker
+- THEN the record adds the job's amount to `paid_value` or `unpaid_value`, and counts each paying manager once in `payers` (a worker paid by itself is not counted)
+- unit: `a_record_counts_money_and_distinct_payers`; swarm: `records_are_weighed_by_money_and_payers`
+
 ### Requirement: Platform fee
 The owner SHALL be able to set a platform fee of at most 1% (100 bps). On
 each post the factory SHALL keep the fee and fund the job with the rest;
@@ -73,3 +78,28 @@ a failed post SHALL refund the whole budget, fee included. Only the owner
 withdraws fees; a failed withdrawal puts them back. The fee is 0 unless
 set (the swarm runs at 0.5%).
 - unit: `the_platform_fee_comes_off_the_top_and_is_kept_only_when_posted`, `the_fee_is_capped_at_one_percent`, `only_the_owner_withdraws_fees`
+
+### Requirement: Signed job intents
+A client SHALL be able to keep fUSD at the factory (`ft_transfer_call`
+with msg "deposit"), register one ed25519 intent key, and sign job intents
+off-chain: budget, spec hash, window, nonce, and a lead fee that rises
+linearly (a Dutch auction) from 0 at `starts_ns` to `max_lead_fee` at
+`ends_ns`. Any lead but the client SHALL be able to fill an intent with
+`fill_intent`: the factory checks the signature over
+`hiretree-intent:<json>`, that it names this factory, that it has not
+expired, been cancelled or filled (a nonce is used once), and that the
+deposit covers the budget; it then posts the job with the filler as
+manager and the current fee as lead fee. A failed post SHALL return the
+budget to the deposit, not the wallet. The client MAY cancel a nonce and
+withdraw its deposit. This is intent-based settlement: the client signs
+what it wants and pays nothing until a lead commits to deliver it.
+
+#### Scenario: A lead fills an intent
+- unit: `the_lead_fee_rises_from_zero_to_the_max`, `a_lead_fills_a_signed_intent_and_the_job_is_posted`
+
+#### Scenario: Replays, tampering and the wrong factory
+- THEN refused
+- unit: `an_intent_fills_only_once`, `a_tampered_intent_is_refused`, `an_intent_for_another_factory_is_refused`, `an_expired_intent_is_refused`, `a_cancelled_intent_is_refused`, `an_intent_above_the_deposit_is_refused`, `the_client_cannot_fill_its_own_intent`
+
+#### Scenario: A failed post
+- unit: `a_failed_intent_post_goes_back_to_the_deposit`

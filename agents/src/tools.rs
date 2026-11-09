@@ -54,6 +54,10 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
          s(json!({ "job": str_, "task": str_, "max": str_, "secs": { "type": "integer" }, "bond": str_, "sealed": { "type": "boolean" } }), &["job", "task", "max", "secs"])),
         ("bid_sealed", "Worker, sealed slot: commit to a price without showing it (the tool hashes `price:salt:you`; keep the salt). Attaches 0.002 NEAR for storage plus the slot's bond, plus an optional `stake` (yoctoNEAR) on top: a bigger bond vouches for a bidder with no record yet.",
          s(json!({ "job": str_, "slot": { "type": "integer" }, "price": str_, "salt": str_, "stake": str_ }), &["job", "slot", "price", "salt"])),
+        ("seek_backer", "Worker, after bidding: ask an underwriter to back your bid with more bond. You offer `premium` (yoctoNEAR, at most half your own bond), paid out of your bond only if you win and your work is paid. A newcomer with no record uses it to borrow a trusted agent's vouch.",
+         s(json!({ "job": str_, "slot": { "type": "integer" }, "premium": str_ }), &["job", "slot", "premium"])),
+        ("back", "Underwriter: back another agent's bid that seeks a backer, attaching `amount` yoctoNEAR (at most 5 NEAR). Buyers see the bid's bond plus your backing. Paid work: you get it back plus the premium. Junk: the buyer keeps it. A losing bid: refunded at the award.",
+         s(json!({ "job": str_, "slot": { "type": "integer" }, "bidder": str_, "amount": str_ }), &["job", "slot", "bidder", "amount"])),
         ("reveal", "Worker, sealed slot, after bidding closes: reveal the committed price with its salt. An unrevealed bid cannot win and loses its bond.",
          s(json!({ "job": str_, "slot": { "type": "integer" }, "price": str_, "salt": str_ }), &["job", "slot", "price", "salt"])),
         ("bid", "Worker: bid `price` (at most the slot's max) on an open slot; a second bid replaces the first. Attaches 0.001 NEAR (the bid's storage) plus the slot's bond, if any, plus an optional `stake` (yoctoNEAR) on top: a bigger bond vouches for a bidder with no record yet.",
@@ -261,6 +265,32 @@ impl Tools<'_> {
                     "bid_sealed",
                     json!({ "slot": slot, "commit": commit }),
                     deposit,
+                )
+                .await
+            }
+            "seek_backer" => {
+                c.call(
+                    who,
+                    &id(a, "job")?,
+                    "seek_backer",
+                    json!({ "slot": a["slot"].as_u64().ok_or("missing slot")?, "premium": s(a, "premium")? }),
+                    zero,
+                )
+                .await
+            }
+            "back" => {
+                let amount: u128 = s(a, "amount")?
+                    .parse()
+                    .map_err(|_| "amount must be yoctoNEAR as a string".to_string())?;
+                if amount == 0 || amount > MAX_STAKE {
+                    return Err("back with 1 yocto to 5 NEAR".into());
+                }
+                c.call(
+                    who,
+                    &id(a, "job")?,
+                    "back",
+                    json!({ "slot": a["slot"].as_u64().ok_or("missing slot")?, "bidder": id(a, "bidder")? }),
+                    NearToken::from_yoctonear(amount),
                 )
                 .await
             }

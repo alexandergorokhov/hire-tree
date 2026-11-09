@@ -511,7 +511,7 @@ impl Factory {
             .and_then(|b| b.try_into().ok())
             .unwrap_or_else(|| env::panic_str("signature must be 64 bytes, base64"));
         require!(
-            env::ed25519_verify(&sig, &intent_message(&intent), &key),
+            env::ed25519_verify(&sig, intent_message(&intent), &key),
             "bad intent signature"
         );
         let now = env::block_timestamp();
@@ -713,6 +713,7 @@ impl Factory {
     /// Called by a settled job of this factory's tree (any account under
     /// `.<factory>`: only the factory and its jobs can create those, and the
     /// jobs run the pinned global code). Counts one finished job.
+    #[allow(clippy::too_many_arguments)]
     pub fn record(
         &mut self,
         worker: AccountId,

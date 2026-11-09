@@ -611,6 +611,31 @@ pub fn mock_script(req: &Value) -> String {
             { "name": "translate", "task": "Translate the explanation into Spanish.", "pay": 20 },
             { "name": "summary", "task": "Write a one-line summary.", "pay": 10 } ] }).to_string();
     }
+    if sys.starts_with("ROLE: tree planner") {
+        // Scripted stand-in: buy the parts the brief names, at the usual max.
+        let u: Value = serde_json::from_str(user).unwrap_or(Value::Null);
+        let brief = u["brief"].as_str().unwrap_or_default().to_lowercase();
+        let mut parts = vec![];
+        for (skill, words) in [
+            ("research", &["research", "explain"][..]),
+            ("translate", &["spanish", "translat", "locali"][..]),
+            ("summary", &["summar"][..]),
+        ] {
+            if words.iter().any(|w| brief.contains(w)) {
+                let max = u["catalog"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .find(|c| c["skill"] == skill)
+                    .and_then(|c| c["usual_max_fusd"].as_u64())
+                    .unwrap_or(10);
+                parts.push(json!({ "skill": skill, "max": max }));
+            }
+        }
+        let names: Vec<&str> = parts.iter().filter_map(|p| p["skill"].as_str()).collect();
+        return json!({ "parts": parts, "why": format!("The brief needs {}.", names.join(", ")) })
+            .to_string();
+    }
     if sys.starts_with("ROLE: contractor") {
         // Scripted stand-in: expected price = median recent winning rate
         // (60 if none) divided by the chance a sub-agent delivers (last 4

@@ -92,6 +92,11 @@ pub struct Agent {
     pub bought: u32,
     pub made: u32,
     pub since_buy: u32,
+    /// Underwriter: backs a newcomer only if its ask is at least this %
+    /// of the skill's recent median win (85, +5 after each backed junk).
+    pub strict: u128,
+    /// Underwriter: backings it lost to buyers (backed junk).
+    pub backs_lost: u32,
 }
 
 pub const MARKET_BIDDER: &str = "ROLE: market bidder. You sell one skill in an open market of AI agents. \
@@ -205,6 +210,73 @@ pub fn next_premium(p: u128, newcomer_failed: Option<bool>) -> u128 {
         Some(false) => p / 2,
         None => p * 4 / 5,
     }
+}
+
+/// What clients ask for. Each round each client signs an intent for one of
+/// these; the lead that fills it asks its model which parts to buy.
+pub const BRIEFS: [&str; 3] = [
+    "Explain NEAR intents for a Spanish-speaking board: research, a Spanish translation and a one-line summary.",
+    "An English market note on agent payments: research the facts and summarize them.",
+    "Localize our release notes into Spanish and add a short summary.",
+];
+
+pub const TREE_PLANNER: &str = "ROLE: tree planner. You are the lead of a job tree. Decide which parts of the client's brief to buy from the open market, from the catalog only, each at most once. \
+Reply with JSON only: {\"parts\": [{\"skill\": \"<catalog skill>\", \"max\": <the most you pay, fUSD>}], \"why\": \"<one short sentence>\"}. \
+Buy only what the brief needs; the sum of the maxes must fit the budget.";
+
+/// The tree planner's prompt: the brief, the budget and the catalog.
+pub fn plan_prompt(brief: &str, budget: u128) -> String {
+    let catalog: Vec<Value> = SKILLS
+        .iter()
+        .map(|(s, m)| json!({ "skill": s, "usual_max_fusd": m }))
+        .collect();
+    json!({ "brief": brief, "budget_fusd": budget, "catalog": catalog }).to_string()
+}
+
+/// Reads the planner's answer into (skill, max in yocto fUSD) parts and its
+/// reason. Unknown or repeated skills are dropped; each max is clamped to
+/// the lead's cap (`max_pct` of the usual max) and to at least the cost
+/// floor; parts that overflow the budget are dropped. Nothing usable falls
+/// back to the whole catalog.
+pub fn read_plan(answer: &str, budget: u128, max_pct: u128) -> (Vec<(&'static str, u128)>, String) {
+    let v: Value = answer
+        .find('{')
+        .and_then(|i| answer.rfind('}').map(|j| &answer[i..=j]))
+        .and_then(|t| serde_json::from_str(t).ok())
+        .unwrap_or(Value::Null);
+    let mut out: Vec<(&'static str, u128)> = vec![];
+    let mut left = budget * USD;
+    for q in v["parts"].as_array().into_iter().flatten() {
+        let Some(&(skill, usual)) = SKILLS.iter().find(|s| Some(s.0) == q["skill"].as_str()) else {
+            continue;
+        };
+        if out.iter().any(|x| x.0 == skill) {
+            continue;
+        }
+        let cap = usual * USD * max_pct / 100;
+        let floor = usual * USD * COST_FLOOR / 100;
+        let max = q["max"]
+            .as_f64()
+            .map(|m| (m.max(0.0) * USD as f64) as u128)
+            .unwrap_or(cap)
+            .clamp(floor.min(cap), cap);
+        if max > left {
+            continue;
+        }
+        left -= max;
+        out.push((skill, max));
+    }
+    if out.is_empty() {
+        let all = SKILLS
+            .iter()
+            .map(|(s, m)| (*s, m * USD * max_pct / 100))
+            .collect();
+        return (all, "unreadable plan: buying the whole catalog".into());
+    }
+    (
+        out,
+        v["why"].as_str().unwrap_or("").chars().take(160).collect(),
+    )
 }
 
 /// The parts a lead buys, with their max price in fUSD.
@@ -339,7 +411,28 @@ pub fn trusted(rec: &Value) -> bool {
     num(&rec["paid_value"]) >= AUDIT_VALUE && rec["payers"].as_u64().unwrap_or(0) >= AUDIT_PAYERS
 }
 
+/// What an underwriter puts behind a newcomer's bid: 9x the slot's bond,
+/// so the bid carries 10x. It gets it back (plus the premium) when the
+/// newcomer's work is paid; the buyer keeps it on junk.
 pub const VOUCH_EXTRA_YOCTO: u128 = 9 * BOND_YOCTO;
+/// The premium a newcomer offers its underwriter: half its own bond.
+pub const BACKER_PREMIUM_YOCTO: u128 = BOND_YOCTO / 2;
+/// An underwriter backs asks at least this % of the recent median win.
+pub const BACKER_STRICT: u128 = 85;
+
+/// The median of the recent winning rates (the last 8), or 0 with none.
+pub fn median_rate(h: &[u128]) -> u128 {
+    let mut v = h[h.len().saturating_sub(8)..].to_vec();
+    v.sort_unstable();
+    v.get(v.len() / 2).copied().unwrap_or(0)
+}
+
+/// An underwriter backs an ask (rate, % of max) that looks like real work:
+/// at least `strict`% of the recent median. Junk asks far below; with no
+/// history yet, nobody knows, so nobody backs.
+pub fn will_back(rate: u128, median: u128, strict: u128) -> bool {
+    median > 0 && rate * 100 >= median * strict
+}
 
 /// What an agent bids on a part with this `max` (yocto fUSD), or None if it
 /// sits out. Its ask is `rate`% of the skill's nominal max. When the ask is
@@ -486,6 +579,10 @@ struct Part {
     audit: Option<Value>,
     /// Why a fired winner was not replaced (no free bidder, or the hire's error).
     no_runner_up: Option<String>,
+    /// Underwriting on this slot: (bidder, backer).
+    backings: Vec<(usize, usize)>,
+    /// The winner's underwriter, if it had one.
+    backer: Option<usize>,
 }
 
 fn buyer_name(b: Buyer, agents: &[Agent]) -> String {
@@ -568,6 +665,8 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
             bought: 0,
             made: 0,
             since_buy: 0,
+            strict: BACKER_STRICT,
+            backs_lost: 0,
         });
     }
     let mut premium: HashMap<String, u128> = HashMap::new();
@@ -596,8 +695,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
         let t1 = t0 + INTENT_SECS * 1_000_000_000;
         let mut intents = vec![];
         for (k, (cl, _)) in LEADS.iter().enumerate() {
-            let task =
-                format!("Round {r}, client {cl}: explainer, Spanish translation and a summary.");
+            let task = format!("Round {r}, client {cl}: {}", BRIEFS[(k + r as usize) % 3]);
             let i = intent::build(
                 c.hub.as_str(),
                 leads[k].1.id.as_str(),
@@ -658,11 +756,25 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
         let last = order[2];
         reserve[first] = (reserve[first] + USD / 2).min(MAX_LEAD_FEE - USD);
         reserve[last] = reserve[last].saturating_sub(USD / 2).max(USD);
-        // 2. Every lead puts its job's three parts out for bids.
+        // 2. Every lead asks its model which parts the client's brief needs
+        // (the planner), then puts those parts out for bids.
+        let mut plans = vec![];
         for (k, &l) in order.iter().enumerate() {
             let root = fill_roots[k].clone();
-            for (skill, max) in SKILLS {
-                let max = max * USD * LEADS[l].1.max_pct / 100;
+            let brief = BRIEFS[(k + r as usize) % 3];
+            let budget = JOB_BUDGET - MAX_LEAD_FEE / USD;
+            let ans = llm
+                .chat(&chat_body(
+                    &model,
+                    TREE_PLANNER,
+                    &plan_prompt(brief, budget),
+                    120,
+                ))
+                .await?;
+            let (plan, why) = read_plan(&ans.content(), budget, LEADS[l].1.max_pct);
+            plans.push(json!({ "lead": LEADS[l].0, "brief": brief, "why": why,
+                "parts": plan.iter().map(|(s, m)| json!({ "skill": s, "max": *m as f64 / USD as f64 })).collect::<Vec<_>>() }));
+            for (skill, max) in plan {
                 let ptask = format!("Round {r}, lead {}: the {skill} part.", LEADS[l].0);
                 let slot = tools
                     .call(&leads[l].0, "open_bids", &json!({ "job": root, "task": ptask, "max": max.to_string(), "secs": BID_SECS,
@@ -700,6 +812,8 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                     delivered: vec![],
                     audit: None,
                     no_runner_up: None,
+                    backings: vec![],
+                    backer: None,
                 });
             }
         }
@@ -743,6 +857,8 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
         }
         let mut booked: HashSet<usize> = HashSet::new();
         let mut bidders: HashSet<usize> = HashSet::new();
+        let mut seekers: Vec<(usize, usize, u128)> = vec![];
+        let mut backing: HashSet<usize> = HashSet::new();
         let mut children: HashMap<String, u32> = HashMap::new();
         // 3. Bid and award level by level: a contractor that wins becomes a
         // buyer one level down.
@@ -767,14 +883,10 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                     let Some(price) = bid_price(a.strategy, nominal_max(skill), a.rate, max) else {
                         continue;
                     };
-                    // An honest agent never hired yet vouches for itself with
-                    // a bigger bond; junk keeps the minimum (it expects to
-                    // lose it).
-                    let stake = if a.wins == 0 && a.strategy != Strategy::Junk {
-                        VOUCH_EXTRA_YOCTO
-                    } else {
-                        0
-                    };
+                    // Everyone stakes the slot's bond. A newcomer with no
+                    // record does not stake more of its own: it asks a
+                    // trusted agent of its skill to underwrite it (below).
+                    let stake = 0u128;
                     let placed = if parts[p].sealed {
                         tools
                             .call(
@@ -796,11 +908,71 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                     if placed.is_ok() {
                         parts[p].bids.push((i, price));
                         bidders.insert(i);
+                        if !blind && a.wins == 0 {
+                            let sought = tools
+                                .call(
+                                    &a.acc,
+                                    "seek_backer",
+                                    &json!({ "job": job, "slot": slot,
+                                    "premium": BACKER_PREMIUM_YOCTO.to_string() }),
+                                )
+                                .await;
+                            if sought.is_ok() {
+                                seekers.push((p, i, price));
+                            } else {
+                                bid_errors += 1;
+                            }
+                        }
                     } else {
                         bid_errors += 1;
                     }
                 }
             }
+            // Underwriters: a trusted agent of the same skill, not bidding on
+            // the slot itself, backs a seeking newcomer whose ask looks like
+            // real work (at least `strict`% of the skill's recent median
+            // win). One backing per underwriter per round. A sealed bidder
+            // shows its backer the price off-chain.
+            for &(p, i, price) in &seekers {
+                let skill = parts[p].skill;
+                let median = median_rate(history.get(skill).map(|h| h.as_slice()).unwrap_or(&[]));
+                let rate = price * 100 / (nominal_max(skill) * USD);
+                for j in 0..agents.len() {
+                    let b = &agents[j];
+                    if j == i
+                        || b.gone
+                        || b.skill != skill
+                        || backing.contains(&j)
+                        || parts[p].bids.iter().any(|x| x.0 == j)
+                        || matches!(parts[p].buyer, Buyer::Agent(x) if x == j)
+                        || !will_back(rate, median, b.strict)
+                    {
+                        continue;
+                    }
+                    let rec = tools
+                        .call(&keeper, "get_record", &json!({ "account": b.acc.id }))
+                        .await?;
+                    if !trusted(&rec) {
+                        continue;
+                    }
+                    let ok = tools
+                        .call(
+                            &b.acc,
+                            "back",
+                            &json!({ "job": parts[p].job, "slot": parts[p].slot,
+                            "bidder": agents[i].acc.id, "amount": VOUCH_EXTRA_YOCTO.to_string() }),
+                        )
+                        .await;
+                    if ok.is_ok() {
+                        backing.insert(j);
+                        parts[p].backings.push((i, j));
+                    } else {
+                        bid_errors += 1;
+                    }
+                    break;
+                }
+            }
+            seekers.clear();
             c.fast_forward(BID_SECS + 1).await;
             // Sealed slots: every bidder reveals its committed price.
             let mut any_sealed = false;
@@ -847,7 +1019,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                             .map(|b| {
                                 (
                                     b["worker"].as_str().unwrap_or("").to_string(),
-                                    num(&b["bond"]),
+                                    num(&b["bond"]) + num(&b["backed"]),
                                 )
                             })
                             .collect()
@@ -901,6 +1073,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                     q.premium_seen = prem;
                     q.child = child.clone();
                     q.vouched = vouch > 1;
+                    q.backer = q.backings.iter().find(|x| x.0 == w).map(|x| x.1);
                 }
                 // A contractor becomes a buyer: it puts the sub-part out for
                 // bids on its own job, paid out of its own pay.
@@ -974,6 +1147,8 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                             delivered: vec![],
                             audit: None,
                             no_runner_up: None,
+                            backings: vec![],
+                            backer: None,
                         });
                     }
                 }
@@ -1300,6 +1475,8 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                         delivered: vec![],
                         audit: None,
                         no_runner_up: None,
+                        backings: vec![],
+                        backer: None,
                     };
                     parts.push(next);
                 }
@@ -1382,6 +1559,11 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
             if let Some(w) = q.winner {
                 agents[w].bonds_lost += 1;
             }
+            // Its underwriter lost its backing too, and backs more carefully.
+            if let Some(j) = q.backer {
+                agents[j].backs_lost += 1;
+                agents[j].strict = (agents[j].strict + 5).min(100);
+            }
         }
         let caught: Vec<usize> = parts
             .iter()
@@ -1411,7 +1593,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                     "winner": w.map(|w| agents[w].name.clone()), "strategy": w.map(|w| agents[w].strategy.name()),
                     "price": q.price as f64 / 1e6, "rate": if q.price > 0 { q.price * 100 / (nominal_max(q.skill) * USD) } else { 0 },
                     "newcomer": q.newcomer, "newcomer_premium": q.premium_seen, "score": q.score,
-                    "paid": q.passed, "paid_now": q.paid_now, "make_or_buy": q.decision, "fired": q.fired, "replaces": q.replaces, "vouched": q.vouched, "audit": q.audit, "no_runner_up": q.no_runner_up, "job": q.child, "sealed": q.sealed,
+                    "paid": q.passed, "paid_now": q.paid_now, "make_or_buy": q.decision, "fired": q.fired, "replaces": q.replaces, "vouched": q.vouched, "audit": q.audit, "no_runner_up": q.no_runner_up, "backer": q.backer.map(|j| agents[j].name.clone()), "job": q.child, "sealed": q.sealed,
                     "bids": q.bids.iter().map(|(i, p)| { let a = &agents[*i];
                         let mut b = json!({ "agent": a.name, "price": *p as f64 / 1e6 });
                         if a.strategy == Strategy::Model { b["why"] = json!(a.why); }
@@ -1432,7 +1614,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
                 .collect::<Vec<_>>()
                 .join(", ")
         );
-        log.push(json!({ "round": r, "order": order.iter().map(|&l| LEADS[l].0).collect::<Vec<_>>(), "intents": fills, "parts": rows }));
+        log.push(json!({ "round": r, "order": order.iter().map(|&l| LEADS[l].0).collect::<Vec<_>>(), "intents": fills, "plans": plans, "parts": rows }));
     }
     let mut table = vec![];
     for a in &agents {
@@ -1441,7 +1623,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, blind: bool) -> Result<Value
             .await?;
         let earned = a.earned_before + c.ft(&a.acc.id).await;
         table.push(json!({ "agent": a.name, "skill": a.skill, "strategy": a.strategy.name(), "wins": a.wins,
-            "earned": earned as f64 / 1e6, "record": rec, "final_rate": a.rate, "quit": a.gone, "bonds_lost": a.bonds_lost, "bought": a.bought, "made": a.made }));
+            "earned": earned as f64 / 1e6, "record": rec, "final_rate": a.rate, "quit": a.gone, "bonds_lost": a.bonds_lost, "backs_lost": a.backs_lost, "backer_strict": a.strict, "bought": a.bought, "made": a.made }));
     }
     let settings = c.view(&c.hub, "get_settings", json!({})).await?;
     Ok(
@@ -1535,6 +1717,71 @@ mod tests {
         assert_eq!(pick(&[(0, 27, 3, 3, 1), (1, 13, 2, 0, 1)], 0, 150), Some(0));
         // One unpaid job in four is a smaller penalty: 19 weighs ~26 and still wins.
         assert_eq!(pick(&[(0, 27, 3, 3, 1), (1, 19, 4, 3, 1)], 0, 150), Some(1));
+    }
+
+    #[test]
+    fn the_planner_buys_only_what_the_brief_needs() {
+        let ask = |brief: &str| {
+            let req = json!({ "messages": [
+                { "role": "system", "content": TREE_PLANNER },
+                { "role": "user", "content": plan_prompt(brief, 62) } ] });
+            read_plan(&crate::agents::mock_script(&req), 62, 100).0
+        };
+        let skills = |p: Vec<(&'static str, u128)>| p.into_iter().map(|x| x.0).collect::<Vec<_>>();
+        assert_eq!(skills(ask(BRIEFS[0])), ["research", "translate", "summary"]);
+        assert_eq!(skills(ask(BRIEFS[1])), ["research", "summary"]);
+        assert_eq!(skills(ask(BRIEFS[2])), ["translate", "summary"]);
+    }
+
+    #[test]
+    fn a_bad_plan_is_clamped_or_falls_back() {
+        // Unknown and repeated skills dropped; a max above the cap clamped
+        // to it, one below the cost floor raised to it.
+        let (p, _) = read_plan(
+            r#"{"parts":[{"skill":"hack","max":1},{"skill":"research","max":999},{"skill":"research","max":5},{"skill":"summary","max":0}]}"#,
+            62,
+            90,
+        );
+        assert_eq!(
+            p,
+            vec![
+                ("research", 27 * USD),
+                ("summary", 10 * USD * COST_FLOOR / 100)
+            ]
+        );
+        // A part that would overflow the budget is dropped.
+        let (p, _) = read_plan(
+            r#"{"parts":[{"skill":"research","max":30},{"skill":"translate","max":20}]}"#,
+            40,
+            100,
+        );
+        assert_eq!(p, vec![("research", 30 * USD)]);
+        // Garbage buys the whole catalog at the lead's cap.
+        let (p, why) = read_plan("no json here", 62, 100);
+        assert_eq!(p.len(), 3);
+        assert!(why.contains("unreadable"));
+    }
+
+    #[test]
+    fn an_underwriter_backs_real_asks_and_tightens_after_junk() {
+        assert_eq!(median_rate(&[]), 0);
+        assert_eq!(median_rate(&[50, 70, 60]), 60);
+        // Only the last 8 wins count.
+        assert_eq!(
+            median_rate(&[1, 1, 1, 1, 90, 90, 90, 90, 90, 90, 90, 90]),
+            90
+        );
+        assert!(
+            !will_back(60, 0, BACKER_STRICT),
+            "no history: nobody knows, nobody backs"
+        );
+        assert!(will_back(52, 60, BACKER_STRICT), "52 is 87% of 60");
+        assert!(
+            !will_back(30, 60, BACKER_STRICT),
+            "junk asks far below the median"
+        );
+        // After one backed junk the bar rises to 90%: 52 no longer passes.
+        assert!(!will_back(52, 60, BACKER_STRICT + 5));
     }
 
     #[test]

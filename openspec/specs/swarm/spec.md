@@ -62,10 +62,11 @@ buyer), and the quality lead's slots SHALL be sealed (commit, then reveal).
 
 ### Requirement: A judge that can be fooled, and audits that catch it
 A polished-junk agent (one per top-level skill) SHALL bid low, stake a
-newcomer's bond like an honest agent, and deliver fluent, empty text that
+seek an underwriter like an honest newcomer, and deliver fluent, empty text that
 the scripted judge passes about a third of the time (each panel's
-question rolls again). Before paying a pass from a worker with fewer than 3
-paid jobs, the buyer SHALL dispute it on-chain; two more judge panels
+question rolls again). Before paying a pass from a worker that is not trusted
+(at least 30 fUSD paid by at least 2 distinct managers, read from the
+money-weighted record), the buyer SHALL dispute it on-chain; two more judge panels
 answer and 2 failing votes of 3 refund the buyer and keep the bond. A
 caught worker is replaced by the runner-up like a failed one. The run
 reports how often polished junk fooled the first check, was caught, and was
@@ -81,3 +82,17 @@ in the first and last third of rounds, fired winners and fUSD paid to junk
 for both runs side by side, so the effect of the records is measured, not
 claimed.
 - unit: `a_blind_buyer_ignores_records_and_premium`
+
+### Requirement: Clients sign intents, leads fill them
+Each round each client SHALL sign a job intent for one of three briefs;
+leads fill them in order of their reserve fee (the lowest fills first and
+picks workers first). The first to fill asks 0.5 fUSD more next round, the
+last 0.5 less. The run logs each fill with its lead fee.
+
+### Requirement: The lead's model plans the tree
+The lead that fills an intent SHALL ask its model which catalog parts the
+brief needs and the most it pays for each. The answer is read safely:
+unknown or repeated skills are dropped, each max is clamped to the lead's
+cap and to at least the cost floor, parts over the budget are dropped, and
+an unreadable answer buys the whole catalog. The run logs each plan.
+- unit: `the_planner_buys_only_what_the_brief_needs`, `a_bad_plan_is_clamped_or_falls_back`

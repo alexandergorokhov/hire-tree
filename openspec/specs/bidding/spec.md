@@ -81,7 +81,28 @@ hire the runner-up in the same window.
 ### Requirement: Newcomers vouch with a bigger bond
 A bidder MAY attach more than the slot's bond; the job SHALL hold all of
 it as that bid's bond. In the swarm a buyer divides the newcomer premium by
-how many times the slot's bond the bidder staked, read from the bid
-on-chain, so an honest first-timer can outbid a cheaper fresh junk
-account.
+how many times the slot's bond the bid carries (its own bond plus an
+underwriter's backing), read from the bid on-chain, so a backed
+first-timer can outbid a cheaper fresh junk account.
 - unit: `a_newcomer_that_stakes_more_bond_pays_less_premium`, `a_deposit_on_a_rebid_is_added_to_the_bond`
+
+### Requirement: Underwriters back newcomers
+A bidder SHALL be able to ask for a backer with `seek_backer(slot,
+premium)` before bidding closes, offering a premium of at most half its
+own bond. Any account but the bidder and the buyer MAY then `back` the bid
+once with up to 5 NEAR. The bid's vouch is its bond plus the backing. If
+the bid loses the auction, both are refunded at the award. If the work is
+paid, the backer gets its NEAR back plus the premium, taken out of the
+worker's bond. If the work is junk, the buyer keeps the bond and the
+backing. A rolled-back hire charges no premium. In the swarm a newcomer
+seeks a backer instead of staking more of its own; a trusted agent of the
+same skill (see records) backs it only if its ask is at least 85% of the
+skill's recent median win, and 5 points stricter after each backed junk.
+
+#### Scenario: Paid, junk, lost
+- contract: `a_backer_of_paid_work_gets_its_near_back_plus_the_premium`, `a_backer_of_junk_loses_its_near_to_the_buyer`, `a_backer_of_a_losing_bid_is_refunded_at_the_award`
+- unit: `an_underwriter_backs_real_asks_and_tightens_after_junk`
+
+#### Scenario: Misuse
+- THEN refused
+- contract: `nobody_backs_a_bid_that_did_not_ask`, `a_premium_above_half_the_bond_is_refused`, `a_bidder_cannot_back_itself`

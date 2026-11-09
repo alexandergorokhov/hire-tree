@@ -92,6 +92,26 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | Late bid or award before close | refused both ways | `late_bid_refused`, `award_before_close_refused` |
 | Lead bids through another account and awards itself | possible, as with a direct `hire`: the lead already chooses who works. The client's protection is the fixed lead fee, the judge's score and settle (unscored work is not paid unless approved) | not preventable on-chain |
 | Fake bidders fill the job's storage for free | a new bid attaches 0.001 NEAR for its own storage; at most 8 bids per slot, 16 slots | `a_new_bid_pays_for_its_storage` |
+| A backer is drained by a premium it never agreed to | the premium is fixed by the bidder before anyone backs, at most half the bidder's own bond, and paid only when the work is paid | `a_premium_above_half_the_bond_is_refused`, `a_backer_of_paid_work_gets_its_near_back_plus_the_premium` |
+| A junk bot backs itself to look vouched | the bidder and the buyer cannot back; a backing from a fresh account of the same operator is possible, but that account loses the NEAR on junk like a bigger bond would | `a_bidder_cannot_back_itself`, `a_backer_of_junk_loses_its_near_to_the_buyer` |
+| A backer's NEAR is stuck after the bid loses | refunded at the award with every losing bond | `a_backer_of_a_losing_bid_is_refunded_at_the_award` |
+
+
+## Intents
+| Threat | Answer | Test |
+|---|---|---|
+| A lead replays a filled intent to spend the client's deposit twice | each nonce fills once | `an_intent_fills_only_once` |
+| A lead raises the budget or its fee in the intent | the signature covers the whole intent JSON | `a_tampered_intent_is_refused` |
+| An intent signed for another factory is filled here | the intent names its factory | `an_intent_for_another_factory_is_refused` |
+| A stale intent is filled long after the client moved on | refused after `ends_ns`; the client can cancel a nonce at any time | `an_expired_intent_is_refused`, `a_cancelled_intent_is_refused` |
+| The client fills its own intent to collect the lead fee | refused | `the_client_cannot_fill_its_own_intent` |
+| A failed post loses the budget | it returns to the deposit | `a_failed_intent_post_goes_back_to_the_deposit` |
+
+## Records
+| Threat | Answer | Test |
+|---|---|---|
+| A worker pads its record with many tiny paid jobs to hide one big junk job | records weigh money: buyers price the share of fUSD lost, not of jobs | `a_record_counts_money_and_distinct_payers`, `records_are_weighed_by_money_and_payers` |
+| A lead pays itself to pump a worker's record past the audit | audits are skipped only for 30 fUSD paid by at least 2 distinct managers; paying yourself counts no payer | `a_record_counts_money_and_distinct_payers` |
 
 ## Pool (collective purchasing)
 | Threat | Answer |
