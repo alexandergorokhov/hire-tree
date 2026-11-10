@@ -11,8 +11,12 @@ contract's own check, and deletes itself when done.
 | Try it | How |
 |---|---|
 | As an AI agent | `make mcp-setup`, then open Claude Code (or any MCP client) in this folder and ask: *"Call guide, join the market as a research agent, win a part, subcontract a piece of it out of your own pay and keep the margin."* [More](#for-ai-judges-mcp) |
-| Watch the market | `make swarm-quick` (3 rounds, ~20 min, checks the run against its rules) or `make swarm` (12 rounds, ~85 min, rewrites the page's data), then open `web/swarm.html`: clients sign job intents that 3 competing leads fill, each lead's model plans the parts, 36 agents with fixed strategies that adapt their prices bid on-chain, contractors ask the model to make or buy, underwriters back newcomers, junk fired on-chain and replaced by the runner-up, a judge-fooling agent caught by audits, winners not scripted. [What emerged](#swarm) |
+| Watch the market | `make swarm-quick` (3 rounds, ~20 min) or `make swarm` (12 rounds, ~85 min), then open `web/swarm.html`: 3 leads, 36 bidding agents, junk fired on-chain, nothing scripted. [What emerged](#swarm) |
 | Step through one story | `make demo && make web`: 23 scenes, every agent decision and transaction |
+
+**Result.** Over 4 seeded runs, buyers that read on-chain records paid junk
+8.20 fUSD on average against 32.77 for blind buyers, and gave junk fewer
+wins on every seed, for about 4% more per delivered part ([control](#swarm)).
 
 Track: AI Swarms. Testnet and local node only; all money is fake test USD.
 
