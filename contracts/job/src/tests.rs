@@ -4109,3 +4109,435 @@ mod late_bids_and_unfunded_roots {
         assert_ne!(j.get_job().status, "Open");
     }
 }
+
+// ================================================================ award_best
+
+/// The award rule on-chain: the job reads each revealed bidder's record from
+/// the registry, then a callback hires the bid `ht_core::pick` chooses.
+mod award_best {
+    use super::*;
+
+    const BID_SECS: u64 = 60;
+    const CLOSED: u64 = T0 + (BID_SECS + 1) * NS_PER_SEC;
+    const REVEAL_END: u64 = T0 + (2 * BID_SECS + 1) * NS_PER_SEC;
+    const DEPOSIT: NearToken = NearToken::from_millinear(50);
+
+    fn open(j: &mut Job, bond: Option<NearToken>) -> u32 {
+        Ctx::new(ROOT, LEAD).set();
+        j.open_bids(
+            spec(),
+            U128(30 * USD),
+            BID_SECS,
+            bond.map(|b| U128(b.as_yoctonear())),
+            None,
+        )
+    }
+
+    fn bid(j: &mut Job, who: &str, slot: u32, price: u128, extra: NearToken) {
+        Ctx::new(ROOT, who)
+            .deposit(BID_NEAR.saturating_add(extra))
+            .set();
+        j.bid(slot, U128(price));
+    }
+
+    /// A factory `Record` reply: (paid, unpaid) in whole fUSD.
+    fn rec(paid: u128, unpaid: u128) -> PromiseResult {
+        ok(format!(
+            r#"{{"jobs":{},"delivered":0,"checked":0,"junk":0,"paid":0,"score_sum":0,"scored":0,"paid_value":"{}","unpaid_value":"{}","payers":1}}"#,
+            paid + unpaid,
+            paid * USD,
+            unpaid * USD
+        )
+        .as_bytes())
+    }
+
+    fn start(j: &mut Job, slot: u32, weight: u32, pct: u32) {
+        Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
+        j.award_best(slot, weight, pct, None, None);
+    }
+
+    fn finish(
+        j: &mut Job,
+        slot: u32,
+        workers: &[&str],
+        weight: u32,
+        pct: u32,
+        results: Vec<PromiseResult>,
+    ) -> PromiseOrValue<bool> {
+        Ctx::new(ROOT, ROOT).at(CLOSED).results(results).set();
+        j.on_award_best(
+            slot,
+            workers.iter().map(|w| acc(w)).collect(),
+            weight,
+            pct,
+            None,
+            false,
+            acc(LEAD),
+            U128(DEPOSIT.as_yoctonear()),
+        )
+    }
+
+    fn refunded() -> bool {
+        get_created_receipts().iter().any(|r| {
+            r.receiver_id == acc(LEAD)
+                && r.actions.iter().any(|a| {
+                    matches!(a, MockAction::Transfer { deposit, .. }
+                        if deposit.as_yoctonear() == DEPOSIT.as_yoctonear())
+                })
+        })
+    }
+
+    /// WORKER bids 25, WORKER2 bids 18.
+    fn two_bids() -> (Job, u32) {
+        let mut j = funded_root(100 * USD);
+        let s = open(&mut j, None);
+        bid(&mut j, WORKER, s, 25 * USD, NearToken::from_yoctonear(0));
+        bid(&mut j, WORKER2, s, 18 * USD, NearToken::from_yoctonear(0));
+        (j, s)
+    }
+
+    #[test]
+    fn the_job_reads_every_bidders_record_from_the_registry() {
+        let (mut j, s) = two_bids();
+        start(&mut j, s, 150, 0);
+        let reads: Vec<_> = calls()
+            .into_iter()
+            .filter(|c| c.1 == "get_record")
+            .collect();
+        assert_eq!(reads.len(), 2);
+        assert!(reads.iter().all(|c| c.0 == FACTORY));
+        assert_eq!(j.get_bids(s).unwrap().awarded, None, "nothing yet");
+        assert!(calls().iter().any(|c| c.1 == "on_award_best"));
+    }
+
+    #[test]
+    fn a_bad_record_costs_more_than_a_low_bid_saves() {
+        let (mut j, s) = two_bids();
+        start(&mut j, s, 150, 0);
+        // WORKER2's 18 weighs 63 with a record that is all unpaid.
+        let r = finish(
+            &mut j,
+            s,
+            &[WORKER, WORKER2],
+            150,
+            0,
+            vec![rec(30, 0), rec(0, 20)],
+        );
+        assert!(matches!(r, PromiseOrValue::Promise(_)));
+        drop(r); // a promise is scheduled when it is dropped
+        let v = j.get_job();
+        assert_eq!(v.children.len(), 1);
+        assert_eq!(v.children[0].worker, acc(WORKER));
+        assert_eq!(v.children[0].total, U128(25 * USD), "hired at its own bid");
+        assert_eq!(j.get_bids(s).unwrap().awarded, Some(acc(WORKER)));
+        let e = &events("award_best")[0];
+        assert_eq!(e["winner"], WORKER);
+        assert_eq!(e["record_weight"], 150);
+        assert_eq!(e["inputs"].as_array().unwrap().len(), 2);
+        assert_eq!(events("award").len(), 1, "the same award event as by hand");
+        assert_eq!(call_args("new")["worker"], WORKER, "the child is created");
+    }
+
+    #[test]
+    fn with_no_record_rule_the_lowest_bid_wins() {
+        let (mut j, s) = two_bids();
+        start(&mut j, s, 0, 0);
+        finish(
+            &mut j,
+            s,
+            &[WORKER, WORKER2],
+            0,
+            0,
+            vec![rec(30, 0), rec(0, 20)],
+        );
+        assert_eq!(j.get_job().children[0].worker, acc(WORKER2));
+    }
+
+    #[test]
+    fn a_bond_and_backing_cut_a_newcomers_premium() {
+        let bond = NearToken::from_millinear(100);
+        let mut j = funded_root(100 * USD);
+        let s = open(&mut j, Some(bond));
+        // WORKER stakes the bond only; WORKER2 stakes ten times it.
+        bid(&mut j, WORKER, s, 13 * USD, bond);
+        bid(
+            &mut j,
+            WORKER2,
+            s,
+            18 * USD,
+            NearToken::from_yoctonear(10 * bond.as_yoctonear()),
+        );
+        start(&mut j, s, 150, 100);
+        finish(
+            &mut j,
+            s,
+            &[WORKER, WORKER2],
+            150,
+            100,
+            vec![rec(0, 0), rec(0, 0)],
+        );
+        let e = &events("award_best")[0];
+        assert_eq!(e["inputs"][1]["vouch"], "10");
+        assert_eq!(j.get_job().children[0].worker, acc(WORKER2));
+    }
+
+    #[test]
+    fn a_failed_record_read_awards_nobody_and_refunds() {
+        let (mut j, s) = two_bids();
+        start(&mut j, s, 150, 0);
+        let r = finish(
+            &mut j,
+            s,
+            &[WORKER, WORKER2],
+            150,
+            0,
+            vec![rec(30, 0), PromiseResult::Failed],
+        );
+        assert!(matches!(r, PromiseOrValue::Value(false)));
+        assert_eq!(j.get_bids(s).unwrap().awarded, None);
+        assert!(j.get_job().children.is_empty());
+        assert_eq!(j.get_job().allocated.0, 0);
+        assert!(refunded(), "the deposit goes back to the buyer");
+        assert_eq!(events("award_best_failed").len(), 1);
+        // The slot is still open for a retry.
+        let r = finish(
+            &mut j,
+            s,
+            &[WORKER, WORKER2],
+            150,
+            0,
+            vec![rec(30, 0), rec(30, 0)],
+        );
+        assert!(matches!(r, PromiseOrValue::Promise(_)));
+        assert_eq!(j.get_bids(s).unwrap().awarded, Some(acc(WORKER2)));
+    }
+
+    #[test]
+    fn a_garbled_record_fails_closed() {
+        let (mut j, s) = two_bids();
+        start(&mut j, s, 150, 0);
+        let r = finish(
+            &mut j,
+            s,
+            &[WORKER, WORKER2],
+            150,
+            0,
+            vec![rec(30, 0), ok(b"not json")],
+        );
+        assert!(matches!(r, PromiseOrValue::Value(false)));
+        assert_eq!(j.get_bids(s).unwrap().awarded, None);
+        assert!(refunded());
+    }
+
+    #[test]
+    fn a_hand_award_between_the_read_and_the_callback_wins_the_race() {
+        let (mut j, s) = two_bids();
+        start(&mut j, s, 0, 0);
+        Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
+        j.award(s, acc(WORKER), None);
+        let r = finish(
+            &mut j,
+            s,
+            &[WORKER, WORKER2],
+            0,
+            0,
+            vec![rec(0, 0), rec(0, 0)],
+        );
+        assert!(matches!(r, PromiseOrValue::Value(false)));
+        let v = j.get_job();
+        assert_eq!(v.children.len(), 1, "awarded once");
+        assert_eq!(v.children[0].worker, acc(WORKER));
+        assert!(refunded());
+        assert_eq!(
+            events("award_best_failed")[0]["reason"],
+            "slot already awarded"
+        );
+    }
+
+    #[test]
+    fn two_award_bests_award_the_slot_once() {
+        let (mut j, s) = two_bids();
+        start(&mut j, s, 0, 0);
+        start(&mut j, s, 150, 0);
+        let first = finish(
+            &mut j,
+            s,
+            &[WORKER, WORKER2],
+            0,
+            0,
+            vec![rec(0, 0), rec(0, 0)],
+        );
+        assert!(matches!(first, PromiseOrValue::Promise(_)));
+        let second = finish(
+            &mut j,
+            s,
+            &[WORKER, WORKER2],
+            150,
+            0,
+            vec![rec(0, 0), rec(0, 0)],
+        );
+        assert!(matches!(second, PromiseOrValue::Value(false)));
+        assert_eq!(j.get_job().children.len(), 1);
+    }
+
+    #[test]
+    fn a_hand_award_after_award_best_is_refused() {
+        let (mut j, s) = two_bids();
+        start(&mut j, s, 0, 0);
+        finish(
+            &mut j,
+            s,
+            &[WORKER, WORKER2],
+            0,
+            0,
+            vec![rec(0, 0), rec(0, 0)],
+        );
+        Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            j.award(s, acc(WORKER), None)
+        }));
+        assert!(r.is_err());
+        assert_eq!(j.get_job().children.len(), 1);
+    }
+
+    #[test]
+    fn skipped_bidders_are_not_read_or_awarded() {
+        let (mut j, s) = two_bids();
+        Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
+        j.award_best(s, 0, 0, None, Some(vec![acc(WORKER2)]));
+        let args: Vec<_> = get_created_receipts()
+            .into_iter()
+            .flat_map(|r| r.actions)
+            .filter_map(|a| match a {
+                MockAction::FunctionCallWeight {
+                    method_name, args, ..
+                } if method_name == b"get_record" => Some(String::from_utf8(args).unwrap()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(args.len(), 1);
+        assert!(args[0].contains(WORKER) && !args[0].contains(WORKER2));
+        assert_eq!(call_args("on_award_best")["workers"], json!([WORKER]));
+    }
+
+    #[test]
+    fn unrevealed_sealed_bids_are_not_candidates() {
+        let mut j = funded_root(100 * USD);
+        Ctx::new(ROOT, LEAD).set();
+        let s = j.open_bids(spec(), U128(30 * USD), BID_SECS, None, Some(true));
+        let commit = |price: u128, salt: &str, who: &str| {
+            hex_of(&env::sha256_array(
+                format!("{price}:{salt}:{who}").as_bytes(),
+            ))
+        };
+        Ctx::new(ROOT, WORKER).deposit(SEALED_BID_NEAR).set();
+        j.bid_sealed(s, commit(20 * USD, "a", WORKER));
+        Ctx::new(ROOT, WORKER2).deposit(SEALED_BID_NEAR).set();
+        j.bid_sealed(s, commit(10 * USD, "b", WORKER2));
+        Ctx::new(ROOT, WORKER).at(CLOSED).set();
+        j.reveal(s, U128(20 * USD), "a".into());
+        Ctx::new(ROOT, LEAD).at(REVEAL_END).deposit(DEPOSIT).set();
+        j.award_best(s, 0, 0, None, None);
+        assert_eq!(call_args("on_award_best")["workers"], json!([WORKER]));
+    }
+
+    #[test]
+    #[should_panic(expected = "no revealed bid can be awarded")]
+    fn award_best_with_nothing_revealed_is_refused() {
+        let mut j = funded_root(100 * USD);
+        Ctx::new(ROOT, LEAD).set();
+        let s = j.open_bids(spec(), U128(30 * USD), BID_SECS, None, Some(true));
+        Ctx::new(ROOT, WORKER).deposit(SEALED_BID_NEAR).set();
+        j.bid_sealed(s, "ab".repeat(32));
+        Ctx::new(ROOT, LEAD).at(REVEAL_END).deposit(DEPOSIT).set();
+        j.award_best(s, 0, 0, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "bidding is still open")]
+    fn award_best_before_the_close_is_refused() {
+        let (mut j, s) = two_bids();
+        Ctx::new(ROOT, LEAD).deposit(DEPOSIT).set();
+        j.award_best(s, 0, 0, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "only the manager or this job's worker can award")]
+    fn only_the_buyer_can_award_best() {
+        let (mut j, s) = two_bids();
+        Ctx::new(ROOT, EVE).at(CLOSED).deposit(DEPOSIT).set();
+        j.award_best(s, 0, 0, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "attach at least 0.035 NEAR")]
+    fn award_best_needs_the_childs_storage_deposit() {
+        let (mut j, s) = two_bids();
+        Ctx::new(ROOT, LEAD).at(CLOSED).set();
+        j.award_best(s, 0, 0, None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "not enough gas for award_best")]
+    fn award_best_needs_gas_for_every_read() {
+        let (mut j, s) = two_bids();
+        Ctx::new(ROOT, LEAD)
+            .at(CLOSED)
+            .deposit(DEPOSIT)
+            .gas(Gas::from_tgas(170))
+            .set();
+        j.award_best(s, 0, 0, None, None);
+    }
+
+    #[test]
+    fn the_most_bids_a_slot_takes_fit_in_the_gas_cap() {
+        let need = GAS_HIRE_MIN.as_gas()
+            + GAS_AWARD_OWN.as_gas()
+            + GAS_GET_RECORD.as_gas() * MAX_BIDS as u64;
+        assert!(need <= Gas::from_tgas(300).as_gas());
+    }
+
+    #[test]
+    #[should_panic(expected = "callback: caller must be this contract")]
+    fn on_award_best_is_private() {
+        let (mut j, s) = two_bids();
+        Ctx::new(ROOT, EVE).at(CLOSED).set();
+        j.on_award_best(
+            s,
+            vec![acc(WORKER)],
+            0,
+            0,
+            None,
+            false,
+            acc(LEAD),
+            U128(DEPOSIT.as_yoctonear()),
+        );
+    }
+
+    #[test]
+    fn a_job_that_cannot_fund_the_hire_refunds_instead_of_stranding() {
+        // 30 fUSD funded; a 25 fUSD winner plus a 10 fUSD sub-budget is too much.
+        let mut j = funded_root(30 * USD);
+        let s = open(&mut j, None);
+        bid(&mut j, WORKER, s, 25 * USD, NearToken::from_yoctonear(0));
+        Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
+        j.award_best(s, 0, 0, Some(U128(10 * USD)), None);
+        Ctx::new(ROOT, ROOT)
+            .at(CLOSED)
+            .results(vec![rec(0, 0)])
+            .set();
+        let r = j.on_award_best(
+            s,
+            vec![acc(WORKER)],
+            0,
+            0,
+            Some(U128(10 * USD)),
+            false,
+            acc(LEAD),
+            U128(DEPOSIT.as_yoctonear()),
+        );
+        assert!(matches!(r, PromiseOrValue::Value(false)));
+        assert_eq!(j.get_bids(s).unwrap().awarded, None);
+        assert!(refunded());
+    }
+}

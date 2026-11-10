@@ -89,6 +89,12 @@ pub const RESUME_AFTER_SECS: u64 = 600;
 pub const RESUME_ANYONE_SECS: u64 = 24 * 3600;
 /// Least prepaid gas `hire` accepts (create + callbacks + own work).
 pub const GAS_HIRE_MIN: Gas = Gas::from_tgas(150);
+/// `award_best`: gas for each record read (a factory view), and for its own
+/// work and the callback's before the hire it schedules.
+pub const GAS_GET_RECORD: Gas = Gas::from_tgas(5);
+pub const GAS_AWARD_OWN: Gas = Gas::from_tgas(20);
+/// The largest record a read may return.
+const MAX_RECORD_LEN: usize = 2048;
 /// Least prepaid gas `settle` accepts.
 pub const GAS_SETTLE_MIN: Gas = Gas::from_tgas(150);
 
@@ -412,6 +418,16 @@ fn assert_self() {
         env::predecessor_account_id() == env::current_account_id(),
         "callback: caller must be this contract"
     );
+}
+
+/// The two fields of a factory `Record` the award rule weighs.
+#[near(serializers = [json])]
+#[derive(Default)]
+struct RecordView {
+    #[serde(default)]
+    paid_value: U128,
+    #[serde(default)]
+    unpaid_value: U128,
 }
 
 /// Did promise `idx` succeed? A success with a long result is still a
@@ -760,7 +776,28 @@ impl Job {
         sub: Option<U128>,
     ) -> Promise {
         let by_worker = self.hiring_role("hire");
-        self.hire_inner(worker, amount, spec_hash, sub, by_worker)
+        self.require_hire_resources(env::prepaid_gas());
+        self.hire_inner(
+            worker,
+            amount,
+            spec_hash,
+            sub,
+            by_worker,
+            env::attached_deposit(),
+        )
+    }
+
+    /// What every hire needs attached (also an `award`'s, and an
+    /// `award_best`'s, whose hire happens in a callback).
+    fn require_hire_resources(&self, prepaid: Gas) {
+        require!(
+            env::attached_deposit() >= HIRE_MIN_NEAR,
+            "attach at least 0.035 NEAR for the child account's storage"
+        );
+        require!(
+            prepaid >= GAS_HIRE_MIN,
+            "not enough gas for hire (attach at least 150 Tgas)"
+        );
     }
 
     /// The manager may hire in any job. A sub-job's own worker may hire too
@@ -1061,6 +1098,27 @@ impl Job {
     #[payable]
     pub fn award(&mut self, slot: u32, worker: AccountId, sub: Option<U128>) -> Promise {
         let by_worker = self.hiring_role("award");
+        self.require_hire_resources(env::prepaid_gas());
+        let s = self.awardable_slot(slot);
+        let chosen = s
+            .bids
+            .iter()
+            .find(|b| b.worker == worker)
+            .unwrap_or_else(|| env::panic_str("that account did not bid on this slot"));
+        require!(chosen.commit.is_none(), "that bid was never revealed");
+        self.award_inner(
+            slot,
+            worker,
+            sub,
+            by_worker,
+            env::predecessor_account_id(),
+            env::attached_deposit(),
+        )
+    }
+
+    /// The slot, if it can be awarded now: bidding (and any reveal) closed
+    /// and nobody is awarded yet.
+    fn awardable_slot(&self, slot: u32) -> BidSlot {
         let s = self
             .bid_slots
             .get(slot as usize)
@@ -1075,13 +1133,214 @@ impl Job {
             env::block_timestamp() >= s.reveal_ns.0,
             "the reveal is still open"
         );
-        let chosen = s
+        s
+    }
+
+    /// Manager only, after bidding closes: the award rule runs on-chain. The
+    /// job reads every revealed bidder's track record from the registry
+    /// (the factory), then hires the bid with the lowest score under
+    /// `ht_core::pick`: the bid, raised by `record_weight` times the share of
+    /// money the record shows unpaid (150 = x2.5 if all of it), and for a
+    /// bidder with no record, by `newcomer_pct` divided by how many times the
+    /// slot's bond the bid carries (its bond plus its backing). Ties go to
+    /// more paid money, then the earlier bid. `skip` names bidders the buyer
+    /// cannot use (it is in the event). The 0.035 NEAR attached is for the
+    /// child account; it comes back if no award is made. Any failed record
+    /// read fails closed: no award, the slot stays open to retry or to a
+    /// hand `award`. `award` stays for a buyer that picks by hand.
+    #[payable]
+    pub fn award_best(
+        &mut self,
+        slot: u32,
+        record_weight: u32,
+        newcomer_pct: u32,
+        sub: Option<U128>,
+        skip: Option<Vec<AccountId>>,
+    ) -> Promise {
+        let by_worker = self.hiring_role("award");
+        let s = self.awardable_slot(slot);
+        let skip = skip.unwrap_or_default();
+        let workers: Vec<AccountId> = s
+            .bids
+            .iter()
+            .filter(|b| b.commit.is_none() && !skip.contains(&b.worker))
+            .map(|b| b.worker.clone())
+            .collect();
+        require!(!workers.is_empty(), "no revealed bid can be awarded");
+        require!(
+            env::prepaid_gas().as_gas()
+                >= GAS_HIRE_MIN.as_gas()
+                    + GAS_AWARD_OWN.as_gas()
+                    + GAS_GET_RECORD.as_gas() * workers.len() as u64,
+            "not enough gas for award_best (attach 300 Tgas)"
+        );
+        self.require_hire_resources(GAS_HIRE_MIN);
+        require!(self.status == Status::Open, "job is not open");
+        require!(self.window_open(), "window is closed");
+        let me = env::current_account_id();
+        let mut reads = Promise::new(self.registry.clone()).function_call(
+            "get_record",
+            json!({ "account_id": workers[0] }).to_string().into_bytes(),
+            NO_DEPOSIT,
+            GAS_GET_RECORD,
+        );
+        for w in &workers[1..] {
+            reads = reads.and(Promise::new(self.registry.clone()).function_call(
+                "get_record",
+                json!({ "account_id": w }).to_string().into_bytes(),
+                NO_DEPOSIT,
+                GAS_GET_RECORD,
+            ));
+        }
+        reads.then(Self::ext(me).with_static_gas(GAS_HIRE_MIN).on_award_best(
+            slot,
+            workers,
+            record_weight,
+            newcomer_pct,
+            sub,
+            by_worker,
+            env::predecessor_account_id(),
+            U128(env::attached_deposit().as_yoctonear()),
+        ))
+    }
+
+    /// After the record reads. Fails closed: if any read failed, or the slot
+    /// was awarded meanwhile (by `award` or another `award_best`), or the job
+    /// can no longer hire, nothing is awarded and the deposit goes back to
+    /// the buyer. Otherwise the winner is hired through the same path as
+    /// `award`.
+    #[private]
+    #[allow(clippy::too_many_arguments)]
+    pub fn on_award_best(
+        &mut self,
+        slot: u32,
+        workers: Vec<AccountId>,
+        record_weight: u32,
+        newcomer_pct: u32,
+        sub: Option<U128>,
+        by_worker: bool,
+        buyer: AccountId,
+        deposit: U128,
+    ) -> PromiseOrValue<bool> {
+        assert_self();
+        let refuse = |why: &str| -> PromiseOrValue<bool> {
+            emit("award_best_failed", json!({ "slot": slot, "reason": why }));
+            if deposit.0 > 0 {
+                Promise::new(buyer.clone())
+                    .transfer(NearToken::from_yoctonear(deposit.0))
+                    .detach();
+            }
+            PromiseOrValue::Value(false)
+        };
+        if env::promise_results_count() != workers.len() as u64 {
+            return refuse("record reads are missing");
+        }
+        let mut records = Vec::with_capacity(workers.len());
+        for i in 0..workers.len() {
+            match env::promise_result_checked(i as u64, MAX_RECORD_LEN) {
+                Ok(bytes) => match serde_json::from_slice::<RecordView>(&bytes) {
+                    Ok(r) => records.push(r),
+                    Err(_) => return refuse("a record could not be read"),
+                },
+                Err(_) => return refuse("a record read failed"),
+            }
+        }
+        let Some(s) = self.bid_slots.get(slot as usize).cloned() else {
+            return refuse("no such bid slot");
+        };
+        if s.awarded.is_some() {
+            return refuse("slot already awarded");
+        }
+        if self.status != Status::Open || !self.window_open() {
+            return refuse("the job no longer hires");
+        }
+        if self.children.len() >= MAX_CHILDREN {
+            return refuse("too many children");
+        }
+        if by_worker && (self.note_sold || self.note_pending) {
+            return refuse("the note is sold: the pay is no longer yours to spend");
+        }
+        // Every candidate is the revealed bid, with its on-chain bond and backing.
+        let mut cands: Vec<ht_core::pick::Cand> = vec![];
+        let mut inputs = vec![];
+        for (w, rec) in workers.iter().zip(&records) {
+            let Some(idx) = s
+                .bids
+                .iter()
+                .position(|b| &b.worker == w && b.commit.is_none())
+            else {
+                return refuse("a bidder is gone from the slot");
+            };
+            let b = &s.bids[idx];
+            let (jobs, paid) = ht_core::pick::weigh(rec.paid_value.0, rec.unpaid_value.0);
+            let v = ht_core::pick::vouch(b.bond.0, b.backed.0, s.bond.0);
+            let c = (idx, b.price.0, jobs, paid, v);
+            inputs.push(json!({ "worker": w, "bid": b.price, "jobs": jobs, "paid": paid, "vouch": v.to_string(),
+                "score": ht_core::pick::score(&c, newcomer_pct as u128, record_weight as u128).to_string() }));
+            cands.push(c);
+        }
+        let Some(win) = ht_core::pick::pick(&cands, newcomer_pct as u128, record_weight as u128)
+        else {
+            return refuse("no bid to award");
+        };
+        let chosen = s.bids[win].clone();
+        // Would the hire fail on money? Then say so here and refund, instead
+        // of panicking with the deposit stranded.
+        let total = chosen.price.0.saturating_add(sub.map(|x| x.0).unwrap_or(0));
+        let mut ledger = self.ledger.clone();
+        let funds = if by_worker {
+            if sub.is_some() {
+                Err("a contractor hires without a sub-budget")
+            } else {
+                ledger
+                    .carve(total)
+                    .and_then(|_| ledger.allocate(total))
+                    .map_err(|_| "the job cannot fund this hire")
+            }
+        } else {
+            ledger
+                .allocate(total)
+                .map_err(|_| "the job cannot fund this hire")
+        };
+        if let Err(why) = funds {
+            return refuse(why);
+        }
+        emit(
+            "award_best",
+            json!({ "slot": slot, "rule": "lowest bid x (1 + record_weight x unpaid share) x newcomer premium / vouch",
+                "record_weight": record_weight, "newcomer_pct": newcomer_pct,
+                "winner": chosen.worker, "price": chosen.price, "inputs": inputs }),
+        );
+        let p = self.award_inner(
+            slot,
+            chosen.worker,
+            sub,
+            by_worker,
+            buyer,
+            NearToken::from_yoctonear(deposit.0),
+        );
+        PromiseOrValue::Promise(p)
+    }
+
+    /// The award itself, for a bidder already chosen and checked: mark the
+    /// slot, refund the losers, hire the winner at its bid. `award` and
+    /// `on_award_best` both end here.
+    fn award_inner(
+        &mut self,
+        slot: u32,
+        worker: AccountId,
+        sub: Option<U128>,
+        by_worker: bool,
+        buyer: AccountId,
+        deposit: NearToken,
+    ) -> Promise {
+        let s = self.bid_slots[slot as usize].clone();
+        let price = s
             .bids
             .iter()
             .find(|b| b.worker == worker)
+            .map(|b| b.price)
             .unwrap_or_else(|| env::panic_str("that account did not bid on this slot"));
-        require!(chosen.commit.is_none(), "that bid was never revealed");
-        let price = chosen.price;
         self.bid_slots[slot as usize].awarded = Some(worker.clone());
         emit(
             "award",
@@ -1089,7 +1348,6 @@ impl Job {
         );
         // Losers get their bond back; a sealed bid never revealed loses it
         // to the buyer (no free option to hide and walk away).
-        let buyer = env::predecessor_account_id();
         let mut winner_bond = 0;
         let mut winner_backing = (None, 0u128, 0u128);
         for b in self.bid_slots[slot as usize].bids.iter_mut() {
@@ -1116,7 +1374,7 @@ impl Job {
                     .detach();
             }
         }
-        let p = self.hire_inner(worker, price, s.spec_hash, sub, by_worker);
+        let p = self.hire_inner(worker, price, s.spec_hash, sub, by_worker, deposit);
         let last = self.children.len() - 1;
         self.children[last].bond = U128(winner_bond);
         self.children[last].backer = winner_backing.0;
@@ -1137,18 +1395,15 @@ impl Job {
         spec_hash: String,
         sub: Option<U128>,
         by_worker: bool,
+        deposit: NearToken,
     ) -> Promise {
         require!(self.status == Status::Open, "job is not open");
         require!(self.window_open(), "window is closed");
         require!(self.children.len() < MAX_CHILDREN, "too many children");
         require!(amount.0 > 0, "amount must be greater than zero");
         require!(
-            env::attached_deposit() >= HIRE_MIN_NEAR,
+            deposit >= HIRE_MIN_NEAR,
             "attach at least 0.035 NEAR for the child account's storage"
-        );
-        require!(
-            env::prepaid_gas() >= GAS_HIRE_MIN,
-            "not enough gas for hire (attach at least 150 Tgas)"
         );
         let me = env::current_account_id();
         require!(worker != me, "worker cannot be the job itself");
@@ -1206,7 +1461,7 @@ impl Job {
         });
         // The job keeps HIRE_KEEP_NEAR (child's token registration + its own
         // child record); the rest is the child's storage.
-        let child_near = env::attached_deposit().saturating_sub(HIRE_KEEP_NEAR);
+        let child_near = deposit.saturating_sub(HIRE_KEEP_NEAR);
         emit(
             "hire_started",
             json!({ "child": child, "worker": worker, "amount": amount, "total": U128(total) }),
