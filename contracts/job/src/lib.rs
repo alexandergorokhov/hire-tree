@@ -98,6 +98,9 @@ pub const GAS_AWARD_OWN: Gas = Gas::from_tgas(20);
 /// deliver in time loses its bond to the buyer.
 pub const MIN_WORK_SECS: u64 = 60;
 const TOO_LATE: &str = "too late to award: the winner needs at least 60 s of the window to deliver";
+/// Most managers a buyer may list in `award_best`'s `payers` (the factory
+/// refuses a longer list too).
+pub const MAX_LISTED_PAYERS: usize = 16;
 /// The largest record a read may return.
 const MAX_RECORD_LEN: usize = 2048;
 /// Least prepaid gas `settle` accepts.
@@ -429,7 +432,8 @@ fn assert_self() {
     );
 }
 
-/// The two fields of a factory `Record` the award rule weighs.
+/// The fields of a factory `Record` the award rule weighs (`payers` is only
+/// reported, in the event).
 #[near(serializers = [json])]
 #[derive(Default)]
 struct RecordView {
@@ -437,6 +441,8 @@ struct RecordView {
     paid_value: U128,
     #[serde(default)]
     unpaid_value: U128,
+    #[serde(default)]
+    payers: u32,
 }
 
 /// Did promise `idx` succeed? A success with a long result is still a
@@ -1173,7 +1179,16 @@ impl Job {
     /// fails closed: no award, the slot stays open to retry or to a hand
     /// `award`. Like `award`, refused in the last `MIN_WORK_SECS` of the
     /// window. `award` stays for a buyer that picks by hand.
+    ///
+    /// `payers` (optional, at most 16): whose pay counts. When given, each
+    /// bidder's record is read with `get_record_from` and its paid money
+    /// (and the payer count in the event) comes only from those managers, so
+    /// a record washed through accounts the buyer does not list is no
+    /// record. Unpaid money still counts whoever it came from. `min_paid`
+    /// then applies to the listed money. The list is in both events. Left
+    /// out, nothing changes.
     #[payable]
+    #[allow(clippy::too_many_arguments)]
     pub fn award_best(
         &mut self,
         slot: u32,
@@ -1182,8 +1197,13 @@ impl Job {
         sub: Option<U128>,
         skip: Option<Vec<AccountId>>,
         min_paid: Option<U128>,
+        payers: Option<Vec<AccountId>>,
     ) -> Promise {
         let by_worker = self.hiring_role("award");
+        require!(
+            payers.as_ref().map_or(0, |p| p.len()) <= MAX_LISTED_PAYERS,
+            "list at most 16 payers"
+        );
         let s = self.awardable_slot(slot);
         let skip = skip.unwrap_or_default();
         let workers: Vec<AccountId> = s
@@ -1193,11 +1213,12 @@ impl Job {
             .map(|b| b.worker.clone())
             .collect();
         require!(!workers.is_empty(), "no revealed bid can be awarded");
-        emit(
-            "award_best_asked",
-            json!({ "slot": slot, "record_weight": record_weight, "newcomer_pct": newcomer_pct,
-                "min_paid": min_paid, "skip": skip, "reading": workers }),
-        );
+        let mut asked = json!({ "slot": slot, "record_weight": record_weight, "newcomer_pct": newcomer_pct,
+            "min_paid": min_paid, "skip": skip, "reading": workers });
+        if let Some(p) = &payers {
+            asked["payers"] = json!(p);
+        }
+        emit("award_best_asked", asked);
         require!(
             env::prepaid_gas().as_gas()
                 >= GAS_HIRE_MIN.as_gas()
@@ -1209,19 +1230,23 @@ impl Job {
         require!(self.status == Status::Open, "job is not open");
         require!(self.window_open(), "window is closed");
         let me = env::current_account_id();
-        let mut reads = Promise::new(self.registry.clone()).function_call(
-            "get_record",
-            json!({ "account_id": workers[0] }).to_string().into_bytes(),
-            NO_DEPOSIT,
-            GAS_GET_RECORD,
-        );
-        for w in &workers[1..] {
-            reads = reads.and(Promise::new(self.registry.clone()).function_call(
-                "get_record",
-                json!({ "account_id": w }).to_string().into_bytes(),
+        // With a payer list the factory filters the record itself, so the
+        // reply stays one small record however long the breakdown is.
+        let read = |w: &AccountId| {
+            let (method, args) = match &payers {
+                Some(p) => ("get_record_from", json!({ "account_id": w, "payers": p })),
+                None => ("get_record", json!({ "account_id": w })),
+            };
+            Promise::new(self.registry.clone()).function_call(
+                method,
+                args.to_string().into_bytes(),
                 NO_DEPOSIT,
                 GAS_GET_RECORD,
-            ));
+            )
+        };
+        let mut reads = read(&workers[0]);
+        for w in &workers[1..] {
+            reads = reads.and(read(w));
         }
         reads.then(Self::ext(me).with_static_gas(GAS_HIRE_MIN).on_award_best(
             slot,
@@ -1233,6 +1258,7 @@ impl Job {
             env::predecessor_account_id(),
             U128(env::attached_deposit().as_yoctonear()),
             min_paid,
+            payers,
         ))
     }
 
@@ -1254,6 +1280,7 @@ impl Job {
         buyer: AccountId,
         deposit: U128,
         min_paid: Option<U128>,
+        payers: Option<Vec<AccountId>>,
     ) -> PromiseOrValue<bool> {
         assert_self();
         let refuse = |why: &str| -> PromiseOrValue<bool> {
@@ -1326,8 +1353,14 @@ impl Job {
             let (jobs, paid) = ht_core::pick::weigh(paid_value, rec.unpaid_value.0);
             let v = ht_core::pick::vouch(b.bond.0, b.backed.0, s.bond.0);
             let c = (idx, b.price.0, jobs, paid, v);
-            inputs.push(json!({ "worker": w, "bid": b.price, "jobs": jobs, "paid": paid, "vouch": v.to_string(),
-                "score": ht_core::pick::score(&c, newcomer_pct as u128, record_weight as u128).to_string() }));
+            let mut input = json!({ "worker": w, "bid": b.price, "jobs": jobs, "paid": paid, "vouch": v.to_string(),
+                "score": ht_core::pick::score(&c, newcomer_pct as u128, record_weight as u128).to_string() });
+            if payers.is_some() {
+                // What the pick read: the listed managers' pay and their count.
+                input["listed_paid_value"] = json!(rec.paid_value);
+                input["listed_payers"] = json!(rec.payers);
+            }
+            inputs.push(input);
             cands.push(c);
         }
         let Some(win) = ht_core::pick::pick(&cands, newcomer_pct as u128, record_weight as u128)
@@ -1356,12 +1389,13 @@ impl Job {
         if let Err(why) = funds {
             return refuse(why);
         }
-        emit(
-            "award_best",
-            json!({ "slot": slot, "rule": "lowest bid x (1 + record_weight x unpaid share) x newcomer premium / vouch",
-                "record_weight": record_weight, "newcomer_pct": newcomer_pct, "min_paid": U128(floor),
-                "winner": chosen.worker, "price": chosen.price, "inputs": inputs }),
-        );
+        let mut won = json!({ "slot": slot, "rule": "lowest bid x (1 + record_weight x unpaid share) x newcomer premium / vouch",
+            "record_weight": record_weight, "newcomer_pct": newcomer_pct, "min_paid": U128(floor),
+            "winner": chosen.worker, "price": chosen.price, "inputs": inputs });
+        if let Some(p) = &payers {
+            won["payers"] = json!(p);
+        }
+        emit("award_best", won);
         let p = self.award_inner(
             slot,
             chosen.worker,

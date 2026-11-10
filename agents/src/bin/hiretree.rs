@@ -7,7 +7,7 @@
 //! hiretree verify-cassette FILE    # re-check every signature offline
 //! hiretree mcp --as NAME           # stdio MCP server on testnet as NAME.<operator>
 //! hiretree mcp --local             # stdio MCP playground on a local node (no keys)
-//! hiretree swarm [--rounds N] [--out FILE] [--blind|--audit-all] [--seed N] [--storm R] [--llm mock|live|record:FILE|replay:FILE] # 3 leads, 36 agents, trees up to 3 deep, N rounds on a local node
+//! hiretree swarm [--rounds N] [--out FILE] [--blind|--audit-all] [--seed N] [--storm R [--wash]] [--allow-list] [--llm mock|live|record:FILE|replay:FILE] # 3 leads, 36 agents, trees up to 3 deep, N rounds on a local node
 //! ```
 //! Env: NEARAI_API_KEY, HT_MODEL, HT_OPERATOR, HT_OPERATOR_KEY, HT_RPC.
 
@@ -270,7 +270,11 @@ async fn main() {
                 arg(&args, "--seed")
                     .and_then(|x| x.parse().ok())
                     .unwrap_or(0),
-                arg(&args, "--storm").and_then(|x| x.parse().ok()),
+                hire_tree_agents::swarm::Opts {
+                    storm: arg(&args, "--storm").and_then(|x| x.parse().ok()),
+                    wash: args.iter().any(|a| a == "--wash"),
+                    allow: args.iter().any(|a| a == "--allow-list"),
+                },
             )
             .await
             .unwrap_or_else(|e| die(e));

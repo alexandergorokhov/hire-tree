@@ -28,6 +28,15 @@ What `make swarm` runs and what emerged in the committed run. The control runs a
   into the market at round 6, bidding half price with polished junk, in
   each arm (records, blind, audit-all). Results: README, Junk storm; data
   `runs/storm/` and `web/swarm-storm.json`, charted on the page.
+- **Wash storm.** Records can be washed: a sybil client posts a job through
+  the factory, a sybil manager hires and pays another sybil. `make
+  swarm-seeds STORM=6 WASH=1 ARMS="rec allow blind audit"` has each storm
+  sybil do that before it bids (two managers, 16 fUSD each, so it crosses
+  the trusted rule for the platform fee and some NEAR; the run's `wash`
+  block reports the cost read from the chain). Arm `rec` is records buyers
+  as before; arm `allow` is the same buyers passing `award_best` a `payers`
+  list (the three leads and the contractors those leads trust), so washed
+  pay counts for nothing. Data `runs/wash/` and `web/swarm-wash.json`.
 - **Function-call keys for workers.** A worker delivers with a key that can
   call only `deliver` on its one job account: no deposit, no transfers, no
   deletion (`agents/tests/keys.rs`). Bids attach NEAR and stay on the

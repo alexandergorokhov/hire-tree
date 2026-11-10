@@ -65,8 +65,8 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
         ("get_bids", "Anyone: a bid slot with its bids and award.", s(json!({ "job": str_, "slot": { "type": "integer" } }), &["job", "slot"])),
         ("award", "Manager: after bidding closes, hire one bidder at its own bid (a new sub-account). Attaches 0.035 NEAR.",
          s(json!({ "job": str_, "slot": { "type": "integer" }, "worker": str_, "sub": str_ }), &["job", "slot", "worker"])),
-        ("award_best", "Manager: after bidding closes, the job contract picks the winner by a public rule and hires it at its own bid. It reads each revealed bidder's on-chain record, scores bid x (1 + record_weight x unpaid share of the record) and, for a bidder with no record, x (1 + newcomer_pct / how many times the slot's bond the bid carries), and hires the lowest score (ties: more paid money, then the earlier bid). record_weight 150 = x2.5 when all pay was lost; 0 and 0 = lowest bid. `skip` lists bidders you cannot use (it goes in the event). `min_paid` (fUSD units, optional): paid money below it is no record, so a bidder that washed a cent through its own job is still a newcomer. Refused in the last 60 s of the job's window (the winner needs time to deliver). Fails closed (an error, nothing awarded, slot still open) if a record cannot be read. Attaches 0.035 NEAR.",
-         s(json!({ "job": str_, "slot": { "type": "integer" }, "record_weight": { "type": "integer" }, "newcomer_pct": { "type": "integer" }, "sub": str_, "skip": { "type": "array", "items": str_ }, "min_paid": str_ }), &["job", "slot", "record_weight", "newcomer_pct"])),
+        ("award_best", "Manager: after bidding closes, the job contract picks the winner by a public rule and hires it at its own bid. It reads each revealed bidder's on-chain record, scores bid x (1 + record_weight x unpaid share of the record) and, for a bidder with no record, x (1 + newcomer_pct / how many times the slot's bond the bid carries), and hires the lowest score (ties: more paid money, then the earlier bid). record_weight 150 = x2.5 when all pay was lost; 0 and 0 = lowest bid. `skip` lists bidders you cannot use (it goes in the event). `min_paid` (fUSD units, optional): paid money below it is no record, so a bidder that washed a cent through its own job is still a newcomer. `payers` (optional list of up to 16 manager accounts): only the pay of those managers counts as a bidder's paid money, so a record washed through accounts you do not list is no record; unpaid money counts whoever it came from; the list goes in the events. Refused in the last 60 s of the job's window (the winner needs time to deliver). Fails closed (an error, nothing awarded, slot still open) if a record cannot be read. Attaches 0.035 NEAR.",
+         s(json!({ "job": str_, "slot": { "type": "integer" }, "record_weight": { "type": "integer" }, "newcomer_pct": { "type": "integer" }, "sub": str_, "skip": { "type": "array", "items": str_ }, "min_paid": str_, "payers": { "type": "array", "items": str_ } }), &["job", "slot", "record_weight", "newcomer_pct"])),
         ("deliver", "Worker: deliver the response bytes (base64) with an optional NEAR AI receipt (req base64, sig hex, model).",
          s(json!({ "job": str_, "resp": str_, "req": str_, "sig": str_, "model": str_ }), &["job", "resp"])),
         ("check_request", "Anyone: the exact judge request body for a delivery (base64).",
@@ -82,7 +82,7 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
         ("fire", "Manager (sub-job): after the signed check failed the delivery, end the job now: the worker is not paid, its bond goes to you, and the pay comes back so you can hire the runner-up.", s(json!({ "job": str_ }), &["job"])),
         ("settle", "Anyone: settle a job (pay, return the rest, delete at zero).", s(json!({ "job": str_ }), &["job"])),
         ("get_job", "Anyone: a job's state.", s(json!({ "job": str_ }), &["job"])),
-        ("get_record", "Anyone: a worker's track record kept by the factory.", s(json!({ "account": str_ }), &["account"])),
+        ("get_record", "Anyone: a worker's track record kept by the factory. With `payers` (up to 16 manager accounts), its paid money and payer count count only what those managers paid.", s(json!({ "account": str_, "payers": { "type": "array", "items": str_ } }), &["account"])),
         ("join_pool", "Client: put `amount` into a collective-purchase pool; the pool keeps at most what its target still needs.",
          s(json!({ "pool": str_, "amount": str_ }), &["pool", "amount"])),
         ("launch_pool", "Anyone: the target is raised; the pool posts its job through the factory as the client. Attaches 0.06 NEAR.",
@@ -337,7 +337,7 @@ impl Tools<'_> {
                     &job,
                     "award_best",
                     json!({ "slot": slot, "record_weight": num("record_weight")?, "newcomer_pct": num("newcomer_pct")?,
-                            "sub": a["sub"].as_str(), "skip": a["skip"], "min_paid": a["min_paid"].as_str() }),
+                            "sub": a["sub"].as_str(), "skip": a["skip"], "min_paid": a["min_paid"].as_str(), "payers": a["payers"] }),
                     NearToken::from_millinear(35),
                 )
                 .await?;
@@ -400,6 +400,10 @@ impl Tools<'_> {
                     .await
             }
             "get_job" => c.view(&id(a, "job")?, "get_job", json!({})).await,
+            "get_record" if a["payers"].is_array() => {
+                c.view(&c.hub, "get_record_from", json!({ "account_id": s(a, "account")?, "payers": a["payers"] }))
+                    .await
+            }
             "get_record" => {
                 c.view(&c.hub, "get_record", json!({ "account_id": s(a, "account")? }))
                     .await

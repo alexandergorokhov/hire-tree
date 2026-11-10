@@ -73,6 +73,16 @@ Records are evidence, not proof: a lead can hire itself to build one.
 - THEN the record adds the job's amount to `paid_value` or `unpaid_value`, and counts each paying manager once in `payers` (a worker paid by itself is not counted)
 - unit: `a_record_counts_money_and_distinct_payers`; swarm: `records_are_weighed_by_money_and_payers`
 
+#### Scenario: A bounded breakdown of who paid
+- WHEN a job reports a paid worker with a payer
+- THEN the factory also keeps, per worker, a breakdown of paid money by payer: at most 16 entries, each at least 1 fUSD to get its own entry (dust and pay from the worker itself or without a payer go to `other`), so the entries and `other` always add up to `paid_value`. A payer that has an entry adds to it. With the list full, a new payer takes the place of the smallest entry (the oldest of equals) only by paying strictly more than it; that entry's money moves to `other`. So a sybil spraying small payments from many accounts displaces nobody, and displacing an entry costs more than the entry, paid to the worker. `get_payers(account)` returns the breakdown
+- unit: `the_payer_breakdown_adds_up_to_paid_value`, `dust_never_takes_a_place`, `the_breakdown_is_bounded`, `spraying_small_payers_cannot_evict_an_honest_one`, `a_full_list_is_displaced_only_by_paying_more_than_its_smallest`, `an_entry_only_grows_and_is_never_the_one_displaced_by_its_own_top_up`
+
+#### Scenario: A record as seen by a buyer who lists its payers
+- WHEN anyone calls `get_record_from(account, payers)` with at most 16 managers
+- THEN the record comes back with `paid_value` and `payers` counting only the listed managers' entries (a listed payer that lost its entry counts as nothing: the read errs toward distrust; a payer listed twice counts once); every other field, unpaid money included, is the whole record's. A longer list is refused. One small record comes back however long the breakdown is
+- unit: `a_read_from_listed_payers_counts_only_their_pay`, `unpaid_money_stays_whoever_is_listed`, `listing_more_than_sixteen_payers_is_refused`
+
 #### Scenario: A hire nobody answered
 - GIVEN a worker hired with `hire` (no bid) that never delivered and hired nobody
 - WHEN the sub-job lapses and reports

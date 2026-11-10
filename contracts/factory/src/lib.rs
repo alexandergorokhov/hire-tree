@@ -159,6 +159,90 @@ pub struct Posted {
     pub state: PostState,
 }
 
+/// Most payers the factory keeps a paid-money sum for, per worker. Storage
+/// is bounded: 16 entries are at most ~1.4 KB (about 0.014 NEAR) per worker.
+pub const MAX_PAYER_ENTRIES: usize = 16;
+/// Most payers a buyer may list in `get_record_from` (and `award_best`).
+pub const MAX_LISTED_PAYERS: usize = 16;
+/// A payment under this (1 fUSD) never gets its own entry: it counts in the
+/// worker's total and in `other`, so dust from many accounts cannot fill
+/// the list.
+pub const MIN_PAYER_ENTRY: u128 = MIN_BUDGET;
+
+/// One payer's sum in a worker's breakdown.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PayerPaid {
+    pub payer: AccountId,
+    pub paid: U128,
+}
+
+/// What each manager paid a worker, bounded. The sums of `entries` and
+/// `other` always equal the record's `paid_value`. `other` holds pay with no
+/// entry: dust, a payer that lost its place (see [`PayerBook::credit`]), pay
+/// from the worker itself, and pay reported without a payer.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct PayerBook {
+    pub entries: Vec<PayerPaid>,
+    pub other: U128,
+}
+
+impl PayerBook {
+    /// Add `v` paid by `payer` (None: nobody countable). A payer that has an
+    /// entry adds to it. A new payer needs `v >= MIN_PAYER_ENTRY`; with the
+    /// list full it must also pay strictly more than the smallest entry,
+    /// which then moves to `other` (the oldest of equal smallest ones). So
+    /// spraying small payments from many accounts never displaces anyone:
+    /// each displacement costs more than the entry it removes, paid to the
+    /// worker, and an entry only grows.
+    pub fn credit(&mut self, payer: Option<&AccountId>, v: u128) {
+        let Some(p) = payer else {
+            self.other = U128(self.other.0.saturating_add(v));
+            return;
+        };
+        if let Some(e) = self.entries.iter_mut().find(|e| &e.payer == p) {
+            e.paid = U128(e.paid.0.saturating_add(v));
+            return;
+        }
+        if v < MIN_PAYER_ENTRY {
+            self.other = U128(self.other.0.saturating_add(v));
+            return;
+        }
+        let new = PayerPaid {
+            payer: p.clone(),
+            paid: U128(v),
+        };
+        if self.entries.len() < MAX_PAYER_ENTRIES {
+            self.entries.push(new);
+            return;
+        }
+        let (i, least) = self
+            .entries
+            .iter()
+            .enumerate()
+            .min_by_key(|(i, e)| (e.paid.0, *i))
+            .map(|(i, e)| (i, e.paid.0))
+            .expect("a full list is not empty");
+        if v > least {
+            let out = std::mem::replace(&mut self.entries[i], new);
+            self.other = U128(self.other.0.saturating_add(out.paid.0));
+        } else {
+            self.other = U128(self.other.0.saturating_add(v));
+        }
+    }
+
+    /// Paid money and payer count from the listed payers only.
+    pub fn from_listed(&self, listed: &[AccountId]) -> (u128, u32) {
+        self.entries
+            .iter()
+            .filter(|e| listed.contains(&e.payer))
+            .fold((0u128, 0u32), |(m, n), e| {
+                (m.saturating_add(e.paid.0), n + (e.paid.0 > 0) as u32)
+            })
+    }
+}
+
 /// A worker's track record, reported by the jobs this factory's tree made.
 /// Evidence, not proof: a lead can hire itself to build one.
 #[near(serializers = [borsh, json])]
@@ -200,6 +284,8 @@ pub struct Factory {
     /// Prepaid NEAR per client, in yocto.
     credits: LookupMap<AccountId, u128>,
     records: LookupMap<AccountId, Record>,
+    /// Per worker: who paid it how much (bounded, see [`PayerBook`]).
+    payer_books: LookupMap<AccountId, PayerBook>,
     /// Platform fee on each posted budget, in basis points (max 100 = 1%).
     fee_bps: u16,
     /// Fees kept so far and not yet withdrawn.
@@ -253,6 +339,7 @@ impl Factory {
             jobs: LookupMap::new(b"j"),
             credits: LookupMap::new(b"c"),
             records: LookupMap::new(b"r"),
+            payer_books: LookupMap::new(b"b"),
             fee_bps: 0,
             fees: 0,
             deposits: LookupMap::new(b"d"),
@@ -774,11 +861,15 @@ impl Factory {
         let v = amount.map(|a| a.0).unwrap_or(0);
         if paid {
             r.paid_value = U128(r.paid_value.0.saturating_add(v));
-            if let Some(p) = payer.filter(|p| *p != worker) {
-                if self.payers.insert((worker.clone(), p)) {
+            let payer = payer.filter(|p| *p != worker);
+            if let Some(p) = &payer {
+                if self.payers.insert((worker.clone(), p.clone())) {
                     r.payers += 1;
                 }
             }
+            let mut book = self.payer_books.get(&worker).cloned().unwrap_or_default();
+            book.credit(payer.as_ref(), v);
+            self.payer_books.insert(worker.clone(), book);
         } else {
             r.unpaid_value = U128(r.unpaid_value.0.saturating_add(v));
         }
@@ -791,6 +882,32 @@ impl Factory {
 
     pub fn get_record(&self, account_id: AccountId) -> Record {
         self.records.get(&account_id).cloned().unwrap_or_default()
+    }
+
+    /// The record as a buyer who trusts only the `payers` managers sees it:
+    /// `paid_value` and `payers` count only what those managers paid (from
+    /// the bounded breakdown, so an entry that lost its place counts as
+    /// nothing: the read errs toward distrust). Everything else, unpaid
+    /// money included, is the whole record's. At most `MAX_LISTED_PAYERS`.
+    pub fn get_record_from(&self, account_id: AccountId, payers: Vec<AccountId>) -> Record {
+        require!(payers.len() <= MAX_LISTED_PAYERS, "list at most 16 payers");
+        let mut r = self.get_record(account_id.clone());
+        let (paid, n) = self
+            .payer_books
+            .get(&account_id)
+            .map(|b| b.from_listed(&payers))
+            .unwrap_or((0, 0));
+        r.paid_value = U128(paid.min(r.paid_value.0));
+        r.payers = n;
+        r
+    }
+
+    /// Who paid this worker how much (the bounded breakdown).
+    pub fn get_payers(&self, account_id: AccountId) -> PayerBook {
+        self.payer_books
+            .get(&account_id)
+            .cloned()
+            .unwrap_or_default()
     }
 
     pub fn get_job(&self, n: u32) -> Option<Posted> {
@@ -1223,6 +1340,238 @@ mod tests {
         assert_eq!(r.paid_value.0, 65 * MIN_BUDGET);
         assert_eq!(r.unpaid_value.0, 15 * MIN_BUDGET);
         assert_eq!(r.payers, 2);
+    }
+
+    /// A paid job reported by a job of the tree: `v` whole fUSD from `payer`.
+    fn paid(f: &mut Factory, worker: &str, payer: &str, v: u128) {
+        ctx("t1.job-1.hiretree.test", vec![]);
+        f.record(
+            acc(worker),
+            true,
+            true,
+            false,
+            true,
+            None,
+            Some(U128(v * MIN_BUDGET)),
+            Some(acc(payer)),
+        );
+    }
+
+    fn entry(f: &Factory, worker: &str, payer: &str) -> Option<u128> {
+        f.get_payers(acc(worker))
+            .entries
+            .iter()
+            .find(|e| e.payer == acc(payer))
+            .map(|e| e.paid.0 / MIN_BUDGET)
+    }
+
+    #[test]
+    fn the_payer_breakdown_adds_up_to_paid_value() {
+        let mut f = factory();
+        paid(&mut f, "w.test", "lead-a.test", 20);
+        paid(&mut f, "w.test", "lead-a.test", 10);
+        paid(&mut f, "w.test", "lead-b.test", 7);
+        // Paying yourself fills no entry; pay with no payer neither.
+        paid(&mut f, "w.test", "w.test", 5);
+        ctx("t2.job-1.hiretree.test", vec![]);
+        f.record(
+            acc("w.test"),
+            true,
+            true,
+            false,
+            true,
+            None,
+            Some(U128(3 * MIN_BUDGET)),
+            None,
+        );
+        // An unpaid job adds to nothing here.
+        ctx("t3.job-1.hiretree.test", vec![]);
+        f.record(
+            acc("w.test"),
+            true,
+            false,
+            true,
+            false,
+            None,
+            Some(U128(9 * MIN_BUDGET)),
+            Some(acc("lead-c.test")),
+        );
+        let b = f.get_payers(acc("w.test"));
+        let sum: u128 = b.entries.iter().map(|e| e.paid.0).sum::<u128>() + b.other.0;
+        assert_eq!(sum, f.get_record(acc("w.test")).paid_value.0);
+        assert_eq!(entry(&f, "w.test", "lead-a.test"), Some(30));
+        assert_eq!(entry(&f, "w.test", "lead-b.test"), Some(7));
+        assert_eq!(entry(&f, "w.test", "w.test"), None);
+        assert_eq!(b.other.0, 8 * MIN_BUDGET);
+        assert_eq!(f.get_payers(acc("nobody.test")), PayerBook::default());
+    }
+
+    #[test]
+    fn a_read_from_listed_payers_counts_only_their_pay() {
+        let mut f = factory();
+        paid(&mut f, "w.test", "lead-a.test", 20);
+        paid(&mut f, "w.test", "lead-b.test", 15);
+        paid(&mut f, "w.test", "sybil-1.test", 40);
+        paid(&mut f, "w.test", "sybil-2.test", 40);
+        let all = f.get_record(acc("w.test"));
+        assert_eq!((all.paid_value.0, all.payers), (115 * MIN_BUDGET, 4));
+        let r = f.get_record_from(acc("w.test"), vec![acc("lead-a.test"), acc("lead-b.test")]);
+        assert_eq!((r.paid_value.0, r.payers), (35 * MIN_BUDGET, 2));
+        // Nothing else of the record moves.
+        assert_eq!(
+            (r.jobs, r.paid, r.unpaid_value),
+            (all.jobs, all.paid, all.unpaid_value)
+        );
+        // Listing the same payer twice counts it once.
+        let r = f.get_record_from(acc("w.test"), vec![acc("lead-a.test"), acc("lead-a.test")]);
+        assert_eq!((r.paid_value.0, r.payers), (20 * MIN_BUDGET, 1));
+        // Nobody listed, nobody counts; an unknown worker has nothing.
+        let r = f.get_record_from(acc("w.test"), vec![]);
+        assert_eq!((r.paid_value.0, r.payers), (0, 0));
+        assert_eq!(
+            f.get_record_from(acc("x.test"), vec![acc("lead-a.test")]),
+            Record::default()
+        );
+    }
+
+    #[test]
+    fn unpaid_money_stays_whoever_is_listed() {
+        let mut f = factory();
+        ctx("t1.job-1.hiretree.test", vec![]);
+        f.record(
+            acc("w.test"),
+            true,
+            false,
+            true,
+            false,
+            None,
+            Some(U128(12 * MIN_BUDGET)),
+            Some(acc("sybil.test")),
+        );
+        let r = f.get_record_from(acc("w.test"), vec![acc("lead-a.test")]);
+        assert_eq!(r.unpaid_value.0, 12 * MIN_BUDGET);
+    }
+
+    #[test]
+    #[should_panic(expected = "list at most 16 payers")]
+    fn listing_more_than_sixteen_payers_is_refused() {
+        let f = factory();
+        let many: Vec<AccountId> = (0..17).map(|i| acc(&format!("p{i}.test"))).collect();
+        f.get_record_from(acc("w.test"), many);
+    }
+
+    #[test]
+    fn dust_never_takes_a_place() {
+        let mut f = factory();
+        ctx("t1.job-1.hiretree.test", vec![]);
+        for i in 0..40 {
+            f.record(
+                acc("w.test"),
+                true,
+                true,
+                false,
+                true,
+                None,
+                Some(U128(MIN_BUDGET - 1)),
+                Some(acc(&format!("d{i}.test"))),
+            );
+        }
+        let b = f.get_payers(acc("w.test"));
+        assert!(b.entries.is_empty());
+        assert_eq!(b.other.0, 40 * (MIN_BUDGET - 1));
+        // The payer count still counts them (as before).
+        assert_eq!(f.get_record(acc("w.test")).payers, 40);
+        // And a listed read sees none of them.
+        let r = f.get_record_from(acc("w.test"), vec![acc("d1.test")]);
+        assert_eq!((r.paid_value.0, r.payers), (0, 0));
+    }
+
+    #[test]
+    fn the_breakdown_is_bounded() {
+        let mut f = factory();
+        let mut x = 12345u64;
+        for _ in 0..400 {
+            x = x
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            paid(
+                &mut f,
+                "w.test",
+                &format!("p{}.test", (x >> 33) % 90),
+                u128::from(1 + (x >> 50) % 40),
+            );
+            let b = f.get_payers(acc("w.test"));
+            assert!(b.entries.len() <= MAX_PAYER_ENTRIES);
+            let sum: u128 = b.entries.iter().map(|e| e.paid.0).sum::<u128>() + b.other.0;
+            assert_eq!(sum, f.get_record(acc("w.test")).paid_value.0);
+        }
+        assert_eq!(f.get_payers(acc("w.test")).entries.len(), MAX_PAYER_ENTRIES);
+    }
+
+    #[test]
+    fn spraying_small_payers_cannot_evict_an_honest_one() {
+        let mut f = factory();
+        // Three honest managers, then a sybil sprays 200 accounts at 1..=9
+        // fUSD each, into a list that has room for 13 of them.
+        for (p, v) in [
+            ("lead-a.test", 30),
+            ("lead-b.test", 25),
+            ("lead-c.test", 20),
+        ] {
+            paid(&mut f, "w.test", p, v);
+        }
+        for i in 0..200 {
+            paid(&mut f, "w.test", &format!("spray{i}.test"), 1 + i % 9);
+        }
+        let b = f.get_payers(acc("w.test"));
+        assert_eq!(b.entries.len(), MAX_PAYER_ENTRIES);
+        for p in ["lead-a.test", "lead-b.test", "lead-c.test"] {
+            assert!(entry(&f, "w.test", p).is_some(), "{p} kept its place");
+        }
+        let r = f.get_record_from(
+            acc("w.test"),
+            vec![acc("lead-a.test"), acc("lead-b.test"), acc("lead-c.test")],
+        );
+        assert_eq!((r.paid_value.0, r.payers), (75 * MIN_BUDGET, 3));
+    }
+
+    #[test]
+    fn a_full_list_is_displaced_only_by_paying_more_than_its_smallest() {
+        let mut f = factory();
+        for i in 0..MAX_PAYER_ENTRIES {
+            paid(&mut f, "w.test", &format!("p{i}.test"), 10 + i as u128);
+        }
+        // p0 holds the smallest entry, 10. Paying 10 is not enough...
+        paid(&mut f, "w.test", "new.test", 10);
+        assert_eq!(entry(&f, "w.test", "new.test"), None);
+        assert_eq!(entry(&f, "w.test", "p0.test"), Some(10));
+        // ...paying 11 takes its place, and its 10 moves to `other`.
+        paid(&mut f, "w.test", "new.test", 11);
+        assert_eq!(entry(&f, "w.test", "new.test"), Some(11));
+        assert_eq!(entry(&f, "w.test", "p0.test"), None);
+        let b = f.get_payers(acc("w.test"));
+        assert_eq!(b.entries.len(), MAX_PAYER_ENTRIES);
+        assert_eq!(b.other.0, 20 * MIN_BUDGET);
+        // The evicted payer counts as nothing in a listed read (distrust),
+        // but is still one of the payers in the plain record.
+        let r = f.get_record_from(acc("w.test"), vec![acc("p0.test")]);
+        assert_eq!((r.paid_value.0, r.payers), (0, 0));
+        assert_eq!(f.get_record(acc("w.test")).payers, 17);
+    }
+
+    #[test]
+    fn an_entry_only_grows_and_is_never_the_one_displaced_by_its_own_top_up() {
+        let mut f = factory();
+        for i in 0..MAX_PAYER_ENTRIES {
+            paid(&mut f, "w.test", &format!("p{i}.test"), 10);
+        }
+        // Equal smallest entries: the oldest goes first.
+        paid(&mut f, "w.test", "new.test", 11);
+        assert_eq!(entry(&f, "w.test", "p0.test"), None);
+        assert_eq!(entry(&f, "w.test", "p1.test"), Some(10));
+        // A small top-up of an existing entry always lands on it.
+        paid(&mut f, "w.test", "p1.test", 1);
+        assert_eq!(entry(&f, "w.test", "p1.test"), Some(11));
     }
 
     #[test]

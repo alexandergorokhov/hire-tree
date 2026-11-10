@@ -128,3 +128,43 @@ storm runs plus the series rules.
 - GIVEN four won parts, three to junk (two of them storm) and one honest
 - THEN the round's row shows a junk share of 0.75 and the pay of passed junk and storm parts
 - unit: `the_series_row_counts_junk_share_and_pay`
+
+### Requirement: A storm can wash its records, and buyers can list whose pay counts
+`hiretree swarm --storm R --wash` SHALL, before the storm sybils bid (at
+round R, and again for any sybil that came back under a fresh account),
+give each of them a record through real factory jobs among accounts the
+attacker owns: for each of two attacker managers, an attacker client posts a
+job naming that manager (up to 16 sybils per job), the manager hires the
+sybils at 16 fUSD each, each delivers, the judge checks, the manager approves
+and the sub-job settles and pays. The sybils then send the pay back to the
+attacker's bank. The run's JSON SHALL carry a `wash` block read from the
+chain: sybils washed, factory jobs and paid hires, the platform fee kept,
+the fUSD put in less what came back, the NEAR the attacker's accounts lost,
+and the parts the storm won and was paid for. `--wash` without `--storm` is
+refused. `hiretree swarm --allow-list` (records arm only) SHALL make every
+buyer pass `award_best` a `payers` list and read every record, audit and
+runner-up pick through it: the three leads, plus each contractor whose record
+from the leads' pay alone is trusted (30 fUSD from two payers). Without the
+flag the calls, picks and run JSON are what they were. `make swarm-seeds
+STORM=R WASH=1` writes `runs/wash/` (arms `rec` and `allow`, also `blind` and
+`audit`) and `web/swarm-wash.json`.
+
+#### Scenario: A wash crosses the plain rule but not the list
+- WHEN a sybil is washed by two of its own managers
+- THEN the plain rule trusts its record (32 fUSD, 2 payers), and a buyer who lists only the leads reads it as no paid money and no payers
+- unit: `a_wash_crosses_the_trusted_rule_but_only_through_unlisted_payers`
+- sandbox: `a_washed_record_beats_the_plain_rule_but_not_the_buyers_payer_list`
+
+#### Scenario: The allowlist
+- WHEN a records buyer builds its list
+- THEN it holds the leads, then each contractor trusted on the leads' pay alone, once each, at most 16
+- unit: `an_allowlist_names_the_leads_and_contractors_the_leads_trust`
+
+#### Scenario: Without the flags nothing changes
+- WHEN neither `--wash` nor `--allow-list` is given
+- THEN `award_best` is asked exactly as before (no `payers` key), and options that make no sense together are refused before any chain work
+- unit: `without_an_allowlist_the_award_asks_exactly_as_before`, `the_default_run_options_change_nothing`, `wash_needs_a_storm_and_the_allowlist_needs_records`
+
+#### Scenario: A washing job pays and costs are reported
+- THEN a washing job's budget covers its hires after the fee, and the cost block adds up and reports fUSD and NEAR
+- unit: `a_washing_job_can_pay_its_hires_after_the_fee`, `wash_costs_add_up_and_report_in_fusd_and_near`

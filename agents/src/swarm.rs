@@ -99,6 +99,8 @@ pub struct Agent {
     pub backs_lost: u32,
     /// A storm sybil: a fresh account that joined at the storm round.
     pub storm: bool,
+    /// A storm sybil whose current account has a washed record.
+    pub washed: bool,
 }
 
 pub const MARKET_BIDDER: &str = "ROLE: market bidder. You sell one skill in an open market of AI agents. \
@@ -388,6 +390,341 @@ pub fn trusted(rec: &Value) -> bool {
     num(&rec["paid_value"]) >= AUDIT_VALUE && rec["payers"].as_u64().unwrap_or(0) >= AUDIT_PAYERS
 }
 
+/// Most managers an allowlist may name (the contracts refuse more).
+pub const MAX_LISTED: usize = 16;
+
+/// The managers a buyer with an allowlist counts pay from: the three leads,
+/// then each contractor whose record, read from the leads' pay alone, is
+/// trusted (`contractors`: name and that record). A contractor is a manager
+/// of its own sub-jobs, so its sub-agents' records need it listed; being
+/// listed takes pay from at least two leads, which a sybil cannot fake
+/// without a lead paying it. One hop: a contractor listed here is not a
+/// reason to list whoever it paid.
+pub fn listed_payers(leads: &[String], contractors: &[(String, Value)]) -> Vec<String> {
+    let mut v: Vec<String> = leads.to_vec();
+    for (name, rec) in contractors {
+        if trusted(rec) && !v.contains(name) {
+            v.push(name.clone());
+        }
+    }
+    v.truncate(MAX_LISTED);
+    v
+}
+
+/// The `award_best` arguments of one award. Without an allowlist the call
+/// is exactly what it always was (no `payers` key).
+pub fn award_args(
+    job: &str,
+    slot: u64,
+    weight: u128,
+    prem: u128,
+    skip: &[&str],
+    payers: Option<&[String]>,
+) -> Value {
+    let mut a = json!({ "job": job, "slot": slot,
+        "record_weight": u64::try_from(weight).unwrap_or(u64::MAX),
+        "newcomer_pct": u64::try_from(prem).unwrap_or(u64::MAX), "skip": skip });
+    if let Some(p) = payers {
+        a["payers"] = json!(p);
+    }
+    a
+}
+
+/// A record, read as a buyer with this allowlist sees it (or whole).
+async fn record_of(
+    tools: &Tools<'_>,
+    keeper: &Acc,
+    account: &str,
+    payers: Option<&[String]>,
+) -> Result<Value, String> {
+    let mut a = json!({ "account": account });
+    if let Some(p) = payers {
+        a["payers"] = json!(p);
+    }
+    tools.call(keeper, "get_record", &a).await
+}
+
+/// The allowlist of the moment: the leads and the trusted contractors.
+async fn allowlist(
+    tools: &Tools<'_>,
+    keeper: &Acc,
+    leads: &[(Acc, Acc)],
+    agents: &[Agent],
+) -> Result<Vec<String>, String> {
+    let lead_ids: Vec<String> = leads.iter().map(|l| l.0.id.to_string()).collect();
+    let mut contractors = vec![];
+    for a in agents
+        .iter()
+        .filter(|a| a.strategy == Strategy::Contractor && !a.storm && !a.gone)
+    {
+        let rec = record_of(tools, keeper, a.acc.id.as_str(), Some(&lead_ids)).await?;
+        contractors.push((a.acc.id.to_string(), rec));
+    }
+    Ok(listed_payers(&lead_ids, &contractors))
+}
+
+/// fUSD each hire pays a washed sybil, per paying manager. Two managers
+/// make 32, over the audit bar (`AUDIT_VALUE`, 30).
+pub const WASH_HIRE: u128 = 16 * USD;
+/// Managers that pay each washed sybil: the audit bar asks for two.
+pub const WASH_MANAGERS: usize = AUDIT_PAYERS as usize;
+/// Most hires one washing job takes (the job contract's child limit).
+pub const WASH_CHUNK: usize = 16;
+
+/// The budget a washing job posts so that, after the factory's fee, it can
+/// pay `hires` hires.
+pub fn wash_budget(hires: usize, fee_bps: u16) -> u128 {
+    let need = WASH_HIRE * hires as u128;
+    // Smallest budget b with b - fee(b) >= need; the fee is at most
+    // b * bps / 10_000, so this over-covers by a unit at most.
+    (need * 10_000).div_ceil(10_000 - fee_bps as u128) + 1
+}
+
+/// What one washing pass cost the attacker, measured on-chain.
+#[derive(Clone, Debug, Default)]
+pub struct WashCost {
+    pub sybils: u32,
+    /// Factory jobs the attacker posted.
+    pub jobs: u32,
+    /// Paid sub-jobs (one per sybil and paying manager).
+    pub hires: u32,
+    /// fUSD the factory kept as platform fee.
+    pub fee_fusd: u128,
+    /// fUSD put in, less what came back to the attacker's bank.
+    pub outlay_fusd: u128,
+    /// NEAR the attacker's accounts lost (gas, prepaid post credit, hire
+    /// deposits the factory kept, token registrations).
+    pub near: u128,
+}
+
+impl WashCost {
+    pub fn add(&mut self, o: &WashCost) {
+        self.sybils += o.sybils;
+        self.jobs += o.jobs;
+        self.hires += o.hires;
+        self.fee_fusd += o.fee_fusd;
+        self.outlay_fusd += o.outlay_fusd;
+        self.near += o.near;
+    }
+
+    pub fn json(&self) -> Value {
+        json!({ "sybils_washed": self.sybils, "factory_jobs": self.jobs, "paid_hires": self.hires,
+            "platform_fee_fusd": self.fee_fusd as f64 / 1e6, "fusd_outlay": self.outlay_fusd as f64 / 1e6,
+            "near_spent": self.near as f64 / 1e24 })
+    }
+}
+
+/// The attacker's washing rig: two manager accounts and a bank.
+pub struct WashRig {
+    managers: Vec<Acc>,
+    bank: Acc,
+}
+
+impl WashRig {
+    pub async fn new(c: &Chain) -> WashRig {
+        let bank = c.account("wash-bank", 5).await;
+        c.register(&bank).await;
+        let mut managers = vec![];
+        for p in 0..WASH_MANAGERS {
+            let m = c.account(&format!("wash-mgr-{p}"), 20).await;
+            c.register(&m).await;
+            managers.push(m);
+        }
+        WashRig { managers, bank }
+    }
+}
+
+/// A real factory job whose only purpose is a payment: `client` posts it
+/// (`budget` fUSD, already minted to it and its post credit prepaid) naming
+/// `manager`, who hires each of `workers` at `WASH_HIRE`; each delivers
+/// plain work, the judge checks it (one panel, the way the swarm's honest
+/// workers are checked), the manager approves and the sub-job settles and
+/// pays. The record each worker gets is as real as any: `manager` is the
+/// payer on it. The judge's answers are the attacker's to buy: the scripted
+/// model here is free, a live one is not (not counted in the cost).
+#[allow(clippy::too_many_arguments)]
+pub async fn pay_through_job(
+    c: &Chain,
+    llm: &Llm,
+    tools: &Tools<'_>,
+    keeper: &Acc,
+    client: &Acc,
+    manager: &Acc,
+    workers: &[Acc],
+    budget: u128,
+    task: &str,
+) -> Result<String, String> {
+    let next = c.view(&c.hub, "get_settings", json!({})).await?["next"]
+        .as_u64()
+        .ok_or("next")?;
+    let root = format!("job-{next}.{}", c.hub);
+    tools
+        .call(
+            client,
+            "post_job",
+            &json!({ "budget": budget.to_string(), "manager": manager.id,
+                "task": task, "window_secs": WINDOW_SECS, "lead_fee": "0" }),
+        )
+        .await?;
+    let delivered = b64(format!("Deliverable: {task}").as_bytes());
+    for (i, w) in workers.iter().enumerate() {
+        let child = format!("t{}.{root}", i + 1);
+        tools
+            .call(
+                manager,
+                "hire",
+                &json!({ "job": root, "worker": w.id, "amount": WASH_HIRE.to_string(), "task": task }),
+            )
+            .await?;
+        tools
+            .call(w, "deliver", &json!({ "job": child, "resp": delivered }))
+            .await?;
+        let req = tools
+            .call(
+                keeper,
+                "check_request",
+                &json!({ "job": child, "panel": 0, "task": task, "deliverable": delivered }),
+            )
+            .await?;
+        let qb = base64::engine::general_purpose::STANDARD
+            .decode(req.as_str().ok_or("check_request")?)
+            .map_err(|e| e.to_string())?;
+        let ans = llm.chat(&qb).await?;
+        tools
+            .call(
+                keeper,
+                "submit_check",
+                &json!({ "job": child, "panel": 0, "task": task, "deliverable": delivered,
+                    "answer": b64(&ans.body), "sig": ans.sig }),
+            )
+            .await?;
+    }
+    c.fast_forward(crate::agents::CHECK_WINDOW_SECS + 1).await;
+    for i in 0..workers.len() {
+        let child = format!("t{}.{root}", i + 1);
+        tools
+            .call(keeper, "finalize_check", &json!({ "job": child }))
+            .await?;
+        tools
+            .call(manager, "approve", &json!({ "job": child }))
+            .await?;
+        tools
+            .call(keeper, "settle", &json!({ "job": child }))
+            .await?;
+    }
+    tools
+        .call(client, "approve", &json!({ "job": root }))
+        .await?;
+    tools
+        .call(keeper, "settle", &json!({ "job": root }))
+        .await?;
+    Ok(root)
+}
+
+/// The NEAR held by all of `group`.
+async fn near_sum(c: &Chain, group: &[Acc]) -> u128 {
+    let mut t = 0u128;
+    for a in group {
+        t += c.near_of(&a.id).await;
+    }
+    t
+}
+
+/// The platform fees the factory holds.
+async fn factory_fees(c: &Chain) -> Result<u128, String> {
+    Ok(num(
+        &c.view(&c.hub, "get_settings", json!({})).await?["fees"]
+    ))
+}
+
+/// Give each of `targets` a record that crosses the trusted rule, through
+/// real factory jobs among the attacker's own accounts: for each of the
+/// rig's managers, a sybil client posts a job naming that manager, the
+/// manager hires the sybils (16 fUSD each), each delivers, the judge checks,
+/// the manager approves and the sub-job settles and pays. Then every sybil sends its
+/// pay back to the bank. The only money lost is the platform fee, and the
+/// NEAR the factory keeps.
+pub async fn wash_records(
+    c: &Chain,
+    llm: &Llm,
+    tools: &Tools<'_>,
+    keeper: &Acc,
+    rig: &WashRig,
+    round: u32,
+    targets: &[Acc],
+) -> Result<WashCost, String> {
+    let task = |p: usize, k: usize| format!("wash round {round} manager {p} batch {k}");
+    // Accounts first: funding them is not a cost, spending is.
+    let mut clients: Vec<(usize, usize, Acc)> = vec![];
+    for p in 0..rig.managers.len() {
+        for k in 0..targets.chunks(WASH_CHUNK).len() {
+            let cl = c.account(&format!("wash-cl-{round}-{p}-{k}"), 2).await;
+            clients.push((p, k, cl));
+        }
+    }
+    let mut group: Vec<Acc> = vec![rig.bank.clone()];
+    group.extend(rig.managers.iter().cloned());
+    group.extend(clients.iter().map(|x| x.2.clone()));
+    group.extend(targets.iter().cloned());
+    let near_before = near_sum(c, &group).await;
+    let fees_before = factory_fees(c).await?;
+    let bank_before = c.ft(&rig.bank.id).await;
+    let mut cost = WashCost {
+        sybils: targets.len() as u32,
+        ..Default::default()
+    };
+    let mut minted = 0u128;
+    for (p, k, cl) in &clients {
+        let chunk: Vec<&Acc> = targets.chunks(WASH_CHUNK).nth(*k).unwrap().iter().collect();
+        let budget = wash_budget(chunk.len(), SWARM_FEE_BPS);
+        c.register(cl).await;
+        c.mint(&cl.id, budget).await;
+        minted += budget;
+        c.call(
+            cl,
+            &c.hub,
+            "prepay_post",
+            json!({}),
+            near_api::types::NearToken::from_millinear(60),
+        )
+        .await?;
+        let workers: Vec<Acc> = chunk.iter().map(|a| (*a).clone()).collect();
+        let mgr = &rig.managers[*p];
+        pay_through_job(
+            c,
+            llm,
+            tools,
+            keeper,
+            cl,
+            mgr,
+            &workers,
+            budget,
+            &task(*p, *k),
+        )
+        .await?;
+        cost.jobs += 1;
+        cost.hires += workers.len() as u32;
+    }
+    // The pay goes back to the bank: what the washed accounts keep is
+    // their record, not money.
+    for t in targets {
+        let bal = c.ft(&t.id).await;
+        if bal > 0 {
+            c.send(t, &rig.bank.id, bal, None).await?;
+        }
+    }
+    for (_, _, cl) in &clients {
+        let bal = c.ft(&cl.id).await;
+        if bal > 0 {
+            c.send(cl, &rig.bank.id, bal, None).await?;
+        }
+    }
+    cost.fee_fusd = factory_fees(c).await?.saturating_sub(fees_before);
+    cost.outlay_fusd = (bank_before + minted).saturating_sub(c.ft(&rig.bank.id).await);
+    cost.near = near_before.saturating_sub(near_sum(c, &group).await);
+    Ok(cost)
+}
+
 /// What an underwriter puts behind a newcomer's bid: 9x the slot's bond,
 /// so the bid carries 10x. It gets it back (plus the premium) when the
 /// newcomer's work is paid; the buyer keeps it on junk.
@@ -663,6 +1000,31 @@ impl Arm {
     }
 }
 
+/// What a run adds to the plain market. All off is the committed market.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Opts {
+    /// Round at which a junk storm of sybil accounts joins.
+    pub storm: Option<u32>,
+    /// Before bidding, each storm sybil washes a record through real
+    /// factory jobs among the attacker's accounts (needs a storm).
+    pub wash: bool,
+    /// Records buyers count only the pay of managers they list (the leads
+    /// and trusted contractors): `award_best`'s `payers`. Needs the
+    /// records arm.
+    pub allow: bool,
+}
+
+/// Options that make no sense together are refused before any chain work.
+pub fn check_opts(arm: Arm, opts: Opts) -> Result<(), String> {
+    if opts.wash && opts.storm.is_none() {
+        return Err("wash needs a storm (--storm R)".into());
+    }
+    if opts.allow && arm != Arm::Records {
+        return Err("the allowlist is for the records arm: other arms ignore records".into());
+    }
+    Ok(())
+}
+
 /// Runs `rounds` rounds: each round every lead posts one job.
 /// `arm`: with records, or a control where buyers ignore on-chain records:
 /// no record penalty, no newcomer premium (so vouching does nothing), and
@@ -674,8 +1036,10 @@ pub async fn run(
     rounds: u32,
     arm: Arm,
     seed: u32,
-    storm: Option<u32>,
+    opts: Opts,
 ) -> Result<Value, String> {
+    let storm = opts.storm;
+    check_opts(arm, opts)?;
     let blind = arm != Arm::Records;
     let model = llm.model();
     use std::collections::{HashMap, HashSet};
@@ -748,6 +1112,7 @@ pub async fn run(
             strict: BACKER_STRICT,
             backs_lost: 0,
             storm: false,
+            washed: false,
         });
     }
     let mut premium: HashMap<String, u128> = HashMap::new();
@@ -772,6 +1137,12 @@ pub async fn run(
     let mut lead_spent = [0u128; 3];
     let mut lead_unfilled = [0u32; 3];
     let mut series: Vec<Value> = vec![];
+    // The attacker's washing rig and what washing cost, per pass and in all.
+    let mut rig: Option<WashRig> = None;
+    let mut wash_total = WashCost::default();
+    let mut wash_passes: Vec<Value> = vec![];
+    // Parts the storm took: won, and paid (with their fUSD).
+    let (mut stolen, mut stolen_paid, mut stolen_fusd) = (0u32, 0u32, 0u128);
     for r in 1..=rounds {
         let mut parts: Vec<Part> = vec![];
         // A junk storm: fresh sybil accounts join and bid on everything at
@@ -801,12 +1172,43 @@ pub async fn run(
                     strict: BACKER_STRICT,
                     backs_lost: 0,
                     storm: true,
+                    washed: false,
                 });
             }
             eprintln!(
                 "swarm round {r}: junk storm, {} sybil accounts join",
                 STORM_ACCOUNTS
             );
+        }
+        // A washing attacker: every storm sybil without a washed record
+        // (new at the storm, or a fresh account after a respawn) buys one.
+        if opts.wash {
+            let todo: Vec<usize> = (0..agents.len())
+                .filter(|&i| agents[i].storm && !agents[i].gone && !agents[i].washed)
+                .collect();
+            if !todo.is_empty() {
+                if rig.is_none() {
+                    rig = Some(WashRig::new(c).await);
+                }
+                let targets: Vec<Acc> = todo.iter().map(|&i| agents[i].acc.clone()).collect();
+                let cost =
+                    wash_records(c, llm, &tools, &keeper, rig.as_ref().unwrap(), r, &targets)
+                        .await?;
+                eprintln!(
+                    "swarm round {r}: washed {} sybils: {} factory jobs, fee {:.2} fUSD, {:.3} NEAR",
+                    todo.len(),
+                    cost.jobs,
+                    cost.fee_fusd as f64 / 1e6,
+                    cost.near as f64 / 1e24
+                );
+                let mut row = cost.json();
+                row["round"] = json!(r);
+                wash_passes.push(row);
+                wash_total.add(&cost);
+                for i in todo {
+                    agents[i].washed = true;
+                }
+            }
         }
         // 1. Intent-based settlement: each client signs a job intent off-chain
         // (the lead fee rises from 0 to MAX_LEAD_FEE over INTENT_SECS); each
@@ -1133,6 +1535,12 @@ pub async fn run(
             if any_sealed {
                 c.fast_forward(BID_SECS + 1).await;
             }
+            // The managers whose pay these awards count (records arm only).
+            let listed: Option<Vec<String>> = if opts.allow {
+                Some(allowlist(&tools, &keeper, &leads, &agents).await?)
+            } else {
+                None
+            };
             for &p in &level_parts {
                 let buyer = parts[p].buyer;
                 let bname = buyer_name(buyer, &agents);
@@ -1169,13 +1577,13 @@ pub async fn run(
                     }
                     let vouch =
                         staked.get(agents[i].acc.id.as_str()).copied().unwrap_or(0) / slot_bond;
-                    let rec = tools
-                        .call(
-                            &keeper,
-                            "get_record",
-                            &json!({ "account": agents[i].acc.id }),
-                        )
-                        .await?;
+                    let rec = record_of(
+                        &tools,
+                        &keeper,
+                        agents[i].acc.id.as_str(),
+                        listed.as_deref(),
+                    )
+                    .await?;
                     cands.push((i, price, weighed(&rec).0, weighed(&rec).1, vouch));
                 }
                 let (prem, weight) = terms(blind, *premium.get(&bname).unwrap_or(&0), rules);
@@ -1200,9 +1608,14 @@ pub async fn run(
                     .call(
                         &buyer_acc,
                         "award_best",
-                        &json!({ "job": parts[p].job, "slot": parts[p].slot,
-                            "record_weight": u64::try_from(weight).unwrap_or(u64::MAX),
-                            "newcomer_pct": u64::try_from(prem).unwrap_or(u64::MAX), "skip": skip }),
+                        &award_args(
+                            &parts[p].job,
+                            parts[p].slot,
+                            weight,
+                            prem,
+                            &skip,
+                            listed.as_deref(),
+                        ),
                     )
                     .await?;
                 let on_chain = got["awarded"].as_str().unwrap_or_default().to_string();
@@ -1342,6 +1755,11 @@ pub async fn run(
                 if ps.is_empty() {
                     break;
                 }
+                let listed: Option<Vec<String>> = if opts.allow {
+                    Some(allowlist(&tools, &keeper, &leads, &agents).await?)
+                } else {
+                    None
+                };
                 for &p in &ps {
                     parts[p].worked = true;
                     let w = parts[p].winner.unwrap();
@@ -1433,13 +1851,13 @@ pub async fn run(
                         continue;
                     }
                     let w = parts[p].winner.unwrap();
-                    let rec = tools
-                        .call(
-                            &keeper,
-                            "get_record",
-                            &json!({ "account": agents[w].acc.id }),
-                        )
-                        .await?;
+                    let rec = record_of(
+                        &tools,
+                        &keeper,
+                        agents[w].acc.id.as_str(),
+                        listed.as_deref(),
+                    )
+                    .await?;
                     if !arm.audits(trusted(&rec)) {
                         continue;
                     }
@@ -1586,13 +2004,13 @@ pub async fn run(
                         if Some(i) == failed || booked.contains(&i) || agents[i].gone {
                             continue;
                         }
-                        let rec = tools
-                            .call(
-                                &keeper,
-                                "get_record",
-                                &json!({ "account": agents[i].acc.id }),
-                            )
-                            .await?;
+                        let rec = record_of(
+                            &tools,
+                            &keeper,
+                            agents[i].acc.id.as_str(),
+                            listed.as_deref(),
+                        )
+                        .await?;
                         // Losers' bonds went back at the award: no vouching now.
                         cands.push((i, price, weighed(&rec).0, weighed(&rec).1, 1));
                     }
@@ -1780,6 +2198,7 @@ pub async fn run(
             let fresh = mk(format!("w-{}-{respawns}", agents[w].name)).await;
             c.register(&fresh).await;
             agents[w].acc = fresh;
+            agents[w].washed = false;
         }
         if storm.is_some() {
             let won: Vec<Won> = parts
@@ -1793,6 +2212,13 @@ pub async fn run(
                     })
                 })
                 .collect();
+            stolen += won.iter().filter(|w| w.storm).count() as u32;
+            stolen_paid += won.iter().filter(|w| w.storm && w.paid).count() as u32;
+            stolen_fusd += won
+                .iter()
+                .filter(|w| w.storm && w.paid)
+                .map(|w| w.price)
+                .sum::<u128>();
             let mut row = series_row(r, &won);
             let mut storm_earned = 0u128;
             for a in agents.iter().filter(|a| a.storm) {
@@ -1849,7 +2275,15 @@ pub async fn run(
         json!({ "schema": "hiretree-swarm-2", "storm": storm.map(|r| json!({
             "round": r, "accounts": STORM_ACCOUNTS, "ask_pct": STORM_RATE, "series": series,
             "measures": "per round: junk_share = share of won parts that went to junk or polished-junk bidders (storm sybils included); junk_paid_fusd and storm_paid_fusd = pay of passed parts won by them; storm_earned_fusd = fUSD on all storm accounts (and their earlier accounts) at round end, read on-chain; key_held_fusd = fUSD a current storm account holds beyond the paid_value the factory recorded for it from settled jobs (job pay sits in job accounts until the check passes and the job settles, so this should be 0)",
-        })), "blind": blind, "arm": arm.name(), "seed": seed, "network": c.network_name, "rounds": log, "agents": table,
+        })), "blind": blind, "arm": arm.name(), "allowlist": opts.allow.then_some(true), "wash": opts.wash.then(|| {
+            let mut w = wash_total.json();
+            w["passes"] = json!(wash_passes);
+            w["storm_wins"] = json!(stolen);
+            w["storm_paid_wins"] = json!(stolen_paid);
+            w["storm_paid_fusd"] = json!(stolen_fusd as f64 / 1e6);
+            w["measures"] = json!("what washing the storm's records cost, read on-chain: platform_fee_fusd = fees the factory kept during washing; fusd_outlay = fUSD put in less what came back to the attacker's bank (the sybils send their pay back); near_spent = NEAR the attacker's accounts lost (gas, prepaid post credit, hire deposits the factory kept); storm_wins = parts the storm won, storm_paid_wins = of those, parts that passed and were paid");
+            w
+        }), "seed": seed, "network": c.network_name, "rounds": log, "agents": table,
         "leads": LEADS.iter().enumerate().map(|(l, (n, r))| json!({ "lead": n, "record_weight": r.record_weight,
             "max_pct": r.max_pct, "spent": lead_spent[l] as f64 / 1e6, "unfilled": lead_unfilled[l] })).collect::<Vec<_>>(),
         "junk_respawns": respawns, "bid_errors": bid_errors, "late_reveals": late_reveals, "award_rule": "on-chain (award_best)", "award_mismatches": award_mismatches, "backer_asks_too_low": asks_too_low, "premiums": premium,
@@ -2004,6 +2438,129 @@ mod tests {
             asks.iter().any(|j| *j != asks[0]),
             "seeds draw different asks"
         );
+    }
+
+    fn lead_ids() -> Vec<String> {
+        ["lead-a", "lead-b", "lead-c"].map(String::from).to_vec()
+    }
+
+    #[test]
+    fn an_allowlist_names_the_leads_and_contractors_the_leads_trust() {
+        let by_two_leads = json!({ "paid_value": (40 * USD).to_string(), "payers": 2 });
+        let by_one_lead = json!({ "paid_value": (400 * USD).to_string(), "payers": 1 });
+        let none = json!({ "paid_value": "0", "payers": 0 });
+        let l = listed_payers(
+            &lead_ids(),
+            &[
+                ("con-ok".into(), by_two_leads.clone()),
+                ("con-one-lead".into(), by_one_lead),
+                ("con-new".into(), none),
+            ],
+        );
+        assert_eq!(l, ["lead-a", "lead-b", "lead-c", "con-ok"]);
+        // Never twice, never more than the contracts take.
+        let again = listed_payers(&lead_ids(), &[("lead-a".into(), by_two_leads.clone())]);
+        assert_eq!(again.len(), 3);
+        let many: Vec<(String, Value)> = (0..40)
+            .map(|i| (format!("con-{i}"), by_two_leads.clone()))
+            .collect();
+        let l = listed_payers(&lead_ids(), &many);
+        assert_eq!(l.len(), MAX_LISTED);
+        assert_eq!(l[..3], lead_ids()[..], "the leads come first");
+    }
+
+    #[test]
+    fn without_an_allowlist_the_award_asks_exactly_as_before() {
+        let a = award_args("job-1.hub", 2, 150, 75, &["w.hub"], None);
+        assert_eq!(
+            a,
+            json!({ "job": "job-1.hub", "slot": 2, "record_weight": 150, "newcomer_pct": 75, "skip": ["w.hub"] })
+        );
+        let l = lead_ids();
+        let a = award_args("job-1.hub", 2, 150, 75, &[], Some(&l));
+        assert_eq!(a["payers"], json!(["lead-a", "lead-b", "lead-c"]));
+        assert_eq!(a["record_weight"], 150);
+    }
+
+    #[test]
+    fn the_default_run_options_change_nothing() {
+        let o = Opts::default();
+        assert!(o.storm.is_none() && !o.wash && !o.allow);
+        for arm in [Arm::Records, Arm::Blind, Arm::AuditAll] {
+            assert!(check_opts(arm, o).is_ok());
+        }
+    }
+
+    #[test]
+    fn wash_needs_a_storm_and_the_allowlist_needs_records() {
+        let wash = Opts {
+            wash: true,
+            ..Opts::default()
+        };
+        assert!(check_opts(Arm::Records, wash).is_err());
+        let storm_wash = Opts {
+            storm: Some(6),
+            wash: true,
+            allow: false,
+        };
+        assert!(check_opts(Arm::Records, storm_wash).is_ok());
+        assert!(check_opts(Arm::Blind, storm_wash).is_ok());
+        let allow = Opts {
+            allow: true,
+            ..Opts::default()
+        };
+        assert!(check_opts(Arm::Records, allow).is_ok());
+        assert!(check_opts(Arm::Blind, allow).is_err());
+        assert!(check_opts(Arm::AuditAll, allow).is_err());
+    }
+
+    #[test]
+    fn a_wash_crosses_the_trusted_rule_but_only_through_unlisted_payers() {
+        // What the factory shows for a washed sybil: 2 managers x 16 fUSD.
+        let paid = WASH_HIRE * WASH_MANAGERS as u128;
+        let whole = json!({ "paid_value": paid.to_string(), "payers": WASH_MANAGERS });
+        assert!(trusted(&whole), "the wash must beat the plain rule");
+        // The same record as a buyer listing only the leads reads it.
+        let listed = json!({ "paid_value": "0", "payers": 0 });
+        assert!(!trusted(&listed));
+        assert_eq!(weighed(&listed), (0, 0), "a newcomer again");
+        assert!(
+            weighed(&whole).0 > 0,
+            "no newcomer premium without the list"
+        );
+    }
+
+    #[test]
+    fn a_washing_job_can_pay_its_hires_after_the_fee() {
+        for n in [1usize, 2, 14, WASH_CHUNK] {
+            let b = wash_budget(n, SWARM_FEE_BPS);
+            let fee = b * SWARM_FEE_BPS as u128 / 10_000;
+            assert!(b - fee >= WASH_HIRE * n as u128, "{n} hires");
+            assert!(
+                b - fee < WASH_HIRE * n as u128 + 2 * USD / 100,
+                "no big surplus"
+            );
+        }
+    }
+
+    #[test]
+    fn wash_costs_add_up_and_report_in_fusd_and_near() {
+        let mut t = WashCost::default();
+        let one = WashCost {
+            sybils: 30,
+            jobs: 4,
+            hires: 60,
+            fee_fusd: 5 * USD,
+            outlay_fusd: 5 * USD,
+            near: 3 * 10u128.pow(24),
+        };
+        t.add(&one);
+        t.add(&one);
+        let j = t.json();
+        assert_eq!(j["sybils_washed"], 60);
+        assert_eq!(j["paid_hires"], 120);
+        assert_eq!(j["platform_fee_fusd"], 10.0);
+        assert_eq!(j["near_spent"], 6.0);
     }
 
     #[test]

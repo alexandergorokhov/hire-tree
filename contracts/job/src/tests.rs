@@ -4168,7 +4168,7 @@ mod award_best {
 
     fn start(j: &mut Job, slot: u32, weight: u32, pct: u32) {
         Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
-        j.award_best(slot, weight, pct, None, None, None);
+        j.award_best(slot, weight, pct, None, None, None, None);
     }
 
     fn finish(
@@ -4189,6 +4189,7 @@ mod award_best {
             false,
             acc(LEAD),
             U128(DEPOSIT.as_yoctonear()),
+            None,
             None,
         )
     }
@@ -4420,7 +4421,7 @@ mod award_best {
     fn skipped_bidders_are_not_read_or_awarded() {
         let (mut j, s) = two_bids();
         Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
-        j.award_best(s, 0, 0, None, Some(vec![acc(WORKER2)]), None);
+        j.award_best(s, 0, 0, None, Some(vec![acc(WORKER2)]), None, None);
         let args: Vec<_> = get_created_receipts()
             .into_iter()
             .flat_map(|r| r.actions)
@@ -4453,7 +4454,7 @@ mod award_best {
         Ctx::new(ROOT, WORKER).at(CLOSED).set();
         j.reveal(s, U128(20 * USD), "a".into());
         Ctx::new(ROOT, LEAD).at(REVEAL_END).deposit(DEPOSIT).set();
-        j.award_best(s, 0, 0, None, None, None);
+        j.award_best(s, 0, 0, None, None, None, None);
         assert_eq!(call_args("on_award_best")["workers"], json!([WORKER]));
     }
 
@@ -4466,7 +4467,7 @@ mod award_best {
         Ctx::new(ROOT, WORKER).deposit(SEALED_BID_NEAR).set();
         j.bid_sealed(s, "ab".repeat(32));
         Ctx::new(ROOT, LEAD).at(REVEAL_END).deposit(DEPOSIT).set();
-        j.award_best(s, 0, 0, None, None, None);
+        j.award_best(s, 0, 0, None, None, None, None);
     }
 
     #[test]
@@ -4474,7 +4475,7 @@ mod award_best {
     fn award_best_before_the_close_is_refused() {
         let (mut j, s) = two_bids();
         Ctx::new(ROOT, LEAD).deposit(DEPOSIT).set();
-        j.award_best(s, 0, 0, None, None, None);
+        j.award_best(s, 0, 0, None, None, None, None);
     }
 
     #[test]
@@ -4482,7 +4483,7 @@ mod award_best {
     fn only_the_buyer_can_award_best() {
         let (mut j, s) = two_bids();
         Ctx::new(ROOT, EVE).at(CLOSED).deposit(DEPOSIT).set();
-        j.award_best(s, 0, 0, None, None, None);
+        j.award_best(s, 0, 0, None, None, None, None);
     }
 
     #[test]
@@ -4490,7 +4491,7 @@ mod award_best {
     fn award_best_needs_the_childs_storage_deposit() {
         let (mut j, s) = two_bids();
         Ctx::new(ROOT, LEAD).at(CLOSED).set();
-        j.award_best(s, 0, 0, None, None, None);
+        j.award_best(s, 0, 0, None, None, None, None);
     }
 
     #[test]
@@ -4502,7 +4503,7 @@ mod award_best {
             .deposit(DEPOSIT)
             .gas(Gas::from_tgas(170))
             .set();
-        j.award_best(s, 0, 0, None, None, None);
+        j.award_best(s, 0, 0, None, None, None, None);
     }
 
     #[test]
@@ -4528,6 +4529,7 @@ mod award_best {
             acc(LEAD),
             U128(DEPOSIT.as_yoctonear()),
             None,
+            None,
         );
     }
 
@@ -4538,7 +4540,7 @@ mod award_best {
         let s = open(&mut j, None);
         bid(&mut j, WORKER, s, 25 * USD, NearToken::from_yoctonear(0));
         Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
-        j.award_best(s, 0, 0, Some(U128(10 * USD)), None, None);
+        j.award_best(s, 0, 0, Some(U128(10 * USD)), None, None, None);
         Ctx::new(ROOT, ROOT)
             .at(CLOSED)
             .results(vec![rec(0, 0)])
@@ -4552,6 +4554,7 @@ mod award_best {
             false,
             acc(LEAD),
             U128(DEPOSIT.as_yoctonear()),
+            None,
             None,
         );
         assert!(matches!(r, PromiseOrValue::Value(false)));
@@ -4583,7 +4586,7 @@ mod award_best {
     fn a_late_award_best_is_refused() {
         let (mut j, s) = two_bids();
         Ctx::new(ROOT, LEAD).at(LATE).deposit(DEPOSIT).set();
-        j.award_best(s, 0, 0, None, None, None);
+        j.award_best(s, 0, 0, None, None, None, None);
     }
 
     #[test]
@@ -4603,6 +4606,7 @@ mod award_best {
             false,
             acc(LEAD),
             U128(DEPOSIT.as_yoctonear()),
+            None,
             None,
         );
         assert!(matches!(r, PromiseOrValue::Value(false)));
@@ -4684,7 +4688,7 @@ mod award_best {
         let run = |min_paid: Option<U128>| {
             let (mut j, s) = two_bids();
             Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
-            j.award_best(s, 150, 100, None, None, min_paid);
+            j.award_best(s, 150, 100, None, None, min_paid, None);
             assert_eq!(call_args("on_award_best")["min_paid"], json!(min_paid));
             Ctx::new(ROOT, ROOT)
                 .at(CLOSED)
@@ -4700,6 +4704,7 @@ mod award_best {
                 acc(LEAD),
                 U128(DEPOSIT.as_yoctonear()),
                 min_paid,
+                None,
             );
             j.get_job().children[0].worker.clone()
         };
@@ -4727,6 +4732,7 @@ mod award_best {
             acc(LEAD),
             U128(DEPOSIT.as_yoctonear()),
             Some(U128(10 * USD)),
+            None,
         );
         let e = &events("award_best")[0];
         assert_eq!(e["inputs"][1]["score"], (45 * USD).to_string());
@@ -4764,7 +4770,7 @@ mod award_best {
     fn the_skip_list_is_in_the_event() {
         let (mut j, s) = two_bids();
         Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
-        j.award_best(s, 150, 0, None, Some(vec![acc(WORKER2)]), None);
+        j.award_best(s, 150, 0, None, Some(vec![acc(WORKER2)]), None, None);
         let e = &events("award_best_asked")[0];
         assert_eq!(e["slot"], s);
         assert_eq!(e["skip"], json!([WORKER2]));
@@ -4814,9 +4820,223 @@ mod award_best {
             acc(LEAD),
             U128(DEPOSIT.as_yoctonear()),
             None,
+            None,
         );
         assert!(matches!(r, PromiseOrValue::Value(false)));
         assert_eq!(j.get_bids(s).unwrap().awarded, None);
         assert!(refunded());
+    }
+
+    // ---- the buyer's payer list
+
+    /// `payers` as the buyer passes them (the lead's own managers).
+    fn list(ids: &[&str]) -> Option<Vec<AccountId>> {
+        Some(ids.iter().map(|x| acc(x)).collect())
+    }
+
+    /// A factory `get_record_from` reply: listed pay (whole fUSD) from `n` payers.
+    fn rec_from(paid: u128, unpaid: u128, n: u32) -> PromiseResult {
+        ok(format!(
+            r#"{{"jobs":{},"delivered":0,"checked":0,"junk":0,"paid":0,"score_sum":0,"scored":0,"paid_value":"{}","unpaid_value":"{}","payers":{n}}}"#,
+            paid + unpaid,
+            paid * USD,
+            unpaid * USD
+        )
+        .as_bytes())
+    }
+
+    fn start_listed(j: &mut Job, s: u32, payers: Option<Vec<AccountId>>, min_paid: Option<U128>) {
+        Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
+        j.award_best(s, 150, 100, None, None, min_paid, payers);
+    }
+
+    fn finish_listed(
+        j: &mut Job,
+        s: u32,
+        payers: Option<Vec<AccountId>>,
+        min_paid: Option<U128>,
+        results: Vec<PromiseResult>,
+    ) {
+        Ctx::new(ROOT, ROOT).at(CLOSED).results(results).set();
+        j.on_award_best(
+            s,
+            vec![acc(WORKER), acc(WORKER2)],
+            150,
+            100,
+            None,
+            false,
+            acc(LEAD),
+            U128(DEPOSIT.as_yoctonear()),
+            min_paid,
+            payers,
+        );
+    }
+
+    #[test]
+    fn a_payer_list_makes_the_job_read_the_record_from_those_payers() {
+        let (mut j, s) = two_bids();
+        start_listed(&mut j, s, list(&[LEAD, EVE]), None);
+        let c = calls();
+        let reads: Vec<_> = c.iter().filter(|c| c.1 == "get_record_from").collect();
+        assert_eq!(reads.len(), 2);
+        assert!(reads.iter().all(|c| c.0 == FACTORY));
+        assert!(!c.iter().any(|c| c.1 == "get_record"));
+        let a = call_args("get_record_from");
+        assert_eq!(a["payers"], json!([LEAD, EVE]));
+        assert_eq!(a["account_id"], WORKER);
+        assert_eq!(call_args("on_award_best")["payers"], json!([LEAD, EVE]));
+    }
+
+    #[test]
+    fn without_a_payer_list_the_reads_and_events_are_as_before() {
+        let (mut j, s) = two_bids();
+        start(&mut j, s, 150, 100);
+        assert!(calls().iter().all(|c| c.1 != "get_record_from"));
+        assert!(call_args("get_record").get("payers").is_none());
+        assert_eq!(call_args("on_award_best")["payers"], json!(null));
+        assert!(events("award_best_asked")[0].get("payers").is_none());
+        finish(
+            &mut j,
+            s,
+            &[WORKER, WORKER2],
+            150,
+            100,
+            vec![rec(30, 0), rec(30, 0)],
+        );
+        let e = &events("award_best")[0];
+        assert!(e.get("payers").is_none());
+        assert!(e["inputs"][0].get("listed_paid_value").is_none());
+    }
+
+    #[test]
+    fn the_payer_list_and_what_was_read_are_in_the_events() {
+        let (mut j, s) = two_bids();
+        start_listed(&mut j, s, list(&[LEAD]), None);
+        assert_eq!(events("award_best_asked")[0]["payers"], json!([LEAD]));
+        finish_listed(
+            &mut j,
+            s,
+            list(&[LEAD]),
+            None,
+            vec![rec_from(30, 0, 2), rec_from(0, 0, 0)],
+        );
+        let e = &events("award_best")[0];
+        assert_eq!(e["payers"], json!([LEAD]));
+        assert_eq!(e["inputs"][0]["listed_paid_value"], (30 * USD).to_string());
+        assert_eq!(e["inputs"][0]["listed_payers"], 2);
+        assert_eq!(e["inputs"][1]["listed_paid_value"], "0");
+        assert_eq!(e["inputs"][1]["listed_payers"], 0);
+    }
+
+    #[test]
+    fn pay_from_payers_the_buyer_does_not_list_is_no_record() {
+        // WORKER2 (18) washed 30 fUSD through two accounts of its own. Read
+        // whole, that is a record and it beats WORKER's 25. Read through
+        // the buyer's list the factory shows none of it: a newcomer pays
+        // the premium (18 x 2 = 36) and WORKER wins.
+        let run = |payers: Option<Vec<AccountId>>, results: Vec<PromiseResult>| {
+            let (mut j, s) = two_bids();
+            start_listed(&mut j, s, payers.clone(), None);
+            finish_listed(&mut j, s, payers, None, results);
+            j.get_job().children[0].worker.clone()
+        };
+        assert_eq!(run(None, vec![rec(30, 0), rec(30, 0)]), acc(WORKER2));
+        assert_eq!(
+            run(list(&[LEAD]), vec![rec_from(30, 0, 2), rec_from(0, 0, 0)]),
+            acc(WORKER)
+        );
+    }
+
+    #[test]
+    fn a_listed_manager_pay_counts_like_any_record() {
+        // The same bidder, paid by a listed manager, keeps its record: the
+        // option closes the washing door, not the front one.
+        let (mut j, s) = two_bids();
+        start_listed(&mut j, s, list(&[LEAD]), None);
+        finish_listed(
+            &mut j,
+            s,
+            list(&[LEAD]),
+            None,
+            vec![rec_from(30, 0, 2), rec_from(30, 0, 1)],
+        );
+        assert_eq!(j.get_job().children[0].worker, acc(WORKER2));
+    }
+
+    #[test]
+    fn unpaid_money_counts_whoever_is_listed() {
+        let (mut j, s) = two_bids();
+        start_listed(&mut j, s, list(&[LEAD]), None);
+        // WORKER2's whole record is unpaid: 18 x 2.5 = 45 loses to 25.
+        finish_listed(
+            &mut j,
+            s,
+            list(&[LEAD]),
+            None,
+            vec![rec_from(30, 0, 2), rec_from(0, 20, 0)],
+        );
+        assert_eq!(j.get_job().children[0].worker, acc(WORKER));
+        assert_eq!(
+            events("award_best")[0]["inputs"][1]["score"],
+            (45 * USD).to_string()
+        );
+    }
+
+    #[test]
+    fn min_paid_applies_to_the_listed_money() {
+        // 5 fUSD from a listed manager is under a 10 fUSD floor: a newcomer.
+        let (mut j, s) = two_bids();
+        let floor = Some(U128(10 * USD));
+        start_listed(&mut j, s, list(&[LEAD]), floor);
+        finish_listed(
+            &mut j,
+            s,
+            list(&[LEAD]),
+            floor,
+            vec![rec_from(30, 0, 2), rec_from(5, 0, 1)],
+        );
+        assert_eq!(j.get_job().children[0].worker, acc(WORKER));
+    }
+
+    #[test]
+    fn an_empty_payer_list_counts_nobodys_pay() {
+        let (mut j, s) = two_bids();
+        start_listed(&mut j, s, list(&[]), None);
+        assert_eq!(call_args("get_record_from")["payers"], json!([]));
+        // Both are newcomers, so the lowest bid wins.
+        finish_listed(
+            &mut j,
+            s,
+            list(&[]),
+            None,
+            vec![rec_from(0, 0, 0), rec_from(0, 0, 0)],
+        );
+        assert_eq!(j.get_job().children[0].worker, acc(WORKER2));
+    }
+
+    #[test]
+    #[should_panic(expected = "list at most 16 payers")]
+    fn a_payer_list_over_sixteen_is_refused() {
+        let (mut j, s) = two_bids();
+        let many: Vec<AccountId> = (0..17).map(|i| acc(&format!("p{i}.test"))).collect();
+        Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
+        j.award_best(s, 0, 0, None, None, None, Some(many));
+    }
+
+    #[test]
+    fn a_failed_listed_read_awards_nobody_and_refunds() {
+        let (mut j, s) = two_bids();
+        start_listed(&mut j, s, list(&[LEAD]), None);
+        // An old registry without `get_record_from` fails the read.
+        finish_listed(
+            &mut j,
+            s,
+            list(&[LEAD]),
+            None,
+            vec![rec_from(30, 0, 2), PromiseResult::Failed],
+        );
+        assert_eq!(j.get_bids(s).unwrap().awarded, None);
+        assert!(refunded());
+        assert_eq!(events("award_best_failed").len(), 1);
     }
 }

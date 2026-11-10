@@ -36,7 +36,7 @@ slot, only to an account that bid; it hires through the same path as
 - unit: `manager_opens_workers_bid_manager_awards_at_the_bid_price`; `award_before_close_refused`, `award_to_a_non_bidder_refused`, `second_award_refused`
 
 ### Requirement: The award rule can run on-chain
-`award_best(slot, record_weight, newcomer_pct, sub, skip, min_paid)` SHALL be
+`award_best(slot, record_weight, newcomer_pct, sub, skip, min_paid, payers)` SHALL be
 manager-only, with the same preconditions as `award` (after close and any
 reveal, once per slot) and at least one revealed bidder not in `skip`. The
 job SHALL read each such bidder's track record from its registry (the
@@ -87,6 +87,18 @@ that picks by hand.
 - WHEN `award_best` scores it
 - THEN its paid money counts as none: it pays the newcomer premium, and any unpaid money it has weighs as its whole record. Without `min_paid` the rule is unchanged
 - unit: `paid_money_below_min_paid_does_not_make_a_record`, `a_thin_record_with_unpaid_money_keeps_its_penalty`
+
+#### Scenario: Whose pay counts
+- GIVEN `payers`, a list of at most 16 manager accounts the buyer trusts
+- WHEN `award_best` runs
+- THEN the job reads each bidder with the factory's `get_record_from(account, payers)` instead of `get_record`, so a bidder's paid money (and the payer count in the event) comes only from those managers, and `min_paid` applies to that money. Unpaid money still counts whoever it came from. The list is in `award_best_asked` and `award_best`, and each input carries `listed_paid_value` and `listed_payers`. A list over 16 is refused; an empty list counts nobody's pay; a failed read (an old registry without the method) fails closed like any other
+- unit: `a_payer_list_makes_the_job_read_the_record_from_those_payers`, `the_payer_list_and_what_was_read_are_in_the_events`, `pay_from_payers_the_buyer_does_not_list_is_no_record`, `a_listed_manager_pay_counts_like_any_record`, `unpaid_money_counts_whoever_is_listed`, `min_paid_applies_to_the_listed_money`, `an_empty_payer_list_counts_nobodys_pay`, `a_payer_list_over_sixteen_is_refused`, `a_failed_listed_read_awards_nobody_and_refunds`
+- sandbox: `a_washed_record_beats_the_plain_rule_but_not_the_buyers_payer_list`
+
+#### Scenario: No payer list
+- WHEN `payers` is left out
+- THEN the reads, the pick and the events are exactly what they were before the option existed
+- unit: `without_a_payer_list_the_reads_and_events_are_as_before`
 
 #### Scenario: A slot without a bond
 - WHEN a bidder attaches a few yocto on a slot that asks for no bond

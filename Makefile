@@ -43,6 +43,7 @@ lint: ## rustfmt check + clippy -D warnings + every test the specs name exists +
 	python3 scripts/swarm-seeds.py --check --readme
 	@if [ -f web/swarm-blind.json ]; then python3 scripts/swarm-compare.py web/swarm.json web/swarm-blind.json --readme; fi
 	@if [ -d runs/storm ]; then python3 scripts/swarm-seeds.py --storm --check --readme; fi
+	@if [ -d runs/wash ]; then python3 scripts/swarm-seeds.py --wash --check; fi
 
 # Plain cargo needs --cfg near (what cargo-near sets). Without it near-sdk's
 # panic_str aborts and every on-chain error reads only "unreachable".
@@ -104,9 +105,9 @@ swarm-blind: build ## control run: the same 12-round market with buyers blind to
 	python3 scripts/swarm-compare.py web/swarm.json web/swarm-blind.json
 
 .PHONY: swarm-seeds
-swarm-seeds: build ## repeat the control comparison: for each seed in SEEDS (default 1 2 3) run the market in each arm of ARMS (default rec blind; also audit) (other starting asks and judge rolls), RUNS (default 2) at a time, then print mean, min and max per arm with the committed pair as seed 0 (about 90 min per run). STORM=R adds a junk storm at round R (30 sybil accounts flood every auction at half price) and writes runs/storm/ and web/swarm-storm.json instead; ROUNDS shortens a run
-	@$(SBX) STORM="$(STORM)" ROUNDS="$(ROUNDS)" ../scripts/swarm-seeds-run.sh "$(or $(SEEDS),1 2 3)" "$(or $(RUNS),2)" "$(or $(ARMS),rec blind)"
-	python3 scripts/swarm-seeds.py $(if $(STORM),--storm)
+swarm-seeds: build ## repeat the control comparison: for each seed in SEEDS (default 1 2 3) run the market in each arm of ARMS (default rec blind; also audit) (other starting asks and judge rolls), RUNS (default 2) at a time, then print mean, min and max per arm with the committed pair as seed 0 (about 90 min per run). STORM=R adds a junk storm at round R (30 sybil accounts flood every auction at half price) and writes runs/storm/ and web/swarm-storm.json instead; with WASH=1 too the sybils first wash a record through real factory jobs among themselves and the runs go to runs/wash/ and web/swarm-wash.json (arm allow = records with the buyers' payer list); ROUNDS shortens a run
+	@$(SBX) STORM="$(STORM)" WASH="$(WASH)" ROUNDS="$(ROUNDS)" ../scripts/swarm-seeds-run.sh "$(or $(SEEDS),1 2 3)" "$(or $(RUNS),2)" "$(or $(ARMS),rec blind)"
+	python3 scripts/swarm-seeds.py $(if $(WASH),--wash,$(if $(STORM),--storm))
 
 .PHONY: swarm-quick
 swarm-quick: build ## 3 rounds of the same market (about 20 min), then checks the run against its rules: every part sold, bonds lost exactly by unpaid winners, sub-parts below their contractor's price, fees

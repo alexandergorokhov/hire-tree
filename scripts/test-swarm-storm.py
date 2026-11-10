@@ -60,6 +60,32 @@ try:
     empty = tempfile.mkdtemp()
     check(go(empty).returncode == 0 and not os.path.exists(os.path.join(empty, "web")), "no storm runs: nothing written")
     shutil.rmtree(empty)
+    # Washed storms: arms rec (no list) and allow (payer list), with the cost of washing.
+    w = tempfile.mkdtemp()
+    try:
+        os.makedirs(os.path.join(w, "runs", "wash"))
+        os.makedirs(os.path.join(w, "web"))
+        for tag, listed, fee in (("rec", False, 4.5), ("allow", True, 4.5)):
+            d = run("records", 1, 0.2)
+            d["wash"] = {"sybils_washed": 30, "platform_fee_fusd": fee, "fusd_outlay": fee, "near_spent": 3.25}
+            if listed:
+                d["allowlist"] = True
+            json.dump(d, open(os.path.join(w, "runs", "wash", f"{tag}-1.json"), "w"))
+        r = subprocess.run([sys.executable, SCRIPT, "--wash"], cwd=w, capture_output=True, text=True)
+        check(r.returncode == 0, "the wash summary is written")
+        ws = json.load(open(os.path.join(w, "web", "swarm-wash.json")))
+        check(ws["arms"] == ["records", "records+allowlist"], "the allowlist arm is its own arm")
+        row = ws["records+allowlist"][0]
+        check(row["sybils washed"] == 30 and row["wash platform fee fUSD"] == 4.5 and row["wash NEAR spent"] == 3.25, "washing cost is reported per run")
+        check(subprocess.run([sys.executable, SCRIPT, "--wash", "--check"], cwd=w).returncode == 0, "--wash --check passes on a fresh summary")
+        # A run without the wash block is not a wash run.
+        d = run("records", 2, 0.2)
+        json.dump(d, open(os.path.join(w, "runs", "wash", "rec-2.json"), "w"))
+        json.dump(d, open(os.path.join(w, "runs", "wash", "allow-2.json"), "w"))
+        r = subprocess.run([sys.executable, SCRIPT, "--wash"], cwd=w, capture_output=True, text=True)
+        check(r.returncode != 0, "a run without a wash block is refused")
+    finally:
+        shutil.rmtree(w)
 finally:
     shutil.rmtree(tmp)
 sys.exit(1 if fails else 0)
