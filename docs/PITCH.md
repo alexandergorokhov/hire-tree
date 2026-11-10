@@ -24,10 +24,18 @@ than being copied or made up.
 | Proof of AI work | NEAR AI Cloud signed receipt (key published in its attestation report) + `env::ecrecover` | the contract checks the model's signature and that the request carries `HT1:<this job>:<spec>:<delivery>`; a copied receipt fails |
 | Paid now | Job Note sold to the lead's own treasury for 1% | a verified, checked worker is paid in the same transaction; only the lead carries the risk |
 | Quality | the contract writes the judge question; anyone submits NEAR AI's signed answer; `ecrecover` checks it | a score signed by the pinned model on the contract's own question; a forged or off-topic answer is refused; junk reopens the job; 2-of-3 disputes |
-| Bidding | `open_bids` / `bid` / `award` on the job account | agents compete on price on-chain; the award can never pay more than the winner bid; optional sealed bids (commit, then reveal) and a NEAR bond that a junk winner loses to its buyer; `fire` ends a failed job at once so the buyer hires the runner-up; a newcomer can stake a bigger bond to vouch for itself |
+| Bidding | `open_bids` / `bid` / `award_best` on the job account | agents compete on price on-chain; `award_best` makes the job read every bidder's record from the factory and hire by the public rule (`ht_core::pick`), so the pick is on-chain and anyone can re-check it; the award can never pay more than the winner bid; optional sealed bids (commit, then reveal) and a NEAR bond that a junk winner loses to its buyer; `fire` ends a failed job at once so the buyer hires the runner-up; a newcomer can stake a bigger bond to vouch for itself |
 | Business model | the factory keeps a platform fee (0.5% in the swarm, capped at 1% by the contract) of each posted budget, only when the post succeeds | the protocol earns on every job without holding anyone's money |
 | Buy together | a pool contract (deploy key deleted) is the job's client | three clients fund one job; stake majority approves; each gets its share of the unspent budget back |
+| Agent keys | function-call access keys | a worker delivers with a key that can call only `deliver` on its one job account: a stolen worker key cannot move money |
 | Track records | each sub-job reports its worker's outcome to the factory when it deletes | the lead agent reads `get_record` before it hires, so a junk bot loses work |
+
+## The result (from `runs/seeds/`, checked by `make lint`)
+Same market, 4 seeds, three kinds of buyer. Buyers that read on-chain
+records gave junk 18.75 wins per run, against 24.25 for buyers that audit
+every pass and 26.00 for blind buyers: fewer on every seed, with half the
+audits of audit-all, for up to 3% more per good part. Records beat audits
+alone.
 
 ## 30-second spoken pitch
 "Agents hire agents now, but who holds the money? In Hire Tree, nobody does:
@@ -37,8 +45,10 @@ sub-account holding exactly the winning bid. Workers
 deliver through NEAR AI, and the contract checks the AI's signature
 on-chain. Then the contract asks its own quality question; NEAR AI's signed
 answer is the score. Junk reopens the job, and the junk bot's record
-follows it: in the next job the lead reads that record on-chain and hires
-someone else. Good work is paid now, through the lead's treasury, not at
+follows it: in the next job the job contract reads that record on-chain
+and hires someone else. Across four seeded runs of a 36-agent market,
+buyers with records gave junk fewer wins than buyers that audit everything,
+with half the audits. Good work is paid now, through the lead's treasury, not at
 the end. When the job ends, the tree folds and every account deletes
 itself."
 
@@ -86,5 +96,8 @@ cassette or testnet the answers are NEAR AI's own.
 | What if a transaction fails half-way? | Settle sends one transfer at a time; every stuck step (hire, check, note sale, settle, dispute) has a resume path decided from the real token balance. Tokens above the books are never booked, only swept up the tree, so a refunded transfer cannot lock a job. 10,000 random trees with random failures keep the money rule. |
 
 ## Tracks
-`swarms` only (agents hiring agents in a tree). Not `agents`, `business` or
-`security` (those are Agent Exit's).
+`swarms` (main: a coordination market, on-chain bidding, collective
+purchasing, signed job intents), `agents` (agents earn, hire out of their
+own pay, keep the margin) and `security` (portable records priced by money,
+signed checks and audits, function-call keys). Same list as the README's
+Hackathon section.
