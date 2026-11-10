@@ -26,7 +26,9 @@ mean, min and max per arm.
           arms rec (records), allow (records with the buyers' payer list),
           blind and audit, plus what washing cost the storm (platform fee
           fUSD, fUSD outlay, NEAR, sybils washed). Nothing is written or
-          checked when there are no wash runs. No README claims are checked.
+          checked when there are no wash runs. With --readme, fail unless
+          README.md states the wash means in WASH_README and how many seeds
+          the payer list cut storm wins on.
 """
 import glob, json, os, re, sys
 
@@ -34,6 +36,7 @@ BAD = ("junk", "polished")
 ARMS = {"rec": "records", "blind": "blind", "audit": "audit-all", "allow": "records+allowlist"}
 # Storm means the README must state (with --storm --readme).
 STORM_README = ("junk wins", "storm wins", "storm earned fUSD", "junk paid fUSD", "fUSD per good part", "max fUSD held by storm keys", "sub-parts bought")
+WASH_README = ("storm wins", "storm earned fUSD", "fUSD per good part", "wash fUSD outlay", "wash NEAR spent")
 
 
 def measures(d):
@@ -118,13 +121,21 @@ def storm_summary(kind="storm"):
         bad += not ok
     else:
         json.dump(out, open(f"web/swarm-{kind}.json", "w"), indent=1)
-    if "--readme" in sys.argv and kind == "storm":
+    if kind == "wash" and "records+allowlist" in arms:
+        fewer = sum(x["storm wins"] < r["storm wins"] for x, r in zip(out["records+allowlist"], out["records"]))
+        out["claim"] = f"fewer storm wins with the payer list on {fewer} of {len(seeds)} seeds"
+        print(out["claim"])
+    if "--readme" in sys.argv:
         readme = re.sub(r"\s+", " ", open("README.md").read())
+        if "claim" in out:
+            ok = out["claim"] in readme
+            print(("ok  " if ok else "FAIL"), f"README states: {out['claim']}")
+            bad += not ok
         for a in arms:
-            for k in STORM_README:
+            for k in (STORM_README if kind == "storm" else WASH_README):
                 s = f"{out['mean'][a][k]:.2f}"
                 ok = s in readme
-                print(("ok  " if ok else "FAIL"), f"README states the storm {a} mean of {k}: {s}")
+                print(("ok  " if ok else "FAIL"), f"README states the {kind} {a} mean of {k}: {s}")
                 bad += not ok
     return 1 if bad else 0
 
