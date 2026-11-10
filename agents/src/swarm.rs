@@ -1120,6 +1120,7 @@ pub async fn run(
     let mut respawns = 0u32;
     let mut bid_errors = 0u32;
     let mut late_reveals = 0u32;
+    let mut late_audits = 0u32;
     // Awards where the contract's winner differed from the off-chain expectation.
     let mut award_mismatches = 0u32;
     // Newcomer asks no underwriter would back: below 85% of the median win.
@@ -1864,9 +1865,18 @@ pub async fn run(
                     let buyer_acc = buyer_acc(parts[p].buyer, &leads, &agents);
                     let (child, task) = (parts[p].child.clone(), parts[p].task.clone());
                     let d = b64(&parts[p].delivered);
-                    tools
+                    // Under heavy CPU load the job's window can close before the
+                    // audit; the contract then refuses the dispute and the pass stands.
+                    if let Err(e) = tools
                         .call(&buyer_acc, "dispute", &json!({ "job": child, "resp": d }))
-                        .await?;
+                        .await
+                    {
+                        if !e.to_string().contains("window is closed") {
+                            return Err(e);
+                        }
+                        late_audits += 1;
+                        continue;
+                    }
                     let mut votes = vec![parts[p].score];
                     for panel in 1..=2u8 {
                         let req = tools
@@ -2286,7 +2296,7 @@ pub async fn run(
         }), "seed": seed, "network": c.network_name, "rounds": log, "agents": table,
         "leads": LEADS.iter().enumerate().map(|(l, (n, r))| json!({ "lead": n, "record_weight": r.record_weight,
             "max_pct": r.max_pct, "spent": lead_spent[l] as f64 / 1e6, "unfilled": lead_unfilled[l] })).collect::<Vec<_>>(),
-        "junk_respawns": respawns, "bid_errors": bid_errors, "late_reveals": late_reveals, "award_rule": "on-chain (award_best)", "award_mismatches": award_mismatches, "backer_asks_too_low": asks_too_low, "premiums": premium,
+        "junk_respawns": respawns, "bid_errors": bid_errors, "late_reveals": late_reveals, "late_audits": late_audits, "award_rule": "on-chain (award_best)", "award_mismatches": award_mismatches, "backer_asks_too_low": asks_too_low, "premiums": premium,
         "platform_fee_bps": SWARM_FEE_BPS, "job_budget": JOB_BUDGET, "bond_near": BOND_YOCTO as f64 / 1e24, "sealed_lead": "quality", "platform_fees": num(&settings["fees"]) as f64 / 1e6,
         "model": match llm {
             Llm::Mock(_) => "scripted test model (not NEAR AI) for work, judging, the model bidder and contractors' make-or-buy; agents adapt their asks; buyers pick by price, on-chain record and a learned newcomer premium".to_string(),
