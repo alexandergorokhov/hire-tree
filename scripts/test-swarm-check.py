@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """The swarm checker must catch a broken run: each case below breaks one
-rule in a copy of web/swarm.json (or the README) and expects a FAIL.
+rule in a copy of web/swarm.json (or docs/SWARM.md) and expects a FAIL.
 
     python3 scripts/test-swarm-check.py
 """
@@ -49,7 +49,8 @@ def run(d, readme=None):
     with tempfile.TemporaryDirectory() as t:
         path = os.path.join(t, "swarm.json")
         json.dump(d, open(path, "w"))
-        shutil.copy(os.path.join(ROOT, "README.md") if readme is None else readme, os.path.join(t, "README.md"))
+        os.mkdir(os.path.join(t, "docs"))
+        shutil.copy(os.path.join(ROOT, "docs", "SWARM.md") if readme is None else readme, os.path.join(t, "docs", "SWARM.md"))
         r = subprocess.run([sys.executable, CHECK, path, "--readme"], cwd=t, capture_output=True, text=True)
         return r.returncode, r.stdout
 
@@ -66,15 +67,15 @@ for case in CASES:
     print(("ok  " if ok else "FAIL"), "caught:", case.__name__[5:].replace("_", " "))
     fails += not ok
 
-# A README number with extra leading digits must not pass.
-readme = open(os.path.join(ROOT, "README.md")).read()
+# A docs/SWARM.md number with extra leading digits must not pass.
+readme = open(os.path.join(ROOT, "docs", "SWARM.md")).read()
 n = sum(1 for p in won(base) if p["paid"])
 assert f"{n} passed" in readme
 with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as f:
     f.write(readme.replace(f"{n} passed", f"9{n} passed"))
 code, _ = run(base, f.name)
 os.unlink(f.name)
-print(("ok  " if code != 0 else "FAIL"), "caught: a README number with an extra leading digit")
+print(("ok  " if code != 0 else "FAIL"), "caught: a docs/SWARM.md number with an extra leading digit")
 fails += code == 0
 
 print("swarm-check self-test:", "all ok" if not fails else f"{fails} failed")

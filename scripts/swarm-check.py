@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Check a swarm run (web/swarm.json by default) against its own rules and,
-with --readme, the numbers the README states about the committed run.
+with --readme, the numbers docs/SWARM.md states about the committed run.
 
   python3 scripts/swarm-check.py [swarm.json] [--readme]
 """
@@ -84,8 +84,7 @@ if "--same-as" in sys.argv:
     check(key(d) == key(other), f"same winners, prices, scores and payouts as {sys.argv[sys.argv.index('--same-as') + 1]}")
 
 if "--readme" in sys.argv:
-    readme = open("README.md").read()
-    sec = readme[readme.index("## Swarm"):readme.index("## The problem")]
+    sec = open("docs/SWARM.md").read()
     def junk(rs):
         w = [p for r in rs for p in r["parts"] if p.get("winner")]
         return round(100 * sum(p["strategy"] == "junk" for p in w) / len(w))
@@ -114,7 +113,7 @@ if "--readme" in sys.argv:
     for s in want:
         # A number must stand alone: "120 passed" is not found in "9120 passed".
         pat = r"(?<![\d.])" + re.escape(s) + (r"(?![\d])" if s[-1].isdigit() else "")
-        check(re.search(pat, flat) is not None, f"README states: {s}")
+        check(re.search(pat, flat) is not None, f"docs/SWARM.md states: {s}")
 
 print("swarm check:", "all ok" if not fails else f"{len(fails)} failed")
 sys.exit(1 if fails else 0)

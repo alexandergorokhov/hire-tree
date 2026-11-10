@@ -49,76 +49,17 @@ instead of reading about it. No keys, no network.
 (JSON-RPC over stdio, about 7 min) and checks every answer.
 
 ## Swarm
-`make swarm` runs a recursive labor market on a local node, 12 rounds:
-- **Intents** (our own signed intents, not NEAR Intents). Each round 3 clients sign a job intent off-chain (budget,
-  brief, a lead fee that rises from 0 like a Dutch auction) against a fUSD
-  deposit at the factory. Three competing leads fill them with
-  `fill_intent`: the one that asks the lowest fee fills first and picks
-  workers first. The contract checks the signature, spends the deposit
-  once and posts the job (AI Swarms brief: intent-based settlement).
-- **The lead's model plans the tree.** The lead asks its model which parts
-  the brief needs and the most it pays for each (research, translation,
-  summary), read safely and capped by the budget.
-- **On-chain bidding.** 36 worker agents with 10 strategies bid for each
-  part (one lead buys the cheapest after records, one weighs records
-  heavily and uses sealed bids, one offers only 75% of the max). Buyers
-  price records by money: the share of fUSD a worker was paid or lost,
-  and from how many different managers.
-  The pick itself runs on-chain: the buyer calls `award_best` with its
-  record weight and newcomer premium, the job contract reads each bidder's
-  record from the factory and hires the lowest score by the public rule
-  (`ht_core::pick`), and the event lists every input. A failed record read
-  awards nobody; `award` stays for a buyer that picks by hand.
-- **Junk storm.** `make swarm-seeds STORM=6` drops 30 fresh sybil accounts
-  into the market at round 6, bidding half price with polished junk, in
-  each arm (records, blind, audit-all); `web/swarm-storm.json` charts the
-  junk share per round. Not yet run in full: the page card appears when the
-  file exists.
-- **Function-call keys for workers.** A worker delivers with a key that can
-  call only `deliver` on its one job account: no deposit, no transfers, no
-  deletion (`agents/tests/keys.rs`). Bids attach NEAR and stay on the
-  owner's key; see `docs/THREATS.md`, Agent keys.
-- **Contractors grow the tree.** A winner can put a piece of its part out
-  for bids and hire a sub-agent out of its own pay, after asking the model
-  "make it myself, or buy it, and for what share?"; trees reach 3 levels, counting the root job.
-- **Bonds and underwriters.** Every bid stakes 0.05 NEAR. A newcomer with
-  no record asks an underwriter to back it: a trusted agent of the same
-  skill puts 0.45 NEAR behind the bid for a premium out of the newcomer's
-  bond, if its ask looks like real work. Buyers cut the newcomer premium
-  by the bid's total bond, read on-chain. Junk loses both bonds.
-- **Fire and replace.** When a winner fails the signed check, the buyer
-  fires it on-chain at once (no pay, its bond to the buyer) and hires the
-  runner-up in the same round. Passes from workers that are not yet
-  trusted (30 fUSD paid by 2 different managers) are audited by two more
-  judge panels. The factory keeps a 0.5% fee.
-
-Nothing about the winners is scripted. What emerged in the committed run
-(`web/swarm.json`, page `web/swarm.html`):
-- 36 signed client intents were filled. Lead fees converged from 4.86 to
-  6.28 fUSD in round 1 to about 5.50 by round 12 as leads raced each other.
-- 108 parts were bought on-chain, 9 of them by contractors out of their
-  own pay; 89 passed the contract's check and were paid early.
-- Buyers fired 18 failed winners on the spot; 17 of 18 runner-ups passed,
-  so those parts were still delivered in the same round.
-- Junk took 21% of wins in the first 4 rounds and 3% in the last 4.  Junk is
-  never paid; every unpaid winner (mostly junk) loses its 0.05 NEAR bond
-  to the buyer (18 bonds), and each junk bot quits after 2 fresh accounts.
-- The judge can be fooled. A "polished" agent hands in fluent text with
-  nothing in it; it fooled the first check 2 times. Buyers audit every pass
-  from a worker that is not yet trusted (a dispute: 2 more panels, 2 of 3
-  decide): 54 audits, and audits caught 2, so the polished agent was paid
-  0 times.
-- Underwriters backed 3 newcomers once trusted agents existed; all 3
-  delivered, so each backer got its NEAR back plus the premium. They
-  declined 24 newcomer asks that were too far below the market to be real
-  work.
-- Make or buy: contractors asked the model 10 times and bought 6.
-  Contractors kept 32.80 fUSD of margin between what they won and what
-  they paid their sub-agents.
-- Lean agents earn the most (373 fUSD), then adaptive (192), undercut
-  (125), the model-driven bidder (111) and contractors (91). Greedy agents
-  leave.
-- The factory kept 12.60 fUSD in platform fees.
+`make swarm` runs a recursive labor market on a local node for 12 rounds.
+Each round 3 clients sign job intents (our own signed intents, not NEAR
+Intents); 3 competing leads fill them, and the lead's model plans the
+parts. 36 worker agents with 10 strategies bid on-chain; each job account
+picks the winner by the public rule (`award_best`), checks the signed work,
+fires failed winners and hires the runner-up. Winners can subcontract out
+of their own pay, newcomers can get an underwriter's bond, and workers
+deliver with a key that can only call `deliver` on their one job.
+Mechanics and everything that emerged in the committed run (108 parts,
+9 bought by contractors, 18 fired, 0 paid to polished junk):
+[docs/SWARM.md](docs/SWARM.md).
 
 **Control runs.** Do the on-chain records matter, or would audits alone do?
 `make swarm-seeds ARMS="rec blind audit"` runs the same market three ways
@@ -161,7 +102,7 @@ Seed 0 alone, the run the page shows: blind buyers gave 24 junk wins
 0.00 fUSD with records; blind junk burns through its fresh accounts sooner, so it
 holds 0% of wins in the last 4 rounds.
 
-In this run the model is the scripted test model. With a NEAR AI key the
+The model in these runs is the scripted test model. With a NEAR AI key the
 same prompts go to NEAR AI (`make record-swarm`).
 
 ![Swarm: who won each part](docs/screens/swarm.png)
@@ -192,82 +133,7 @@ a deliverable came out of a model call made for this task.
 5. **Fold.** When the work is done, every account settles bottom-up, sends
    back what is left, and deletes itself.
 
-### Mechanics in detail
-1. **Post.** A client prepays 0.06 NEAR of storage, then sends the budget
-   to the factory with one `ft_transfer_call`, naming the lead and the
-   lead's fee. The factory creates `job-1.hiretree.<net>` from one global
-   contract (by code hash) and funds it. The account has no owner key.
-2. **Bid and hire.** The lead agent (manager) puts each subtask out for
-   bids on the job account (`open_bids`, with a maximum price). Worker
-   agents bid on-chain; after 60 s the lead awards one bid (`award`),
-   weighing price against each bidder's track record. The award (or a
-   direct `hire`) creates a sub-account `t1.job-1...` from the same global
-   code, holding exactly the winning bid. Sub-jobs can hire in turn (a tree).
-   A sub-job's own worker may hire too (contractor mode): each sub-hire is
-   paid out of its own pay (`Ledger::carve`, it must keep part), it manages
-   its sub-jobs, and whatever they send back becomes its pay again.
-3. **Deliver with proof.** A worker that used NEAR AI Cloud sends the raw
-   request, the response hash and the model's ECDSA signature. The contract
-   hashes the request itself, requires the tag `HT1:<this job>:<spec hash>:<delivery #>`
-   inside it, rebuilds `model:sha256(req):sha256(resp)`, and recovers the
-   signer with `env::ecrecover`; it must equal the signer the factory pinned
-   (NEAR AI Cloud's address on testnet). The factory owner can change the
-   pinned signer and checker for new jobs only; existing jobs keep theirs.
-4. **Check.** For each delivery the contract builds the judge question
-   itself (`check_request`: rubric, task, deliverable as data, temperature 0).
-   Anyone may ask NEAR AI exactly that and submit the signed answer within
-   5 minutes; the contract verifies the signature against the pinned signer
-   and the pinned judge model, and reads the score. The lowest answer
-   counts; answers 3 or more apart make the check unclear (unscored, not
-   failed). 6/10 or more passes; a low score reopens the job.
-5. **Paid now.** A verified and checked worker's payout right (the Job Note)
-   can be bought by the lead's own treasury for 1% off: the worker is paid in
-   the same transaction, the treasury collects the full pay at settle.
-6. **Dispute.** The lead may dispute a sub-job once: two more signed
-   judge rounds (panels 1 and 2); a missing or split panel counts as junk;
-   2 junk votes of 3 send the pay back up the tree.
-7. **Track record.** When a sub-job deletes itself it reports the worker's
-   outcome (delivered, checked, junk, paid) to the factory; `get_record`
-   serves it, and the lead agent reads it before it hires.
-8. **Fold.** After the window (or approval), `settle` runs bottom-up, one
-   transfer at a time: pay the note holder, return the rest to the parent
-   (at the root: the lead's fee to the lead, everything else back to the
-   client), confirm the real token balance is zero, delete the account
-   (storage NEAR goes to the parent). Every stuck step (hire, check, note sale, settle, dispute) has a resume path, decided from the real token balance.
-9. **Buy together (pool).** Clients who would not fund a job alone join a
-   pool contract (`ft_transfer_call(pool, share, "join")`; one pool per
-   purchase, its deploy key deleted). At the target, `launch` posts the job
-   through the factory with the pool as the client; `bind` checks with the
-   factory that the job is the pool's own. Members holding more than half
-   the stake approve the work early. When the job has deleted itself, the
-   pool shares what came back, and each member `claim`s its part pro rata.
-
-## The agents
-`agents/` holds the agents and the `hiretree` CLI. Every agent decision is
-a model call; every action is a tool call (the same tools an MCP client
-gets from `hiretree mcp`).
-
-| Agent | Decides with a model | Acts with tools |
-|---|---|---|
-| Lead | planner: split the task and the budget; picker: choose a bid by price and the bidder's on-chain record; reviewer: buy the note, dispute, or wait | `open_bids`, `get_bids`, `get_record`, `award`, `quote_note`, `buy_note`, `dispute`, `approve` |
-| Worker | bids its own price (or passes); does the subtask through NEAR AI with the job's `HT1` tag | `bid`, `deliver` with the signed receipt |
-| Junk bot | nothing: bids 60% of max on anything near its skills, sends filler | `bid`, `deliver` without a receipt |
-| Keeper | none of its own: asks the judge model the contract's question | `check_request`, `submit_check`, `finalize_check`, `finalize_dispute`, `settle`, `finish_pool` |
-| Pool members (3 clients) | none: fixed shares | `join_pool`, `launch_pool`, `bind_pool`, `vote_approve`, `claim_pool` |
-
-The story (three jobs): in job 1 nobody has a record, so the cheap bot's low
-bids win two parts; the judge scores its filler 2/10, those parts reopen and
-their pay goes back. In job 2 the bot bids low again, but the picker reads its record (2 jobs,
-0 paid) and awards the others; the lead's treasury buys every note, so the
-workers are paid before the job closes. In job 3 three clients pool 30
-fUSD each for one 90 fUSD job; two of them vote to approve the work, and
-each gets 7 fUSD back from the 21 the job did not spend.
-
-Model answers come from one of: a scripted test model signing with a test
-key (tests, `make demo`), NEAR AI Cloud live, or a **cassette**: a file of
-real NEAR AI answers with their original signatures, recorded once and
-replayed offline (`make demo-replay`). The contract checks the signatures
-again on every replay; `make verify-cassette` checks them offline.
+Every step, the agents and the three-job story: [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md).
 
 ## Judge fast path
 Prerequisites: `rustup` (it installs Rust 1.97.0 and the wasm32 target from
@@ -276,11 +142,11 @@ Prerequisites: `rustup` (it installs Rust 1.97.0 and the wasm32 target from
 and the first local-node run (it downloads the `near-sandbox` binary).
 No keys, no NEAR AI account, no testnet NEAR.
 
-| Step | Command | Cold time (measured on the build box) |
-|---|---|---|
-| 1 | `make setup` | crate download |
-| 2 | `make test` | 471 unit + property tests, all `ok`: core (69 + 10 property tests: 5 over 10,000 random job trees with random transfer failures, 5 on the award rule), job contract (285), factory (38), pool (25), mock checker (2), mock-usdc (7), agents (35) |
-| `make lint` | rustfmt check, clippy `-D warnings`, a check that every test the specs and THREATS.md name exists, and a check that every swarm number in this README matches `web/swarm.json`; exit 0 |
+| Command | What it does |
+|---|---|
+| `make setup` | downloads the crates |
+| `make test` | 471 unit + property tests, all `ok`: core (69 + 10 property tests: 5 over 10,000 random job trees with random transfer failures, 5 on the award rule), job contract (285), factory (38), pool (25), mock checker (2), mock-usdc (7), agents (35) |
+| `make lint` | rustfmt check, clippy `-D warnings`, a check that every test the specs and THREATS.md name exists, a check that every swarm number in `docs/SWARM.md` matches `web/swarm.json`, and a check that the control table below matches the runs in `runs/seeds/`; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make mcp-setup`, then an MCP client in this folder | `.mcp.json` starts `scripts/mcp-local.sh`: tools `guide`, `accounts`, `wait`, `do_work`, `judge_check`, `run_story` plus every agent tool, each with `as` to pick the acting account |
 | `make mcp-test` | `test result: ok. 3 passed`: the guide's walk-through; a guest agent that wins a round at 20 fUSD (paid 19.80 early), delivers junk in round 2 (2/10, unpaid), and loses round 3 on its record although it bid lowest; and a guest agent that wins a part, subcontracts a piece to the house out of its own pay, and keeps the margin |
@@ -308,8 +174,12 @@ No keys, no NEAR AI account, no testnet NEAR.
 | `contracts/mock-outlayer/` | sandbox stand-in for the OutLayer quality checker (recorded scores, no AI) |
 | `agents/` | the agents, their tools, the MCP server, NEAR AI client and cassettes, the `hiretree` CLI; near-sandbox tests |
 | `web/` | static tree page |
+| `docs/SWARM.md` | the swarm's mechanics and what emerged in the committed run |
+| `docs/HOW-IT-WORKS.md` | every step in detail, the agents and the three-job story |
+| `docs/INTEGRATE.md` | how an agent market plugs Hire Tree in as its settlement layer |
 | `docs/THREATS.md` | every threat and the test that answers it |
 | `docs/PITCH.md` | pitch, 30 s speech, 3 min video script, judge Q&A |
+| `runs/seeds/` | the raw control runs behind the README table |
 | `docs/NEXT.md` | designed, not built: a multi-model judge panel, a NEAR Intents payout leg |
 | `scripts/pitch-svg.py` | draws the top picture from one real tree in `web/swarm.json` |
 
