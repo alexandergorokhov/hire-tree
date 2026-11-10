@@ -31,6 +31,7 @@ def measures(d):
         "junk paid fUSD": round(sum(p["price"] for p in w if p["strategy"] in BAD and p["paid"]), 2),
         "fUSD spent": round(spent, 2),
         "fUSD per good part": round(spent / max(len(good), 1), 2),
+        "audits": sum(1 for p in w if p.get("audit")),
     }
 
 
@@ -67,8 +68,11 @@ for k in keys:
         v = [m[k] for m in out[a]]
         row += f"{out['mean'][a][k]:.2f} ({min(v):g}-{max(v):g})".rjust(30)
     print(f"{k:22}{row}")
-lower = sum(r["junk wins"] < b["junk wins"] for r, b in zip(out["records"], out["blind"]))
-print(f"records had fewer junk wins than blind on {lower} of {len(seeds)} seeds")
+claims = []
+for a in arms[1:]:
+    lower = sum(r["junk wins"] < b["junk wins"] for r, b in zip(out["records"], out[a]))
+    claims.append(f"fewer junk wins than {a} buyers on {lower} of {len(seeds)} seeds")
+    print("records had", claims[-1])
 
 bad = 0
 if "--check" in sys.argv:
@@ -87,8 +91,8 @@ if "--readme" in sys.argv:
             ok = s in readme
             print(("ok  " if ok else "FAIL"), f"README states the {a} mean of {k}: {s}")
             bad += not ok
-    s = f"{lower} of {len(seeds)} seeds"
-    ok = s in readme
-    print(("ok  " if ok else "FAIL"), f"README states fewer junk wins on {s}")
-    bad += not ok
+    for s in claims:
+        ok = s in readme
+        print(("ok  " if ok else "FAIL"), f"README states: {s}")
+        bad += not ok
 sys.exit(1 if bad else 0)
