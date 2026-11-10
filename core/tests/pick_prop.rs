@@ -1,7 +1,7 @@
 //! The pick rule as properties over random bids, records and parameters.
 //! Cases: `PROP_CASES` (default 10,000).
 
-use ht_core::pick::{pick, score, Cand};
+use ht_core::pick::{pick, score, weigh, Cand, CENT};
 use proptest::prelude::*;
 
 fn cases() -> u32 {
@@ -75,5 +75,20 @@ proptest! {
     ) {
         let c = build(&v);
         prop_assert_eq!(pick(&c, pct, w).is_some(), !c.is_empty());
+    }
+
+    #[test]
+    fn weighing_never_hides_unpaid_money(
+        paid in any::<u128>(),
+        unpaid in any::<u128>(),
+    ) {
+        let (jobs, p) = weigh(paid, unpaid);
+        prop_assert!(p <= jobs);
+        // A record at least half unpaid (and worth a cent) weighs at least
+        // about half unpaid, at any size.
+        if unpaid >= paid && unpaid >= CENT {
+            prop_assert!(jobs > 0);
+            prop_assert!((jobs - p) as u64 + 1 >= p as u64, "{} {}", jobs, p);
+        }
     }
 }

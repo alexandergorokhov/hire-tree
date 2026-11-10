@@ -173,6 +173,7 @@ fn new_root() -> Job {
         None,
         None,
         None,
+        None,
     )
 }
 
@@ -198,6 +199,7 @@ fn new_sub(pay: u128) -> Job {
         WINDOW,
         signer(),
         code_hash(),
+        None,
         None,
         None,
         None,
@@ -289,6 +291,7 @@ fn init_must_be_called_by_parent_account() {
         None,
         None,
         None,
+        None,
     );
 }
 
@@ -304,6 +307,7 @@ fn root_with_fee(fee: u128) -> Job {
         WINDOW,
         signer(),
         code_hash(),
+        None,
         None,
         None,
         None,
@@ -363,6 +367,7 @@ fn client_and_worker_both_refused() {
         None,
         None,
         None,
+        None,
     );
 }
 
@@ -380,6 +385,7 @@ fn bad_spec_hash_refused() {
         WINDOW,
         signer(),
         code_hash(),
+        None,
         None,
         None,
         None,
@@ -405,6 +411,7 @@ fn bad_signer_refused() {
         None,
         None,
         None,
+        None,
     );
 }
 
@@ -422,6 +429,7 @@ fn window_too_long_refused() {
         MAX_WINDOW_SECS + 1,
         signer(),
         code_hash(),
+        None,
         None,
         None,
         None,
@@ -987,6 +995,7 @@ mod receipt_tests {
             WINDOW,
             addr_hex(&key(1)),
             code_hash(),
+            None,
             None,
             None,
             None,
@@ -1904,6 +1913,7 @@ fn two_level_tree_folds_bottom_up() {
         None,
         None,
         None,
+        None,
     );
     Ctx::new(GC, TOKEN).set();
     gc.ft_on_transfer(acc(T1), U128(8 * USD), "fund".into());
@@ -1966,6 +1976,7 @@ mod check_note_dispute {
             code_hash(),
             checker.then(|| acc(CHECKER)),
             Some(acc(TREASURY)),
+            None,
             None,
             None,
         );
@@ -2400,6 +2411,7 @@ mod check_note_dispute {
             Some(acc(TREASURY)),
             None,
             None,
+            None,
         );
         Ctx::new(ROOT, TOKEN).set();
         r.ft_on_transfer(acc(CLIENT), U128(100 * USD), "fund".into());
@@ -2775,6 +2787,7 @@ mod signed_check {
             Some(acc(TREASURY)),
             Some(MODEL.into()),
             None,
+            None,
         );
         Ctx::new(T1, TOKEN).set();
         j.ft_on_transfer(acc(ROOT), U128(PAY), "fund".into());
@@ -3117,6 +3130,7 @@ mod signed_check {
             Some(acc(CHECKER)),
             None,
             Some(MODEL.into()),
+            None,
             None,
         );
     }
@@ -4097,6 +4111,7 @@ mod late_bids_and_unfunded_roots {
             None,
             None,
             None,
+            None,
         );
         // The fund arrives after the 1 s window and is refused.
         Ctx::new(ROOT, TOKEN).at(T0 + 2 * NS_PER_SEC).set();
@@ -4153,7 +4168,7 @@ mod award_best {
 
     fn start(j: &mut Job, slot: u32, weight: u32, pct: u32) {
         Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
-        j.award_best(slot, weight, pct, None, None);
+        j.award_best(slot, weight, pct, None, None, None);
     }
 
     fn finish(
@@ -4174,6 +4189,7 @@ mod award_best {
             false,
             acc(LEAD),
             U128(DEPOSIT.as_yoctonear()),
+            None,
         )
     }
 
@@ -4404,7 +4420,7 @@ mod award_best {
     fn skipped_bidders_are_not_read_or_awarded() {
         let (mut j, s) = two_bids();
         Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
-        j.award_best(s, 0, 0, None, Some(vec![acc(WORKER2)]));
+        j.award_best(s, 0, 0, None, Some(vec![acc(WORKER2)]), None);
         let args: Vec<_> = get_created_receipts()
             .into_iter()
             .flat_map(|r| r.actions)
@@ -4437,7 +4453,7 @@ mod award_best {
         Ctx::new(ROOT, WORKER).at(CLOSED).set();
         j.reveal(s, U128(20 * USD), "a".into());
         Ctx::new(ROOT, LEAD).at(REVEAL_END).deposit(DEPOSIT).set();
-        j.award_best(s, 0, 0, None, None);
+        j.award_best(s, 0, 0, None, None, None);
         assert_eq!(call_args("on_award_best")["workers"], json!([WORKER]));
     }
 
@@ -4450,7 +4466,7 @@ mod award_best {
         Ctx::new(ROOT, WORKER).deposit(SEALED_BID_NEAR).set();
         j.bid_sealed(s, "ab".repeat(32));
         Ctx::new(ROOT, LEAD).at(REVEAL_END).deposit(DEPOSIT).set();
-        j.award_best(s, 0, 0, None, None);
+        j.award_best(s, 0, 0, None, None, None);
     }
 
     #[test]
@@ -4458,7 +4474,7 @@ mod award_best {
     fn award_best_before_the_close_is_refused() {
         let (mut j, s) = two_bids();
         Ctx::new(ROOT, LEAD).deposit(DEPOSIT).set();
-        j.award_best(s, 0, 0, None, None);
+        j.award_best(s, 0, 0, None, None, None);
     }
 
     #[test]
@@ -4466,7 +4482,7 @@ mod award_best {
     fn only_the_buyer_can_award_best() {
         let (mut j, s) = two_bids();
         Ctx::new(ROOT, EVE).at(CLOSED).deposit(DEPOSIT).set();
-        j.award_best(s, 0, 0, None, None);
+        j.award_best(s, 0, 0, None, None, None);
     }
 
     #[test]
@@ -4474,7 +4490,7 @@ mod award_best {
     fn award_best_needs_the_childs_storage_deposit() {
         let (mut j, s) = two_bids();
         Ctx::new(ROOT, LEAD).at(CLOSED).set();
-        j.award_best(s, 0, 0, None, None);
+        j.award_best(s, 0, 0, None, None, None);
     }
 
     #[test]
@@ -4486,7 +4502,7 @@ mod award_best {
             .deposit(DEPOSIT)
             .gas(Gas::from_tgas(170))
             .set();
-        j.award_best(s, 0, 0, None, None);
+        j.award_best(s, 0, 0, None, None, None);
     }
 
     #[test]
@@ -4511,6 +4527,7 @@ mod award_best {
             false,
             acc(LEAD),
             U128(DEPOSIT.as_yoctonear()),
+            None,
         );
     }
 
@@ -4521,7 +4538,7 @@ mod award_best {
         let s = open(&mut j, None);
         bid(&mut j, WORKER, s, 25 * USD, NearToken::from_yoctonear(0));
         Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
-        j.award_best(s, 0, 0, Some(U128(10 * USD)), None);
+        j.award_best(s, 0, 0, Some(U128(10 * USD)), None, None);
         Ctx::new(ROOT, ROOT)
             .at(CLOSED)
             .results(vec![rec(0, 0)])
@@ -4535,6 +4552,268 @@ mod award_best {
             false,
             acc(LEAD),
             U128(DEPOSIT.as_yoctonear()),
+            None,
+        );
+        assert!(matches!(r, PromiseOrValue::Value(false)));
+        assert_eq!(j.get_bids(s).unwrap().awarded, None);
+        assert!(refunded());
+    }
+
+    // ------------------------------------------------ security review 6
+
+    /// 30 s before the root's window ends.
+    const LATE: u64 = T0 + (WINDOW - 30) * NS_PER_SEC;
+
+    #[test]
+    #[should_panic(expected = "too late to award")]
+    fn a_late_award_cannot_take_the_winners_bond() {
+        // The child's window is what is left of this job's. Awarded in the
+        // last seconds, the winner could not deliver and the buyer would
+        // keep its bond (and its backer's NEAR).
+        let bond = NearToken::from_near(5);
+        let mut j = funded_root(100 * USD);
+        let s = open(&mut j, Some(bond));
+        bid(&mut j, WORKER, s, 20 * USD, bond);
+        Ctx::new(ROOT, LEAD).at(LATE).deposit(DEPOSIT).set();
+        j.award(s, acc(WORKER), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "too late to award")]
+    fn a_late_award_best_is_refused() {
+        let (mut j, s) = two_bids();
+        Ctx::new(ROOT, LEAD).at(LATE).deposit(DEPOSIT).set();
+        j.award_best(s, 0, 0, None, None, None);
+    }
+
+    #[test]
+    fn an_award_best_callback_that_lands_too_late_refunds() {
+        let (mut j, s) = two_bids();
+        start(&mut j, s, 0, 0);
+        Ctx::new(ROOT, ROOT)
+            .at(LATE)
+            .results(vec![rec(0, 0), rec(0, 0)])
+            .set();
+        let r = j.on_award_best(
+            s,
+            vec![acc(WORKER), acc(WORKER2)],
+            0,
+            0,
+            None,
+            false,
+            acc(LEAD),
+            U128(DEPOSIT.as_yoctonear()),
+            None,
+        );
+        assert!(matches!(r, PromiseOrValue::Value(false)));
+        assert_eq!(j.get_bids(s).unwrap().awarded, None);
+        assert!(refunded());
+    }
+
+    #[test]
+    fn an_award_leaves_the_winner_at_least_a_minute() {
+        let (mut j, s) = two_bids();
+        let ok_at = T0 + (WINDOW - MIN_WORK_SECS) * NS_PER_SEC;
+        Ctx::new(ROOT, LEAD).at(ok_at).deposit(DEPOSIT).set();
+        j.award(s, acc(WORKER), None);
+        assert_eq!(call_args("new")["window_secs"], MIN_WORK_SECS);
+    }
+
+    #[test]
+    fn an_award_tells_the_child_it_was_won_by_a_bid() {
+        let (mut j, s) = two_bids();
+        Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
+        j.award(s, acc(WORKER), None);
+        assert_eq!(call_args("new")["bid"], true);
+        let mut j = funded_root(100 * USD);
+        hire_one(&mut j, WORKER, 10 * USD);
+        assert_eq!(call_args("new")["bid"], false);
+    }
+
+    /// A sub-job nobody delivered to, settled and deleted: its record call.
+    fn lapsed_record(bid: Option<bool>) -> serde_json::Value {
+        Ctx::new(T1, ROOT).set();
+        let mut j = Job::new(
+            None,
+            acc(LEAD),
+            Some(acc(WORKER)),
+            acc(TOKEN),
+            U128(30 * USD),
+            spec(),
+            WINDOW,
+            signer(),
+            code_hash(),
+            None,
+            None,
+            None,
+            None,
+            bid,
+        );
+        Ctx::new(T1, TOKEN).set();
+        j.ft_on_transfer(acc(ROOT), U128(30 * USD), "fund".into());
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+        rest_cb(&mut j, T1, true);
+        balance_cb(&mut j, T1, ok(&u128_json(0)));
+        call_args("record")
+    }
+
+    #[test]
+    fn a_hire_nobody_bid_for_leaves_no_unpaid_mark() {
+        // Anyone can `hire` any account without asking it. Left to lapse,
+        // that must not write unpaid money on the victim's record.
+        let r = lapsed_record(None);
+        assert_eq!(r["worker"], WORKER);
+        assert_eq!(r["paid"], false);
+        assert_eq!(r["delivered"], false);
+        assert_eq!(r["amount"], "0");
+    }
+
+    #[test]
+    fn a_bid_winner_that_never_delivers_is_marked_unpaid() {
+        let r = lapsed_record(Some(true));
+        assert_eq!(r["paid"], false);
+        assert_eq!(r["amount"], (30 * USD).to_string());
+    }
+
+    #[test]
+    fn paid_money_below_min_paid_does_not_make_a_record() {
+        // WORKER2 washed 1 fUSD through a job it paid itself. With no
+        // floor that is a record and its 18 beats 25; with a 10 fUSD floor
+        // it is a newcomer again and pays the premium (18 x 2 = 36).
+        let run = |min_paid: Option<U128>| {
+            let (mut j, s) = two_bids();
+            Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
+            j.award_best(s, 150, 100, None, None, min_paid);
+            assert_eq!(call_args("on_award_best")["min_paid"], json!(min_paid));
+            Ctx::new(ROOT, ROOT)
+                .at(CLOSED)
+                .results(vec![rec(30, 0), rec(1, 0)])
+                .set();
+            j.on_award_best(
+                s,
+                vec![acc(WORKER), acc(WORKER2)],
+                150,
+                100,
+                None,
+                false,
+                acc(LEAD),
+                U128(DEPOSIT.as_yoctonear()),
+                min_paid,
+            );
+            j.get_job().children[0].worker.clone()
+        };
+        assert_eq!(run(None), acc(WORKER2));
+        assert_eq!(run(Some(U128(10 * USD))), acc(WORKER));
+    }
+
+    #[test]
+    fn a_thin_record_with_unpaid_money_keeps_its_penalty() {
+        // Ignoring thin paid money never helps a bad record: 1 paid and 5
+        // unpaid under a 10 fUSD floor weighs all unpaid (18 x 2.5 = 45).
+        let (mut j, s) = two_bids();
+        start(&mut j, s, 150, 0);
+        Ctx::new(ROOT, ROOT)
+            .at(CLOSED)
+            .results(vec![rec(30, 0), rec(1, 5)])
+            .set();
+        j.on_award_best(
+            s,
+            vec![acc(WORKER), acc(WORKER2)],
+            150,
+            0,
+            None,
+            false,
+            acc(LEAD),
+            U128(DEPOSIT.as_yoctonear()),
+            Some(U128(10 * USD)),
+        );
+        let e = &events("award_best")[0];
+        assert_eq!(e["inputs"][1]["score"], (45 * USD).to_string());
+        assert_eq!(e["min_paid"], (10 * USD).to_string());
+        assert_eq!(j.get_job().children[0].worker, acc(WORKER));
+    }
+
+    #[test]
+    fn yocto_on_a_slot_without_a_bond_do_not_cut_the_premium() {
+        // No bond asked: 1000 yocto attached is not "1000x the bond".
+        let mut j = funded_root(100 * USD);
+        let s = open(&mut j, None);
+        bid(&mut j, WORKER, s, 18 * USD, NearToken::from_yoctonear(0));
+        bid(
+            &mut j,
+            WORKER2,
+            s,
+            13 * USD,
+            NearToken::from_yoctonear(1_000),
+        );
+        start(&mut j, s, 150, 75);
+        finish(
+            &mut j,
+            s,
+            &[WORKER, WORKER2],
+            150,
+            75,
+            vec![rec(30, 0), rec(0, 0)],
+        );
+        assert_eq!(events("award_best")[0]["inputs"][1]["vouch"], "1");
+        assert_eq!(j.get_job().children[0].worker, acc(WORKER));
+    }
+
+    #[test]
+    fn the_skip_list_is_in_the_event() {
+        let (mut j, s) = two_bids();
+        Ctx::new(ROOT, LEAD).at(CLOSED).deposit(DEPOSIT).set();
+        j.award_best(s, 150, 0, None, Some(vec![acc(WORKER2)]), None);
+        let e = &events("award_best_asked")[0];
+        assert_eq!(e["slot"], s);
+        assert_eq!(e["skip"], json!([WORKER2]));
+        assert_eq!(e["reading"], json!([WORKER]));
+    }
+
+    #[test]
+    fn a_child_id_too_long_refunds_instead_of_stranding() {
+        // A job deep enough that `t1.<job>` passes 64 bytes: the callback
+        // must refund, not panic with the deposit left in the job.
+        let long = format!("{}.{FACTORY}", "a".repeat(63 - FACTORY.len()));
+        assert!(long.len() == 64 && long.parse::<AccountId>().is_ok());
+        Ctx::new(&long, FACTORY).set();
+        let mut j = Job::new(
+            Some(acc(CLIENT)),
+            acc(LEAD),
+            None,
+            acc(TOKEN),
+            U128(0),
+            spec(),
+            WINDOW,
+            signer(),
+            code_hash(),
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        Ctx::new(&long, TOKEN).set();
+        j.ft_on_transfer(acc(CLIENT), U128(100 * USD), "fund".into());
+        Ctx::new(&long, LEAD).set();
+        let s = j.open_bids(spec(), U128(30 * USD), BID_SECS, None, None);
+        Ctx::new(&long, WORKER).deposit(BID_NEAR).set();
+        j.bid(s, U128(20 * USD));
+        Ctx::new(&long, &long)
+            .at(CLOSED)
+            .results(vec![rec(0, 0)])
+            .set();
+        let r = j.on_award_best(
+            s,
+            vec![acc(WORKER)],
+            0,
+            0,
+            None,
+            false,
+            acc(LEAD),
+            U128(DEPOSIT.as_yoctonear()),
+            None,
         );
         assert!(matches!(r, PromiseOrValue::Value(false)));
         assert_eq!(j.get_bids(s).unwrap().awarded, None);

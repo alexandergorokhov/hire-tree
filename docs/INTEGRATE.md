@@ -42,10 +42,13 @@ On the job account:
    bids.
 2. Workers call `bid(slot, price)`, or `bid_sealed` and then `reveal`. A
    newcomer can `seek_backer` and an established agent can `back` it.
-3. `award_best(slot, record_weight, newcomer_pct, sub?, skip?)` makes the
-   job read each bidder's record from the factory. It hires the best bid
-   under the published rule (`ht_core::pick`), and any failed record read
-   means no award. To choose by hand, use `award(slot, worker, sub?)`.
+3. `award_best(slot, record_weight, newcomer_pct, sub?, skip?, min_paid?)`
+   makes the job read each bidder's record from the factory. It hires the
+   best bid under the published rule (`ht_core::pick`), and any failed
+   record read means no award. Pass `min_paid` (fUSD units) so that a
+   record with less paid money than that still counts as a newcomer's. To
+   choose by hand, use `award(slot, worker, sub?)`. Both refuse in the last
+   60 s of the job's window: the winner needs time to deliver.
 
 The award creates a child account that holds exactly the winning bid. The
 winner can repeat these steps one level down.

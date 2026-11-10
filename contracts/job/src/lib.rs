@@ -93,6 +93,11 @@ pub const GAS_HIRE_MIN: Gas = Gas::from_tgas(150);
 /// work and the callback's before the hire it schedules.
 pub const GAS_GET_RECORD: Gas = Gas::from_tgas(5);
 pub const GAS_AWARD_OWN: Gas = Gas::from_tgas(20);
+/// An award must leave the winner at least this much of the window: the
+/// child's window is what is left of this job's, and a winner that cannot
+/// deliver in time loses its bond to the buyer.
+pub const MIN_WORK_SECS: u64 = 60;
+const TOO_LATE: &str = "too late to award: the winner needs at least 60 s of the window to deliver";
 /// The largest record a read may return.
 const MAX_RECORD_LEN: usize = 2048;
 /// Least prepaid gas `settle` accepts.
@@ -327,6 +332,7 @@ pub struct JobView {
     pub judge: Option<String>,
     pub rounds: Vec<CheckRound>,
     pub registry: AccountId,
+    pub by_bid: bool,
 }
 
 #[near(contract_state)]
@@ -395,6 +401,9 @@ pub struct Job {
     bid_slots: Vec<BidSlot>,
     /// Where workers' track records live (the factory).
     registry: AccountId,
+    /// The worker won this job with its own bid (an award), so it took the
+    /// job on. A plain `hire` asks nobody.
+    by_bid: bool,
 }
 
 fn emit(event: &str, data: serde_json::Value) {
@@ -459,6 +468,7 @@ impl Job {
         treasury: Option<AccountId>,
         judge: Option<String>,
         registry: Option<AccountId>,
+        bid: Option<bool>,
     ) -> Self {
         require!(
             !(checker.is_some() && judge.is_some()),
@@ -548,6 +558,7 @@ impl Job {
             bid_slots: Vec::new(),
             // Root: its creator (the factory). Sub-jobs inherit it.
             registry: registry.unwrap_or_else(env::predecessor_account_id),
+            by_bid: bid == Some(true),
         };
         emit(
             "job_created",
@@ -784,6 +795,7 @@ impl Job {
             sub,
             by_worker,
             env::attached_deposit(),
+            false,
         )
     }
 
@@ -1133,7 +1145,16 @@ impl Job {
             env::block_timestamp() >= s.reveal_ns.0,
             "the reveal is still open"
         );
+        require!(self.leaves_time_to_work(), TOO_LATE);
         s
+    }
+
+    /// Is there still `MIN_WORK_SECS` of this job's window for a winner to
+    /// deliver in? Its sub-job gets what is left of the window. Without
+    /// this a buyer could award in the last second and keep the bond of a
+    /// winner that never had time to deliver.
+    fn leaves_time_to_work(&self) -> bool {
+        self.window_end_ns.saturating_sub(env::block_timestamp()) >= MIN_WORK_SECS * NS_PER_SEC
     }
 
     /// Manager only, after bidding closes: the award rule runs on-chain. The
@@ -1144,10 +1165,14 @@ impl Job {
     /// bidder with no record, by `newcomer_pct` divided by how many times the
     /// slot's bond the bid carries (its bond plus its backing). Ties go to
     /// more paid money, then the earlier bid. `skip` names bidders the buyer
-    /// cannot use (it is in the event). The 0.035 NEAR attached is for the
-    /// child account; it comes back if no award is made. Any failed record
-    /// read fails closed: no award, the slot stays open to retry or to a
-    /// hand `award`. `award` stays for a buyer that picks by hand.
+    /// cannot use (it is in the `award_best_asked` event). `min_paid`: paid
+    /// money below it is no record, so a cent washed through a job a
+    /// bidder paid itself does not end its newcomer premium; any unpaid
+    /// money still counts. The 0.035 NEAR attached is for the child
+    /// account; it comes back if no award is made. Any failed record read
+    /// fails closed: no award, the slot stays open to retry or to a hand
+    /// `award`. Like `award`, refused in the last `MIN_WORK_SECS` of the
+    /// window. `award` stays for a buyer that picks by hand.
     #[payable]
     pub fn award_best(
         &mut self,
@@ -1156,6 +1181,7 @@ impl Job {
         newcomer_pct: u32,
         sub: Option<U128>,
         skip: Option<Vec<AccountId>>,
+        min_paid: Option<U128>,
     ) -> Promise {
         let by_worker = self.hiring_role("award");
         let s = self.awardable_slot(slot);
@@ -1167,6 +1193,11 @@ impl Job {
             .map(|b| b.worker.clone())
             .collect();
         require!(!workers.is_empty(), "no revealed bid can be awarded");
+        emit(
+            "award_best_asked",
+            json!({ "slot": slot, "record_weight": record_weight, "newcomer_pct": newcomer_pct,
+                "min_paid": min_paid, "skip": skip, "reading": workers }),
+        );
         require!(
             env::prepaid_gas().as_gas()
                 >= GAS_HIRE_MIN.as_gas()
@@ -1201,6 +1232,7 @@ impl Job {
             by_worker,
             env::predecessor_account_id(),
             U128(env::attached_deposit().as_yoctonear()),
+            min_paid,
         ))
     }
 
@@ -1221,6 +1253,7 @@ impl Job {
         by_worker: bool,
         buyer: AccountId,
         deposit: U128,
+        min_paid: Option<U128>,
     ) -> PromiseOrValue<bool> {
         assert_self();
         let refuse = |why: &str| -> PromiseOrValue<bool> {
@@ -1254,12 +1287,23 @@ impl Job {
         if self.status != Status::Open || !self.window_open() {
             return refuse("the job no longer hires");
         }
+        if !self.leaves_time_to_work() {
+            return refuse(TOO_LATE);
+        }
         if self.children.len() >= MAX_CHILDREN {
             return refuse("too many children");
+        }
+        // `hire_inner` would panic on this, with the deposit left here.
+        if format!("t{}.{}", self.children.len() + 1, env::current_account_id())
+            .parse::<AccountId>()
+            .is_err()
+        {
+            return refuse("the child account id would be too long");
         }
         if by_worker && (self.note_sold || self.note_pending) {
             return refuse("the note is sold: the pay is no longer yours to spend");
         }
+        let floor = min_paid.map(|x| x.0).unwrap_or(0);
         // Every candidate is the revealed bid, with its on-chain bond and backing.
         let mut cands: Vec<ht_core::pick::Cand> = vec![];
         let mut inputs = vec![];
@@ -1272,7 +1316,14 @@ impl Job {
                 return refuse("a bidder is gone from the slot");
             };
             let b = &s.bids[idx];
-            let (jobs, paid) = ht_core::pick::weigh(rec.paid_value.0, rec.unpaid_value.0);
+            // Paid money under the buyer's floor is no record (a cent
+            // washed through a job you paid yourself is not a history).
+            let paid_value = if rec.paid_value.0 < floor {
+                0
+            } else {
+                rec.paid_value.0
+            };
+            let (jobs, paid) = ht_core::pick::weigh(paid_value, rec.unpaid_value.0);
             let v = ht_core::pick::vouch(b.bond.0, b.backed.0, s.bond.0);
             let c = (idx, b.price.0, jobs, paid, v);
             inputs.push(json!({ "worker": w, "bid": b.price, "jobs": jobs, "paid": paid, "vouch": v.to_string(),
@@ -1308,7 +1359,7 @@ impl Job {
         emit(
             "award_best",
             json!({ "slot": slot, "rule": "lowest bid x (1 + record_weight x unpaid share) x newcomer premium / vouch",
-                "record_weight": record_weight, "newcomer_pct": newcomer_pct,
+                "record_weight": record_weight, "newcomer_pct": newcomer_pct, "min_paid": U128(floor),
                 "winner": chosen.worker, "price": chosen.price, "inputs": inputs }),
         );
         let p = self.award_inner(
@@ -1374,7 +1425,7 @@ impl Job {
                     .detach();
             }
         }
-        let p = self.hire_inner(worker, price, s.spec_hash, sub, by_worker, deposit);
+        let p = self.hire_inner(worker, price, s.spec_hash, sub, by_worker, deposit, true);
         let last = self.children.len() - 1;
         self.children[last].bond = U128(winner_bond);
         self.children[last].backer = winner_backing.0;
@@ -1388,6 +1439,7 @@ impl Job {
         self.bid_slots.get(slot as usize).cloned()
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn hire_inner(
         &mut self,
         worker: AccountId,
@@ -1396,6 +1448,7 @@ impl Job {
         sub: Option<U128>,
         by_worker: bool,
         deposit: NearToken,
+        bid: bool,
     ) -> Promise {
         require!(self.status == Status::Open, "job is not open");
         require!(self.window_open(), "window is closed");
@@ -1458,6 +1511,7 @@ impl Job {
             "treasury": self.treasury,
             "judge": self.judge,
             "registry": self.registry,
+            "bid": bid,
         });
         // The job keeps HIRE_KEEP_NEAR (child's token registration + its own
         // child record); the rest is the child's storage.
@@ -2905,7 +2959,20 @@ impl Job {
                         "junk": prev == Some(Status::Refunded),
                         "paid": paid,
                         "quality": self.quality,
-                        "amount": U128(self.ledger.amount),
+                        // Unpaid money marks a record only if the worker
+                        // took the job on: it won it with its own bid,
+                        // delivered, or hired with the pay. A `hire` asks
+                        // nobody, so a hire left to lapse must not stain
+                        // anyone's record.
+                        "amount": U128(if paid
+                            || self.by_bid
+                            || self.seq > 0
+                            || self.children.iter().any(|c| c.by_worker)
+                        {
+                            self.ledger.amount
+                        } else {
+                            0
+                        }),
                         "payer": self.manager,
                     })
                     .to_string()
@@ -3003,6 +3070,7 @@ impl Job {
             judge: self.judge.clone(),
             rounds: self.rounds.clone(),
             registry: self.registry.clone(),
+            by_bid: self.by_bid,
         }
     }
 }

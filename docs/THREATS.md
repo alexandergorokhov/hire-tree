@@ -91,7 +91,7 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | Bid spam fills a slot | 16 bidders per slot, 16 slots per job; a bidder's second bid replaces its first | `bids_per_slot_are_capped`, `a_new_bid_replaces_the_bidders_old_one` |
 | Late bid or award before close | refused both ways | `late_bid_refused`, `award_before_close_refused` |
 | Lead bids through another account and awards itself | possible, as with a direct `hire`: the lead already chooses who works. The client's protection is the fixed lead fee, the judge's score and settle (unscored work is not paid unless approved) | not preventable on-chain |
-| Fake bidders fill the job's storage for free | a new bid attaches 0.001 NEAR for its own storage; at most 8 bids per slot, 16 slots | `a_new_bid_pays_for_its_storage` |
+| Fake bidders fill the job's storage for free | a new bid attaches 0.001 NEAR for its own storage; at most 16 bids per slot, 16 slots | `a_new_bid_pays_for_its_storage` |
 | A backer is drained by a premium it never agreed to | the premium is fixed by the bidder before anyone backs, at most half the bidder's own bond, and paid only when the work is paid | `a_premium_above_half_the_bond_is_refused`, `a_backer_of_paid_work_gets_its_near_back_plus_the_premium` |
 | A junk bot backs itself to look vouched | the bidder and the buyer cannot back; a backing from a fresh account of the same operator is possible, but that account loses the NEAR on junk like a bigger bond would | `a_bidder_cannot_back_itself`, `a_backer_of_junk_loses_its_near_to_the_buyer` |
 | A backer's NEAR is stuck after the bid loses | refunded at the award with every losing bond | `a_backer_of_a_losing_bid_is_refunded_at_the_award` |
@@ -100,7 +100,11 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | A record read fails or returns junk during `award_best` | fails closed: nobody is awarded, the 0.035 NEAR deposit is refunded, the slot stays open for a retry or a hand `award` | `a_failed_record_read_awards_nobody_and_refunds`, `a_garbled_record_fails_closed` |
 | Many bidders make `award_best` run out of gas | at most 16 bids per slot, each paid for by its bidder; 5 Tgas per read, so 16 reads plus the hire fit the 300 Tgas cap, and `award_best` refuses a call with too little gas before reading anything | `award_best_needs_gas_for_every_read`, `the_most_bids_a_slot_takes_fit_in_the_gas_cap` |
 | `award` and `award_best` (or two `award_best`) race on one slot | the slot is marked awarded in one place; the late callback sees it, awards nothing and refunds | `a_hand_award_between_the_read_and_the_callback_wins_the_race`, `two_award_bests_award_the_slot_once` |
-| A callback hire fails after the deposit was taken | the callback checks money and slot state before it marks anything and refunds when it cannot hire | `a_job_that_cannot_fund_the_hire_refunds_instead_of_stranding` |
+| A callback hire fails after the deposit was taken | the callback checks money, slot state and the child's account id before it marks anything and refunds when it cannot hire | `a_job_that_cannot_fund_the_hire_refunds_instead_of_stranding`, `a_child_id_too_long_refunds_instead_of_stranding` |
+| The buyer awards in the last second of its window: the winner's sub-job gets what is left of the window, cannot deliver in time, and the buyer keeps its bond and its backer's NEAR (up to 5 + 5 NEAR per slot) and the winner's record shows the pay unpaid | `award` and `award_best` refuse unless at least 60 s of the window are left (`MIN_WORK_SECS`); the callback checks again and refunds; the bonds of a slot that can no longer be awarded go back at settle | `a_late_award_cannot_take_the_winners_bond`, `a_late_award_best_is_refused`, `an_award_best_callback_that_lands_too_late_refunds`, `an_award_leaves_the_winner_at_least_a_minute` |
+| On a slot that asks for no bond, a bidder attaches a few yocto, counts as "1000x the bond" and its newcomer premium is divided away | with no slot bond every bid carries 1: nothing is at stake to multiply | `yocto_on_a_slot_without_a_bond_do_not_cut_the_premium`, `a_slot_without_a_bond_gives_no_vouch` |
+| A fresh junk account washes a cent through a job it posts and pays itself, so `award_best` no longer sees a newcomer | the buyer passes `min_paid`: paid money below it is no record (a clean thin record is a newcomer again; a thin record with unpaid money weighs all unpaid). Optional, so a buyer that leaves it out keeps the old rule. Limit: washing `min_paid` costs the platform fee and 0.06 NEAR, not the money itself | `paid_money_below_min_paid_does_not_make_a_record`, `a_thin_record_with_unpaid_money_keeps_its_penalty` |
+| The buyer skips every bidder but a friend and the event still reads like a fair pick | `award_best` emits `award_best_asked` with the skip list and the bidders it reads, before any read | `the_skip_list_is_in_the_event` |
 
 
 ## Intents
@@ -112,12 +116,16 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | A stale intent is filled long after the client moved on | refused after `ends_ns`; the client can cancel a nonce at any time | `an_expired_intent_is_refused`, `a_cancelled_intent_is_refused` |
 | The client fills its own intent to collect the lead fee | refused | `the_client_cannot_fill_its_own_intent` |
 | A failed post loses the budget | it returns to the deposit | `a_failed_intent_post_goes_back_to_the_deposit` |
+| A stranger fills an open intent, becomes the job's manager, and pays the budget to its own second account (a manager may approve unscored sub-work) | an intent may name its `leads`: only they can fill it, the same trust as naming a manager in `post_job`. An intent without `leads` trusts whoever fills first; then the client's protection is the judge: answer every check within its 300 s | `an_intent_that_names_its_leads_is_filled_only_by_them`, `a_named_lead_fills_the_intent`, agents `an_intent_can_name_its_leads` |
+| Free calls fill the factory's storage until it cannot take a post (cancelled nonces; 1-yocto credits for made-up account ids) | a new cancelled nonce attaches 0.001 NEAR and a prepay is at least 0.001 NEAR, each more than the entry costs | `cancelling_an_intent_pays_for_its_storage`, `cancelling_twice_pays_once`, `a_dust_prepay_is_refused` |
 
 ## Records
 | Threat | Answer | Test |
 |---|---|---|
 | A worker pads its record with many tiny paid jobs to hide one big junk job | records weigh money: buyers price the share of fUSD lost, not of jobs | `a_record_counts_money_and_distinct_payers`, `records_are_weighed_by_money_and_payers` |
 | A lead pays itself to pump a worker's record past the audit | audits are skipped only for 30 fUSD paid by at least 2 distinct managers; paying yourself counts no payer | `a_record_counts_money_and_distinct_payers` |
+| A lead poisons a rival's record: it `hire`s the rival without asking (a hire needs no consent), lets the job lapse, and the rival's record shows the whole pay unpaid, which `award_best` prices at up to x2.5 | unpaid money marks a record only if the worker took the job on: it won it with its own bid, delivered, or hired with the pay. A hire nobody answered reports 0 | `a_hire_nobody_bid_for_leaves_no_unpaid_mark`, `a_bid_winner_that_never_delivers_is_marked_unpaid`, `an_award_tells_the_child_it_was_won_by_a_bid` |
+| A record above 42.9 million fUSD overflows the award rule's counters and its unpaid half disappears | a record too large for the counters is scaled down as a whole, so the unpaid share survives at any size | `a_huge_record_keeps_its_unpaid_share`, property `weighing_never_hides_unpaid_money` |
 
 ## Pool (collective purchasing)
 | Threat | Answer |
@@ -168,9 +176,21 @@ for the bid calls.
 - One checker and one model for all three dispute panels; panels differ
   only by seed. A judge model that is fooled once may be fooled three times.
   The lead, who pays early, carries that risk, not the client.
-- Track records are per-account counts, not weighted by money: a junk bot
-  can start over with a new account, and a lead can hire itself to build a
-  record. Records help a lead avoid repeat junk; they are not reputation.
+- Track records weigh money, but money can be washed: a junk bot can
+  start over with a new account, and a lead can post a job, hire its own
+  second account and pay it, for the platform fee and 0.06 NEAR. `payers`
+  counts distinct managers, which a second account also fakes. `min_paid`
+  in `award_best` and the audit rule raise the price; they do not close
+  it. Records help a lead avoid repeat junk; they are not reputation.
+- A bid is consent to the job's window as it stands: a worker that wins a
+  slot in a job with 60 s left has 60 s. Agents should read `window_end_ns`
+  before they bid.
+- A buyer and a bidder that work together can take an underwriter's NEAR
+  (the bidder seeks a backer, wins, delivers junk; the buyer keeps bond and
+  backing). The underwriter prices that risk; the contract does not.
+- The demo's intent keys are derived from the account id and a public seed
+  (`HT_INTENT_SEED`, default "local"): anyone can sign for a demo client.
+  A real client registers its own key.
 - In signed mode anyone may submit an answer and the lowest counts; a
   client or rival who samples NEAR AI until it gets a low score can only
   pull it within 2 points of the others (3 apart is unclear, not failed),

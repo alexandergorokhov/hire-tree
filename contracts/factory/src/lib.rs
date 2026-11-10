@@ -34,6 +34,9 @@ pub const MAX_WINDOW_SECS: u64 = 30 * 24 * 3600;
 pub const POST_NEAR: NearToken = NearToken::from_millinear(60);
 /// Smallest budget a post accepts (1 fUSD at 6 decimals).
 pub const MIN_BUDGET: u128 = 1_000_000;
+/// What a caller attaches for a storage entry it makes the factory keep (a
+/// cancelled nonce, a new credit): about 100 bytes at 1e19 yocto per byte.
+pub const STORAGE_NEAR: NearToken = NearToken::from_millinear(1);
 
 #[derive(Deserialize)]
 #[serde(crate = "near_sdk::serde", deny_unknown_fields)]
@@ -60,6 +63,11 @@ struct Intent {
     starts_ns: U64,
     ends_ns: U64,
     nonce: U128,
+    /// The only accounts that may fill this intent. Left out: anyone may.
+    /// The filler becomes the job's manager and spends its budget, so an
+    /// open intent trusts whoever fills first.
+    #[serde(default)]
+    leads: Option<Vec<AccountId>>,
 }
 
 /// The bytes a client signs: a domain tag, then the intent JSON exactly.
@@ -310,7 +318,12 @@ impl Factory {
     pub fn prepay_post(&mut self, account_id: Option<AccountId>) -> U128 {
         let who = account_id.unwrap_or_else(env::predecessor_account_id);
         let add = env::attached_deposit().as_yoctonear();
-        require!(add > 0, "attach NEAR");
+        // A credit is a storage entry for any account id the caller names:
+        // it must at least pay for itself.
+        require!(
+            add >= STORAGE_NEAR.as_yoctonear(),
+            "prepay at least 0.001 NEAR"
+        );
         let now = self.credits.get(&who).copied().unwrap_or(0) + add;
         self.credits.insert(who.clone(), now);
         emit("prepaid", json!({ "account": who, "credit": U128(now) }));
@@ -502,6 +515,12 @@ impl Factory {
             "intent is for another factory"
         );
         require!(lead != i.client, "the client cannot fill its own intent");
+        if let Some(leads) = &i.leads {
+            require!(
+                leads.contains(&lead),
+                "this intent names its leads: you are not one of them"
+            );
+        }
         let key = self
             .intent_keys
             .get(&i.client)
@@ -547,10 +566,20 @@ impl Factory {
         self.launch(i.client, i.budget.0, m, true)
     }
 
-    /// The client cancels an intent it signed (before anyone fills it).
+    /// The client cancels an intent it signed (before anyone fills it). A
+    /// nonce not yet spent attaches `STORAGE_NEAR`: the factory keeps the
+    /// entry for good, so it is not free to make.
+    #[payable]
     pub fn cancel_intent(&mut self, nonce: U128) {
         let who = env::predecessor_account_id();
-        self.used_nonces.insert((who.clone(), nonce.0));
+        let key = (who.clone(), nonce.0);
+        if !self.used_nonces.contains(&key) {
+            require!(
+                env::attached_deposit() >= STORAGE_NEAR,
+                "attach 0.001 NEAR for the nonce's storage"
+            );
+            self.used_nonces.insert(key);
+        }
         emit("intent_cancelled", json!({ "client": who, "nonce": nonce }));
     }
 
@@ -1417,7 +1446,7 @@ mod tests {
     #[should_panic(expected = "intent already filled or cancelled")]
     fn a_cancelled_intent_is_refused() {
         let mut f = with_deposit(BUDGET);
-        at("client.test", T0);
+        pay("client.test", T0, STORAGE_NEAR.as_yoctonear());
         f.cancel_intent(U128(1));
         let i = intent(F, BUDGET, 1);
         at("lead.test", T0 + 1);
@@ -1454,5 +1483,73 @@ mod tests {
         assert_eq!(f.on_posted(1, U128(BUDGET), None, Some(true)), U128(0));
         assert_eq!(f.get_deposit(acc("client.test")).0, BUDGET);
         assert_eq!(f.get_job(1).unwrap().state, PostState::Failed);
+    }
+
+    // ------------------------------------------------ security review 6
+
+    fn pay(pred: &str, ts: u64, yocto: u128) {
+        testing_env!(VMContextBuilder::new()
+            .current_account_id(acc(F))
+            .predecessor_account_id(acc(pred))
+            .prepaid_gas(Gas::from_tgas(300))
+            .block_timestamp(ts)
+            .attached_deposit(NearToken::from_yoctonear(yocto))
+            .account_balance(NearToken::from_near(10))
+            .build());
+    }
+
+    #[test]
+    #[should_panic(expected = "attach 0.001 NEAR for the nonce's storage")]
+    fn cancelling_an_intent_pays_for_its_storage() {
+        // Each cancelled nonce is a new entry the factory stores for good:
+        // free, anyone could fill the factory's storage with them.
+        let mut f = with_deposit(BUDGET);
+        at("eve.test", T0);
+        f.cancel_intent(U128(7));
+    }
+
+    #[test]
+    fn cancelling_twice_pays_once() {
+        let mut f = with_deposit(BUDGET);
+        pay("client.test", T0, STORAGE_NEAR.as_yoctonear());
+        f.cancel_intent(U128(1));
+        at("client.test", T0);
+        f.cancel_intent(U128(1));
+    }
+
+    #[test]
+    #[should_panic(expected = "prepay at least 0.001 NEAR")]
+    fn a_dust_prepay_is_refused() {
+        // 1 yocto used to open a credit entry for any account id.
+        let mut f = factory();
+        pay("eve.test", T0, 1);
+        f.prepay_post(Some(acc("anyone-1.test")));
+    }
+
+    fn intent_for(leads: &[&str]) -> String {
+        json!({ "factory": F, "client": "client.test", "budget": U128(BUDGET),
+                "spec_hash": "ab".repeat(32), "window_secs": 3600, "max_lead_fee": U128(10 * MIN_BUDGET),
+                "starts_ns": U64(T0), "ends_ns": U64(T0 + SPAN), "nonce": U128(1), "leads": leads })
+        .to_string()
+    }
+
+    #[test]
+    #[should_panic(expected = "this intent names its leads: you are not one of them")]
+    fn an_intent_that_names_its_leads_is_filled_only_by_them() {
+        // Whoever fills becomes the job's manager and spends its budget, so
+        // a client can sign for leads it trusts instead of for anyone.
+        let mut f = with_deposit(BUDGET);
+        let i = intent_for(&["lead.test", "lead2.test"]);
+        at("eve.test", T0 + 1);
+        let _ = f.fill_intent(i.clone(), sign(&i), None);
+    }
+
+    #[test]
+    fn a_named_lead_fills_the_intent() {
+        let mut f = with_deposit(BUDGET);
+        let i = intent_for(&["lead.test", "lead2.test"]);
+        at("lead2.test", T0 + 1);
+        let _ = f.fill_intent(i.clone(), sign(&i), None);
+        assert_eq!(f.get_job(1).unwrap().manager, acc("lead2.test"));
     }
 }

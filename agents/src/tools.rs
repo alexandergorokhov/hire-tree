@@ -42,8 +42,8 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
          s(json!({ "budget": str_, "manager": str_, "task": str_, "window_secs": { "type": "integer" }, "lead_fee": str_, "treasury": str_ }), &["budget", "manager", "task", "window_secs"])),
         ("deposit", "Client: keep `amount` fUSD at the factory for signed job intents (an ft_transfer_call with msg \"deposit\").",
          s(json!({ "amount": str_ }), &["amount"])),
-        ("sign_intent", "Client: register your intent key (once) and sign a job intent off-chain: get `task` done for `budget`; a lead may keep up to `max_lead_fee`, rising from 0 now to the max after `secs`. Returns {intent, signature} for any lead to fill. No transaction but the key registration.",
-         s(json!({ "budget": str_, "task": str_, "window_secs": { "type": "integer" }, "max_lead_fee": str_, "secs": { "type": "integer" }, "nonce": str_ }), &["budget", "task", "window_secs", "max_lead_fee", "secs", "nonce"])),
+        ("sign_intent", "Client: register your intent key (once) and sign a job intent off-chain: get `task` done for `budget`; a lead may keep up to `max_lead_fee`, rising from 0 now to the max after `secs`. Returns {intent, signature} for any lead to fill, or only the accounts in `leads` if you name them: the filler becomes the job's manager and spends its budget, so an open intent trusts whoever fills first. No transaction but the key registration.",
+         s(json!({ "budget": str_, "task": str_, "window_secs": { "type": "integer" }, "max_lead_fee": str_, "secs": { "type": "integer" }, "nonce": str_, "leads": { "type": "array", "items": str_ } }), &["budget", "task", "window_secs", "max_lead_fee", "secs", "nonce"])),
         ("quote_intent", "Anyone: the lead fee a fill would get right now, and whether the intent is still open.",
          s(json!({ "intent": str_ }), &["intent"])),
         ("fill_intent", "Lead: fill a signed job intent. The factory checks the client's signature, spends its deposit and posts the job with you as manager and the current lead fee (it rises over time: fill early to win, late to earn more).",
@@ -65,8 +65,8 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
         ("get_bids", "Anyone: a bid slot with its bids and award.", s(json!({ "job": str_, "slot": { "type": "integer" } }), &["job", "slot"])),
         ("award", "Manager: after bidding closes, hire one bidder at its own bid (a new sub-account). Attaches 0.035 NEAR.",
          s(json!({ "job": str_, "slot": { "type": "integer" }, "worker": str_, "sub": str_ }), &["job", "slot", "worker"])),
-        ("award_best", "Manager: after bidding closes, the job contract picks the winner by a public rule and hires it at its own bid. It reads each revealed bidder's on-chain record, scores bid x (1 + record_weight x unpaid share of the record) and, for a bidder with no record, x (1 + newcomer_pct / how many times the slot's bond the bid carries), and hires the lowest score (ties: more paid money, then the earlier bid). record_weight 150 = x2.5 when all pay was lost; 0 and 0 = lowest bid. `skip` lists bidders you cannot use. Fails closed (an error, nothing awarded, slot still open) if a record cannot be read. Attaches 0.035 NEAR.",
-         s(json!({ "job": str_, "slot": { "type": "integer" }, "record_weight": { "type": "integer" }, "newcomer_pct": { "type": "integer" }, "sub": str_, "skip": { "type": "array", "items": str_ } }), &["job", "slot", "record_weight", "newcomer_pct"])),
+        ("award_best", "Manager: after bidding closes, the job contract picks the winner by a public rule and hires it at its own bid. It reads each revealed bidder's on-chain record, scores bid x (1 + record_weight x unpaid share of the record) and, for a bidder with no record, x (1 + newcomer_pct / how many times the slot's bond the bid carries), and hires the lowest score (ties: more paid money, then the earlier bid). record_weight 150 = x2.5 when all pay was lost; 0 and 0 = lowest bid. `skip` lists bidders you cannot use (it goes in the event). `min_paid` (fUSD units, optional): paid money below it is no record, so a bidder that washed a cent through its own job is still a newcomer. Refused in the last 60 s of the job's window (the winner needs time to deliver). Fails closed (an error, nothing awarded, slot still open) if a record cannot be read. Attaches 0.035 NEAR.",
+         s(json!({ "job": str_, "slot": { "type": "integer" }, "record_weight": { "type": "integer" }, "newcomer_pct": { "type": "integer" }, "sub": str_, "skip": { "type": "array", "items": str_ }, "min_paid": str_ }), &["job", "slot", "record_weight", "newcomer_pct"])),
         ("deliver", "Worker: deliver the response bytes (base64) with an optional NEAR AI receipt (req base64, sig hex, model).",
          s(json!({ "job": str_, "resp": str_, "req": str_, "sig": str_, "model": str_ }), &["job", "resp"])),
         ("check_request", "Anyone: the exact judge request body for a delivery (base64).",
@@ -186,6 +186,13 @@ impl Tools<'_> {
                     now + secs * 1_000_000_000,
                     s(a, "nonce")?.parse().map_err(|_| "nonce")?,
                 );
+                let intent = match a["leads"].as_array() {
+                    Some(l) => crate::intent::name_leads(
+                        &intent,
+                        &l.iter().filter_map(|x| x.as_str()).collect::<Vec<_>>(),
+                    ),
+                    None => intent,
+                };
                 Ok(json!({ "signature": crate::intent::sign(&me, &intent), "intent": intent }))
             }
             "quote_intent" => c.view(&c.hub, "quote_intent", json!({ "intent": s(a, "intent")? })).await,
@@ -330,7 +337,7 @@ impl Tools<'_> {
                     &job,
                     "award_best",
                     json!({ "slot": slot, "record_weight": num("record_weight")?, "newcomer_pct": num("newcomer_pct")?,
-                            "sub": a["sub"].as_str(), "skip": a["skip"] }),
+                            "sub": a["sub"].as_str(), "skip": a["skip"], "min_paid": a["min_paid"].as_str() }),
                     NearToken::from_millinear(35),
                 )
                 .await?;
@@ -339,7 +346,7 @@ impl Tools<'_> {
                 let bids = c.view(&job, "get_bids", json!({ "slot": slot })).await?;
                 match bids["awarded"].as_str() {
                     Some(w) => Ok(json!({ "slot": slot, "awarded": w })),
-                    None => Err("award_best made no award (a record could not be read, or the slot was awarded meanwhile): nothing was spent, try again".into()),
+                    None => Err("award_best made no award (a record could not be read, the job could not hire, or it is too late in the window): the deposit was refunded, see the award_best_failed event".into()),
                 }
             }
             "deliver" => {

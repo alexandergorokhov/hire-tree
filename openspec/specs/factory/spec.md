@@ -14,12 +14,14 @@ pinned signer, checker and token.
 `client = sender` and the factory's pinned signer/checker, register it on the
 token and forward the budget with `fund`. The client SHALL first prepay
 `POST_NEAR` (0.06 NEAR) with `prepay_post`; each post uses one credit (the
-root's storage and registration), so posting spam costs the spammer. The
-budget SHALL be at least 1 fUSD. A failed post gives the credit back.
+root's storage and registration), so posting spam costs the spammer. A
+prepay SHALL be at least 0.001 NEAR (a credit is a storage entry for any
+account id the caller names). The budget SHALL be at least 1 fUSD. A
+failed post gives the credit back.
 
 #### Scenario: No prepaid NEAR, or dust budget
 - THEN refunded in full, no account created
-- unit: `post_without_prepaid_near_refunded`, `one_credit_one_post`, `dust_budget_refunded`, `failed_post_gives_the_credit_back`
+- unit: `post_without_prepaid_near_refunded`, `one_credit_one_post`, `dust_budget_refunded`, `failed_post_gives_the_credit_back`, `a_dust_prepay_is_refused`
 
 #### Scenario: Post
 - unit: `post_job_creates_and_funds_root`; sandbox: `scene_full_tree_on_local_node`
@@ -71,6 +73,12 @@ Records are evidence, not proof: a lead can hire itself to build one.
 - THEN the record adds the job's amount to `paid_value` or `unpaid_value`, and counts each paying manager once in `payers` (a worker paid by itself is not counted)
 - unit: `a_record_counts_money_and_distinct_payers`; swarm: `records_are_weighed_by_money_and_payers`
 
+#### Scenario: A hire nobody answered
+- GIVEN a worker hired with `hire` (no bid) that never delivered and hired nobody
+- WHEN the sub-job lapses and reports
+- THEN it reports amount 0: `unpaid_value` does not move. A hire needs no consent, so it must not be able to stain a record. A worker that won the job with its own bid (the child is created with `bid: true`) and never delivered is marked with the whole pay
+- unit: `a_hire_nobody_bid_for_leaves_no_unpaid_mark`, `a_bid_winner_that_never_delivers_is_marked_unpaid`, `an_award_tells_the_child_it_was_won_by_a_bid`
+
 ### Requirement: Platform fee
 The owner SHALL be able to set a platform fee of at most 1% (100 bps). On
 each post the factory SHALL keep the fee and fund the job with the rest;
@@ -90,8 +98,11 @@ linearly (a Dutch auction) from 0 at `starts_ns` to `max_lead_fee` at
 expired, been cancelled or filled (a nonce is used once), and that the
 deposit covers the budget; it then posts the job with the filler as
 manager and the current fee as lead fee. A failed post SHALL return the
-budget to the deposit, not the wallet. The client MAY cancel a nonce and
-withdraw its deposit. This is intent-based settlement: the client signs
+budget to the deposit, not the wallet. The client MAY cancel a nonce
+(a nonce not yet spent attaches 0.001 NEAR for its storage) and
+withdraw its deposit. An intent MAY name `leads`: then only those accounts
+SHALL fill it. The filler becomes the job's manager and spends its budget,
+so an intent without `leads` trusts whoever fills first. This is intent-based settlement: the client signs
 what it wants and pays nothing until a lead commits to deliver it.
 
 #### Scenario: A lead fills an intent
@@ -103,3 +114,14 @@ what it wants and pays nothing until a lead commits to deliver it.
 
 #### Scenario: A failed post
 - unit: `a_failed_intent_post_goes_back_to_the_deposit`
+
+#### Scenario: Named leads
+- GIVEN an intent signed with `leads: [lead, lead2]`
+- WHEN a stranger fills it
+- THEN refused; lead2 fills it and becomes the manager
+- unit: `an_intent_that_names_its_leads_is_filled_only_by_them`, `a_named_lead_fills_the_intent`, `an_intent_can_name_its_leads`
+
+#### Scenario: Storage is paid for
+- WHEN a caller cancels a new nonce with no deposit
+- THEN refused; cancelling the same nonce again needs none
+- unit: `cancelling_an_intent_pays_for_its_storage`, `cancelling_twice_pays_once`

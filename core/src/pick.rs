@@ -19,19 +19,28 @@ pub const CENT: u128 = 10_000;
 pub type Cand = (usize, u128, u32, u32, u128);
 
 /// A record weighed by money, in 0.01 fUSD: (all pay at stake, pay paid).
+/// A record too large for u32 is scaled down as a whole, so the unpaid
+/// share survives (clamping each number alone would turn a huge half-unpaid
+/// record into a clean one).
 pub fn weigh(paid_value: u128, unpaid_value: u128) -> (u32, u32) {
-    let paid = paid_value / CENT;
-    let unpaid = unpaid_value / CENT;
-    (
-        paid.saturating_add(unpaid).min(u32::MAX as u128) as u32,
-        paid.min(u32::MAX as u128) as u32,
-    )
+    let mut paid = paid_value / CENT;
+    let mut all = paid.saturating_add(unpaid_value / CENT);
+    let bits = 128 - all.leading_zeros();
+    if bits > 32 {
+        paid >>= bits - 32;
+        all >>= bits - 32;
+    }
+    (all as u32, paid as u32)
 }
 
 /// How many times the slot's bond a bid carries: its own bond plus an
-/// underwriter's backing, over the slot's bond (at least 1).
+/// underwriter's backing, over the slot's bond. A slot that asks for no
+/// bond has nothing to multiply: every bid carries 1.
 pub fn vouch(bond: u128, backed: u128, slot_bond: u128) -> u128 {
-    bond.saturating_add(backed) / slot_bond.max(1)
+    if slot_bond == 0 {
+        return 1;
+    }
+    bond.saturating_add(backed) / slot_bond
 }
 
 /// One candidate's score (lower wins).
@@ -109,14 +118,36 @@ mod tests {
         assert_eq!(weigh(30_000_000, 15_000_000), (4500, 3000));
         assert_eq!(weigh(9_999, 9_999), (0, 0));
         assert_eq!(vouch(50, 450, 50), 10);
-        assert_eq!(vouch(0, 0, 0), 0);
-        assert_eq!(vouch(5, 0, 0), 5);
+        assert_eq!(vouch(0, 0, 0), 1);
+    }
+
+    #[test]
+    fn a_slot_without_a_bond_gives_no_vouch() {
+        // Nothing is at stake on a slot with no bond: a few yocto attached
+        // must not divide the newcomer premium away.
+        assert_eq!(vouch(5, 0, 0), 1);
+        assert_eq!(vouch(1_000_000, 1_000_000, 0), 1);
+        let c = [(0, 18, 5, 5, 1), (1, 13, 0, 0, vouch(1_000, 0, 0))];
+        assert_eq!(pick(&c, 75, 150), Some(0));
+    }
+
+    #[test]
+    fn a_huge_record_keeps_its_unpaid_share() {
+        // Half of a record far above u32::MAX cents is unpaid: it still
+        // weighs as half unpaid, not as clean.
+        let big = (u32::MAX as u128) * CENT * 8;
+        let (jobs, paid) = weigh(big, big);
+        assert!(jobs > 0 && paid <= jobs / 2 + 1, "{jobs} {paid}");
+        let (jobs, paid) = weigh(0, u128::MAX);
+        assert!(jobs > 0 && paid == 0);
+        let (jobs, paid) = weigh(u128::MAX, u128::MAX);
+        assert!(paid <= jobs / 2 + 1, "{jobs} {paid}");
     }
 
     #[test]
     fn absurd_inputs_do_not_panic() {
         let c = [(0, u128::MAX, u32::MAX, 0, 0), (1, u128::MAX, 0, 0, 0)];
         assert!(pick(&c, u128::MAX, u128::MAX).is_some());
-        assert_eq!(weigh(u128::MAX, u128::MAX).0, u32::MAX);
+        assert!(weigh(u128::MAX, u128::MAX).0 >= 1 << 31);
     }
 }
