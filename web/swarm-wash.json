@@ -1,0 +1,364 @@
+{
+ "seeds": [
+  0,
+  1,
+  2,
+  3
+ ],
+ "arms": [
+  "records",
+  "records+allowlist"
+ ],
+ "records": [
+  {
+   "junk wins": 82,
+   "fired": 38,
+   "junk paid fUSD": 210.5,
+   "fUSD spent": 1132.7,
+   "fUSD per good part": 24.62,
+   "audits": 42,
+   "sub-parts bought": 17,
+   "storm wins": 66,
+   "storm paid fUSD": 210.5,
+   "storm earned fUSD": 210.5,
+   "max fUSD held by storm keys": 0.0,
+   "sybils washed": 59,
+   "wash platform fee fUSD": 9.49,
+   "wash fUSD outlay": 9.49,
+   "wash NEAR spent": 6.392
+  },
+  {
+   "junk wins": 96,
+   "fired": 47,
+   "junk paid fUSD": 167.8,
+   "fUSD spent": 1179.1,
+   "fUSD per good part": 26.8,
+   "audits": 41,
+   "sub-parts bought": 20,
+   "storm wins": 78,
+   "storm paid fUSD": 157.0,
+   "storm earned fUSD": 157.0,
+   "max fUSD held by storm keys": 0.0,
+   "sybils washed": 64,
+   "wash platform fee fUSD": 10.29,
+   "wash fUSD outlay": 10.29,
+   "wash NEAR spent": 6.837
+  },
+  {
+   "junk wins": 89,
+   "fired": 47,
+   "junk paid fUSD": 191.5,
+   "fUSD spent": 1171.6,
+   "fUSD per good part": 24.41,
+   "audits": 41,
+   "sub-parts bought": 20,
+   "storm wins": 73,
+   "storm paid fUSD": 180.5,
+   "storm earned fUSD": 180.5,
+   "max fUSD held by storm keys": 0.0,
+   "sybils washed": 66,
+   "wash platform fee fUSD": 10.61,
+   "wash fUSD outlay": 10.61,
+   "wash NEAR spent": 7.015
+  },
+  {
+   "junk wins": 86,
+   "fired": 44,
+   "junk paid fUSD": 159.0,
+   "fUSD spent": 1177.6,
+   "fUSD per good part": 25.6,
+   "audits": 39,
+   "sub-parts bought": 16,
+   "storm wins": 71,
+   "storm paid fUSD": 159.0,
+   "storm earned fUSD": 159.0,
+   "max fUSD held by storm keys": 0.0,
+   "sybils washed": 67,
+   "wash platform fee fUSD": 10.77,
+   "wash fUSD outlay": 10.77,
+   "wash NEAR spent": 7.104
+  }
+ ],
+ "series": {
+  "records": [
+   {
+    "round": 1,
+    "junk_share": 0.4808,
+    "junk_paid_fusd": 4.1,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 2,
+    "junk_share": 0.37,
+    "junk_paid_fusd": 1.35,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 3,
+    "junk_share": 0.2519,
+    "junk_paid_fusd": 0.0,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 4,
+    "junk_share": 0.0278,
+    "junk_paid_fusd": 0.0,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 5,
+    "junk_share": 0.05,
+    "junk_paid_fusd": 0.0,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 6,
+    "junk_share": 0.9773,
+    "junk_paid_fusd": 30.0,
+    "storm_earned_fusd": 30.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 7,
+    "junk_share": 0.8356,
+    "junk_paid_fusd": 22.25,
+    "storm_earned_fusd": 52.25,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 8,
+    "junk_share": 0.8438,
+    "junk_paid_fusd": 19.75,
+    "storm_earned_fusd": 72.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 9,
+    "junk_share": 0.8138,
+    "junk_paid_fusd": 30.125,
+    "storm_earned_fusd": 102.125,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 10,
+    "junk_share": 0.7919,
+    "junk_paid_fusd": 18.875,
+    "storm_earned_fusd": 121.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 11,
+    "junk_share": 0.734,
+    "junk_paid_fusd": 25.375,
+    "storm_earned_fusd": 146.375,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 12,
+    "junk_share": 0.7152,
+    "junk_paid_fusd": 30.375,
+    "storm_earned_fusd": 176.75,
+    "key_held_fusd": 0.0
+   }
+  ],
+  "records+allowlist": [
+   {
+    "round": 1,
+    "junk_share": 0.4808,
+    "junk_paid_fusd": 4.1,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 2,
+    "junk_share": 0.37,
+    "junk_paid_fusd": 1.35,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 3,
+    "junk_share": 0.2921,
+    "junk_paid_fusd": 0.0,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 4,
+    "junk_share": 0.1528,
+    "junk_paid_fusd": 0.0,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 5,
+    "junk_share": 0.1371,
+    "junk_paid_fusd": 0.0,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 6,
+    "junk_share": 0.2614,
+    "junk_paid_fusd": 1.875,
+    "storm_earned_fusd": 1.875,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 7,
+    "junk_share": 0.3031,
+    "junk_paid_fusd": 4.75,
+    "storm_earned_fusd": 6.625,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 8,
+    "junk_share": 0.2969,
+    "junk_paid_fusd": 3.25,
+    "storm_earned_fusd": 9.875,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 9,
+    "junk_share": 0.2788,
+    "junk_paid_fusd": 1.625,
+    "storm_earned_fusd": 11.5,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 10,
+    "junk_share": 0.1278,
+    "junk_paid_fusd": 1.25,
+    "storm_earned_fusd": 12.75,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 11,
+    "junk_share": 0.2102,
+    "junk_paid_fusd": 1.25,
+    "storm_earned_fusd": 14.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 12,
+    "junk_share": 0.3015,
+    "junk_paid_fusd": 6.875,
+    "storm_earned_fusd": 20.875,
+    "key_held_fusd": 0.0
+   }
+  ]
+ },
+ "storm_round": 6,
+ "rounds": 12,
+ "records+allowlist": [
+  {
+   "junk wins": 33,
+   "fired": 23,
+   "junk paid fUSD": 38.0,
+   "fUSD spent": 1044.2,
+   "fUSD per good part": 13.56,
+   "audits": 67,
+   "sub-parts bought": 20,
+   "storm wins": 16,
+   "storm paid fUSD": 38.0,
+   "storm earned fUSD": 38.0,
+   "max fUSD held by storm keys": 0.0,
+   "sybils washed": 37,
+   "wash platform fee fUSD": 5.95,
+   "wash fUSD outlay": 5.95,
+   "wash NEAR spent": 4.292
+  },
+  {
+   "junk wins": 41,
+   "fired": 34,
+   "junk paid fUSD": 18.3,
+   "fUSD spent": 1053.0,
+   "fUSD per good part": 13.33,
+   "audits": 79,
+   "sub-parts bought": 27,
+   "storm wins": 20,
+   "storm paid fUSD": 7.5,
+   "storm earned fUSD": 7.5,
+   "max fUSD held by storm keys": 0.0,
+   "sybils washed": 46,
+   "wash platform fee fUSD": 7.4,
+   "wash fUSD outlay": 7.4,
+   "wash NEAR spent": 5.235
+  },
+  {
+   "junk wins": 41,
+   "fired": 34,
+   "junk paid fUSD": 30.0,
+   "fUSD spent": 1085.6,
+   "fUSD per good part": 13.57,
+   "audits": 75,
+   "sub-parts bought": 28,
+   "storm wins": 21,
+   "storm paid fUSD": 19.0,
+   "storm earned fUSD": 19.0,
+   "max fUSD held by storm keys": 0.0,
+   "sybils washed": 44,
+   "wash platform fee fUSD": 7.08,
+   "wash fUSD outlay": 7.08,
+   "wash NEAR spent": 5.057
+  },
+  {
+   "junk wins": 40,
+   "fired": 34,
+   "junk paid fUSD": 19.0,
+   "fUSD spent": 1107.7,
+   "fUSD per good part": 13.85,
+   "audits": 74,
+   "sub-parts bought": 27,
+   "storm wins": 21,
+   "storm paid fUSD": 19.0,
+   "storm earned fUSD": 19.0,
+   "max fUSD held by storm keys": 0.0,
+   "sybils washed": 44,
+   "wash platform fee fUSD": 7.08,
+   "wash fUSD outlay": 7.08,
+   "wash NEAR spent": 5.057
+  }
+ ],
+ "mean": {
+  "records": {
+   "junk wins": 88.25,
+   "fired": 44.0,
+   "junk paid fUSD": 182.2,
+   "fUSD spent": 1165.25,
+   "fUSD per good part": 25.36,
+   "audits": 40.75,
+   "sub-parts bought": 18.25,
+   "storm wins": 72.0,
+   "storm paid fUSD": 176.75,
+   "storm earned fUSD": 176.75,
+   "max fUSD held by storm keys": 0.0,
+   "sybils washed": 64.0,
+   "wash platform fee fUSD": 10.29,
+   "wash fUSD outlay": 10.29,
+   "wash NEAR spent": 6.84
+  },
+  "records+allowlist": {
+   "junk wins": 38.75,
+   "fired": 31.25,
+   "junk paid fUSD": 26.32,
+   "fUSD spent": 1072.62,
+   "fUSD per good part": 13.58,
+   "audits": 73.75,
+   "sub-parts bought": 25.5,
+   "storm wins": 19.5,
+   "storm paid fUSD": 20.88,
+   "storm earned fUSD": 20.88,
+   "max fUSD held by storm keys": 0.0,
+   "sybils washed": 42.75,
+   "wash platform fee fUSD": 6.88,
+   "wash fUSD outlay": 6.88,
+   "wash NEAR spent": 4.91
+  }
+ }
+}

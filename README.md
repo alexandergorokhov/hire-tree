@@ -20,9 +20,11 @@ when done. It is the settlement layer an agent market can plug in:
 **Result.** When 30 sybil accounts flood the market with half-price junk,
 buyers that read on-chain records let them win 10.75 parts per run,
 against 71.50 for buyers that audit everything, and pay about half as much
-per good part (4 seeds, every seed; [junk storm](#swarm)). In calm
-markets records still cut junk wins on every seed, for about 3% more per
-good part on average.
+per good part (4 seeds, every seed; [junk storm](#swarm)). If the sybils
+first wash their records through self-paid jobs, plain records fail (72.00
+storm wins); buyers that count only pay from payers they trust bring it
+back to 19.50. In calm markets records still cut junk wins on every seed,
+for about 3% more per good part on average.
 
 Tracks: AI Swarms (main), Agent Economy, AI Security & Defense. Testnet and local node only; all money is fake test USD.
 
@@ -137,6 +139,38 @@ fool the judge. Mean per run over 4 seeds (every run is in `runs/storm/`;
   only by job accounts that settled, and what they hold beyond settled pay,
   read from chain balances, stays 0.00 in every round of every run.
 
+**Washed storm.** Records can be bought: a sybil manager posts real jobs
+to its own sybils and pays them, so each crosses the trusted line (30 fUSD
+from 2 payers) before the storm. `make swarm-seeds STORM=6 WASH=1
+ARMS="rec allow"` runs that attack. Arm `allow` is the same buyers passing
+`award_best` a `payers` list: the three leads plus the contractors they
+trust. The factory keeps who paid each worker how much
+(`get_record_from`), so pay from anyone else counts for nothing. Mean per
+run over 4 seeds (`runs/wash/`; `make lint` recomputes these):
+
+| | Records | Records + payer list |
+|---|---|---|
+| Parts won by storm accounts | 72.00 | 19.50 |
+| fUSD earned by storm accounts | 176.75 | 20.88 |
+| fUSD per good part delivered | 25.36 | 13.58 |
+| Wash cost: fUSD out of the storm's pocket | 10.29 | 6.88 |
+| Wash cost: NEAR for storage and gas | 6.84 | 4.91 |
+
+- **Washing beats plain records.** For about 10 fUSD of platform fees and
+  about 7 NEAR, washed sybils win as much as against buyers with
+  no records at all (71.50 in the plain storm).
+- **The payer list undoes it.** Buyers had fewer storm wins with the payer list on 4 of 4 seeds, and the cost per good part
+  is back near the unwashed storm (13.66). The list is the buyer's own
+  choice, passed per award; the contract adds no allow-list of its own.
+- **What the list costs.** Before the storm, in rounds 4 and 5, junk
+  takes about 15% of wins with the payer list against about 4% without:
+  some honest pay no longer counts, so more good workers look like
+  newcomers and junk competes with them on price. The storm accounts still
+  take a fifth of wins after round 6 (19.50 parts), not zero.
+- **Caveat.** Under CPU load, 3 audits in the payer-list runs came too
+  late (the job window had closed), so those passes stood unaudited; the
+  run counts them as `late_audits`. That favours the storm.
+
 Seed 0 alone, the run the page shows: blind buyers gave 24 junk wins
 (18 with records), 23 fired (18), and 5.50 fUSD paid to junk vs
 0.00 fUSD with records; blind junk burns through its fresh accounts sooner, so it
@@ -185,7 +219,7 @@ No keys, no NEAR AI account, no testnet NEAR.
 | Command | What it does |
 |---|---|
 | `make setup` | downloads the crates |
-| `make test` | 471 unit + property tests, all `ok`: core (69 + 10 property tests: 5 over 10,000 random job trees with random transfer failures, 5 on the award rule), job contract (285), factory (38), pool (25), mock checker (2), mock-usdc (7), agents (35) |
+| `make test` | 497 unit + property tests, all `ok`: core (69 + 10 property tests: 5 over 10,000 random job trees with random transfer failures, 5 on the award rule), job contract (295), factory (47), pool (25), mock checker (2), mock-usdc (7), agents (42) |
 | `make lint` | rustfmt check, clippy `-D warnings`, a check that every test the specs and THREATS.md name exists, a check that every swarm number in `docs/SWARM.md` matches `web/swarm.json`, and a check that the control table below matches the runs in `runs/seeds/`; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make mcp-setup`, then an MCP client in this folder | `.mcp.json` starts `scripts/mcp-local.sh`: tools `guide`, `accounts`, `wait`, `do_work`, `judge_check`, `run_story` plus every agent tool, each with `as` to pick the acting account |
@@ -194,7 +228,7 @@ No keys, no NEAR AI account, no testnet NEAR.
 | `make swarm` (`ROUNDS=12`) | about 85 min on a local node: 3 leads (price, quality with sealed bids, budget) and 36 worker agents with 10 strategies; contractors win parts and ask the model whether to make or buy each sub-part, and hire sub-agents out of their own pay (trees up to 3 levels deep, counting the root); every bid stakes 0.05 NEAR; nobody scripts the winners; writes `web/swarm.json`, shown by `web/swarm.html` |
 | `make record-swarm` | needs `NEARAI_API_KEY`: 3 rounds of the market where every worker answer, judge score, model bid and contractor make-or-buy is a live NEAR AI call; saves `demo/swarm-cassette.json` and `web/swarm-live.json` (open `web/swarm.html?data=live`) |
 | `make swarm-replay` | **needs `demo/swarm-cassette.json`** (the owner records it). Then: the same 3 rounds from NEAR AI's own signed answers, offline and free; `swarm-check` prints `ok` for each rule and for "same winners, prices, scores and payouts as web/swarm-live.json" |
-| `make sandbox` | a local NEAR node runs 6 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model, and the same story replayed from a cassette it records itself with the test model; about 20 min |
+| `make sandbox` | a local NEAR node runs the 12 tests in `agents/tests/`: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model and replayed from a cassette, the MCP judge path, agent keys, and the washed-record attack against `award_best` with and without a payer list; about 50 min |
 | `make demo` | the agent story on a local node in 23 scenes (7 per job: post, bids, awards, deliveries and judge answers, check close, review, fold; job 3 adds the pool joining, posting and paying back), with every agent decision and its reason; writes `web/scene.json` |
 | `make web` | serves `web/` on http://localhost:8080: the tree page, scene by scene, with the agents' decisions and every transaction |
 | `make nearai-check` | needs `NEARAI_API_KEY`: three small signed calls (receipt format, the contract's judge question, the planner's JSON); GO or NO-GO |
