@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Repeat the control comparison across seeds.
 
-    python3 scripts/swarm-seeds.py [--readme]
+    python3 scripts/swarm-seeds.py [--readme] [--committed]
 
 Reads every pair out/seeds/rec-<n>.json + out/seeds/blind-<n>.json, plus
 the committed pair web/swarm.json + web/swarm-blind.json (seed 0), and
 writes web/swarm-seeds.json: per arm, each measure for every seed. Prints
 mean, min and max per arm. With --readme, checks README.md states the
-means it prints.
+means it prints. With --committed, reads web/swarm-seeds.json instead of
+the runs (out/ is not committed), so make lint can check the README.
 """
 import glob, json, os, re, sys
 
@@ -26,14 +27,19 @@ def measures(d):
     }
 
 
-pairs = [(0, "web/swarm.json", "web/swarm-blind.json")]
-for f in sorted(glob.glob("out/seeds/rec-*.json")):
+if "--committed" in sys.argv:
+    out = json.load(open("web/swarm-seeds.json"))
+    pairs = out["seeds"]
+else:
+    out = None
+pairs = [] if out else [(0, "web/swarm.json", "web/swarm-blind.json")]
+for f in [] if out else sorted(glob.glob("out/seeds/rec-*.json")):
     n = int(re.search(r"rec-(\d+)", f).group(1))
     b = f"out/seeds/blind-{n}.json"
     if os.path.exists(b):
         pairs.append((n, f, b))
 
-out = {"seeds": [n for n, _, _ in pairs], "records": [], "blind": []}
+out = out or {"seeds": [n for n, _, _ in pairs], "records": [], "blind": []}
 for n, rf, bf in pairs:
     r, b = json.load(open(rf)), json.load(open(bf))
     assert not r.get("blind") and b.get("blind"), f"seed {n}: arms swapped"
@@ -42,7 +48,7 @@ for n, rf, bf in pairs:
     out["blind"].append(measures(b))
 
 summary = {}
-print(f"{len(pairs)} seeds: {out['seeds']}")
+print(f"{len(out['seeds'])} seeds: {out['seeds']}")
 print(f"{'measure':26}{'records mean (min-max)':>26}{'blind mean (min-max)':>26}")
 for k in out["records"][0]:
     row = []
@@ -53,7 +59,8 @@ for k in out["records"][0]:
         row.append(f"{mean:.2f} ({min(v):g}-{max(v):g})")
     print(f"{k:26}{row[0]:>26}{row[1]:>26}")
 out["mean"] = {arm: {k: round(summary[(arm, k)], 2) for k in out["records"][0]} for arm in ("records", "blind")}
-json.dump(out, open("web/swarm-seeds.json", "w"), indent=1)
+if "--committed" not in sys.argv:
+    json.dump(out, open("web/swarm-seeds.json", "w"), indent=1)
 
 if "--readme" in sys.argv:
     readme = re.sub(r"\s+", " ", open("README.md").read())

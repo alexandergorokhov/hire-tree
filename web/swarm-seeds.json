@@ -1,6 +1,9 @@
 {
  "seeds": [
-  0
+  0,
+  1,
+  2,
+  3
  ],
  "records": [
   {
@@ -8,6 +11,24 @@
    "junk paid fUSD": 0,
    "fired": 18,
    "fUSD per delivered part": 13.2
+  },
+  {
+   "junk wins": 20,
+   "junk paid fUSD": 10.8,
+   "fired": 18,
+   "fUSD per delivered part": 12.22
+  },
+  {
+   "junk wins": 19,
+   "junk paid fUSD": 11.0,
+   "fired": 18,
+   "fUSD per delivered part": 12.45
+  },
+  {
+   "junk wins": 18,
+   "junk paid fUSD": 11.0,
+   "fired": 17,
+   "fUSD per delivered part": 12.55
   }
  ],
  "blind": [
@@ -16,20 +37,38 @@
    "junk paid fUSD": 5.5,
    "fired": 23,
    "fUSD per delivered part": 11.8
+  },
+  {
+   "junk wins": 28,
+   "junk paid fUSD": 48.6,
+   "fired": 23,
+   "fUSD per delivered part": 12.25
+  },
+  {
+   "junk wins": 30,
+   "junk paid fUSD": 71.2,
+   "fired": 25,
+   "fUSD per delivered part": 12.61
+  },
+  {
+   "junk wins": 22,
+   "junk paid fUSD": 5.8,
+   "fired": 21,
+   "fUSD per delivered part": 11.81
   }
  ],
  "mean": {
   "records": {
-   "junk wins": 18.0,
-   "junk paid fUSD": 0.0,
-   "fired": 18.0,
-   "fUSD per delivered part": 13.2
+   "junk wins": 18.75,
+   "junk paid fUSD": 8.2,
+   "fired": 17.75,
+   "fUSD per delivered part": 12.61
   },
   "blind": {
-   "junk wins": 24.0,
-   "junk paid fUSD": 5.5,
+   "junk wins": 26.0,
+   "junk paid fUSD": 32.77,
    "fired": 23.0,
-   "fUSD per delivered part": 11.8
+   "fUSD per delivered part": 12.12
   }
  }
 }

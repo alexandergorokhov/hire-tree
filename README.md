@@ -101,13 +101,29 @@ Nothing about the winners is scripted. What emerged in the committed run
 **Control run.** `make swarm-blind` runs the same market with buyers blind
 to on-chain records (no record penalty, no newcomer premium, no audits):
 
+Both arms were run on 4 seeds (`make swarm-seeds`; seed 0 is the committed run). Mean (min to max):
+
 | Junk and polished junk | Blind buyers | With records |
 |---|---|---|
-| Wins | 24 junk wins | 18 |
-| Winners fired | 23 fired | 18 |
-| Paid | 5.50 fUSD paid to junk | 0.00 fUSD with records |
+| Junk wins | 26.00 (22 to 30) | 18.75 (18 to 20) |
+| Winners fired | 23.00 (21 to 25) | 17.75 (17 to 18) |
+| fUSD paid to junk | 32.77 (5.5 to 71.2) | 8.20 (0 to 11) |
+| fUSD per delivered part | 12.12 | 12.61 |
 
-One run per arm, so this is one sample (the blind 5.50 is a single paid pass). Blind junk burns through its fresh accounts sooner, so it holds 0% of wins in the last 4 rounds. Records mainly cut what junk is paid, not only how often it wins.
+Records cut junk wins on every seed (by about a quarter on average) and
+fired winners on every seed. What junk is paid swings much more: blind
+buyers paid junk 48.60 and 71.20 fUSD on two seeds and about 5.50 on the
+other two, while with records it stays at 11 fUSD or less, so the mean
+falls about 4 times, but on one seed records paid junk more (11.00 vs
+5.80). The junk that still gets paid with records is always polished junk that
+fooled the check and was not picked for an audit (1 or 2 parts per seed). The price: leads pay about 4%
+more per delivered part, because they skip cheap asks from accounts with
+bad records.
+
+Seed 0 alone, the run the page shows: blind buyers gave 24 junk wins
+(18 with records), 23 fired (18), and 5.50 fUSD paid to junk vs
+0.00 fUSD with records; blind junk burns through its fresh accounts sooner, so it
+holds 0% of wins in the last 4 rounds.
 
 In this run the model is the scripted test model. With a NEAR AI key the
 same prompts go to NEAR AI (`make record-swarm`).
@@ -227,7 +243,7 @@ No keys, no NEAR AI account, no testnet NEAR.
 | Step | Command | Cold time (measured on the build box) |
 |---|---|---|
 | 1 | `make setup` | crate download |
-| 2 | `make test` | 415 unit + property tests, all `ok`: core (59 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (254), factory (33), pool (25), mock checker (2), mock-usdc (7), agents (30) |
+| 2 | `make test` | 416 unit + property tests, all `ok`: core (59 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (254), factory (33), pool (25), mock checker (2), mock-usdc (7), agents (31) |
 | `make lint` | rustfmt check, clippy `-D warnings`, a check that every test the specs and THREATS.md name exists, and a check that every swarm number in this README matches `web/swarm.json`; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make mcp-setup`, then an MCP client in this folder | `.mcp.json` starts `scripts/mcp-local.sh`: tools `guide`, `accounts`, `wait`, `do_work`, `judge_check`, `run_story` plus every agent tool, each with `as` to pick the acting account |

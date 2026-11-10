@@ -39,6 +39,7 @@ lint: ## rustfmt check + clippy -D warnings + every test the specs name exists +
 	scripts/check-spec-tests.sh
 	python3 scripts/swarm-check.py web/swarm.json --readme
 	python3 scripts/test-swarm-check.py
+	python3 scripts/swarm-seeds.py --committed --readme
 	@if [ -f web/swarm-blind.json ]; then python3 scripts/swarm-compare.py web/swarm.json web/swarm-blind.json --readme; fi
 
 # Plain cargo needs --cfg near (what cargo-near sets). Without it near-sdk's
