@@ -176,3 +176,7 @@ testnet-all: build ## [testnet: HT_OPERATOR, HT_OPERATOR_KEY, NEARAI_API_KEY] de
 .PHONY: pages
 pages: ## build the static site for GitHub Pages into out/pages (swarm page as landing, story as story.html); publishing steps in scripts/pages.sh
 	scripts/pages.sh
+
+.PHONY: clip
+clip: ## record a silent captioned demo clip of the story and swarm pages to out/clip/hire-tree-demo.mp4 (needs web/scene.json, Playwright and ffmpeg)
+	node scripts/clip.js
