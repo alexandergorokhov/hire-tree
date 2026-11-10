@@ -349,7 +349,10 @@ async fn g4_global_contract_and_hire_create_sub_accounts() {
         )
         .await
         .unwrap_err();
-    assert!(err.contains("only the manager can hire"), "{err}");
+    assert!(
+        err.contains("only the manager or this job's worker can hire"),
+        "{err}"
+    );
 
     w.hire(
         &lead,

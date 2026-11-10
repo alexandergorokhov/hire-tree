@@ -3,7 +3,8 @@
   0,
   1,
   2,
-  3
+  3,
+  4
  ],
  "arms": [
   "records",
@@ -46,6 +47,15 @@
    "fUSD per good part": 12.7,
    "audits": 55,
    "sub-parts bought": 13
+  },
+  {
+   "junk wins": 20,
+   "fired": 18,
+   "junk paid fUSD": 10.6,
+   "fUSD spent": 1003.6,
+   "fUSD per good part": 12.39,
+   "audits": 56,
+   "sub-parts bought": 12
   }
  ],
  "blind": [
@@ -84,6 +94,15 @@
    "fUSD per good part": 11.95,
    "audits": 0,
    "sub-parts bought": 26
+  },
+  {
+   "junk wins": 24,
+   "fired": 22,
+   "junk paid fUSD": 10.6,
+   "fUSD spent": 975.1,
+   "fUSD per good part": 11.89,
+   "audits": 0,
+   "sub-parts bought": 27
   }
  ],
  "audit-all": [
@@ -122,35 +141,44 @@
    "fUSD per good part": 11.83,
    "audits": 117,
    "sub-parts bought": 26
+  },
+  {
+   "junk wins": 24,
+   "fired": 22,
+   "junk paid fUSD": 10.6,
+   "fUSD spent": 975.1,
+   "fUSD per good part": 11.89,
+   "audits": 115,
+   "sub-parts bought": 27
   }
  ],
  "mean": {
   "records": {
-   "junk wins": 18.75,
-   "fired": 17.75,
-   "junk paid fUSD": 8.2,
-   "fUSD spent": 1046.15,
-   "fUSD per good part": 12.75,
-   "audits": 56.75,
-   "sub-parts bought": 13.5
+   "junk wins": 19.0,
+   "fired": 17.8,
+   "junk paid fUSD": 8.68,
+   "fUSD spent": 1037.64,
+   "fUSD per good part": 12.68,
+   "audits": 56.6,
+   "sub-parts bought": 13.2
   },
   "blind": {
-   "junk wins": 26.0,
-   "fired": 23.0,
-   "junk paid fUSD": 32.77,
-   "fUSD spent": 1011.48,
-   "fUSD per good part": 12.67,
+   "junk wins": 25.6,
+   "fired": 22.8,
+   "junk paid fUSD": 28.34,
+   "fUSD spent": 1004.2,
+   "fUSD per good part": 12.52,
    "audits": 0.0,
-   "sub-parts bought": 26.25
+   "sub-parts bought": 26.4
   },
   "audit-all": {
-   "junk wins": 24.25,
-   "fired": 22.5,
-   "junk paid fUSD": 17.77,
-   "fUSD spent": 1006.88,
-   "fUSD per good part": 12.41,
-   "audits": 115.25,
-   "sub-parts bought": 26.25
+   "junk wins": 24.2,
+   "fired": 22.4,
+   "junk paid fUSD": 16.34,
+   "fUSD spent": 1000.52,
+   "fUSD per good part": 12.3,
+   "audits": 115.2,
+   "sub-parts bought": 26.4
   }
  }
 }

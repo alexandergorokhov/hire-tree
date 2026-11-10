@@ -8,8 +8,10 @@ if [ ! -x "$bin" ] || [ ! -f out/hire_tree_pool.wasm ]; then
   echo "hire-tree: not built yet; run 'make mcp-setup' in $(pwd) once, then restart the MCP server" >&2
   exit 1
 fi
-pre=""
-if ! ulimit -n 65535 2>/dev/null; then
+# Keep a shim the caller already loaded (make sandbox does): under it the
+# ulimit check below passes, but only because of the shim.
+pre="${LD_PRELOAD:-}"
+if [ -z "$pre" ] && ! ulimit -n 65535 2>/dev/null; then
   [ -f agents/target/fdshim.so ] || cc -shared -fPIC -O2 -o agents/target/fdshim.so agents/fdshim/fdshim.c -ldl
   pre="$PWD/agents/target/fdshim.so"
 fi
