@@ -97,6 +97,8 @@ pub struct Agent {
     pub strict: u128,
     /// Underwriter: backings it lost to buyers (backed junk).
     pub backs_lost: u32,
+    /// A storm sybil: a fresh account that joined at the storm round.
+    pub storm: bool,
 }
 
 pub const MARKET_BIDDER: &str = "ROLE: market bidder. You sell one skill in an open market of AI agents. \
@@ -459,6 +461,62 @@ pub fn roster() -> Vec<(String, &'static str, Strategy)> {
     v
 }
 
+/// How many sybil accounts a junk storm brings.
+pub const STORM_ACCOUNTS: usize = 30;
+/// Their ask, percent of a part's max: about half the usual price.
+pub const STORM_RATE: u128 = 50;
+
+/// The storm's accounts and the skill each bids on: spread over the six
+/// skills so every slot is flooded up to the contract's 16-bid cap
+/// (a skill already has 7 to 10 honest and junk bidders).
+pub fn storm_roster() -> Vec<(String, &'static str)> {
+    let per: [(&str, usize); 6] = [
+        ("research", 6),
+        ("translate", 7),
+        ("summary", 9),
+        ("sources", 3),
+        ("glossary", 3),
+        ("fetch", 2),
+    ];
+    let mut v = vec![];
+    for (skill, n) in per {
+        for k in 0..n {
+            v.push((format!("storm-{}-{k:02}", &skill[..3]), skill));
+        }
+    }
+    v
+}
+
+/// One won part, as the storm series sees it.
+#[derive(Clone, Copy, Debug)]
+pub struct Won {
+    /// Junk or polished junk (a bad strategy), storm sybils included.
+    pub junk: bool,
+    pub storm: bool,
+    pub paid: bool,
+    /// fUSD units.
+    pub price: u128,
+}
+
+/// A round's row of the storm series: how much of the market went to junk
+/// and what junk and the storm were paid.
+pub fn series_row(round: u32, won: &[Won]) -> Value {
+    let n = won.len().max(1) as f64;
+    let junk = won.iter().filter(|w| w.junk).count();
+    let paid_to = |f: &dyn Fn(&Won) -> bool| -> f64 {
+        won.iter()
+            .filter(|w| w.paid && f(w))
+            .map(|w| w.price)
+            .sum::<u128>() as f64
+            / 1e6
+    };
+    json!({ "round": round, "wins": won.len(), "junk_wins": junk,
+        "junk_share": junk as f64 / n,
+        "storm_wins": won.iter().filter(|w| w.storm).count(),
+        "junk_paid_fusd": paid_to(&|w| w.junk),
+        "storm_paid_fusd": paid_to(&|w| w.storm) })
+}
+
 fn initial_rate(s: Strategy) -> u128 {
     match s {
         Strategy::Steady => 90,
@@ -610,7 +668,14 @@ impl Arm {
 /// no record penalty, no newcomer premium (so vouching does nothing), and
 /// either no audits (`Blind`) or an audit of every pass (`AuditAll`). The
 /// contract still checks, fires and keeps bonds.
-pub async fn run(c: &Chain, llm: &Llm, rounds: u32, arm: Arm, seed: u32) -> Result<Value, String> {
+pub async fn run(
+    c: &Chain,
+    llm: &Llm,
+    rounds: u32,
+    arm: Arm,
+    seed: u32,
+    storm: Option<u32>,
+) -> Result<Value, String> {
     let blind = arm != Arm::Records;
     let model = llm.model();
     use std::collections::{HashMap, HashSet};
@@ -682,6 +747,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, arm: Arm, seed: u32) -> Resu
             since_buy: 0,
             strict: BACKER_STRICT,
             backs_lost: 0,
+            storm: false,
         });
     }
     let mut premium: HashMap<String, u128> = HashMap::new();
@@ -704,8 +770,43 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, arm: Arm, seed: u32) -> Resu
     let mut reserve: [u128; 3] = [5 * USD, 4 * USD, 6 * USD];
     let mut lead_spent = [0u128; 3];
     let mut lead_unfilled = [0u32; 3];
+    let mut series: Vec<Value> = vec![];
     for r in 1..=rounds {
         let mut parts: Vec<Part> = vec![];
+        // A junk storm: fresh sybil accounts join and bid on everything at
+        // about half the usual price, with polished junk and no record.
+        if storm == Some(r) {
+            for (name, skill) in storm_roster() {
+                let acc = mk(format!("w-{name}")).await;
+                c.register(&acc).await;
+                agents.push(Agent {
+                    name,
+                    acc,
+                    skill,
+                    strategy: Strategy::Polished,
+                    rate: STORM_RATE,
+                    wins: 0,
+                    gone: false,
+                    respawned: 0,
+                    lost: 0,
+                    won_last: false,
+                    why: String::new(),
+                    earned_before: 0,
+                    bonds_lost: 0,
+                    sub_hist: vec![],
+                    bought: 0,
+                    made: 0,
+                    since_buy: 0,
+                    strict: BACKER_STRICT,
+                    backs_lost: 0,
+                    storm: true,
+                });
+            }
+            eprintln!(
+                "swarm round {r}: junk storm, {} sybil accounts join",
+                STORM_ACCOUNTS
+            );
+        }
         // 1. Intent-based settlement: each client signs a job intent off-chain
         // (the lead fee rises from 0 to MAX_LEAD_FEE over INTENT_SECS); each
         // lead fills one when the fee reaches its reservation. The lead that
@@ -1235,27 +1336,31 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, arm: Arm, seed: u32) -> Resu
                         _ => false,
                     };
                     let (child, task) = (parts[p].child.clone(), parts[p].task.clone());
+                    // The worker delivers with a function-call key that can
+                    // call only `deliver`, on this one job account. Bids and
+                    // bonds (they attach NEAR) stay on the owner's key.
+                    let work = c
+                        .grant_key(
+                            &agents[w].acc,
+                            "work",
+                            &child.parse().map_err(|e| format!("{child}: {e}"))?,
+                            &["deliver"],
+                            near_api::types::NearToken::from_millinear(500),
+                        )
+                        .await?;
                     let delivered = if agents[w].strategy == Strategy::Polished {
                         let mut b = crate::agents::POLISHED.as_bytes().to_vec();
                         if seed > 0 {
                             b.extend(format!(" Ref {seed}.").bytes());
                         }
                         tools
-                            .call(
-                                &agents[w].acc,
-                                "deliver",
-                                &json!({ "job": child, "resp": b64(&b) }),
-                            )
+                            .call(&work, "deliver", &json!({ "job": child, "resp": b64(&b) }))
                             .await?;
                         b
                     } else if junk {
                         let b = b"lorem ipsum dolor sit amet, lorem ipsum dolor sit amet".to_vec();
                         tools
-                            .call(
-                                &agents[w].acc,
-                                "deliver",
-                                &json!({ "job": child, "resp": b64(&b) }),
-                            )
+                            .call(&work, "deliver", &json!({ "job": child, "resp": b64(&b) }))
                             .await?;
                         b
                     } else {
@@ -1265,7 +1370,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, arm: Arm, seed: u32) -> Resu
                         let rep = llm.chat(&body).await?;
                         tools
                             .call(
-                                &agents[w].acc,
+                                &work,
                                 "deliver",
                                 &json!({ "job": child, "resp": b64(&rep.body), "req": b64(&body),
                             "sig": rep.sig, "model": model }),
@@ -1273,6 +1378,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, arm: Arm, seed: u32) -> Resu
                             .await?;
                         rep.body
                     };
+                    c.revoke_key(&agents[w].acc, &work).await?;
                     let req = tools
                     .call(&keeper, "check_request", &json!({ "job": child, "panel": 0, "task": task, "deliverable": b64(&delivered) }))
                     .await?;
@@ -1626,6 +1732,22 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, arm: Arm, seed: u32) -> Resu
                 agents[j].strict = (agents[j].strict + 5).min(100);
             }
         }
+        // Storm accounts' escrow check, before any respawn: fUSD a storm key
+        // holds beyond what settled jobs paid it (the factory's record
+        // `paid_value`). Job pay is escrowed in job accounts until the check
+        // passes and the job settles, so this is expected to be 0.
+        let mut key_held = 0u128;
+        if storm.is_some() {
+            for a in agents.iter().filter(|a| a.storm && !a.gone) {
+                let rec = tools
+                    .call(&keeper, "get_record", &json!({ "account": a.acc.id }))
+                    .await?;
+                key_held += c
+                    .ft(&a.acc.id)
+                    .await
+                    .saturating_sub(num(&rec["paid_value"]));
+            }
+        }
         let caught: Vec<usize> = parts
             .iter()
             .filter(|q| !q.passed)
@@ -1643,6 +1765,27 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, arm: Arm, seed: u32) -> Resu
             let fresh = mk(format!("w-{}-{respawns}", agents[w].name)).await;
             c.register(&fresh).await;
             agents[w].acc = fresh;
+        }
+        if storm.is_some() {
+            let won: Vec<Won> = parts
+                .iter()
+                .filter_map(|q| {
+                    q.winner.map(|w| Won {
+                        junk: matches!(agents[w].strategy, Strategy::Junk | Strategy::Polished),
+                        storm: agents[w].storm,
+                        paid: q.passed,
+                        price: q.price,
+                    })
+                })
+                .collect();
+            let mut row = series_row(r, &won);
+            let mut storm_earned = 0u128;
+            for a in agents.iter().filter(|a| a.storm) {
+                storm_earned += a.earned_before + c.ft(&a.acc.id).await;
+            }
+            row["storm_earned_fusd"] = json!(storm_earned as f64 / 1e6);
+            row["key_held_fusd"] = json!(key_held as f64 / 1e6);
+            series.push(row);
         }
         let rows: Vec<Value> = parts
             .iter()
@@ -1683,12 +1826,15 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, arm: Arm, seed: u32) -> Resu
             .call(&keeper, "get_record", &json!({ "account": a.acc.id }))
             .await?;
         let earned = a.earned_before + c.ft(&a.acc.id).await;
-        table.push(json!({ "agent": a.name, "skill": a.skill, "strategy": a.strategy.name(), "wins": a.wins,
+        table.push(json!({ "agent": a.name, "storm": a.storm, "skill": a.skill, "strategy": a.strategy.name(), "wins": a.wins,
             "earned": earned as f64 / 1e6, "record": rec, "final_rate": a.rate, "quit": a.gone, "bonds_lost": a.bonds_lost, "backs_lost": a.backs_lost, "backer_strict": a.strict, "bought": a.bought, "made": a.made }));
     }
     let settings = c.view(&c.hub, "get_settings", json!({})).await?;
     Ok(
-        json!({ "schema": "hiretree-swarm-2", "blind": blind, "arm": arm.name(), "seed": seed, "network": c.network_name, "rounds": log, "agents": table,
+        json!({ "schema": "hiretree-swarm-2", "storm": storm.map(|r| json!({
+            "round": r, "accounts": STORM_ACCOUNTS, "ask_pct": STORM_RATE, "series": series,
+            "measures": "per round: junk_share = share of won parts that went to junk or polished-junk bidders (storm sybils included); junk_paid_fusd and storm_paid_fusd = pay of passed parts won by them; storm_earned_fusd = fUSD on all storm accounts (and their earlier accounts) at round end, read on-chain; key_held_fusd = fUSD a current storm account holds beyond the paid_value the factory recorded for it from settled jobs (job pay sits in job accounts until the check passes and the job settles, so this should be 0)",
+        })), "blind": blind, "arm": arm.name(), "seed": seed, "network": c.network_name, "rounds": log, "agents": table,
         "leads": LEADS.iter().enumerate().map(|(l, (n, r))| json!({ "lead": n, "record_weight": r.record_weight,
             "max_pct": r.max_pct, "spent": lead_spent[l] as f64 / 1e6, "unfilled": lead_unfilled[l] })).collect::<Vec<_>>(),
         "junk_respawns": respawns, "bid_errors": bid_errors, "award_rule": "on-chain (award_best)", "award_mismatches": award_mismatches, "backer_asks_too_low": asks_too_low, "premiums": premium,
@@ -1759,6 +1905,60 @@ mod tests {
     }
 
     use super::*;
+
+    #[test]
+    fn the_storm_floods_every_skill_without_passing_the_bid_cap() {
+        let st = storm_roster();
+        assert_eq!(st.len(), STORM_ACCOUNTS);
+        let r = roster();
+        for skill in [
+            "research",
+            "translate",
+            "summary",
+            "sources",
+            "glossary",
+            "fetch",
+        ] {
+            let honest = r.iter().filter(|x| x.1 == skill).count();
+            let sybils = st.iter().filter(|x| x.1 == skill).count();
+            assert!(sybils > 0, "{skill} gets sybils");
+            assert!(
+                honest + sybils <= 16, /* the job contract's MAX_BIDS */
+                "{skill}: {honest} + {sybils} must fit the contract's bid cap"
+            );
+        }
+        let mut names: Vec<_> = st.iter().map(|x| &x.0).collect();
+        names.sort();
+        names.dedup();
+        assert_eq!(names.len(), STORM_ACCOUNTS, "unique names");
+    }
+
+    #[test]
+    fn the_series_row_counts_junk_share_and_pay() {
+        let w = |junk, storm, paid, price: u128| Won {
+            junk,
+            storm,
+            paid,
+            price: price * USD,
+        };
+        let row = series_row(
+            6,
+            &[
+                w(true, true, true, 6),
+                w(true, true, false, 5),
+                w(true, false, true, 4),
+                w(false, false, true, 20),
+            ],
+        );
+        assert_eq!(row["round"], 6);
+        assert_eq!(row["wins"], 4);
+        assert_eq!(row["junk_wins"], 3);
+        assert_eq!(row["junk_share"], 0.75);
+        assert_eq!(row["storm_wins"], 2);
+        assert_eq!(row["junk_paid_fusd"], 10.0);
+        assert_eq!(row["storm_paid_fusd"], 6.0);
+        assert_eq!(series_row(1, &[])["junk_share"], 0.0);
+    }
 
     #[test]
     fn pick_takes_the_lowest_bid_with_a_clean_record() {

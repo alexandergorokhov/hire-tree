@@ -421,6 +421,68 @@ impl Chain {
         Acc { id, signer }
     }
 
+    /// Add a function-call access key to `owner`'s account and return the
+    /// account as that key signs for it. NEAR limits such a key to ONE
+    /// receiver account and a list of methods, and refuses any attached
+    /// deposit: it can neither transfer NEAR, nor delete the account, nor
+    /// call `ft_transfer` (which needs 1 yocto), nor touch any other
+    /// contract. `label` makes the key unique per use. The owner's own key
+    /// signs the AddKey; the returned key never holds more than `allowance`
+    /// NEAR of gas.
+    pub async fn grant_key(
+        &self,
+        owner: &Acc,
+        label: &str,
+        receiver: &AccountId,
+        methods: &[&str],
+        allowance: NearToken,
+    ) -> Result<Acc, String> {
+        let signer = self.derived(&format!("fc:{}:{receiver}:{label}", owner.id));
+        let pk = signer
+            .get_public_key()
+            .await
+            .map_err(|e| format!("{e:?}"))?;
+        Account(owner.id.clone())
+            .add_key(
+                near_api::types::AccessKeyPermission::FunctionCall(
+                    near_api::types::transaction::actions::FunctionCallPermission {
+                        allowance: Some(allowance),
+                        receiver_id: receiver.to_string(),
+                        method_names: methods.iter().map(|m| m.to_string()).collect(),
+                    },
+                ),
+                pk,
+            )
+            .with_signer(owner.signer.clone())
+            .send_to(&self.net)
+            .await
+            .map_err(|e| format!("{e:?}"))?
+            .into_result()
+            .map_err(|e| format!("{e:?}"))?;
+        Ok(Acc {
+            id: owner.id.clone(),
+            signer,
+        })
+    }
+
+    /// Delete a key `grant_key` made, signed by the owner's own key.
+    pub async fn revoke_key(&self, owner: &Acc, key: &Acc) -> Result<(), String> {
+        let pk = key
+            .signer
+            .get_public_key()
+            .await
+            .map_err(|e| format!("{e:?}"))?;
+        Account(owner.id.clone())
+            .delete_key(pk)
+            .with_signer(owner.signer.clone())
+            .send_to(&self.net)
+            .await
+            .map_err(|e| format!("{e:?}"))?
+            .into_result()
+            .map_err(|e| format!("{e:?}"))?;
+        Ok(())
+    }
+
     pub async fn call(
         &self,
         who: &Acc,

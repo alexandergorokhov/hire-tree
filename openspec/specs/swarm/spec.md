@@ -102,3 +102,29 @@ unknown or repeated skills are dropped, each max is clamped to the lead's
 cap and to at least the cost floor, parts over the budget are dropped, and
 an unreadable answer buys the whole catalog. The run logs each plan.
 - unit: `the_planner_buys_only_what_the_brief_needs`, `a_bad_plan_is_clamped_or_falls_back`
+
+### Requirement: A junk storm can be replayed in every arm
+`hiretree swarm --storm R` (Makefile `STORM=R` with `make swarm-seeds`) SHALL
+add 30 fresh sybil accounts at the start of round R, in the records, blind
+and audit-all arms alike. Each has no record, bids about half the usual price
+(50% of the part's max), stakes only the slot's bond, delivers polished junk
+and, when caught, comes back under a fresh account like a junk bot. They are
+spread over the six skills so that no slot passes the contract's 16-bid cap.
+The run's JSON SHALL carry a per-round series: share of won parts that went
+to junk, fUSD paid to junk and to the storm, the storm's total earnings, and
+the fUSD a storm key holds beyond what settled jobs paid it (read from
+on-chain balances and the factory record; expected 0, because pay stays in
+job accounts until the check passes). Storm runs go to `runs/storm/` and are
+summarised in `web/swarm-storm.json`, which the page charts; the normal seed
+summary is unchanged, and `scripts/swarm-check.py` applies all its rules to
+storm runs plus the series rules.
+
+#### Scenario: The storm fits the market
+- WHEN the storm roster is built
+- THEN it has 30 uniquely named accounts and every skill, with them, stays within 16 bidders
+- unit: `the_storm_floods_every_skill_without_passing_the_bid_cap`
+
+#### Scenario: The series counts junk
+- GIVEN four won parts, three to junk (two of them storm) and one honest
+- THEN the round's row shows a junk share of 0.75 and the pay of passed junk and storm parts
+- unit: `the_series_row_counts_junk_share_and_pay`

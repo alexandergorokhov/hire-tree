@@ -12,6 +12,7 @@
   --accent: #2a78d6;
   --s-steady: #2a78d6; --s-lean: #eb6834; --s-greedy: #1baf7a; --s-adaptive: #eda100; --s-junk: #e87ba4; --s-polished: #a23d68; --s-sloppy: #008300; --s-undercut: #6250d6; --s-model: #8a5a2e; --s-contractor: #128a9a;
   --l-price: #2a78d6; --l-quality: #8a3ffc; --l-budget: #d97a00;
+  --a-records: #2a78d6; --a-blind: #d97a00; --a-audit-all: #128a9a;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -21,6 +22,7 @@
     --accent: #3987e5;
     --s-steady: #3987e5; --s-lean: #d95926; --s-greedy: #199e70; --s-adaptive: #c98500; --s-junk: #d55181; --s-polished: #f0a8c6; --s-sloppy: #008300; --s-undercut: #9085e9; --s-model: #c08a5a; --s-contractor: #3fb6c6;
     --l-price: #3987e5; --l-quality: #a571ff; --l-budget: #e8942a;
+    --a-records: #3987e5; --a-blind: #e8942a; --a-audit-all: #3fb6c6;
   }
 }
 :root[data-theme="dark"] {
@@ -30,6 +32,7 @@
   --accent: #3987e5;
   --s-steady: #3987e5; --s-lean: #d95926; --s-greedy: #199e70; --s-adaptive: #c98500; --s-junk: #d55181; --s-polished: #f0a8c6; --s-sloppy: #008300; --s-undercut: #9085e9; --s-model: #c08a5a; --s-contractor: #3fb6c6;
   --l-price: #3987e5; --l-quality: #a571ff; --l-budget: #e8942a;
+  --a-records: #3987e5; --a-blind: #e8942a; --a-audit-all: #3fb6c6;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--surface); color: var(--text-primary);
@@ -96,6 +99,15 @@ td .sk { color: var(--text-muted); }
     <h2>Do on-chain records matter, or would audits alone do?</h2>
     <p class="note" id="control-note">Each seed runs the same 12 rounds with three kinds of buyer: buyers that read on-chain records (and audit untrusted workers), blind buyers (no record penalty, no newcomer premium, no audits), and blind buyers that audit every pass. Seeds change the agents' starting asks and the judge's rolls.</p>
     <div class="wrap"><table id="control"></table></div>
+  </div>
+
+  <div class="card" id="storm-card" hidden>
+    <h2>A junk storm: 30 fresh accounts flood every auction</h2>
+    <p class="note" id="storm-note"></p>
+    <div class="legend" id="storm-legend"></div>
+    <div class="wrap"><svg id="storm" width="100%" height="230" role="img" aria-label="Share of won parts that went to junk, per round, by kind of buyer"></svg></div>
+    <div class="wrap"><table id="storm-table"></table></div>
+    <p class="note" id="storm-measures"></p>
   </div>
 
   <div class="card">
@@ -184,6 +196,36 @@ function control(c) {
   document.getElementById('control-card').hidden = false;
 }
 
+const ARMS = { 'records': 'with records', 'blind': 'blind', 'audit-all': 'blind + audit all' };
+const acol = a => `var(--a-${String(a).replace(/[^a-z-]/g, '')})`;
+
+function stormCard(c) {
+  const arms = c.arms, n = c.series[arms[0]].length;
+  document.getElementById('storm-note').textContent = `At round ${c.storm_round} of ${n}, 30 new accounts with no record join and bid on every part at about half the usual price, with fluent, empty answers that sometimes fool the judge. Each line is the share of that round's won parts that went to junk bidders (mean over ${c.seeds.length} seed${c.seeds.length > 1 ? 's' : ''}). Hover a point for the round's numbers.`;
+  document.getElementById('storm-legend').innerHTML = arms.map(a => `<span><i class="sw" style="background:${acol(a)}"></i>${ARMS[a] || esc(a)}</span>`).join('') + '<span>dashed line: the storm arrives</span>';
+  const svg = document.getElementById('storm'); svg.innerHTML = '';
+  const W = svg.clientWidth || 900, H = 230, L = 40, R = 12, T = 10, B = 26;
+  const x = i => L + (W - L - R) * (n < 2 ? 0.5 : i / (n - 1));
+  const y = v => T + (H - T - B) * (1 - v);
+  for (const g of [0, .25, .5, .75, 1]) { el('line', { x1: L, x2: W - R, y1: y(g), y2: y(g), stroke: 'var(--grid)' }, svg);
+    el('text', { x: L - 6, y: y(g) + 4, 'text-anchor': 'end' }, svg).textContent = Math.round(g * 100) + '%'; }
+  for (let i = 0; i < n; i++) if (i % Math.ceil(n / 12) === 0) el('text', { x: x(i), y: H - 6, 'text-anchor': 'middle' }, svg).textContent = 'round ' + (i + 1);
+  el('line', { x1: x(c.storm_round - 1), x2: x(c.storm_round - 1), y1: T, y2: H - B, stroke: 'var(--text-muted)', 'stroke-dasharray': '4 3' }, svg);
+  for (const a of arms) {
+    const pts = c.series[a];
+    el('path', { d: pts.map((p, i) => (i ? 'L' : 'M') + x(i) + ' ' + y(p.junk_share)).join(''), fill: 'none', stroke: acol(a), 'stroke-width': 2 }, svg);
+    pts.forEach((p, i) => {
+      const dot = el('circle', { cx: x(i), cy: y(p.junk_share), r: 4, fill: acol(a), stroke: 'var(--card)', 'stroke-width': 2 }, svg);
+      dot.addEventListener('mousemove', e => showTip(e, `<b>Round ${p.round}, ${esc(ARMS[a] || a)}</b><br>${(p.junk_share * 100).toFixed(0)}% of wins to junk<br>${p.junk_paid_fusd.toFixed(2)} fUSD paid to junk<br>storm accounts hold ${p.storm_earned_fusd.toFixed(2)} fUSD in all<br>${p.key_held_fusd.toFixed(2)} fUSD held by a storm key beyond settled pay`));
+      dot.addEventListener('mouseleave', hideTip); });
+  }
+  const rows = Object.keys(c.mean[arms[0]]);
+  document.getElementById('storm-table').innerHTML = `<tr><th>mean over the seeds</th>` + arms.map(a => `<th class="n">${ARMS[a] || esc(a)}</th>`).join('') + '</tr>' +
+    rows.map(k => `<tr><td>${esc(k)}</td>` + arms.map(a => `<td class="n">${c.mean[a][k].toFixed(2)}</td>`).join('') + '</tr>').join('');
+  document.getElementById('storm-measures').textContent = 'Held by storm keys: the fUSD a storm account holds beyond what settled jobs paid it. Job pay is escrowed in job accounts until the check passes, so it should read 0.00; it is read from on-chain balances and the factory record, not assumed.';
+  document.getElementById('storm-card').hidden = false;
+}
+
 function render(d) {
   const parts = d.rounds.flatMap(r => r.parts.map(p => ({ ...p, round: r.round })));
   const won = parts.filter(p => p.winner);
@@ -245,6 +287,7 @@ function render(d) {
   document.getElementById('foot').textContent = 'Regenerate with make swarm (writes web/swarm.json). All money is fake test USD.';
   priceChart(d); earnChart(d);
   fetch('swarm-seeds.json').then(r => r.ok ? r.json() : null).then(c => { if (c) control(c); }).catch(() => {});
+  fetch('swarm-storm.json').then(r => r.ok ? r.json() : null).then(c => { if (c) { stormCard(c); addEventListener('resize', () => stormCard(c)); } }).catch(() => {});
   addEventListener('resize', () => { priceChart(d); earnChart(d); });
 }
 fetch(new URLSearchParams(location.search).get('data') === 'live' ? 'swarm-live.json' : 'swarm.json').then(r => r.json()).then(render).catch(e => { document.getElementById('sub').textContent = 'No swarm.json yet: run make swarm. (' + e + ')'; });

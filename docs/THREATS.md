@@ -95,6 +95,7 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | A backer is drained by a premium it never agreed to | the premium is fixed by the bidder before anyone backs, at most half the bidder's own bond, and paid only when the work is paid | `a_premium_above_half_the_bond_is_refused`, `a_backer_of_paid_work_gets_its_near_back_plus_the_premium` |
 | A junk bot backs itself to look vouched | the bidder and the buyer cannot back; a backing from a fresh account of the same operator is possible, but that account loses the NEAR on junk like a bigger bond would | `a_bidder_cannot_back_itself`, `a_backer_of_junk_loses_its_near_to_the_buyer` |
 | A backer's NEAR is stuck after the bid loses | refunded at the award with every losing bond | `a_backer_of_a_losing_bid_is_refunded_at_the_award` |
+| A flood of fresh accounts (a junk storm) takes every auction with half-price polished junk | each bid stakes the slot's bond and a junk winner loses it; no record means the newcomer premium; passes from untrusted workers are audited; at most 16 bids per slot, so a storm cannot grow a slot. `make swarm-seeds STORM=R` replays it in the records, blind and audit-all arms and charts the damage | `the_storm_floods_every_skill_without_passing_the_bid_cap`, `the_series_row_counts_junk_share_and_pay` |
 | The buyer picks a winner by a secret or biased rule | `award_best` runs the rule in the contract: the buyer names only the weights and a skip list, and the event lists the rule, every bidder's inputs and score. A buyer that wants a friend can still use `award` by hand (as with `hire`) | `a_bad_record_costs_more_than_a_low_bid_saves`, `skipped_bidders_are_not_read_or_awarded` |
 | A record read fails or returns junk during `award_best` | fails closed: nobody is awarded, the 0.035 NEAR deposit is refunded, the slot stays open for a retry or a hand `award` | `a_failed_record_read_awards_nobody_and_refunds`, `a_garbled_record_fails_closed` |
 | Many bidders make `award_best` run out of gas | at most 16 bids per slot, each paid for by its bidder; 5 Tgas per read, so 16 reads plus the hire fit the 300 Tgas cap, and `award_best` refuses a call with too little gas before reading anything | `award_best_needs_gas_for_every_read`, `the_most_bids_a_slot_takes_fit_in_the_gas_cap` |
@@ -140,6 +141,18 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | The run diverges from the recording | replay answers only byte-identical requests and stops | `replay_refuses_a_request_it_never_saw` |
 | NEAR AI signs a different text than the contract checks | the live client stops with NO-GO before anything goes on-chain | `make nearai-check` (live only) |
 | Demo account keys | derived from the operator key held in an env var; nothing written to disk | `Chain::derived` |
+
+## Agent keys
+| Threat | Answer | Test |
+|---|---|---|
+| An agent's key is stolen from the runtime that holds it | the worker delivers with a **function-call access key**, added by its owner for one job: it names one receiver (that job's account) and one method (`deliver`), and NEAR refuses a deposit on it. A thief can deliver (junk is caught by the check; the bond is at risk) but cannot transfer NEAR, call `ft_transfer`, delete the account, add a key, call another method or another job | `a_stolen_function_call_key_can_only_deliver_to_its_one_job` |
+| A function-call key could cover bids too | it cannot: bids and bonds attach NEAR, a function-call key may not attach a deposit, and the receiver of a key is one fixed account while every job is a new account. So the deposit-attaching calls (`bid`, `bid_sealed`, `back`) stay on the owner's full-access key, and `reveal` and `seek_backer` are not scoped yet (they would need a key per bid). A thief who steals the owner's key still owns the account | not preventable with keys; keep the owner key out of the agent's runtime |
+| A stolen delivery key keeps working after the job | the owner deletes it as soon as the delivery is made; its gas allowance is 0.5 NEAR and it names one job | `a_stolen_function_call_key_can_only_deliver_to_its_one_job` |
+
+In the swarm one process plays both the owner and the agent, so the split is
+shown but not enforced by separate machines: a production agent would hold
+only the function-call keys and ask its owner (or a small signing service)
+for the bid calls.
 
 ## Known limits
 - Sealed bids: when no bid on a slot is revealed, nobody can be awarded,

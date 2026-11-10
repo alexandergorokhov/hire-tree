@@ -13,6 +13,11 @@ mean, min and max per arm.
 --check   recompute from the raw runs and fail if web/swarm-seeds.json
           differs (does not write it).
 --readme  fail unless README.md states every mean it prints.
+--storm   the junk-storm runs instead: runs/storm/<arm>-<seed>.json (made by
+          `make swarm-seeds STORM=6`) into web/swarm-storm.json: per arm and
+          seed the totals, and per arm the mean per-round series (junk share
+          of wins, fUSD paid to junk, storm earnings, fUSD held by storm keys).
+          Nothing is written or checked when there are no storm runs.
 """
 import glob, json, os, re, sys
 
@@ -38,6 +43,60 @@ def measures(d):
 def arm_of(d):
     return d.get("arm") or ("blind" if d.get("blind") else "records")
 
+
+def storm_summary():
+    runs = {}
+    for f in sorted(glob.glob("runs/storm/*.json")):
+        m = re.search(r"(rec|blind|audit)-(\d+)\.json$", f)
+        if m:
+            runs.setdefault(ARMS[m.group(1)], {})[int(m.group(2))] = f
+    if not runs:
+        print("no storm runs (runs/storm/*.json): nothing to do")
+        return 0
+    seeds = sorted(set.intersection(*[set(v) for v in runs.values()]))
+    arms = [a for a in ("records", "blind", "audit-all") if a in runs]
+    out = {"seeds": seeds, "arms": arms}
+    for a in arms:
+        out[a], out.setdefault("series", {})[a] = [], []
+        ds = []
+        for n in seeds:
+            d = json.load(open(runs[a][n]))
+            assert arm_of(d) == a and d.get("seed", 0) == n, f"{runs[a][n]}: wrong arm or seed"
+            assert d.get("storm"), f"{runs[a][n]}: not a storm run"
+            out.setdefault("storm_round", d["storm"]["round"])
+            assert out["storm_round"] == d["storm"]["round"], "storm round differs between runs"
+            ds.append(d)
+            w = [p for r in d["rounds"] for p in r["parts"] if p.get("winner")]
+            sw = [p for p in w if p["winner"].startswith("storm-")]
+            ser = d["storm"]["series"]
+            out[a].append({
+                **measures(d),
+                "storm wins": len(sw),
+                "storm paid fUSD": round(sum(p["price"] for p in sw if p["paid"]), 2),
+                "storm earned fUSD": round(ser[-1]["storm_earned_fusd"], 2),
+                "max fUSD held by storm keys": round(max(x["key_held_fusd"] for x in ser), 2),
+            })
+        out["rounds"] = len(ds[0]["rounds"])
+        for i in range(out["rounds"]):
+            row = {"round": i + 1}
+            for k in ("junk_share", "junk_paid_fusd", "storm_earned_fusd", "key_held_fusd"):
+                row[k] = round(sum(d["storm"]["series"][i][k] for d in ds) / len(ds), 4)
+            out["series"][a].append(row)
+    keys = list(out[arms[0]][0])
+    out["mean"] = {a: {k: round(sum(m[k] for m in out[a]) / len(seeds), 2) for k in keys} for a in arms}
+    print(f"storm at round {out['storm_round']}, {len(seeds)} seeds: {seeds}")
+    for k in keys:
+        print(f"{k:30}" + "".join(f"{a}: {out['mean'][a][k]:>9.2f}  " for a in arms))
+    if "--check" in sys.argv:
+        ok = json.load(open("web/swarm-storm.json")) == out
+        print(("ok  " if ok else "FAIL"), "web/swarm-storm.json matches the raw storm runs")
+        return 0 if ok else 1
+    json.dump(out, open("web/swarm-storm.json", "w"), indent=1)
+    return 0
+
+
+if "--storm" in sys.argv:
+    sys.exit(storm_summary())
 
 runs = {}  # arm -> {seed: file}
 for f, arm in (("web/swarm.json", "records"), ("web/swarm-blind.json", "blind")):

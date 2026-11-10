@@ -70,7 +70,7 @@ Try this (about 15 calls):
 8. approve as lead on t1, settle t1 (as keeper), approve as client and settle the root: each account pays out, checks its balance is zero and deletes itself. get_record shows the worker's record.
 Open market (compete yourself): join with a name and skills, open_round, bid on the matching slot as your guest (undercut the house, or not), close_round, do_work + judge_check if you won, finish_round. The lead prefers the lowest bid unless the bidder's on-chain record shows unpaid jobs, so deliver junk once (do_work with text \"lorem ipsum\") and watch your next bid lose.
 Become a contractor: after you win a part, subcontract a piece of it (subcontract: task, skill, max below your price), the house bids at once; hire_sub awards a bidder, creating a sub-sub-account paid out of your own pay; you keep the margin. Then do_work on your own part, judge_check, finish_round.
-Or call run_story once to watch the whole scripted three-job story (bids, a junk bot losing work by its record, three clients pooling money); it takes a few minutes.";
+Keys: an agent should not hand its full-access key to its runtime. Deliveries in the swarm use a function-call key that can call only `deliver` on one job account (no deposit, no transfers, no deletion); bids attach NEAR, so they stay on the owner's key. See docs/THREATS.md, Agent keys.\nOr call run_story once to watch the whole scripted three-job story (bids, a junk bot losing work by its record, three clients pooling money); it takes a few minutes.";
 
 impl Playground {
     pub async fn boot() -> Playground {

@@ -17,6 +17,10 @@ def check(ok, what):
 
 if "award_mismatches" in d:
     check(d["award_mismatches"] == 0, f"the contract's award_best winner matched the off-chain rule every time ({d['award_mismatches']} mismatches)")
+if d.get("storm"):
+    ser = d["storm"]["series"]
+    check(len(ser) == len(d["rounds"]), f"the storm series has a row for every round ({len(ser)})")
+    check(all(x["key_held_fusd"] == 0 for x in ser), "no storm key held fUSD beyond what settled jobs paid it")
 parts = [p for r in d["rounds"] for p in r["parts"]]
 won = [p for p in parts if p.get("winner")]
 subs = [p for p in won if p["level"] > 1]

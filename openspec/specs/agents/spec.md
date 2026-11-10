@@ -91,3 +91,19 @@ question, signed answer) and `run_story`. Only JSON-RPC reaches stdout.
 treated like any bidder) and makes house winners deliver and get judged;
 `finish_round` pays checked work early, folds the tree and reports records.
 - sandbox: `a_judges_agent_competes_in_the_open_market` (round 1 wins at 20 and is paid 19.80; round 2 junk scores 2, unpaid; round 3 loses on record though lowest)
+
+### Requirement: A worker delivers with a function-call key
+In the swarm a worker SHALL deliver through a function-call access key that
+its owner adds to the worker's account for the one job it won: receiver the
+job's account, method `deliver` only, a 0.5 NEAR gas allowance, deleted once
+the delivery is made. Calls that attach NEAR (`bid`, `bid_sealed`, `back`)
+cannot use such a key and stay on the owner's key. A thief holding the
+delivery key SHALL be able to deliver on that job and nothing else: no NEAR
+or fUSD transfer, no deposit, no account deletion, no new key, no other
+method, no other job.
+
+#### Scenario: A stolen key
+- GIVEN a worker hired on t1.job-1 and a function-call key for `deliver` on t1.job-1
+- WHEN a thief signs with that key
+- THEN a delivery is accepted and an `ft_transfer`, a NEAR transfer, an account deletion, an add-key, a deposit, `approve`, and a call on another job are all refused, and the owner's balances do not change
+- sandbox: `a_stolen_function_call_key_can_only_deliver_to_its_one_job`
