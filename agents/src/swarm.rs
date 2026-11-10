@@ -754,6 +754,7 @@ pub async fn run(
     let mut history: HashMap<&str, Vec<u128>> = HashMap::new();
     let mut respawns = 0u32;
     let mut bid_errors = 0u32;
+    let mut late_reveals = 0u32;
     // Awards where the contract's winner differed from the off-chain expectation.
     let mut award_mismatches = 0u32;
     // Newcomer asks no underwriter would back: below 85% of the median win.
@@ -1103,17 +1104,31 @@ pub async fn run(
                     continue;
                 }
                 any_sealed = true;
+                let mut late = Vec::new();
                 for k in 0..parts[p].bids.len() {
                     let (i, price) = parts[p].bids[k];
-                    tools
+                    // A reveal that misses the window (a busy node during a
+                    // storm) leaves that bid unrevealed: the contract skips
+                    // it at the award, as it would any late bidder.
+                    if tools
                         .call(
                             &agents[i].acc,
                             "reveal",
                             &json!({ "job": parts[p].job, "slot": parts[p].slot,
                             "price": price.to_string(), "salt": salt(&salt_key, r, p, i) }),
                         )
-                        .await?;
+                        .await
+                        .is_err()
+                    {
+                        late_reveals += 1;
+                        late.push(k);
+                    }
                 }
+                let mut k = 0;
+                parts[p].bids.retain(|_| {
+                    k += 1;
+                    !late.contains(&(k - 1))
+                });
             }
             if any_sealed {
                 c.fast_forward(BID_SECS + 1).await;
@@ -1837,7 +1852,7 @@ pub async fn run(
         })), "blind": blind, "arm": arm.name(), "seed": seed, "network": c.network_name, "rounds": log, "agents": table,
         "leads": LEADS.iter().enumerate().map(|(l, (n, r))| json!({ "lead": n, "record_weight": r.record_weight,
             "max_pct": r.max_pct, "spent": lead_spent[l] as f64 / 1e6, "unfilled": lead_unfilled[l] })).collect::<Vec<_>>(),
-        "junk_respawns": respawns, "bid_errors": bid_errors, "award_rule": "on-chain (award_best)", "award_mismatches": award_mismatches, "backer_asks_too_low": asks_too_low, "premiums": premium,
+        "junk_respawns": respawns, "bid_errors": bid_errors, "late_reveals": late_reveals, "award_rule": "on-chain (award_best)", "award_mismatches": award_mismatches, "backer_asks_too_low": asks_too_low, "premiums": premium,
         "platform_fee_bps": SWARM_FEE_BPS, "job_budget": JOB_BUDGET, "bond_near": BOND_YOCTO as f64 / 1e24, "sealed_lead": "quality", "platform_fees": num(&settings["fees"]) as f64 / 1e6,
         "model": match llm {
             Llm::Mock(_) => "scripted test model (not NEAR AI) for work, judging, the model bidder and contractors' make-or-buy; agents adapt their asks; buyers pick by price, on-chain record and a learned newcomer premium".to_string(),
