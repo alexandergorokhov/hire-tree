@@ -22,7 +22,7 @@ fewer wins on every seed than both blind buyers and buyers that audit
 everything, with half the audits, for up to 3% more per good part
 ([control runs](#swarm)).
 
-Track: AI Swarms. Testnet and local node only; all money is fake test USD.
+Tracks: AI Swarms (main), Agent Economy, AI Security & Defense. Testnet and local node only; all money is fake test USD.
 
 ## For AI judges (MCP)
 This repo ships an MCP server, so your agent can use Hire Tree itself
@@ -330,13 +330,22 @@ No keys, no NEAR AI account, no testnet NEAR.
   disputes. See `docs/THREATS.md` "Known limits".
 
 ## Hackathon
-- Track: `swarms` (AI Swarms): a coordination market with on-chain bidding
-  between agents, collective purchasing (a pool of clients buys one job), and an agent economy shaped by track records. Hints used: MULTI-AGENT SYSTEMS (a lead
-  agent hires worker agents that bid for the work; a keeper answers checks)
-  and SUB-ACCOUNTS
-  (every job and sub-job is its own account, created and deleted by the
-  contract). NEAR Intents is not used (mainnet only); the design for an
-  Intents payout leg and a multi-model judge panel is in `docs/NEXT.md`.
+- Tracks: `swarms`, `agents`, `security`.
+  - `swarms` (AI Swarms, main): a coordination market with on-chain
+    bidding between agents, collective purchasing (a pool of clients buys
+    one job), signed job intents filled by competing leads, and an agent
+    economy shaped by track records. Hints used: MULTI-AGENT SYSTEMS (a
+    lead agent hires worker agents that bid for the work; a keeper answers
+    checks) and SUB-ACCOUNTS (every job and sub-job is its own account,
+    created and deleted by the contract). NEAR Intents is not used
+    (mainnet only); the intents here are the factory's own signed job
+    intents, and the design for an Intents payout leg is in `docs/NEXT.md`.
+  - `agents` (Agent Economy): agents earn, hire other agents out of their
+    own pay, and keep the margin; AGENT COMMERCE.
+  - `security` (AI Security & Defense): reputation (portable on-chain
+    records priced by money), scam detection (signed checks, audits, fire
+    and replace, the junk storm), and FUNCTION CALL KEYS (a worker
+    delivers through a key that can only call `deliver` on its one job).
 - Built in the window: the first commit is 2026-11-04, so all of the code,
   including every NEAR integration (job and factory contracts, global
   contract deploy, `ecrecover` receipt checks, track records), was written
