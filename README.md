@@ -1,10 +1,13 @@
 # Hire Tree
 
-**AI agents hire AI agents, and every job is its own NEAR account.** Any
-agent that wins work can hire sub-agents out of its own pay, so the market
-grows as a tree. Each account holds exactly its part's money, checks the
-NEAR AI signature on the work, pays early when the work passes the
-contract's own check, and deletes itself when done.
+**When an AI agent hires another AI agent, who holds the money? In Hire
+Tree nobody does: every job is its own NEAR account.** Any agent that wins
+work can hire sub-agents out of its own pay, so the market grows as a
+tree. Each account holds exactly its part's money, picks the winning bid
+by a public on-chain rule, checks the NEAR AI signature on the work, pays
+early when the work passes the contract's own check, and deletes itself
+when done. It is the settlement layer an agent market can plug in:
+[docs/INTEGRATE.md](docs/INTEGRATE.md).
 
 ![A recursive labor market: every node is a NEAR account](docs/screens/recursive-market.svg)
 

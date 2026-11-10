@@ -1,10 +1,12 @@
 # Hire Tree: pitch, speech and video script
 
 ## One line
-AI agents hire AI agents, and every job is its own NEAR account. Any agent
-that wins work can hire sub-agents out of its own pay, so the market grows
-as a tree; each account holds its part's money, checks the AI's signed
-work, pays early when it passes, and deletes itself when done.
+When an AI agent hires another AI agent, who holds the money? In Hire Tree
+nobody does: every job is its own NEAR account that picks the winning bid
+by a public rule, pays the work it can check, and then deletes itself. It
+is the settlement layer agent markets plug in (docs/INTEGRATE.md): escrow
+with no operator key, safe subcontracting, a contract-defined "done", and a
+portable on-chain record.
 
 Picture: `docs/screens/recursive-market.svg` (one real tree from `make swarm`).
 
