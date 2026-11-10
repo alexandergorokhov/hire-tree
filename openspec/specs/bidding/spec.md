@@ -36,7 +36,7 @@ slot, only to an account that bid; it hires through the same path as
 - unit: `manager_opens_workers_bid_manager_awards_at_the_bid_price`; `award_before_close_refused`, `award_to_a_non_bidder_refused`, `second_award_refused`
 
 ### Requirement: The award rule can run on-chain
-`award_best(slot, record_weight, newcomer_pct, sub, skip)` SHALL be
+`award_best(slot, record_weight, newcomer_pct, sub, skip, min_paid)` SHALL be
 manager-only, with the same preconditions as `award` (after close and any
 reveal, once per slot) and at least one revealed bidder not in `skip`. The
 job SHALL read each such bidder's track record from its registry (the
@@ -75,6 +75,39 @@ that picks by hand.
 - property: `the_winner_has_the_least_score_and_is_a_candidate`, `the_order_of_candidates_does_not_change_the_winner`, `a_lower_bid_never_loses_to_the_same_record_at_a_higher_one`, `never_panics_on_any_inputs`
 - unit: `the_lowest_bid_wins_with_clean_records`, `ties_go_to_more_paid_money_then_the_lower_id`, `weigh_counts_cents_and_vouch_divides_by_the_slot_bond`
 - sandbox: `the_contract_picks_the_winner_with_award_best`
+
+#### Scenario: A late award
+- GIVEN a slot with a bond and less than 60 s left of the job's window
+- WHEN the buyer calls `award` or `award_best`, or an `award_best` callback lands that late
+- THEN nobody is awarded (the callback refunds the deposit): the winner's sub-job would get only what is left of the window, and a winner that cannot deliver in time loses its bond to the buyer
+- unit: `a_late_award_cannot_take_the_winners_bond`, `a_late_award_best_is_refused`, `an_award_best_callback_that_lands_too_late_refunds`, `an_award_leaves_the_winner_at_least_a_minute`
+
+#### Scenario: A washed record
+- GIVEN a bidder whose record is 1 fUSD it paid itself, and `min_paid` = 10 fUSD
+- WHEN `award_best` scores it
+- THEN its paid money counts as none: it pays the newcomer premium, and any unpaid money it has weighs as its whole record. Without `min_paid` the rule is unchanged
+- unit: `paid_money_below_min_paid_does_not_make_a_record`, `a_thin_record_with_unpaid_money_keeps_its_penalty`
+
+#### Scenario: A slot without a bond
+- WHEN a bidder attaches a few yocto on a slot that asks for no bond
+- THEN its bid carries 1, like every other, and its newcomer premium is not divided
+- unit: `yocto_on_a_slot_without_a_bond_do_not_cut_the_premium`, `a_slot_without_a_bond_gives_no_vouch`
+
+#### Scenario: The skip list is public
+- WHEN `award_best` is called
+- THEN it emits `award_best_asked` with the weights, `min_paid`, the skip list and the bidders it reads
+- unit: `the_skip_list_is_in_the_event`
+
+#### Scenario: A child account id too long
+- WHEN the winner's `t<n>.<job>` would pass 64 bytes
+- THEN the callback refunds instead of panicking with the deposit left in the job
+- unit: `a_child_id_too_long_refunds_instead_of_stranding`
+
+#### Scenario: A huge record
+- WHEN a record's money passes what the rule's counters hold
+- THEN both numbers are scaled down together and the unpaid share is kept
+- unit: `a_huge_record_keeps_its_unpaid_share`
+- property: `weighing_never_hides_unpaid_money`
 
 ### Requirement: Agents bid and award through the tools
 Worker agents decide their bid with the model (the junk bot bids 60% of max

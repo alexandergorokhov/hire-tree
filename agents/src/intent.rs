@@ -44,6 +44,15 @@ pub fn build(
     .to_string()
 }
 
+/// The same intent, fillable only by `leads`. Whoever fills an intent
+/// becomes the job's manager and spends its budget, so a client that does
+/// not want to trust the first filler names the leads it does trust.
+pub fn name_leads(intent: &str, leads: &[&str]) -> String {
+    let mut v: serde_json::Value = serde_json::from_str(intent).unwrap_or_default();
+    v["leads"] = json!(leads);
+    v.to_string()
+}
+
 /// Base64 ed25519 signature over "hiretree-intent:" + the intent JSON.
 pub fn sign(account: &str, intent: &str) -> String {
     let mut m = b"hiretree-intent:".to_vec();
@@ -92,6 +101,17 @@ mod tests {
         m2.extend_from_slice(other.as_bytes());
         assert!(vk.verify_strict(&m2, &sig).is_err());
         assert!(public_key("c.x").starts_with("ed25519:"));
+    }
+
+    #[test]
+    fn an_intent_can_name_its_leads() {
+        let i = build("hub.x", "c.x", 70, &"ab".repeat(32), 3600, 8, 1, 601, 3);
+        let named = name_leads(&i, &["lead.x"]);
+        let v: serde_json::Value = serde_json::from_str(&named).unwrap();
+        assert_eq!(v["leads"], json!(["lead.x"]));
+        assert_eq!(v["budget"], "70");
+        // A different text: a signature for the open intent does not cover it.
+        assert_ne!(sign("c.x", &i), sign("c.x", &named));
     }
 
     #[test]
