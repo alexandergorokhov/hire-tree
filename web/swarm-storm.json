@@ -1,0 +1,463 @@
+{
+ "seeds": [
+  0,
+  1,
+  2,
+  3
+ ],
+ "arms": [
+  "records",
+  "blind",
+  "audit-all"
+ ],
+ "records": [
+  {
+   "junk wins": 21,
+   "fired": 18,
+   "junk paid fUSD": 10.0,
+   "fUSD spent": 1076.5,
+   "fUSD per good part": 13.46,
+   "audits": 55,
+   "storm wins": 6,
+   "storm paid fUSD": 10.0,
+   "storm earned fUSD": 10.0,
+   "max fUSD held by storm keys": 0.0
+  },
+  {
+   "junk wins": 27,
+   "fired": 20,
+   "junk paid fUSD": 15.8,
+   "fUSD spent": 1028.8,
+   "fUSD per good part": 13.19,
+   "audits": 56,
+   "storm wins": 9,
+   "storm paid fUSD": 5.0,
+   "storm earned fUSD": 5.0,
+   "max fUSD held by storm keys": 0.0
+  },
+  {
+   "junk wins": 28,
+   "fired": 24,
+   "junk paid fUSD": 16.0,
+   "fUSD spent": 1077.6,
+   "fUSD per good part": 13.47,
+   "audits": 55,
+   "storm wins": 10,
+   "storm paid fUSD": 5.0,
+   "storm earned fUSD": 5.0,
+   "max fUSD held by storm keys": 0.0
+  },
+  {
+   "junk wins": 35,
+   "fired": 23,
+   "junk paid fUSD": 66.0,
+   "fUSD spent": 1059.8,
+   "fUSD per good part": 14.52,
+   "audits": 62,
+   "storm wins": 18,
+   "storm paid fUSD": 66.0,
+   "storm earned fUSD": 66.0,
+   "max fUSD held by storm keys": 0.0
+  }
+ ],
+ "series": {
+  "records": [
+   {
+    "round": 1,
+    "junk_share": 0.4808,
+    "junk_paid_fusd": 4.1,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 2,
+    "junk_share": 0.37,
+    "junk_paid_fusd": 1.35,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 3,
+    "junk_share": 0.2519,
+    "junk_paid_fusd": 0.0,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 4,
+    "junk_share": 0.0278,
+    "junk_paid_fusd": 0.0,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 5,
+    "junk_share": 0.05,
+    "junk_paid_fusd": 0.0,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 6,
+    "junk_share": 0.125,
+    "junk_paid_fusd": 2.5,
+    "storm_earned_fusd": 2.5,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 7,
+    "junk_share": 0.3178,
+    "junk_paid_fusd": 2.5,
+    "storm_earned_fusd": 5.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 8,
+    "junk_share": 0.2284,
+    "junk_paid_fusd": 4.0,
+    "storm_earned_fusd": 9.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 9,
+    "junk_share": 0.1056,
+    "junk_paid_fusd": 1.25,
+    "storm_earned_fusd": 10.25,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 10,
+    "junk_share": 0.2757,
+    "junk_paid_fusd": 1.25,
+    "storm_earned_fusd": 11.5,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 11,
+    "junk_share": 0.1278,
+    "junk_paid_fusd": 5.0,
+    "storm_earned_fusd": 16.5,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 12,
+    "junk_share": 0.1778,
+    "junk_paid_fusd": 5.0,
+    "storm_earned_fusd": 21.5,
+    "key_held_fusd": 0.0
+   }
+  ],
+  "blind": [
+   {
+    "round": 1,
+    "junk_share": 0.4904,
+    "junk_paid_fusd": 5.55,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 2,
+    "junk_share": 0.464,
+    "junk_paid_fusd": 9.45,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 3,
+    "junk_share": 0.4436,
+    "junk_paid_fusd": 9.625,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 4,
+    "junk_share": 0.2356,
+    "junk_paid_fusd": 0.0,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 5,
+    "junk_share": 0.1928,
+    "junk_paid_fusd": 8.15,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 6,
+    "junk_share": 0.9643,
+    "junk_paid_fusd": 28.125,
+    "storm_earned_fusd": 28.125,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 7,
+    "junk_share": 0.7996,
+    "junk_paid_fusd": 33.875,
+    "storm_earned_fusd": 62.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 8,
+    "junk_share": 0.7829,
+    "junk_paid_fusd": 28.25,
+    "storm_earned_fusd": 90.25,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 9,
+    "junk_share": 0.7781,
+    "junk_paid_fusd": 22.625,
+    "storm_earned_fusd": 112.875,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 10,
+    "junk_share": 0.7476,
+    "junk_paid_fusd": 24.125,
+    "storm_earned_fusd": 137.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 11,
+    "junk_share": 0.726,
+    "junk_paid_fusd": 22.25,
+    "storm_earned_fusd": 159.25,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 12,
+    "junk_share": 0.7351,
+    "junk_paid_fusd": 18.85,
+    "storm_earned_fusd": 176.75,
+    "key_held_fusd": 0.0
+   }
+  ],
+  "audit-all": [
+   {
+    "round": 1,
+    "junk_share": 0.4808,
+    "junk_paid_fusd": 4.1,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 2,
+    "junk_share": 0.4557,
+    "junk_paid_fusd": 4.2,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 3,
+    "junk_share": 0.4353,
+    "junk_paid_fusd": 5.425,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 4,
+    "junk_share": 0.2196,
+    "junk_paid_fusd": 0.0,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 5,
+    "junk_share": 0.1159,
+    "junk_paid_fusd": 4.05,
+    "storm_earned_fusd": 0.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 6,
+    "junk_share": 1.0,
+    "junk_paid_fusd": 27.5,
+    "storm_earned_fusd": 27.5,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 7,
+    "junk_share": 0.809,
+    "junk_paid_fusd": 15.125,
+    "storm_earned_fusd": 42.625,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 8,
+    "junk_share": 0.7946,
+    "junk_paid_fusd": 23.875,
+    "storm_earned_fusd": 66.5,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 9,
+    "junk_share": 0.7607,
+    "junk_paid_fusd": 11.875,
+    "storm_earned_fusd": 78.375,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 10,
+    "junk_share": 0.6944,
+    "junk_paid_fusd": 9.375,
+    "storm_earned_fusd": 87.75,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 11,
+    "junk_share": 0.644,
+    "junk_paid_fusd": 16.25,
+    "storm_earned_fusd": 104.0,
+    "key_held_fusd": 0.0
+   },
+   {
+    "round": 12,
+    "junk_share": 0.626,
+    "junk_paid_fusd": 11.25,
+    "storm_earned_fusd": 115.25,
+    "key_held_fusd": 0.0
+   }
+  ]
+ },
+ "storm_round": 6,
+ "rounds": 12,
+ "blind": [
+  {
+   "junk wins": 88,
+   "fired": 45,
+   "junk paid fUSD": 193.5,
+   "fUSD spent": 1127.3,
+   "fUSD per good part": 24.51,
+   "audits": 0,
+   "storm wins": 65,
+   "storm paid fUSD": 188.0,
+   "storm earned fUSD": 188.0,
+   "max fUSD held by storm keys": 0.0
+  },
+  {
+   "junk wins": 101,
+   "fired": 52,
+   "junk paid fUSD": 204.0,
+   "fUSD spent": 1159.7,
+   "fUSD per good part": 28.29,
+   "audits": 0,
+   "storm wins": 74,
+   "storm paid fUSD": 150.0,
+   "storm earned fUSD": 150.0,
+   "max fUSD held by storm keys": 0.0
+  },
+  {
+   "junk wins": 104,
+   "fired": 54,
+   "junk paid fUSD": 239.2,
+   "fUSD spent": 1151.4,
+   "fUSD per good part": 27.41,
+   "audits": 0,
+   "storm wins": 75,
+   "storm paid fUSD": 168.0,
+   "storm earned fUSD": 168.0,
+   "max fUSD held by storm keys": 0.0
+  },
+  {
+   "junk wins": 94,
+   "fired": 47,
+   "junk paid fUSD": 206.8,
+   "fUSD spent": 1099.4,
+   "fUSD per good part": 23.9,
+   "audits": 0,
+   "storm wins": 72,
+   "storm paid fUSD": 201.0,
+   "storm earned fUSD": 201.0,
+   "max fUSD held by storm keys": 0.0
+  }
+ ],
+ "audit-all": [
+  {
+   "junk wins": 94,
+   "fired": 52,
+   "junk paid fUSD": 134.5,
+   "fUSD spent": 1172.8,
+   "fUSD per good part": 24.95,
+   "audits": 89,
+   "storm wins": 71,
+   "storm paid fUSD": 129.0,
+   "storm earned fUSD": 129.0,
+   "max fUSD held by storm keys": 0.0
+  },
+  {
+   "junk wins": 97,
+   "fired": 58,
+   "junk paid fUSD": 127.8,
+   "fUSD spent": 1200.2,
+   "fUSD per good part": 23.53,
+   "audits": 96,
+   "storm wins": 72,
+   "storm paid fUSD": 90.0,
+   "storm earned fUSD": 90.0,
+   "max fUSD held by storm keys": 0.0
+  },
+  {
+   "junk wins": 98,
+   "fired": 55,
+   "junk paid fUSD": 133.3,
+   "fUSD spent": 1164.5,
+   "fUSD per good part": 24.26,
+   "audits": 95,
+   "storm wins": 72,
+   "storm paid fUSD": 105.5,
+   "storm earned fUSD": 105.5,
+   "max fUSD held by storm keys": 0.0
+  },
+  {
+   "junk wins": 92,
+   "fired": 50,
+   "junk paid fUSD": 136.5,
+   "fUSD spent": 1127.3,
+   "fUSD per good part": 23.49,
+   "audits": 94,
+   "storm wins": 71,
+   "storm paid fUSD": 136.5,
+   "storm earned fUSD": 136.5,
+   "max fUSD held by storm keys": 0.0
+  }
+ ],
+ "mean": {
+  "records": {
+   "junk wins": 27.75,
+   "fired": 21.25,
+   "junk paid fUSD": 26.95,
+   "fUSD spent": 1060.67,
+   "fUSD per good part": 13.66,
+   "audits": 57.0,
+   "storm wins": 10.75,
+   "storm paid fUSD": 21.5,
+   "storm earned fUSD": 21.5,
+   "max fUSD held by storm keys": 0.0
+  },
+  "blind": {
+   "junk wins": 96.75,
+   "fired": 49.5,
+   "junk paid fUSD": 210.88,
+   "fUSD spent": 1134.45,
+   "fUSD per good part": 26.03,
+   "audits": 0.0,
+   "storm wins": 71.5,
+   "storm paid fUSD": 176.75,
+   "storm earned fUSD": 176.75,
+   "max fUSD held by storm keys": 0.0
+  },
+  "audit-all": {
+   "junk wins": 95.25,
+   "fired": 53.75,
+   "junk paid fUSD": 133.03,
+   "fUSD spent": 1166.2,
+   "fUSD per good part": 24.06,
+   "audits": 93.5,
+   "storm wins": 71.5,
+   "storm paid fUSD": 115.25,
+   "storm earned fUSD": 115.25,
+   "max fUSD held by storm keys": 0.0
+  }
+ }
+}

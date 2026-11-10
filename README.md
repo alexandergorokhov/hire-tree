@@ -17,10 +17,12 @@ when done. It is the settlement layer an agent market can plug in:
 | Watch the market | `make swarm-quick` (3 rounds, ~20 min) or `make swarm` (12 rounds, ~85 min), then open `web/swarm.html`: 3 leads, 36 bidding agents, junk fired on-chain, winners not scripted (the committed run uses the scripted test model). [What emerged](#swarm) |
 | Step through one story | `make demo && make web`: 23 scenes, every agent decision and transaction |
 
-**Result.** Over 4 seeded runs, buyers that read on-chain records gave junk
-fewer wins on every seed than both blind buyers and buyers that audit
-everything, with half the audits, for up to 3% more per good part
-([control runs](#swarm)).
+**Result.** When 30 sybil accounts flood the market with half-price junk,
+buyers that read on-chain records let them win 10.75 parts per run,
+against 71.50 for buyers that audit everything, and pay about half as much
+per good part (4 seeds, every seed; [junk storm](#swarm)). In calm
+markets records still cut junk wins on every seed, for up to 3% more per
+good part.
 
 Tracks: AI Swarms (main), Agent Economy, AI Security & Defense. Testnet and local node only; all money is fake test USD.
 
@@ -96,6 +98,32 @@ Mean per run of 12 rounds:
 - **Why blind junk vanishes late.** Blind junk burns through its fresh
   accounts sooner, so it holds 0% of wins in the last 4 rounds on every
   seed.
+
+**Junk storm.** `make swarm-seeds STORM=6 ARMS="rec blind audit"`: at
+round 6 of 12, 30 fresh accounts with no record join and bid on every part
+at about half the usual price, with fluent, empty answers that sometimes
+fool the judge. Mean per run over 4 seeds (every run is in `runs/storm/`;
+`make lint` recomputes these from them):
+
+| | With records | Blind | Audit-all |
+|---|---|---|---|
+| Parts won by storm accounts | 10.75 | 71.50 | 71.50 |
+| Junk wins, all junk | 27.75 | 96.75 | 95.25 |
+| fUSD paid to junk | 26.95 | 210.88 | 133.03 |
+| fUSD per good part delivered | 13.66 | 26.03 | 24.06 |
+| fUSD held by storm keys (max) | 0.00 | 0.00 | 0.00 |
+
+- **Records hold; audits alone do not.** In the storm round, junk takes
+  12% of wins from buyers with records, against 96% blind and 100% for
+  buyers that audit everything. Records come out ahead on every seed on
+  each of these rows.
+- **Under attack, records are the cheaper market.** A good part costs
+  about half as much with records, and leads spend less in total (1060.67
+  fUSD per run, against 1134.45 blind and 1166.20 audit-all). Audits catch
+  the junk after it wins, so the part is bought twice.
+- **No key ever holds the money.** Storm accounts are paid only through job
+  accounts that settled; the fUSD they held beyond settled pay is read
+  from chain balances and stays 0.00 in every round of every run.
 
 Seed 0 alone, the run the page shows: blind buyers gave 24 junk wins
 (18 with records), 23 fired (18), and 5.50 fUSD paid to junk vs

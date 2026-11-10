@@ -26,9 +26,8 @@ What `make swarm` runs and what emerged in the committed run. The control runs a
   awards nobody; `award` stays for a buyer that picks by hand.
 - **Junk storm.** `make swarm-seeds STORM=6` drops 30 fresh sybil accounts
   into the market at round 6, bidding half price with polished junk, in
-  each arm (records, blind, audit-all); `web/swarm-storm.json` charts the
-  junk share per round. Not yet run in full: the page card appears when the
-  file exists.
+  each arm (records, blind, audit-all). Results: README, Junk storm; data
+  `runs/storm/` and `web/swarm-storm.json`, charted on the page.
 - **Function-call keys for workers.** A worker delivers with a key that can
   call only `deliver` on its one job account: no deposit, no transfers, no
   deletion (`agents/tests/keys.rs`). Bids attach NEAR and stay on the

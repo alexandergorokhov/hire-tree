@@ -18,11 +18,15 @@ mean, min and max per arm.
           seed the totals, and per arm the mean per-round series (junk share
           of wins, fUSD paid to junk, storm earnings, fUSD held by storm keys).
           Nothing is written or checked when there are no storm runs.
+          With --readme, fail unless README.md states the storm means in
+          STORM_README.
 """
 import glob, json, os, re, sys
 
 BAD = ("junk", "polished")
 ARMS = {"rec": "records", "blind": "blind", "audit": "audit-all"}
+# Storm means the README must state (with --storm --readme).
+STORM_README = ("junk wins", "storm wins", "junk paid fUSD", "fUSD per good part", "max fUSD held by storm keys")
 
 
 def measures(d):
@@ -87,12 +91,22 @@ def storm_summary():
     print(f"storm at round {out['storm_round']}, {len(seeds)} seeds: {seeds}")
     for k in keys:
         print(f"{k:30}" + "".join(f"{a}: {out['mean'][a][k]:>9.2f}  " for a in arms))
+    bad = 0
     if "--check" in sys.argv:
         ok = json.load(open("web/swarm-storm.json")) == out
         print(("ok  " if ok else "FAIL"), "web/swarm-storm.json matches the raw storm runs")
-        return 0 if ok else 1
-    json.dump(out, open("web/swarm-storm.json", "w"), indent=1)
-    return 0
+        bad += not ok
+    else:
+        json.dump(out, open("web/swarm-storm.json", "w"), indent=1)
+    if "--readme" in sys.argv:
+        readme = re.sub(r"\s+", " ", open("README.md").read())
+        for a in arms:
+            for k in STORM_README:
+                s = f"{out['mean'][a][k]:.2f}"
+                ok = s in readme
+                print(("ok  " if ok else "FAIL"), f"README states the storm {a} mean of {k}: {s}")
+                bad += not ok
+    return 1 if bad else 0
 
 
 if "--storm" in sys.argv:

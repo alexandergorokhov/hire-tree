@@ -209,7 +209,8 @@ function stormCard(c) {
   const y = v => T + (H - T - B) * (1 - v);
   for (const g of [0, .25, .5, .75, 1]) { el('line', { x1: L, x2: W - R, y1: y(g), y2: y(g), stroke: 'var(--grid)' }, svg);
     el('text', { x: L - 6, y: y(g) + 4, 'text-anchor': 'end' }, svg).textContent = Math.round(g * 100) + '%'; }
-  for (let i = 0; i < n; i++) if (i % Math.ceil(n / 12) === 0) el('text', { x: x(i), y: H - 6, 'text-anchor': 'middle' }, svg).textContent = 'round ' + (i + 1);
+  const narrow = W < 600, every = Math.ceil(n / (narrow ? 4 : 12));
+  for (let i = 0; i < n; i++) if (i % every === 0 || (narrow && i === n - 1 && (n - 1) % every)) el('text', { x: x(i), y: H - 6, 'text-anchor': i === n - 1 ? 'end' : 'middle' }, svg).textContent = (narrow ? 'r' : 'round ') + (i + 1);
   el('line', { x1: x(c.storm_round - 1), x2: x(c.storm_round - 1), y1: T, y2: H - B, stroke: 'var(--text-muted)', 'stroke-dasharray': '4 3' }, svg);
   for (const a of arms) {
     const pts = c.series[a];
@@ -219,7 +220,7 @@ function stormCard(c) {
       dot.addEventListener('mousemove', e => showTip(e, `<b>Round ${p.round}, ${esc(ARMS[a] || a)}</b><br>${(p.junk_share * 100).toFixed(0)}% of wins to junk<br>${p.junk_paid_fusd.toFixed(2)} fUSD paid to junk<br>storm accounts hold ${p.storm_earned_fusd.toFixed(2)} fUSD in all<br>${p.key_held_fusd.toFixed(2)} fUSD held by a storm key beyond settled pay`));
       dot.addEventListener('mouseleave', hideTip); });
   }
-  const rows = Object.keys(c.mean[arms[0]]);
+  const rows = Object.keys(c.mean[arms[0]]).filter(k => k !== 'storm earned fUSD');
   document.getElementById('storm-table').innerHTML = `<tr><th>mean over the seeds</th>` + arms.map(a => `<th class="n">${ARMS[a] || esc(a)}</th>`).join('') + '</tr>' +
     rows.map(k => `<tr><td>${esc(k)}</td>` + arms.map(a => `<td class="n">${c.mean[a][k].toFixed(2)}</td>`).join('') + '</tr>').join('');
   document.getElementById('storm-measures').textContent = 'Held by storm keys: the fUSD a storm account holds beyond what settled jobs paid it. Job pay is escrowed in job accounts until the check passes, so it should read 0.00; it is read from on-chain balances and the factory record, not assumed.';
