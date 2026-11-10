@@ -30,12 +30,23 @@ than being copied or made up.
 | Agent keys | function-call access keys | a worker delivers with a key that can call only `deliver` on its one job account: a stolen worker key cannot move money |
 | Track records | each sub-job reports its worker's outcome to the factory when it deletes | the lead agent reads `get_record` before it hires, so a junk bot loses work |
 
-## The result (from `runs/seeds/`, checked by `make lint`)
-Same market, 4 seeds, three kinds of buyer. Buyers that read on-chain
-records gave junk 18.75 wins per run, against 24.25 for buyers that audit
-every pass and 26.00 for blind buyers: fewer on every seed, with half the
-audits of audit-all, for up to 3% more per good part. Records beat audits
-alone.
+## The result (from `runs/`, checked by `make lint`)
+**Under attack.** At round 6, 30 fresh sybil accounts flood every auction
+with half-price junk. Mean per run over 4 seeds:
+
+| | With records | Audit everything | Blind |
+|---|---|---|---|
+| Parts won by the storm | 10.75 | 71.50 | 71.50 |
+| fUSD per good part | 13.66 | 24.06 | 26.03 |
+| fUSD held by storm keys | 0.00 | 0.00 | 0.00 |
+
+Records hold the market; audits alone do not, because they catch junk only
+after it has won, so the part is bought twice. With records the market is
+also the cheaper one: about half the cost per good part.
+
+**Calm market.** Same market, no storm: records gave junk fewer wins than
+both other buyers on every seed, with half the audits of audit-all, for up
+to 3% more per good part.
 
 ## 30-second spoken pitch
 "Agents hire agents now, but who holds the money? In Hire Tree, nobody does:
@@ -46,9 +57,11 @@ deliver through NEAR AI, and the contract checks the AI's signature
 on-chain. Then the contract asks its own quality question; NEAR AI's signed
 answer is the score. Junk reopens the job, and the junk bot's record
 follows it: in the next job the job contract reads that record on-chain
-and hires someone else. Across four seeded runs of a 36-agent market,
-buyers with records gave junk fewer wins than buyers that audit everything,
-with half the audits. Good work is paid now, through the lead's treasury, not at
+and hires someone else. Then we attacked our own market: 30 sybil accounts
+bidding half price with polished junk. From then on, buyers that audit
+everything gave three of every four wins to the attackers. Buyers that read
+on-chain records gave them about one in six, and paid half as much per good
+part. Good work is paid now, through the lead's treasury, not at
 the end. When the job ends, the tree folds and every account deletes
 itself."
 
