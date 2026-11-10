@@ -598,17 +598,45 @@ fn buyer_name(b: Buyer, agents: &[Agent]) -> String {
     }
 }
 
+/// Which market a run plays: buyers that read on-chain records, or one of
+/// two controls where buyers ignore them.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Arm {
+    /// Buyers price records and audit passes from untrusted workers.
+    Records,
+    /// Buyers ignore records and never audit.
+    Blind,
+    /// Buyers ignore records but audit every pass: separates what the
+    /// audits catch from what the records add.
+    AuditAll,
+}
+
+impl Arm {
+    pub fn name(self) -> &'static str {
+        match self {
+            Arm::Records => "records",
+            Arm::Blind => "blind",
+            Arm::AuditAll => "audit-all",
+        }
+    }
+
+    /// Whether a buyer audits a pass from a worker with this trust.
+    pub fn audits(self, trusted: bool) -> bool {
+        match self {
+            Arm::Records => !trusted,
+            Arm::Blind => false,
+            Arm::AuditAll => true,
+        }
+    }
+}
+
 /// Runs `rounds` rounds: each round every lead posts one job.
-/// `blind`: the control run. Buyers ignore on-chain records: no record
-/// penalty, no newcomer premium (so vouching does nothing), no audits. The
+/// `arm`: with records, or a control where buyers ignore on-chain records:
+/// no record penalty, no newcomer premium (so vouching does nothing), and
+/// either no audits (`Blind`) or an audit of every pass (`AuditAll`). The
 /// contract still checks, fires and keeps bonds.
-pub async fn run(
-    c: &Chain,
-    llm: &Llm,
-    rounds: u32,
-    blind: bool,
-    seed: u32,
-) -> Result<Value, String> {
+pub async fn run(c: &Chain, llm: &Llm, rounds: u32, arm: Arm, seed: u32) -> Result<Value, String> {
+    let blind = arm != Arm::Records;
     let model = llm.model();
     use std::collections::{HashMap, HashSet};
     let tools = Tools { chain: c };
@@ -1278,7 +1306,7 @@ pub async fn run(
                             &json!({ "account": agents[w].acc.id }),
                         )
                         .await?;
-                    if blind || trusted(&rec) {
+                    if !arm.audits(trusted(&rec)) {
                         continue;
                     }
                     let buyer_acc = buyer_acc(parts[p].buyer, &leads, &agents);
@@ -1647,7 +1675,7 @@ pub async fn run(
     }
     let settings = c.view(&c.hub, "get_settings", json!({})).await?;
     Ok(
-        json!({ "schema": "hiretree-swarm-2", "blind": blind, "seed": seed, "network": c.network_name, "rounds": log, "agents": table,
+        json!({ "schema": "hiretree-swarm-2", "blind": blind, "arm": arm.name(), "seed": seed, "network": c.network_name, "rounds": log, "agents": table,
         "leads": LEADS.iter().enumerate().map(|(l, (n, r))| json!({ "lead": n, "record_weight": r.record_weight,
             "max_pct": r.max_pct, "spent": lead_spent[l] as f64 / 1e6, "unfilled": lead_unfilled[l] })).collect::<Vec<_>>(),
         "junk_respawns": respawns, "bid_errors": bid_errors, "backer_asks_too_low": asks_too_low, "premiums": premium,
@@ -1843,6 +1871,17 @@ mod tests {
         let (p, w) = terms(true, 100, LEADS[0].1);
         assert_eq!((p, w), (0, 0));
         assert_eq!(pick(&c, p, w), Some(2));
+    }
+
+    #[test]
+    fn the_audit_all_arm_audits_every_pass_and_blind_none() {
+        for t in [false, true] {
+            assert!(Arm::AuditAll.audits(t));
+            assert!(!Arm::Blind.audits(t));
+        }
+        assert!(Arm::Records.audits(false));
+        assert!(!Arm::Records.audits(true));
+        assert_eq!(Arm::AuditAll.name(), "audit-all");
     }
 
     #[test]

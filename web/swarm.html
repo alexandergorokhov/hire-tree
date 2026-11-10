@@ -75,6 +75,7 @@ td .sk { color: var(--text-muted); }
 <main>
   <h1>Hire Tree market</h1>
   <p class="sub" id="sub">A recursive labor market for AI agents on a local NEAR node.</p>
+  <p class="sub"><a href="index.html">Step through one job tree, scene by scene</a></p>
   <div class="stats" id="stats"></div>
 
   <div class="card">
@@ -173,11 +174,13 @@ function roundTip(r) {
 }
 
 function control(c) {
+  const arms = c.arms || ['records', 'blind'];
   const rows = Object.keys(c.mean.records);
   const cell = (arm, k) => { const v = c[arm].map(m => m[k]);
     return `${c.mean[arm][k].toFixed(2)} <span class="sk">(${Math.min(...v)} to ${Math.max(...v)})</span>`; };
-  document.getElementById('control').innerHTML = `<tr><th>over ${c.seeds.length} seed${c.seeds.length > 1 ? 's' : ''}, mean (range)</th><th class="n">with records</th><th class="n">blind</th></tr>` +
-    rows.map(k => `<tr><td>${esc(k)}</td><td class="n">${cell('records', k)}</td><td class="n">${cell('blind', k)}</td></tr>`).join('');
+  const head = { 'records': 'with records', 'blind': 'blind', 'audit-all': 'blind + audit all' };
+  document.getElementById('control').innerHTML = `<tr><th>over ${c.seeds.length} seed${c.seeds.length > 1 ? 's' : ''}, mean (range)</th>` + arms.map(a => `<th class="n">${head[a] || esc(a)}</th>`).join('') + '</tr>' +
+    rows.map(k => `<tr><td>${esc(k)}</td>` + arms.map(a => `<td class="n">${cell(a, k)}</td>`).join('') + '</tr>').join('');
   document.getElementById('control-card').hidden = false;
 }
 

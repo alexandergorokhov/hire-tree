@@ -5,70 +5,84 @@
   2,
   3
  ],
+ "arms": [
+  "records",
+  "blind"
+ ],
  "records": [
   {
    "junk wins": 18,
-   "junk paid fUSD": 0,
    "fired": 18,
-   "fUSD per delivered part": 13.2
+   "junk paid fUSD": 0,
+   "fUSD spent": 1095.4,
+   "fUSD per good part": 13.2
   },
   {
    "junk wins": 20,
-   "junk paid fUSD": 10.8,
    "fired": 18,
-   "fUSD per delivered part": 12.22
+   "junk paid fUSD": 10.8,
+   "fUSD spent": 1014.1,
+   "fUSD per good part": 12.52
   },
   {
    "junk wins": 19,
-   "junk paid fUSD": 11.0,
    "fired": 18,
-   "fUSD per delivered part": 12.45
+   "junk paid fUSD": 11.0,
+   "fUSD spent": 1033.4,
+   "fUSD per good part": 12.6
   },
   {
    "junk wins": 18,
-   "junk paid fUSD": 11.0,
    "fired": 17,
-   "fUSD per delivered part": 12.55
+   "junk paid fUSD": 11.0,
+   "fUSD spent": 1041.7,
+   "fUSD per good part": 12.7
   }
  ],
  "blind": [
   {
    "junk wins": 24,
-   "junk paid fUSD": 5.5,
    "fired": 23,
-   "fUSD per delivered part": 11.8
+   "junk paid fUSD": 5.5,
+   "fUSD spent": 991.1,
+   "fUSD per good part": 11.94
   },
   {
    "junk wins": 28,
-   "junk paid fUSD": 48.6,
    "fired": 23,
-   "fUSD per delivered part": 12.25
+   "junk paid fUSD": 48.6,
+   "fUSD spent": 1016.5,
+   "fUSD per good part": 13.03
   },
   {
    "junk wins": 30,
-   "junk paid fUSD": 71.2,
    "fired": 25,
-   "fUSD per delivered part": 12.61
+   "junk paid fUSD": 71.2,
+   "fUSD spent": 1046.6,
+   "fUSD per good part": 13.77
   },
   {
    "junk wins": 22,
-   "junk paid fUSD": 5.8,
    "fired": 21,
-   "fUSD per delivered part": 11.81
+   "junk paid fUSD": 5.8,
+   "fUSD spent": 991.7,
+   "fUSD per good part": 11.95
   }
  ],
  "mean": {
   "records": {
    "junk wins": 18.75,
-   "junk paid fUSD": 8.2,
    "fired": 17.75,
-   "fUSD per delivered part": 12.61
+   "junk paid fUSD": 8.2,
+   "fUSD spent": 1046.15,
+   "fUSD per good part": 12.75
   },
   "blind": {
    "junk wins": 26.0,
-   "junk paid fUSD": 32.77,
    "fired": 23.0,
-   "fUSD per delivered part": 12.12
+   "junk paid fUSD": 32.77,
+   "fUSD spent": 1011.48,
+   "fUSD per good part": 12.67
   }
  }
 }

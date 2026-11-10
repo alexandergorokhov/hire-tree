@@ -7,7 +7,7 @@
 //! hiretree verify-cassette FILE    # re-check every signature offline
 //! hiretree mcp --as NAME           # stdio MCP server on testnet as NAME.<operator>
 //! hiretree mcp --local             # stdio MCP playground on a local node (no keys)
-//! hiretree swarm [--rounds N] [--out FILE] [--blind] [--seed N] [--llm mock|live|record:FILE|replay:FILE] # 3 leads, 36 agents, trees up to 3 deep, N rounds on a local node
+//! hiretree swarm [--rounds N] [--out FILE] [--blind|--audit-all] [--seed N] [--llm mock|live|record:FILE|replay:FILE] # 3 leads, 36 agents, trees up to 3 deep, N rounds on a local node
 //! ```
 //! Env: NEARAI_API_KEY, HT_MODEL, HT_OPERATOR, HT_OPERATOR_KEY, HT_RPC.
 
@@ -260,7 +260,13 @@ async fn main() {
                 &c,
                 &llm,
                 jobs,
-                args.iter().any(|a| a == "--blind"),
+                if args.iter().any(|a| a == "--blind") {
+                    hire_tree_agents::swarm::Arm::Blind
+                } else if args.iter().any(|a| a == "--audit-all") {
+                    hire_tree_agents::swarm::Arm::AuditAll
+                } else {
+                    hire_tree_agents::swarm::Arm::Records
+                },
                 arg(&args, "--seed")
                     .and_then(|x| x.parse().ok())
                     .unwrap_or(0),

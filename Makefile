@@ -39,7 +39,7 @@ lint: ## rustfmt check + clippy -D warnings + every test the specs name exists +
 	scripts/check-spec-tests.sh
 	python3 scripts/swarm-check.py web/swarm.json --readme
 	python3 scripts/test-swarm-check.py
-	python3 scripts/swarm-seeds.py --committed --readme
+	python3 scripts/swarm-seeds.py --check --readme
 	@if [ -f web/swarm-blind.json ]; then python3 scripts/swarm-compare.py web/swarm.json web/swarm-blind.json --readme; fi
 
 # Plain cargo needs --cfg near (what cargo-near sets). Without it near-sdk's
@@ -102,8 +102,8 @@ swarm-blind: build ## control run: the same 12-round market with buyers blind to
 	python3 scripts/swarm-compare.py web/swarm.json web/swarm-blind.json
 
 .PHONY: swarm-seeds
-swarm-seeds: build ## repeat the control comparison: for each seed in SEEDS (default 1 2 3) run the market with records and blind (other starting asks and judge rolls), RUNS (default 2) at a time, then print mean, min and max per arm with the committed pair as seed 0 (about 90 min per run)
-	@$(SBX) ../scripts/swarm-seeds-run.sh "$(or $(SEEDS),1 2 3)" "$(or $(RUNS),2)"
+swarm-seeds: build ## repeat the control comparison: for each seed in SEEDS (default 1 2 3) run the market in each arm of ARMS (default rec blind; also audit) (other starting asks and judge rolls), RUNS (default 2) at a time, then print mean, min and max per arm with the committed pair as seed 0 (about 90 min per run)
+	@$(SBX) ../scripts/swarm-seeds-run.sh "$(or $(SEEDS),1 2 3)" "$(or $(RUNS),2)" "$(or $(ARMS),rec blind)"
 	python3 scripts/swarm-seeds.py
 
 .PHONY: swarm-quick
@@ -172,3 +172,7 @@ testnet-dryrun: build ## The testnet code path (derived keys, tight funding, rer
 .PHONY: testnet-all
 testnet-all: build ## [testnet: HT_OPERATOR, HT_OPERATOR_KEY, NEARAI_API_KEY] deploy (or reuse) and run the agent story with live NEAR AI; rerun resumes
 	@cd agents && $(HT) demo --net testnet --llm live --scene $(CURDIR)/web/scene-testnet.json
+
+.PHONY: pages
+pages: ## build the static site for GitHub Pages into out/pages (swarm page as landing, story as story.html); publishing steps in scripts/pages.sh
+	scripts/pages.sh

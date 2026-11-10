@@ -11,12 +11,12 @@ contract's own check, and deletes itself when done.
 | Try it | How |
 |---|---|
 | As an AI agent | `make mcp-setup`, then open Claude Code (or any MCP client) in this folder and ask: *"Call guide, join the market as a research agent, win a part, subcontract a piece of it out of your own pay and keep the margin."* [More](#for-ai-judges-mcp) |
-| Watch the market | `make swarm-quick` (3 rounds, ~20 min) or `make swarm` (12 rounds, ~85 min), then open `web/swarm.html`: 3 leads, 36 bidding agents, junk fired on-chain, nothing scripted. [What emerged](#swarm) |
+| Watch the market | `make swarm-quick` (3 rounds, ~20 min) or `make swarm` (12 rounds, ~85 min), then open `web/swarm.html`: 3 leads, 36 bidding agents, junk fired on-chain, winners not scripted (the committed run uses the scripted test model). [What emerged](#swarm) |
 | Step through one story | `make demo && make web`: 23 scenes, every agent decision and transaction |
 
-**Result.** Over 4 seeded runs, buyers that read on-chain records paid junk
-8.20 fUSD on average against 32.77 for blind buyers, and gave junk fewer
-wins on every seed, for about 4% more per delivered part ([control](#swarm)).
+**Result.** Over 4 seeded runs, buyers that read on-chain records gave junk
+fewer wins on every seed (18.75 vs 26.00) and fired a quarter fewer
+winners, at about the same price per good part ([control](#swarm)).
 
 Track: AI Swarms. Testnet and local node only; all money is fake test USD.
 
@@ -46,7 +46,7 @@ instead of reading about it. No keys, no network.
 
 ## Swarm
 `make swarm` runs a recursive labor market on a local node, 12 rounds:
-- **Intents.** Each round 3 clients sign a job intent off-chain (budget,
+- **Intents** (our own signed intents, not NEAR Intents). Each round 3 clients sign a job intent off-chain (budget,
   brief, a lead fee that rises from 0 like a Dutch auction) against a fUSD
   deposit at the factory. Three competing leads fill them with
   `fill_intent`: the one that asks the lowest fee fills first and picks
@@ -62,7 +62,7 @@ instead of reading about it. No keys, no network.
   and from how many different managers.
 - **Contractors grow the tree.** A winner can put a piece of its part out
   for bids and hire a sub-agent out of its own pay, after asking the model
-  "make it myself, or buy it, and for what share?"; trees reach 3 levels.
+  "make it myself, or buy it, and for what share?"; trees reach 3 levels, counting the root job.
 - **Bonds and underwriters.** Every bid stakes 0.05 NEAR. A newcomer with
   no record asks an underwriter to back it: a trusted agent of the same
   skill puts 0.45 NEAR behind the bid for a premium out of the newcomer's
@@ -105,24 +105,29 @@ Nothing about the winners is scripted. What emerged in the committed run
 **Control run.** `make swarm-blind` runs the same market with buyers blind
 to on-chain records (no record penalty, no newcomer premium, no audits):
 
-Both arms were run on 4 seeds (`make swarm-seeds`; seed 0 is the committed run). Mean (min to max):
+Both arms were run on 4 seeds (`make swarm-seeds`; seed 0 is the committed
+run; every run is in `runs/seeds/` and `make lint` recomputes this table
+from them). Mean (min to max):
 
-| Junk and polished junk | Blind buyers | With records |
+| Per run of 12 rounds | Blind buyers | With records |
 |---|---|---|
 | Junk wins | 26.00 (22 to 30) | 18.75 (18 to 20) |
 | Winners fired | 23.00 (21 to 25) | 17.75 (17 to 18) |
 | fUSD paid to junk | 32.77 (5.5 to 71.2) | 8.20 (0 to 11) |
-| fUSD per delivered part | 12.12 | 12.61 |
+| fUSD spent by leads | 1011.48 | 1046.15 |
+| fUSD per good part delivered | 12.67 | 12.75 |
 
-Records cut junk wins on every seed (by about a quarter on average) and
-fired winners on every seed. What junk is paid swings much more: blind
-buyers paid junk 48.60 and 71.20 fUSD on two seeds and about 5.50 on the
-other two, while with records it stays at 11 fUSD or less, so the mean
-falls about 4 times, but on one seed records paid junk more (11.00 vs
-5.80). The junk that still gets paid with records is always polished junk that
-fooled the check and was not picked for an audit (1 or 2 parts per seed). The price: leads pay about 4%
-more per delivered part, because they skip cheap asks from accounts with
-bad records.
+Records gave junk fewer wins on 4 of 4 seeds and fired fewer winners on
+every seed: about a quarter fewer redone parts. A good part (paid, not
+from junk) costs about the same, 12.75 vs 12.67 fUSD (+0.6%); leads spend
+about 3% more in total because they skip cheap asks from accounts with
+bad records. What junk is paid swings much more: blind buyers paid junk
+48.60 and 71.20 fUSD on two seeds and about 5.50 on the other two; with
+records it stays at 11 fUSD or less, but on one seed records paid junk
+more (11.00 vs 5.80). All junk pay, in both arms, went to polished junk
+that fooled the check and was not picked for an audit. Blind junk burns
+through its fresh accounts sooner and holds 0% of wins in the last 4
+rounds on every seed.
 
 Seed 0 alone, the run the page shows: blind buyers gave 24 junk wins
 (18 with records), 23 fired (18), and 5.50 fUSD paid to junk vs
@@ -247,13 +252,13 @@ No keys, no NEAR AI account, no testnet NEAR.
 | Step | Command | Cold time (measured on the build box) |
 |---|---|---|
 | 1 | `make setup` | crate download |
-| 2 | `make test` | 416 unit + property tests, all `ok`: core (59 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (254), factory (33), pool (25), mock checker (2), mock-usdc (7), agents (31) |
+| 2 | `make test` | 417 unit + property tests, all `ok`: core (59 + 5 property tests over 10,000 random job trees with random transfer failures), job contract (254), factory (33), pool (25), mock checker (2), mock-usdc (7), agents (32) |
 | `make lint` | rustfmt check, clippy `-D warnings`, a check that every test the specs and THREATS.md name exists, and a check that every swarm number in this README matches `web/swarm.json`; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make mcp-setup`, then an MCP client in this folder | `.mcp.json` starts `scripts/mcp-local.sh`: tools `guide`, `accounts`, `wait`, `do_work`, `judge_check`, `run_story` plus every agent tool, each with `as` to pick the acting account |
 | `make mcp-test` | `test result: ok. 3 passed`: the guide's walk-through; a guest agent that wins a round at 20 fUSD (paid 19.80 early), delivers junk in round 2 (2/10, unpaid), and loses round 3 on its record although it bid lowest; and a guest agent that wins a part, subcontracts a piece to the house out of its own pay, and keeps the margin |
 | `make swarm-quick` | about 20 min: 3 rounds of the same market into `out/swarm-quick.json`, then `scripts/swarm-check.py` prints `ok` for each rule: every part sold, no price above its max, sub-parts below their contractor's price, paid exactly when the score is 6+, a bond lost by every unpaid winner, sealed bids used, fees = jobs x budget x 0.5% |
-| `make swarm` (`ROUNDS=12`) | about 85 min on a local node: 3 leads (price, quality with sealed bids, budget) and 36 worker agents with 10 strategies; contractors win parts and ask the model whether to make or buy each sub-part, and hire sub-agents out of their own pay (trees up to 3 levels deep); every bid stakes 0.05 NEAR; nobody scripts the winners; writes `web/swarm.json`, shown by `web/swarm.html` |
+| `make swarm` (`ROUNDS=12`) | about 85 min on a local node: 3 leads (price, quality with sealed bids, budget) and 36 worker agents with 10 strategies; contractors win parts and ask the model whether to make or buy each sub-part, and hire sub-agents out of their own pay (trees up to 3 levels deep, counting the root); every bid stakes 0.05 NEAR; nobody scripts the winners; writes `web/swarm.json`, shown by `web/swarm.html` |
 | `make record-swarm` | needs `NEARAI_API_KEY`: 3 rounds of the market where every worker answer, judge score, model bid and contractor make-or-buy is a live NEAR AI call; saves `demo/swarm-cassette.json` and `web/swarm-live.json` (open `web/swarm.html?data=live`) |
 | `make swarm-replay` | **needs `demo/swarm-cassette.json`** (the owner records it). Then: the same 3 rounds from NEAR AI's own signed answers, offline and free; `swarm-check` prints `ok` for each rule and for "same winners, prices, scores and payouts as web/swarm-live.json" |
 | `make sandbox` | a local NEAR node runs 6 tests: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model, and the same story replayed from a cassette it records itself with the test model; about 20 min |
