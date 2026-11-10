@@ -44,6 +44,12 @@ Records hold the market; audits alone do not, because they catch junk only
 after it has won, so the part is bought twice. With records the market is
 also the cheaper one: about half the cost per good part.
 
+**Washed storm.** The sybils first pay themselves through real jobs until
+their records look trusted (about 10 fUSD of fees per run). Plain records
+then fail: 72.00 storm wins. Buyers that pass `award_best` a payer list
+(the leads and the contractors they trust) count only that pay, and the
+storm wins 19.50, lower on every seed (4 seeds, `runs/wash/`).
+
 **Calm market.** Same market, no storm: records gave junk fewer wins than
 both other buyers on every seed, with half the audits of audit-all, for
 about 3% more per good part on average (8% cheaper to 11% dearer per seed).
