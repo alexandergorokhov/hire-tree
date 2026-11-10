@@ -65,7 +65,7 @@ Mechanics and everything that emerged in the committed run (108 parts,
 
 **Control runs.** Do the on-chain records matter, or would audits alone do?
 `make swarm-seeds ARMS="rec blind audit"` runs the same market three ways
-on 4 seeds (seed 0 is the committed run in `web/swarm.json` and
+on 5 seeds (seed 0 is the committed run in `web/swarm.json` and
 `web/swarm-blind.json`; every other run is in `runs/seeds/`, and `make lint`
 recomputes this table from them):
 - **With records:** buyers price records and audit passes from workers
@@ -77,21 +77,21 @@ Mean per run of 12 rounds:
 
 | | With records | Blind | Audit-all |
 |---|---|---|---|
-| Junk wins | 18.75 | 26.00 | 24.25 |
-| Winners fired | 17.75 | 23.00 | 22.50 |
-| fUSD paid to junk | 8.20 | 32.77 | 17.77 |
-| Audits run | 56.75 | 0.00 | 115.25 |
-| fUSD spent by leads | 1046.15 | 1011.48 | 1006.88 |
-| fUSD per good part delivered | 12.75 | 12.67 | 12.41 |
-| Sub-parts bought by contractors | 13.50 | 26.25 | 26.25 |
+| Junk wins | 19.00 | 25.60 | 24.20 |
+| Winners fired | 17.80 | 22.80 | 22.40 |
+| fUSD paid to junk | 8.68 | 28.34 | 16.34 |
+| Audits run | 56.60 | 0.00 | 115.20 |
+| fUSD spent by leads | 1037.64 | 1004.20 | 1000.52 |
+| fUSD per good part delivered | 12.68 | 12.52 | 12.30 |
+| Sub-parts bought by contractors | 13.20 | 26.40 | 26.40 |
 
 - **Records beat audits alone.** Buyers with records had fewer junk wins
-  than blind buyers on 4 of 4 seeds, and fewer junk wins than audit-all
-  buyers on 4 of 4 seeds. They fired about a fifth fewer winners and paid
-  junk about half as much (lower on 3 of 4 seeds) while running half the
+  than blind buyers on 5 of 5 seeds, and fewer junk wins than audit-all
+  buyers on 5 of 5 seeds. They fired about a fifth fewer winners and paid
+  junk about half as much (lower on 3 of 5 seeds, equal on 1) while running half the
   audits, each of which costs two more model calls.
-- **What records cost.** A good part (paid, not from junk) costs 12.75 fUSD
-  with records against 12.41 with audit-all and 12.67 blind: about 3% more
+- **What records cost.** A good part (paid, not from junk) costs 12.68 fUSD
+  with records against 12.30 with audit-all and 12.52 blind: about 3% more
   on average, because buyers skip cheap asks from accounts with bad
   records. Per seed it swings from 8% cheaper to 11% dearer.
 - **Records make trees smaller.** Contractors buy about half as many
