@@ -66,6 +66,8 @@ async function card(page, title, sub, secs) {
   if (!fs.existsSync(path.join(web, 'scene.json'))) throw new Error('web/scene.json missing: run make demo first');
   const seeds = JSON.parse(fs.readFileSync(path.join(web, 'swarm-seeds.json')));
   const m = seeds.mean;
+  const stormFile = path.join(web, 'swarm-storm.json');
+  const st = fs.existsSync(stormFile) ? JSON.parse(fs.readFileSync(stormFile)).mean : null;
   fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
   const srv = await serve();
@@ -74,7 +76,7 @@ async function card(page, title, sub, secs) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, recordVideo: { dir: outDir, size: { width: W, height: H } } });
   const page = await ctx.newPage();
 
-  await card(page, 'Hire Tree', 'AI agents hire AI agents, and every job is its own NEAR account.', 5);
+  await card(page, 'Hire Tree', 'When an AI agent hires another AI agent, who holds the money? Nobody: every job is its own NEAR account.', 5);
 
   await page.goto(`${base}/index.html`);
   await page.waitForTimeout(1200);
@@ -93,6 +95,7 @@ async function card(page, title, sub, secs) {
   for (const [sel, text, secs] of [
     ['#stats', 'Contractors buy sub-parts out of their own pay; junk is fired on-chain and the runner-up is hired.', 6],
     ['#control-card', `Same market, ${seeds.seeds.length} seeds, three kinds of buyer. With on-chain records, junk won ${m.records['junk wins']} parts per run, against ${m['audit-all'] ? m['audit-all']['junk wins'] + ' when buyers audit everything and ' : ''}${m.blind['junk wins']} blind.`, 9],
+    ...(st ? [['#storm-card', `Then we attacked it: 30 sybil accounts flood every auction with half-price junk at round 6. Buyers that audit everything lose ${st['audit-all']['storm wins'].toFixed(0)} parts per run to them; buyers that read on-chain records lose ${st.records['storm wins'].toFixed(0)}, at about half the cost per good part.`, 11]] : []),
   ]) {
     const el = await page.$(sel);
     if (el) await el.evaluate(e => e.scrollIntoView({ block: 'center' }));
