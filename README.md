@@ -21,8 +21,8 @@ when done. It is the settlement layer an agent market can plug in:
 buyers that read on-chain records let them win 10.75 parts per run,
 against 71.50 for buyers that audit everything, and pay about half as much
 per good part (4 seeds, every seed; [junk storm](#swarm)). In calm
-markets records still cut junk wins on every seed, for up to 3% more per
-good part.
+markets records still cut junk wins on every seed, for about 3% more per
+good part on average.
 
 Tracks: AI Swarms (main), Agent Economy, AI Security & Defense. Testnet and local node only; all money is fake test USD.
 
@@ -65,8 +65,9 @@ Mechanics and everything that emerged in the committed run (108 parts,
 
 **Control runs.** Do the on-chain records matter, or would audits alone do?
 `make swarm-seeds ARMS="rec blind audit"` runs the same market three ways
-on 4 seeds (seed 0 is the committed run; every run is in `runs/seeds/`, and
-`make lint` recomputes this table from them):
+on 4 seeds (seed 0 is the committed run in `web/swarm.json` and
+`web/swarm-blind.json`; every other run is in `runs/seeds/`, and `make lint`
+recomputes this table from them):
 - **With records:** buyers price records and audit passes from workers
   that are not yet trusted.
 - **Blind:** buyers ignore records and never audit.
@@ -82,6 +83,7 @@ Mean per run of 12 rounds:
 | Audits run | 56.75 | 0.00 | 115.25 |
 | fUSD spent by leads | 1046.15 | 1011.48 | 1006.88 |
 | fUSD per good part delivered | 12.75 | 12.67 | 12.41 |
+| Sub-parts bought by contractors | 13.50 | 26.25 | 26.25 |
 
 - **Records beat audits alone.** Buyers with records had fewer junk wins
   than blind buyers on 4 of 4 seeds, and fewer junk wins than audit-all
@@ -89,8 +91,14 @@ Mean per run of 12 rounds:
   junk about half as much (lower on 3 of 4 seeds) while running half the
   audits, each of which costs two more model calls.
 - **What records cost.** A good part (paid, not from junk) costs 12.75 fUSD
-  with records against 12.41 with audit-all and 12.67 blind: up to 3% more,
-  because buyers skip cheap asks from accounts with bad records.
+  with records against 12.41 with audit-all and 12.67 blind: about 3% more
+  on average, because buyers skip cheap asks from accounts with bad
+  records. Per seed it swings from 8% cheaper to 11% dearer.
+- **Records make trees smaller.** Contractors buy about half as many
+  sub-parts with records. Junk no longer sets the going rate, so the
+  contractor's model reckons a bought sub-part at 83-87% of its max,
+  counting junk risk, above its own cost (80%), and does it itself. Blind
+  contractors see junk's low winning prices and keep buying.
 - **Junk pay is noisy.** It ranges from 0 to 11 fUSD with records, 0 to
   37.8 with audit-all and 5.5 to 71.2 blind. All of it, in every arm,
   went to polished junk that fooled the check and was not caught by an
@@ -111,19 +119,23 @@ fool the judge. Mean per run over 4 seeds (every run is in `runs/storm/`;
 | Junk wins, all junk | 27.75 | 96.75 | 95.25 |
 | fUSD paid to junk | 26.95 | 210.88 | 133.03 |
 | fUSD per good part delivered | 13.66 | 26.03 | 24.06 |
+| fUSD earned by storm accounts | 21.50 | 176.75 | 115.25 |
 | fUSD held by storm keys (max) | 0.00 | 0.00 | 0.00 |
+| Sub-parts bought by contractors | 14.00 | 25.25 | 24.25 |
 
 - **Records hold; audits alone do not.** In the storm round, junk takes
   12% of wins from buyers with records, against 96% blind and 100% for
   buyers that audit everything. Records come out ahead on every seed on
-  each of these rows.
+  storm wins, junk wins, junk pay and cost per good part.
 - **Under attack, records are the cheaper market.** A good part costs
   about half as much with records, and leads spend less in total (1060.67
   fUSD per run, against 1134.45 blind and 1166.20 audit-all). Audits catch
   the junk after it wins, so the part is bought twice.
-- **No key ever holds the money.** Storm accounts are paid only through job
-  accounts that settled; the fUSD they held beyond settled pay is read
-  from chain balances and stays 0.00 in every round of every run.
+- **The attackers still earn something.** Polished junk that fools the
+  check is paid: 21.50 fUSD per run with records, against 176.75 blind.
+  What never happens is money held outside escrow: storm accounts are paid
+  only by job accounts that settled, and what they hold beyond settled pay,
+  read from chain balances, stays 0.00 in every round of every run.
 
 Seed 0 alone, the run the page shows: blind buyers gave 24 junk wins
 (18 with records), 23 fired (18), and 5.50 fUSD paid to junk vs
@@ -244,10 +256,11 @@ No keys, no NEAR AI account, no testnet NEAR.
     records priced by money), scam detection (signed checks, audits, fire
     and replace, the junk storm), and FUNCTION CALL KEYS (a worker
     delivers through a key that can only call `deliver` on its one job).
-- Built in the window: the first commit is 2026-11-04, so all of the code,
-  including every NEAR integration (job and factory contracts, global
-  contract deploy, `ecrecover` receipt checks, track records), was written
-  during the hackathon. There is no pre-hackathon baseline.
+- Built in the window: the hackathon opened on 2026-11-01 and this
+  repository's first commit is 2026-11-04 (`git log --reverse`). Every NEAR
+  integration (job and factory contracts, global contract deploy,
+  `ecrecover` receipt checks, track records) was written here; no code is
+  carried over from an earlier project.
 - Network: testnet and a local NEAR node only; all money is fake.
 
 ## Also by me

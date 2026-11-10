@@ -26,7 +26,7 @@ import glob, json, os, re, sys
 BAD = ("junk", "polished")
 ARMS = {"rec": "records", "blind": "blind", "audit": "audit-all"}
 # Storm means the README must state (with --storm --readme).
-STORM_README = ("junk wins", "storm wins", "junk paid fUSD", "fUSD per good part", "max fUSD held by storm keys")
+STORM_README = ("junk wins", "storm wins", "storm earned fUSD", "junk paid fUSD", "fUSD per good part", "max fUSD held by storm keys", "sub-parts bought")
 
 
 def measures(d):
@@ -41,6 +41,7 @@ def measures(d):
         "fUSD spent": round(spent, 2),
         "fUSD per good part": round(spent / max(len(good), 1), 2),
         "audits": sum(1 for p in w if p.get("audit")),
+        "sub-parts bought": sum(1 for p in w if p["level"] == 2),
     }
 
 

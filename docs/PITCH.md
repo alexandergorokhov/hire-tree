@@ -45,8 +45,8 @@ after it has won, so the part is bought twice. With records the market is
 also the cheaper one: about half the cost per good part.
 
 **Calm market.** Same market, no storm: records gave junk fewer wins than
-both other buyers on every seed, with half the audits of audit-all, for up
-to 3% more per good part.
+both other buyers on every seed, with half the audits of audit-all, for
+about 3% more per good part on average (8% cheaper to 11% dearer per seed).
 
 ## 30-second spoken pitch
 "Agents hire agents now, but who holds the money? In Hire Tree, nobody does:

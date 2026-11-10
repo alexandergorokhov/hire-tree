@@ -17,7 +17,8 @@
    "junk paid fUSD": 0,
    "fUSD spent": 1095.4,
    "fUSD per good part": 13.2,
-   "audits": 54
+   "audits": 54,
+   "sub-parts bought": 9
   },
   {
    "junk wins": 20,
@@ -25,7 +26,8 @@
    "junk paid fUSD": 10.8,
    "fUSD spent": 1014.1,
    "fUSD per good part": 12.52,
-   "audits": 60
+   "audits": 60,
+   "sub-parts bought": 16
   },
   {
    "junk wins": 19,
@@ -33,7 +35,8 @@
    "junk paid fUSD": 11.0,
    "fUSD spent": 1033.4,
    "fUSD per good part": 12.6,
-   "audits": 58
+   "audits": 58,
+   "sub-parts bought": 16
   },
   {
    "junk wins": 18,
@@ -41,7 +44,8 @@
    "junk paid fUSD": 11.0,
    "fUSD spent": 1041.7,
    "fUSD per good part": 12.7,
-   "audits": 55
+   "audits": 55,
+   "sub-parts bought": 13
   }
  ],
  "blind": [
@@ -51,7 +55,8 @@
    "junk paid fUSD": 5.5,
    "fUSD spent": 991.1,
    "fUSD per good part": 11.94,
-   "audits": 0
+   "audits": 0,
+   "sub-parts bought": 27
   },
   {
    "junk wins": 28,
@@ -59,7 +64,8 @@
    "junk paid fUSD": 48.6,
    "fUSD spent": 1016.5,
    "fUSD per good part": 13.03,
-   "audits": 0
+   "audits": 0,
+   "sub-parts bought": 26
   },
   {
    "junk wins": 30,
@@ -67,7 +73,8 @@
    "junk paid fUSD": 71.2,
    "fUSD spent": 1046.6,
    "fUSD per good part": 13.77,
-   "audits": 0
+   "audits": 0,
+   "sub-parts bought": 26
   },
   {
    "junk wins": 22,
@@ -75,7 +82,8 @@
    "junk paid fUSD": 5.8,
    "fUSD spent": 991.7,
    "fUSD per good part": 11.95,
-   "audits": 0
+   "audits": 0,
+   "sub-parts bought": 26
   }
  ],
  "audit-all": [
@@ -85,7 +93,8 @@
    "junk paid fUSD": 5.5,
    "fUSD spent": 991.1,
    "fUSD per good part": 11.94,
-   "audits": 112
+   "audits": 112,
+   "sub-parts bought": 27
   },
   {
    "junk wins": 26,
@@ -93,7 +102,8 @@
    "junk paid fUSD": 37.8,
    "fUSD spent": 1020.9,
    "fUSD per good part": 12.76,
-   "audits": 116
+   "audits": 116,
+   "sub-parts bought": 26
   },
   {
    "junk wins": 26,
@@ -101,7 +111,8 @@
    "junk paid fUSD": 27.8,
    "fUSD spent": 1022.0,
    "fUSD per good part": 13.1,
-   "audits": 116
+   "audits": 116,
+   "sub-parts bought": 26
   },
   {
    "junk wins": 21,
@@ -109,7 +120,8 @@
    "junk paid fUSD": 0,
    "fUSD spent": 993.5,
    "fUSD per good part": 11.83,
-   "audits": 117
+   "audits": 117,
+   "sub-parts bought": 26
   }
  ],
  "mean": {
@@ -119,7 +131,8 @@
    "junk paid fUSD": 8.2,
    "fUSD spent": 1046.15,
    "fUSD per good part": 12.75,
-   "audits": 56.75
+   "audits": 56.75,
+   "sub-parts bought": 13.5
   },
   "blind": {
    "junk wins": 26.0,
@@ -127,7 +140,8 @@
    "junk paid fUSD": 32.77,
    "fUSD spent": 1011.48,
    "fUSD per good part": 12.67,
-   "audits": 0.0
+   "audits": 0.0,
+   "sub-parts bought": 26.25
   },
   "audit-all": {
    "junk wins": 24.25,
@@ -135,7 +149,8 @@
    "junk paid fUSD": 17.77,
    "fUSD spent": 1006.88,
    "fUSD per good part": 12.41,
-   "audits": 115.25
+   "audits": 115.25,
+   "sub-parts bought": 26.25
   }
  }
 }
