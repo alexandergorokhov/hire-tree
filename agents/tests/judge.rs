@@ -207,6 +207,75 @@ fn a_judge_walks_the_guide_over_mcp() {
     assert_eq!(rec["paid"], json!(1));
 }
 
+/// The award rule runs in the job contract: the lead only names the rule
+/// (here "lowest bid"), the contract reads the bids and picks.
+#[test]
+fn the_contract_picks_the_winner_with_award_best() {
+    let mut c = Client::start();
+    c.rpc("initialize", json!({ "protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": { "name": "judge", "version": "1" } }));
+    let acc: Value = serde_json::from_str(&c.ok("accounts", json!({}))).unwrap();
+    let id = |n: &str| -> String {
+        acc["accounts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|a| a["as"] == n)
+            .unwrap()["account"]
+            .as_str()
+            .unwrap()
+            .to_string()
+    };
+    let factory = acc["factory"].as_str().unwrap().to_string();
+    let (lead, cheapbot) = (id("lead"), id("cheapbot"));
+    c.ok(
+        "post_job",
+        json!({ "as": "client", "budget": "50000000", "manager": lead, "task": "Explain NEAR sub-accounts",
+        "window_secs": 3600, "lead_fee": "5000000", "treasury": id("treasury") }),
+    );
+    let root = format!("job-1.{factory}");
+    let slot: u64 = c
+        .ok(
+            "open_bids",
+            json!({ "as": "lead", "job": root, "task": "Explain NEAR sub-accounts in 3 sentences", "max": "30000000", "secs": 60 }),
+        )
+        .trim()
+        .parse()
+        .unwrap();
+    c.ok(
+        "bid",
+        json!({ "as": "researcher", "job": root, "slot": slot, "price": "25000000" }),
+    );
+    c.ok(
+        "bid",
+        json!({ "as": "cheapbot", "job": root, "slot": slot, "price": "10000000" }),
+    );
+    c.ok("wait", json!({ "secs": 61 }));
+    let got: Value = serde_json::from_str(&c.ok(
+        "award_best",
+        json!({ "as": "lead", "job": root, "slot": slot, "record_weight": 150, "newcomer_pct": 0 }),
+    ))
+    .unwrap();
+    assert_eq!(
+        got["awarded"],
+        json!(cheapbot),
+        "the contract awards the lowest bid"
+    );
+    let t1 = format!("t1.{root}");
+    let j: Value = serde_json::from_str(&c.ok("get_job", json!({ "job": t1 }))).unwrap();
+    assert_eq!(j["amount"], "10000000", "hired at its own bid");
+    // The slot is awarded once: a second award, by rule or by hand, is refused.
+    let (t, err) = c.tool(
+        "award_best",
+        json!({ "as": "lead", "job": root, "slot": slot, "record_weight": 0, "newcomer_pct": 0 }),
+    );
+    assert!(err && t.contains("slot already awarded"), "{t}");
+    let (t, err) = c.tool(
+        "award",
+        json!({ "as": "lead", "job": root, "slot": slot, "worker": id("researcher") }),
+    );
+    assert!(err && t.contains("slot already awarded"), "{t}");
+}
+
 /// The judge's own agent joins the open market, outbids the house, does
 /// the work and is paid early; then it delivers junk once, and its record
 /// costs it the next award even though it bids lowest again.

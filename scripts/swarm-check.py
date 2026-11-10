@@ -15,6 +15,8 @@ def check(ok, what):
     if not ok:
         fails.append(what)
 
+if "award_mismatches" in d:
+    check(d["award_mismatches"] == 0, f"the contract's award_best winner matched the off-chain rule every time ({d['award_mismatches']} mismatches)")
 parts = [p for r in d["rounds"] for p in r["parts"]]
 won = [p for p in parts if p.get("winner")]
 subs = [p for p in won if p["level"] > 1]

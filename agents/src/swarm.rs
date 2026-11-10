@@ -361,30 +361,10 @@ pub fn terms(blind: bool, premium: u128, rules: Rules) -> (u128, u128) {
     }
 }
 
-/// The buyer's pick: the lowest bid after a penalty for the share of unpaid
-/// jobs on the bidder's on-chain record (`record_weight`: 150 = x2.5 when
-/// all unpaid), and for a bidder with no record yet, a newcomer premium
-/// (percent) the buyer learned, divided by how many times the slot's bond
-/// the bidder staked (`vouch`, read from the bid on-chain): a newcomer that
-/// puts 10x the bond at risk pays a tenth of the premium. Ties go to the
-/// bidder with more paid jobs. Deterministic.
-pub fn pick(
-    cands: &[(usize, u128, u32, u32, u128)],
-    newcomer_pct: u128,
-    record_weight: u128,
-) -> Option<usize> {
-    cands
-        .iter()
-        .min_by_key(|(i, bid, jobs, paid, vouch)| {
-            let unpaid = jobs.saturating_sub(*paid) as u128;
-            let mut score = bid * (100 + record_weight * unpaid / (*jobs as u128).max(1)) / 100;
-            if *jobs == 0 {
-                score = score * (100 + newcomer_pct / (*vouch).max(1)) / 100;
-            }
-            (score, std::cmp::Reverse(*paid), *i)
-        })
-        .map(|c| c.0)
-}
+/// The buyer's pick. The rule lives in `ht_core::pick` and runs on-chain
+/// in the job contract's `award_best`; the swarm runs it too, to check the
+/// chain's answer.
+pub use ht_core::pick::pick;
 
 /// What an honest newcomer stakes on top of the slot's bond: 9x more, so
 /// its bid carries 10x the slot's bond. It gets it back when it delivers;
@@ -398,12 +378,7 @@ pub const AUDIT_PAYERS: u64 = 2;
 /// A record weighted by money, in 0.01 fUSD: (all pay at stake, pay paid).
 /// Buyers price risk by how much money a worker lost, not how many jobs.
 pub fn weighed(rec: &Value) -> (u32, u32) {
-    let paid = num(&rec["paid_value"]) / (USD / 100);
-    let unpaid = num(&rec["unpaid_value"]) / (USD / 100);
-    (
-        (paid + unpaid).min(u32::MAX as u128) as u32,
-        paid.min(u32::MAX as u128) as u32,
-    )
+    ht_core::pick::weigh(num(&rec["paid_value"]), num(&rec["unpaid_value"]))
 }
 
 /// Passes from this worker skip the audit: enough money, from enough payers.
@@ -713,6 +688,8 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, arm: Arm, seed: u32) -> Resu
     let mut history: HashMap<&str, Vec<u128>> = HashMap::new();
     let mut respawns = 0u32;
     let mut bid_errors = 0u32;
+    // Awards where the contract's winner differed from the off-chain expectation.
+    let mut award_mismatches = 0u32;
     // Newcomer asks no underwriter would back: below 85% of the median win.
     let mut asks_too_low = 0u32;
     // Sealed-bid salts come from a per-run secret, so nobody can open a
@@ -1092,11 +1069,47 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, arm: Arm, seed: u32) -> Resu
                     }
                     continue;
                 };
-                let (_, price, jobs, _, vouch) = *cands.iter().find(|x| x.0 == w).unwrap();
                 let buyer_acc = buyer_acc(buyer, &leads, &agents);
-                tools
-                    .call(&buyer_acc, "award", &json!({ "job": parts[p].job, "slot": parts[p].slot, "worker": agents[w].acc.id }))
+                // The job contract picks, by the same ht_core rule, from the
+                // bids, bonds and records it reads itself. Bidders already
+                // hired this round are named in `skip`. The off-chain pick
+                // above is only the expectation to check the chain against.
+                let skip: Vec<&str> = parts[p]
+                    .bids
+                    .iter()
+                    .filter(|(i, _)| booked.contains(i))
+                    .map(|(i, _)| agents[*i].acc.id.as_str())
+                    .collect();
+                let got = tools
+                    .call(
+                        &buyer_acc,
+                        "award_best",
+                        &json!({ "job": parts[p].job, "slot": parts[p].slot,
+                            "record_weight": u64::try_from(weight).unwrap_or(u64::MAX),
+                            "newcomer_pct": u64::try_from(prem).unwrap_or(u64::MAX), "skip": skip }),
+                    )
                     .await?;
+                let on_chain = got["awarded"].as_str().unwrap_or_default().to_string();
+                let w = if on_chain == agents[w].acc.id.as_str() {
+                    w
+                } else {
+                    award_mismatches += 1;
+                    eprintln!(
+                        "ERROR: award mismatch on {} slot {}: the contract awarded {on_chain}, the off-chain rule expected {}",
+                        parts[p].job, parts[p].slot, agents[w].acc.id
+                    );
+                    // The chain's award stands: follow it.
+                    let Some(&(i, ..)) = cands
+                        .iter()
+                        .find(|x| agents[x.0].acc.id.as_str() == on_chain)
+                    else {
+                        return Err(format!(
+                            "the contract awarded {on_chain}, who is not a candidate"
+                        ));
+                    };
+                    i
+                };
+                let (_, price, jobs, _, vouch) = *cands.iter().find(|x| x.0 == w).unwrap();
                 let k = children.entry(parts[p].job.clone()).or_insert(0);
                 *k += 1;
                 let child = format!("t{}.{}", k, parts[p].job);
@@ -1678,7 +1691,7 @@ pub async fn run(c: &Chain, llm: &Llm, rounds: u32, arm: Arm, seed: u32) -> Resu
         json!({ "schema": "hiretree-swarm-2", "blind": blind, "arm": arm.name(), "seed": seed, "network": c.network_name, "rounds": log, "agents": table,
         "leads": LEADS.iter().enumerate().map(|(l, (n, r))| json!({ "lead": n, "record_weight": r.record_weight,
             "max_pct": r.max_pct, "spent": lead_spent[l] as f64 / 1e6, "unfilled": lead_unfilled[l] })).collect::<Vec<_>>(),
-        "junk_respawns": respawns, "bid_errors": bid_errors, "backer_asks_too_low": asks_too_low, "premiums": premium,
+        "junk_respawns": respawns, "bid_errors": bid_errors, "award_rule": "on-chain (award_best)", "award_mismatches": award_mismatches, "backer_asks_too_low": asks_too_low, "premiums": premium,
         "platform_fee_bps": SWARM_FEE_BPS, "job_budget": JOB_BUDGET, "bond_near": BOND_YOCTO as f64 / 1e24, "sealed_lead": "quality", "platform_fees": num(&settings["fees"]) as f64 / 1e6,
         "model": match llm {
             Llm::Mock(_) => "scripted test model (not NEAR AI) for work, judging, the model bidder and contractors' make-or-buy; agents adapt their asks; buyers pick by price, on-chain record and a learned newcomer premium".to_string(),

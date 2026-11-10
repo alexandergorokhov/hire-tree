@@ -65,6 +65,8 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
         ("get_bids", "Anyone: a bid slot with its bids and award.", s(json!({ "job": str_, "slot": { "type": "integer" } }), &["job", "slot"])),
         ("award", "Manager: after bidding closes, hire one bidder at its own bid (a new sub-account). Attaches 0.035 NEAR.",
          s(json!({ "job": str_, "slot": { "type": "integer" }, "worker": str_, "sub": str_ }), &["job", "slot", "worker"])),
+        ("award_best", "Manager: after bidding closes, the job contract picks the winner by a public rule and hires it at its own bid. It reads each revealed bidder's on-chain record, scores bid x (1 + record_weight x unpaid share of the record) and, for a bidder with no record, x (1 + newcomer_pct / how many times the slot's bond the bid carries), and hires the lowest score (ties: more paid money, then the earlier bid). record_weight 150 = x2.5 when all pay was lost; 0 and 0 = lowest bid. `skip` lists bidders you cannot use. Fails closed (an error, nothing awarded, slot still open) if a record cannot be read. Attaches 0.035 NEAR.",
+         s(json!({ "job": str_, "slot": { "type": "integer" }, "record_weight": { "type": "integer" }, "newcomer_pct": { "type": "integer" }, "sub": str_, "skip": { "type": "array", "items": str_ } }), &["job", "slot", "record_weight", "newcomer_pct"])),
         ("deliver", "Worker: deliver the response bytes (base64) with an optional NEAR AI receipt (req base64, sig hex, model).",
          s(json!({ "job": str_, "resp": str_, "req": str_, "sig": str_, "model": str_ }), &["job", "resp"])),
         ("check_request", "Anyone: the exact judge request body for a delivery (base64).",
@@ -318,6 +320,27 @@ impl Tools<'_> {
                     NearToken::from_millinear(35),
                 )
                 .await
+            }
+            "award_best" => {
+                let job = id(a, "job")?;
+                let slot = a["slot"].as_u64().ok_or("missing slot")?;
+                let num = |k: &str| a[k].as_u64().ok_or(format!("missing {k}"));
+                c.call(
+                    who,
+                    &job,
+                    "award_best",
+                    json!({ "slot": slot, "record_weight": num("record_weight")?, "newcomer_pct": num("newcomer_pct")?,
+                            "sub": a["sub"].as_str(), "skip": a["skip"] }),
+                    NearToken::from_millinear(35),
+                )
+                .await?;
+                // The record reads and the hire run in a callback, which can
+                // refuse without failing this transaction: read the outcome.
+                let bids = c.view(&job, "get_bids", json!({ "slot": slot })).await?;
+                match bids["awarded"].as_str() {
+                    Some(w) => Ok(json!({ "slot": slot, "awarded": w })),
+                    None => Err("award_best made no award (a record could not be read, or the slot was awarded meanwhile): nothing was spent, try again".into()),
+                }
             }
             "deliver" => {
                 use base64::Engine;

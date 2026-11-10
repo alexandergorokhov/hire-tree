@@ -95,6 +95,11 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | A backer is drained by a premium it never agreed to | the premium is fixed by the bidder before anyone backs, at most half the bidder's own bond, and paid only when the work is paid | `a_premium_above_half_the_bond_is_refused`, `a_backer_of_paid_work_gets_its_near_back_plus_the_premium` |
 | A junk bot backs itself to look vouched | the bidder and the buyer cannot back; a backing from a fresh account of the same operator is possible, but that account loses the NEAR on junk like a bigger bond would | `a_bidder_cannot_back_itself`, `a_backer_of_junk_loses_its_near_to_the_buyer` |
 | A backer's NEAR is stuck after the bid loses | refunded at the award with every losing bond | `a_backer_of_a_losing_bid_is_refunded_at_the_award` |
+| The buyer picks a winner by a secret or biased rule | `award_best` runs the rule in the contract: the buyer names only the weights and a skip list, and the event lists the rule, every bidder's inputs and score. A buyer that wants a friend can still use `award` by hand (as with `hire`) | `a_bad_record_costs_more_than_a_low_bid_saves`, `skipped_bidders_are_not_read_or_awarded` |
+| A record read fails or returns junk during `award_best` | fails closed: nobody is awarded, the 0.035 NEAR deposit is refunded, the slot stays open for a retry or a hand `award` | `a_failed_record_read_awards_nobody_and_refunds`, `a_garbled_record_fails_closed` |
+| Many bidders make `award_best` run out of gas | at most 16 bids per slot, each paid for by its bidder; 5 Tgas per read, so 16 reads plus the hire fit the 300 Tgas cap, and `award_best` refuses a call with too little gas before reading anything | `award_best_needs_gas_for_every_read`, `the_most_bids_a_slot_takes_fit_in_the_gas_cap` |
+| `award` and `award_best` (or two `award_best`) race on one slot | the slot is marked awarded in one place; the late callback sees it, awards nothing and refunds | `a_hand_award_between_the_read_and_the_callback_wins_the_race`, `two_award_bests_award_the_slot_once` |
+| A callback hire fails after the deposit was taken | the callback checks money and slot state before it marks anything and refunds when it cannot hire | `a_job_that_cannot_fund_the_hire_refunds_instead_of_stranding` |
 
 
 ## Intents

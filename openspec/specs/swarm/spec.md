@@ -15,6 +15,12 @@ A buyer (lead or contractor) SHALL pick the lowest bid after a penalty for
 the share of unpaid jobs on the bidder's on-chain record, scaled by its own
 record weight (price and budget leads and contractors 150 = x2.5 when all
 unpaid; the quality lead 400). Ties go to the bidder with more paid jobs.
+The rule is `ht_core::pick`, run by the job contract (`award_best`), not by
+the buyer: a lead or contractor names the rule (a blind buyer names 0 and 0)
+and the contract reads the bids, bonds and records itself. The swarm also
+runs the rule off-chain and logs an error, counted in `award_mismatches`, if
+the contract's winner differs. A fired winner's runner-up is still hired by
+hand.
 - unit: `pick_takes_the_lowest_bid_with_a_clean_record`, `unpaid_jobs_cost_more_than_a_low_bid_saves`, `a_quality_lead_weighs_the_record_more`, `ties_go_to_the_longer_clean_record`
 
 ### Requirement: Buyers learn a newcomer premium

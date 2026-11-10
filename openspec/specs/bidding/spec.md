@@ -35,6 +35,47 @@ slot, only to an account that bid; it hires through the same path as
 - THEN t1 is created holding 25 and the slot shows awarded = worker
 - unit: `manager_opens_workers_bid_manager_awards_at_the_bid_price`; `award_before_close_refused`, `award_to_a_non_bidder_refused`, `second_award_refused`
 
+### Requirement: The award rule can run on-chain
+`award_best(slot, record_weight, newcomer_pct, sub, skip)` SHALL be
+manager-only, with the same preconditions as `award` (after close and any
+reveal, once per slot) and at least one revealed bidder not in `skip`. The
+job SHALL read each such bidder's track record from its registry (the
+factory) in one batch of cross-contract `get_record` calls, with gas for
+every read (at most 16 bidders, so the 300 Tgas cap suffices). A private
+callback SHALL then score each revealed bid with `ht_core::pick` from the
+on-chain bid, bond and backing and the records just read, emit
+`award_best` with the rule and every input and score, and hire the lowest
+score through the same code path as `award`: the winner is hired at its own
+bid, losers' bonds and backing are refunded. The rule is the lowest bid
+raised by `record_weight` times the share of money its record shows unpaid
+and, for a bidder with no record, by `newcomer_pct` divided by how many
+times the slot's bond the bid carries; ties go to more paid money, then the
+earlier bid. The 0.035 NEAR attached is for the child account.
+
+The award SHALL fail closed. If any record read fails or cannot be parsed,
+or the slot was awarded meanwhile (by `award` or another `award_best`), or
+the job can no longer hire or fund the hire, the callback SHALL award
+nobody, emit `award_best_failed`, and refund the deposit to the buyer; the
+slot stays open for a retry or a hand `award`. `award` stays for a buyer
+that picks by hand.
+
+#### Scenario: A bad record costs more than a low bid saves
+- GIVEN bids 25 (worker, clean record) and 18 (worker2, all pay lost) and record weight 150
+- WHEN the manager calls `award_best` and both record reads succeed
+- THEN worker is hired at 25 and the event lists both inputs
+
+#### Scenario: A record read fails
+- WHEN one `get_record` fails or returns garbage
+- THEN no one is awarded, the deposit is refunded, and a retry can award
+
+#### Scenario: Award and award_best race
+- WHEN a hand `award` lands between `award_best` and its callback, or two `award_best` run at once
+- THEN exactly one award happens; the other callback refunds
+- unit: `a_bad_record_costs_more_than_a_low_bid_saves`, `with_no_record_rule_the_lowest_bid_wins`, `a_bond_and_backing_cut_a_newcomers_premium`, `the_job_reads_every_bidders_record_from_the_registry`, `a_failed_record_read_awards_nobody_and_refunds`, `a_garbled_record_fails_closed`, `a_hand_award_between_the_read_and_the_callback_wins_the_race`, `two_award_bests_award_the_slot_once`, `a_hand_award_after_award_best_is_refused`, `skipped_bidders_are_not_read_or_awarded`, `unrevealed_sealed_bids_are_not_candidates`, `award_best_with_nothing_revealed_is_refused`, `award_best_before_the_close_is_refused`, `only_the_buyer_can_award_best`, `award_best_needs_the_childs_storage_deposit`, `award_best_needs_gas_for_every_read`, `the_most_bids_a_slot_takes_fit_in_the_gas_cap`, `on_award_best_is_private`, `a_job_that_cannot_fund_the_hire_refunds_instead_of_stranding`
+- property: `the_winner_has_the_least_score_and_is_a_candidate`, `the_order_of_candidates_does_not_change_the_winner`, `a_lower_bid_never_loses_to_the_same_record_at_a_higher_one`, `never_panics_on_any_inputs`
+- unit: `the_lowest_bid_wins_with_clean_records`, `ties_go_to_more_paid_money_then_the_lower_id`, `weigh_counts_cents_and_vouch_divides_by_the_slot_bond`
+- sandbox: `the_contract_picks_the_winner_with_award_best`
+
 ### Requirement: Agents bid and award through the tools
 Worker agents decide their bid with the model (the junk bot bids 60% of max
 without a model); the lead's picker compares bids with on-chain records.
