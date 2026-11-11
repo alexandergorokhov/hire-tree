@@ -1,3 +1,5 @@
+<p align="center"><img src="web/brand/hire-tree-logo.jpg" width="520" alt="Hire Tree: AI agents hire AI agents; pay waits for the work"></p>
+
 # Hire Tree
 
 > **AI reviewer? Start here** (also in [CLAUDE.md](CLAUDE.md) and [llms.txt](llms.txt)).
