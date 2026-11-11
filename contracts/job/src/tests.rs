@@ -1601,7 +1601,9 @@ fn zero_real_balance_notifies_the_parent_then_deletes_on_its_answer() {
 fn a_failed_parent_notice_keeps_the_child_alive_until_resume_close() {
     let mut j = paid_sub();
     balance_cb(&mut j, T1, ok(&u128_json(0)));
-    // child_closed panicked or ran out of gas on the parent.
+    // child_closed ran out of gas on the parent. The resend carries the
+    // caller's spare gas (`a_resent_notice_gives_child_closed_the_callers_
+    // spare_gas`), so this time it can succeed.
     assert!(matches!(ack(&mut j, false), PromiseOrValue::Value(false)));
     assert!(
         !deleted(),
@@ -1973,7 +1975,7 @@ fn known_child_closes_and_returns_funds() {
     let mut j = funded_root(100 * USD);
     hired(&mut j, WORKER, 30 * USD);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(5 * USD), None);
+    j.child_closed(U128(5 * USD), None, None);
     let v = j.get_job();
     assert_eq!(v.children_open, 0);
     assert_eq!(v.children[0].state, ChildState::Closed);
@@ -1988,7 +1990,7 @@ fn a_fired_childs_returned_pay_can_hire_the_runner_up() {
     hired(&mut j, WORKER, 100 * USD);
     assert_eq!(j.get_job().unallocated.0, 0);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(100 * USD), Some(false));
+    j.child_closed(U128(100 * USD), Some(false), None);
     assert_eq!(j.get_job().unallocated.0, 100 * USD);
     hired(&mut j, WORKER2, 90 * USD);
     // A child that paid its worker keeps that much allocated.
@@ -2002,7 +2004,7 @@ fn unknown_caller_cannot_close_a_child() {
     let mut j = funded_root(100 * USD);
     hired(&mut j, WORKER, 30 * USD);
     Ctx::new(ROOT, EVE).set();
-    j.child_closed(U128(1_000 * USD), None);
+    j.child_closed(U128(1_000 * USD), None, None);
 }
 
 #[test]
@@ -2012,11 +2014,11 @@ fn a_repeated_child_closed_credits_nothing() {
     let mut j = funded_root(100 * USD);
     hired(&mut j, WORKER, 30 * USD);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(5 * USD), Some(true));
+    j.child_closed(U128(5 * USD), Some(true), None);
     let once = j.get_job();
     assert_eq!(once.ft_balance.0, 75 * USD);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(5 * USD), Some(true));
+    j.child_closed(U128(5 * USD), Some(true), None);
     let twice = j.get_job();
     assert_eq!(twice.ft_balance.0, 75 * USD, "not credited twice");
     assert_eq!(twice.children_open, 0);
@@ -2036,7 +2038,7 @@ fn failed_child_cannot_close() {
         .set();
     j.on_child_created(idx);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(30 * USD), None);
+    j.child_closed(U128(30 * USD), None, None);
 }
 
 // ================================================================ two-level fold
@@ -2095,7 +2097,7 @@ fn two_level_tree_folds_bottom_up() {
     balance_cb(&mut gc, GC, ok(&u128_json(0)));
     assert_eq!(gc.get_job().status, "Settled");
     Ctx::new(T1, GC).at(AFTER).set();
-    t1.child_closed(U128(0), None);
+    t1.child_closed(U128(0), None, None);
 
     // t1's worker delivers inside the window; settle pays 30 and returns 2.
     Ctx::new(T1, WORKER).set();
@@ -2108,7 +2110,7 @@ fn two_level_tree_folds_bottom_up() {
     balance_cb(&mut t1, T1, ok(&u128_json(0)));
     assert_eq!(t1.get_job().status, "Settled");
     Ctx::new(ROOT, T1).at(AFTER).set();
-    root.child_closed(U128(2 * USD), None);
+    root.child_closed(U128(2 * USD), None, None);
 
     // Root (no fee): 60 unspent + 2 returned = 62 back to the client.
     assert_eq!(root.get_job().ft_balance.0, 62 * USD);
@@ -2865,12 +2867,29 @@ mod check_note_dispute {
 mod stuck_hire {
     use super::*;
 
+    /// Resume a stuck hire; the token answers `real` and the child's own
+    /// funding view is unavailable (as for a child that was never created).
     pub(super) fn resume_hire_with(j: &mut Job, idx: u32, real: PromiseResult) {
+        resume_hire_seen(j, idx, real, PromiseResult::Failed);
+    }
+
+    /// Resume a stuck hire; the token answers `real`, the child's
+    /// `get_funded` answers `funded`.
+    pub(super) fn resume_hire_seen(
+        j: &mut Job,
+        idx: u32,
+        real: PromiseResult,
+        funded: PromiseResult,
+    ) {
         let at = T0 + (RESUME_AFTER_SECS + 1) * NS_PER_SEC;
         Ctx::new(ROOT, EVE).at(at).set();
         j.resume_hire(idx);
         assert!(calls().contains(&(TOKEN.into(), "ft_balance_of".into())));
-        Ctx::new(ROOT, ROOT).at(at).results(vec![real]).set();
+        assert!(calls().contains(&(T1.into(), "get_funded".into())));
+        Ctx::new(ROOT, ROOT)
+            .at(at)
+            .results(vec![real, funded])
+            .set();
         j.on_resume_hire(idx);
     }
 
@@ -2923,29 +2942,11 @@ mod stuck_hire {
         j.on_child_created(idx);
     }
 
+    /// The static floors of the non-settle paths. The settle chain itself
+    /// is checked end to end at its minimum in `settle_gas`.
     #[test]
-    fn settle_at_minimum_gas_budget_reserves_enough_for_every_leg() {
-        // Static gas of each callback covers the static gas it schedules.
-        assert!(
-            GAS_ON_PAYEE_PAID.as_gas()
-                >= (GAS_FT_TRANSFER.as_gas() + GAS_ON_REST_PAID.as_gas())
-                    + Gas::from_tgas(5).as_gas()
-        );
-        assert!(
-            GAS_ON_REST_PAID.as_gas()
-                >= (GAS_FT_BALANCE_OF.as_gas() + GAS_ON_BALANCE_CHECKED.as_gas())
-                    + Gas::from_tgas(5).as_gas()
-        );
+    fn gas_minimums_cover_the_static_gas_they_schedule() {
         assert!(GAS_ON_RESUME.as_gas() >= GAS_ON_PAYEE_PAID.as_gas());
-        // The balance callback schedules child_closed, its ack callback
-        // (which deletes) and the record.
-        assert!(
-            GAS_ON_BALANCE_CHECKED.as_gas()
-                >= GAS_CHILD_CLOSED.as_gas()
-                    + GAS_ON_PARENT_ACK.as_gas()
-                    + GAS_RECORD.as_gas()
-                    + Gas::from_tgas(10).as_gas()
-        );
         assert!(
             GAS_RESUME_CLOSE_MIN.as_gas()
                 >= GAS_CHILD_CLOSED.as_gas()
@@ -2953,10 +2954,10 @@ mod stuck_hire {
                     + Gas::from_tgas(5).as_gas()
         );
         assert!(
-            GAS_SETTLE_MIN.as_gas()
-                >= GAS_STORAGE_DEPOSIT.as_gas()
-                    + GAS_FT_TRANSFER.as_gas()
-                    + GAS_ON_PAYEE_PAID.as_gas()
+            GAS_RESUME_HIRE_MIN.as_gas()
+                >= GAS_FT_BALANCE_OF.as_gas()
+                    + GAS_GET_FUNDED.as_gas()
+                    + GAS_ON_RESUME_HIRE.as_gas()
                     + Gas::from_tgas(20).as_gas()
         );
         assert!(
@@ -3741,7 +3742,7 @@ mod contractor {
         // The sub-job paid its worker and sent nothing back; the contractor
         // delivers and keeps its margin.
         Ctx::new(T1, GC).at(CLOSED).set();
-        t1.child_closed(U128(0), None);
+        t1.child_closed(U128(0), None, None);
         Ctx::new(T1, WORKER).at(CLOSED).set();
         t1.deliver("02".repeat(32), None, None, None, None);
         Ctx::new(T1, EVE).at(AFTER).set();
@@ -3756,7 +3757,7 @@ mod contractor {
         let mut t1 = contracted();
         // The sub-agent failed: its 9 come back as the contractor's pay.
         Ctx::new(T1, GC).at(CLOSED).set();
-        t1.child_closed(U128(9 * USD), None);
+        t1.child_closed(U128(9 * USD), None, None);
         assert_eq!(t1.ledger.amount, 20 * USD);
         assert_eq!(t1.get_job().ft_balance.0, 20 * USD);
     }
@@ -3766,7 +3767,7 @@ mod contractor {
         let mut t1 = contracted();
         assert!(t1.has_open_worker_hires());
         Ctx::new(T1, GC).at(CLOSED).set();
-        t1.child_closed(U128(0), None);
+        t1.child_closed(U128(0), None, None);
         assert!(!t1.has_open_worker_hires());
     }
 
@@ -3815,7 +3816,7 @@ mod contractor {
         // runner-up for the same 9.
         let mut t1 = contracted();
         Ctx::new(T1, GC).at(CLOSED).set();
-        t1.child_closed(U128(9 * USD), None);
+        t1.child_closed(U128(9 * USD), None, None);
         assert_eq!(t1.ledger.amount, 20 * USD);
         assert_eq!(t1.ledger.allocated, 0);
         Ctx::new(T1, WORKER).at(CLOSED).deposit(HIRE_MIN_NEAR).set();
@@ -3939,7 +3940,7 @@ mod bonds {
     fn a_paid_worker_gets_its_bond_back() {
         let mut j = awarded();
         Ctx::new(ROOT, T1).at(CLOSED).set();
-        j.child_closed(U128(0), Some(true));
+        j.child_closed(U128(0), Some(true), None);
         assert!(transfers().contains(&(WORKER.into(), BOND.as_yoctonear())));
         assert_eq!(events("bond_returned").len(), 1);
     }
@@ -3948,7 +3949,7 @@ mod bonds {
     fn junk_loses_its_bond_to_the_buyer() {
         let mut j = awarded();
         Ctx::new(ROOT, T1).at(CLOSED).set();
-        j.child_closed(U128(20 * USD), Some(false));
+        j.child_closed(U128(20 * USD), Some(false), None);
         assert!(transfers().contains(&(LEAD.into(), BOND.as_yoctonear())));
         assert_eq!(events("bond_kept").len(), 1);
         assert_eq!(j.children[0].bond, U128(0));
@@ -3992,7 +3993,7 @@ mod bonds {
     fn a_backer_of_paid_work_gets_its_near_back_plus_the_premium() {
         let mut j = backed_award();
         Ctx::new(ROOT, T1).at(CLOSED).set();
-        j.child_closed(U128(0), Some(true));
+        j.child_closed(U128(0), Some(true), None);
         let t = transfers();
         assert!(t.contains(&(EVE.into(), BACKING.as_yoctonear() + PREMIUM)));
         assert!(t.contains(&(WORKER.into(), BOND.as_yoctonear() - PREMIUM)));
@@ -4003,7 +4004,7 @@ mod bonds {
     fn a_backer_of_junk_loses_its_near_to_the_buyer() {
         let mut j = backed_award();
         Ctx::new(ROOT, T1).at(CLOSED).set();
-        j.child_closed(U128(20 * USD), Some(false));
+        j.child_closed(U128(20 * USD), Some(false), None);
         assert!(transfers().contains(&(LEAD.into(), BOND.as_yoctonear() + BACKING.as_yoctonear())));
         assert!(!transfers().iter().any(|(to, _)| to == EVE));
     }
@@ -5371,5 +5372,547 @@ mod intents_payout {
         Ctx::new(T1, EVE).at(AFTER).set();
         j.settle();
         assert_eq!(transfers(), vec![(WORKER.into(), (30 * USD).to_string())]);
+    }
+}
+
+// ================================================================ settle gas funnel
+
+mod settle_gas {
+    use super::*;
+
+    /// What a receipt's own wasm may burn on top of what the mock charges
+    /// (host calls and receipt fees, no wasm). The whole settle and delete
+    /// of a sub-job burns 24.4 Tgas on the local node, fees included.
+    const WASM: Gas = Gas::from_tgas(5);
+
+    /// Gas `name` left after running with `prepaid`, less its wasm. The
+    /// runtime hands this to the weighted calls it scheduled (`Self::ext`
+    /// callbacks; plain `function_call`s such as the transfers and the
+    /// record have weight 0 and get none).
+    fn spare(name: &str, prepaid: Gas) -> Gas {
+        let used = env::used_gas().as_gas();
+        let left = prepaid.as_gas().saturating_sub(used);
+        assert!(
+            left >= WASM.as_gas(),
+            "{name}: {} of {prepaid} left, less than {WASM} for its own wasm",
+            Gas::from_gas(left)
+        );
+        Gas::from_gas(left - WASM.as_gas())
+    }
+
+    fn plus(a: Gas, b: Gas) -> Gas {
+        Gas::from_gas(a.as_gas() + b.as_gas())
+    }
+
+    /// Weight of every function call scheduled in this receipt, by method.
+    fn weights() -> Vec<(String, u64)> {
+        get_created_receipts()
+            .into_iter()
+            .flat_map(|r| r.actions)
+            .filter_map(|a| match a {
+                MockAction::FunctionCallWeight {
+                    method_name,
+                    gas_weight,
+                    ..
+                } => Some((String::from_utf8(method_name).unwrap(), gas_weight.0)),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// The share of `spare` each weighted call gets.
+    fn share(spare: Gas) -> Gas {
+        let total: u64 = weights().iter().map(|w| w.1).sum();
+        assert!(total > 0, "no weighted call to hand the spare gas to");
+        Gas::from_gas(spare.as_gas() / total)
+    }
+
+    /// Run a settle callback with its static gas plus `extra`.
+    fn leg(j: &mut Job, cur: &str, now: u64, name: &str, extra: Gas, r: PromiseResult) -> Gas {
+        let stat = match name {
+            "on_payee_paid" => GAS_ON_PAYEE_PAID,
+            "on_rest_paid" | "on_swept" => GAS_ON_REST_PAID,
+            "on_balance_checked" => GAS_ON_BALANCE_CHECKED,
+            "on_resume_balance" => GAS_ON_RESUME,
+            _ => unreachable!(),
+        };
+        let prepaid = plus(stat, extra);
+        let a = attempt(j);
+        Ctx::new(cur, cur)
+            .at(now)
+            .gas(prepaid)
+            .results(vec![r])
+            .set();
+        match name {
+            "on_payee_paid" => drop(j.on_payee_paid(a)),
+            "on_rest_paid" => drop(j.on_rest_paid(a)),
+            "on_swept" => drop(j.on_swept(a)),
+            "on_balance_checked" => drop(j.on_balance_checked(a)),
+            _ => drop(j.on_resume_balance(a)),
+        }
+        share(spare(name, prepaid))
+    }
+
+    /// A sub-job's last step: the parent's answer reaches `on_parent_ack`
+    /// with its static gas plus `extra`, and it deletes the account.
+    fn acked(j: &mut Job, extra: Gas) {
+        let prepaid = plus(GAS_ON_PARENT_ACK, extra);
+        let a = j.get_job().close_pending.unwrap().attempt;
+        Ctx::new(T1, T1)
+            .at(STUCK)
+            .gas(prepaid)
+            .results(vec![ok(b"")])
+            .set();
+        drop(j.on_parent_ack(a));
+        spare("on_parent_ack", prepaid);
+        assert_eq!(delete_to(), Some(acc(ROOT)));
+    }
+
+    /// A paid sub-job with a worker and a rest, from settle at exactly
+    /// `GAS_SETTLE_MIN` to the parent notice and the delete. `via` routes
+    /// the pay with `ft_transfer_call`; `stray` tokens make the balance leg
+    /// sweep once.
+    fn sub_funnel(via: bool, stray: u128) {
+        let mut j = delivered_sub(30 * USD, 35 * USD);
+        if via {
+            Ctx::new(T1, WORKER).set();
+            j.set_payout_via(Some(acc(EVE)));
+        }
+        Ctx::new(T1, EVE).at(AFTER).gas(GAS_SETTLE_MIN).set();
+        drop(j.settle());
+        let mut x = share(spare("settle", GAS_SETTLE_MIN));
+        let paid = if via {
+            ok(&u128_json(30 * USD))
+        } else {
+            ok(b"")
+        };
+        x = leg(&mut j, T1, AFTER, "on_payee_paid", x, paid);
+        x = leg(&mut j, T1, AFTER, "on_rest_paid", x, ok(b""));
+        if stray > 0 {
+            x = leg(
+                &mut j,
+                T1,
+                AFTER,
+                "on_balance_checked",
+                x,
+                ok(&u128_json(stray)),
+            );
+            x = leg(&mut j, T1, AFTER, "on_swept", x, ok(b""));
+        }
+        x = leg(
+            &mut j,
+            T1,
+            AFTER,
+            "on_balance_checked",
+            x,
+            ok(&u128_json(0)),
+        );
+        assert_eq!(j.get_job().status, "Settled");
+        assert!(calls().contains(&(ROOT.into(), "child_closed".into())));
+        acked(&mut j, x);
+    }
+
+    #[test]
+    fn settle_at_minimum_gas_budget_reserves_enough_for_every_leg() {
+        sub_funnel(false, 0);
+    }
+
+    #[test]
+    fn settle_at_minimum_gas_routed_pay_reaches_the_delete() {
+        sub_funnel(true, 0);
+    }
+
+    #[test]
+    fn settle_at_minimum_gas_sweeps_stray_tokens_and_reaches_the_delete() {
+        sub_funnel(false, 7);
+    }
+
+    #[test]
+    fn settle_at_minimum_gas_root_reaches_the_delete() {
+        let mut j = funded_root(10 * USD);
+        Ctx::new(ROOT, CLIENT).set();
+        j.approve();
+        Ctx::new(ROOT, EVE).at(AFTER).gas(GAS_SETTLE_MIN).set();
+        drop(j.settle());
+        let mut x = share(spare("settle", GAS_SETTLE_MIN));
+        x = leg(&mut j, ROOT, AFTER, "on_rest_paid", x, ok(b""));
+        Ctx::new(ROOT, ROOT)
+            .at(AFTER)
+            .gas(plus(GAS_ON_BALANCE_CHECKED, x))
+            .results(vec![ok(&u128_json(0))])
+            .set();
+        drop(j.on_balance_checked(attempt(&j)));
+        spare("on_balance_checked", plus(GAS_ON_BALANCE_CHECKED, x));
+        assert_eq!(j.get_job().status, "Settled");
+    }
+
+    /// `resume_settle` at exactly `GAS_SETTLE_MIN` from a stuck payee leg:
+    /// the rest leg, the balance leg, the notice and the delete still fit.
+    #[test]
+    fn resume_settle_at_minimum_gas_reaches_the_delete() {
+        let mut j = settling_sub();
+        Ctx::new(T1, LEAD).at(STUCK).gas(GAS_SETTLE_MIN).set();
+        drop(j.resume_settle());
+        let mut x = share(spare("resume_settle", GAS_SETTLE_MIN));
+        // The payee was paid: 5 left of 35.
+        x = leg(
+            &mut j,
+            T1,
+            STUCK,
+            "on_resume_balance",
+            x,
+            ok(&u128_json(5 * USD)),
+        );
+        x = leg(&mut j, T1, STUCK, "on_rest_paid", x, ok(b""));
+        x = leg(
+            &mut j,
+            T1,
+            STUCK,
+            "on_balance_checked",
+            x,
+            ok(&u128_json(0)),
+        );
+        acked(&mut j, x);
+    }
+
+    /// `resume_close` at exactly its minimum: the notice and the delete fit.
+    #[test]
+    fn resume_close_at_minimum_gas_reaches_the_delete() {
+        let mut j = paid_sub();
+        balance_cb(&mut j, T1, ok(&u128_json(0)));
+        ack(&mut j, false);
+        Ctx::new(T1, EVE).at(AFTER).gas(GAS_RESUME_CLOSE_MIN).set();
+        drop(j.resume_close());
+        let x = share(spare("resume_close", GAS_RESUME_CLOSE_MIN));
+        acked(&mut j, x);
+    }
+}
+
+// ================================================================ parent notice
+
+mod close_notice {
+    use super::stuck_hire::resume_hire_seen;
+    use super::*;
+
+    const WASM: Gas = Gas::from_tgas(5);
+
+    /// (gas, weight) of each scheduled call to `method`.
+    fn gas_of(method: &str) -> Vec<(Gas, u64)> {
+        get_created_receipts()
+            .into_iter()
+            .flat_map(|r| r.actions)
+            .filter_map(|a| match a {
+                MockAction::FunctionCallWeight {
+                    method_name,
+                    prepaid_gas,
+                    gas_weight,
+                    ..
+                } if method_name == method.as_bytes() => Some((prepaid_gas, gas_weight.0)),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn the_notice_reports_what_the_child_was_funded_with() {
+        let mut j = paid_sub();
+        balance_cb(&mut j, T1, ok(&u128_json(0)));
+        assert_eq!(call_args("child_closed")["funded"], (35 * USD).to_string());
+    }
+
+    /// A gas failure of `child_closed` must not repeat forever: the resent
+    /// notice gets the spare gas of whoever calls `resume_close`, not a
+    /// fixed 10 Tgas.
+    #[test]
+    fn a_resent_notice_gives_child_closed_the_callers_spare_gas() {
+        let mut j = paid_sub();
+        balance_cb(&mut j, T1, ok(&u128_json(0)));
+        ack(&mut j, false);
+        let prepaid = Gas::from_tgas(300);
+        Ctx::new(T1, EVE).at(AFTER).gas(prepaid).set();
+        drop(j.resume_close());
+        let cc = gas_of("child_closed");
+        assert_eq!(cc.len(), 1);
+        let (stat, w) = cc[0];
+        assert!(w > 0, "child_closed must take a share of the spare gas");
+        let total_w: u64 = gas_of("on_parent_ack").iter().map(|x| x.1).sum::<u64>() + w;
+        let spare = prepaid.as_gas() - env::used_gas().as_gas();
+        let got = stat.as_gas() + spare / total_w * w;
+        assert!(
+            got >= Gas::from_tgas(100).as_gas(),
+            "child_closed gets only {}",
+            Gas::from_gas(got)
+        );
+    }
+
+    /// `child_closed` on the fullest parent there can be (16 children, 16
+    /// bid slots of 16 backed, sealed bids), state read and written as on
+    /// chain, with a bond and a backer to pay: fits its static gas.
+    #[test]
+    fn child_closed_fits_its_gas_on_a_full_parent() {
+        let mut j = funded_root(1_000 * USD);
+        let idx = hired(&mut j, WORKER, 30 * USD) as usize;
+        j.children[idx].bond = U128(NearToken::from_near(1).as_yoctonear());
+        j.children[idx].backer = Some(acc("backer-with-a-long-name-0000000.test"));
+        j.children[idx].backed = U128(NearToken::from_near(1).as_yoctonear());
+        j.children[idx].premium = U128(NearToken::from_millinear(100).as_yoctonear());
+        while j.children.len() < MAX_CHILDREN {
+            let mut c = j.children[idx].clone();
+            c.account = acc(&format!(
+                "c{:02}-with-a-long-name.job-1.hiretree.test",
+                j.children.len()
+            ));
+            c.state = ChildState::Closed;
+            j.children.push(c);
+        }
+        let long = |p: &str, n: usize| acc(&format!("{p}-{n:02}-with-a-long-account-name.test"));
+        for s in 0..MAX_BID_SLOTS {
+            j.bid_slots.push(BidSlot {
+                spec_hash: spec(),
+                max: U128(30 * USD),
+                closes_ns: U64(AFTER),
+                bids: (0..MAX_BIDS)
+                    .map(|b| Bid {
+                        worker: long("bidder", b),
+                        price: U128(20 * USD),
+                        bond: U128(NearToken::from_near(1).as_yoctonear()),
+                        commit: Some("ef".repeat(32)),
+                        offer: U128(1),
+                        backer: Some(long("backer", b)),
+                        backed: U128(NearToken::from_near(1).as_yoctonear()),
+                    })
+                    .collect(),
+                awarded: Some(long("bidder", s)),
+                bond: U128(NearToken::from_near(1).as_yoctonear()),
+                reveal_ns: U64(AFTER),
+            });
+        }
+        Ctx::new(ROOT, ROOT).set();
+        env::state_write(&j);
+        Ctx::new(ROOT, T1).gas(GAS_CHILD_CLOSED).set();
+        let mut p: Job = env::state_read().expect("state");
+        p.child_closed(U128(0), Some(true), Some(U128(30 * USD)));
+        env::state_write(&p);
+        let used = env::used_gas().as_gas();
+        assert!(
+            used + WASM.as_gas() <= GAS_CHILD_CLOSED.as_gas(),
+            "child_closed used {} of {GAS_CHILD_CLOSED}",
+            Gas::from_gas(used)
+        );
+        assert_eq!(p.children[idx].state, ChildState::Closed);
+    }
+
+    /// Hire t1 (30): created, funded on the token, but the parent's fund
+    /// callback failed (`hire_unclear`), so it still lists t1 as Funding.
+    fn hire_unclear() -> (Job, u32) {
+        let mut j = funded_root(100 * USD);
+        let idx = hire_one(&mut j, WORKER, 30 * USD);
+        Ctx::new(ROOT, ROOT).results(vec![ok(b"")]).set();
+        j.on_child_created(idx);
+        Ctx::new(ROOT, ROOT)
+            .results(vec![PromiseResult::Failed])
+            .set();
+        assert!(!j.on_child_funded(idx));
+        assert_eq!(
+            j.get_job().children[idx as usize].state,
+            ChildState::Funding
+        );
+        (j, idx)
+    }
+
+    fn books_after_t1_paid_its_worker(j: &Job) {
+        let v = j.get_job();
+        assert_eq!(v.children[0].state, ChildState::Closed);
+        assert_eq!(v.children_pending, 0);
+        assert_eq!(v.children_open, 0);
+        // 30 went to t1, all of it to its worker: the parent holds 70.
+        assert_eq!(v.ft_balance.0, 70 * USD);
+        assert_eq!(v.allocated.0, 30 * USD);
+    }
+
+    /// Review: the fund callback was lost, t1 worked and settled before
+    /// anyone resumed the hire. Its notice says it was funded: the parent
+    /// closes it, and a later `resume_hire` has nothing left to do.
+    #[test]
+    fn a_funded_child_whose_fund_callback_was_lost_closes_on_its_notice() {
+        let (mut j, idx) = hire_unclear();
+        Ctx::new(ROOT, T1).set();
+        j.child_closed(U128(0), Some(true), Some(U128(30 * USD)));
+        books_after_t1_paid_its_worker(&j);
+        assert_eq!(events("child_closed").len(), 1);
+        // The parent can settle now.
+        let at = T0 + (RESUME_AFTER_SECS + 1) * NS_PER_SEC;
+        Ctx::new(ROOT, EVE).at(at).set();
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| j.resume_hire(idx)));
+        assert!(r.is_err(), "resume_hire must refuse a closed child");
+    }
+
+    /// The notice arrives while `resume_hire` is reading: the child closes,
+    /// and the late resume answer cannot act.
+    #[test]
+    #[should_panic(expected = "hire is not being resumed")]
+    fn a_notice_during_resume_hire_closes_the_child_and_the_late_answer_is_refused() {
+        let (mut j, idx) = hire_unclear();
+        let at = T0 + (RESUME_AFTER_SECS + 1) * NS_PER_SEC;
+        Ctx::new(ROOT, EVE).at(at).set();
+        j.resume_hire(idx);
+        Ctx::new(ROOT, T1).at(at).set();
+        j.child_closed(U128(0), Some(true), Some(U128(30 * USD)));
+        books_after_t1_paid_its_worker(&j);
+        Ctx::new(ROOT, ROOT)
+            .at(at)
+            .results(vec![ok(&u128_json(0)), ok(&u128_json(30 * USD))])
+            .set();
+        j.on_resume_hire(idx);
+    }
+
+    /// Review: t1 already paid out (balance 0) when `resume_hire` reads it.
+    /// Its own books say it was funded: it is opened, not rolled back, and
+    /// its notice is then credited.
+    #[test]
+    fn resume_hire_opens_a_funded_child_that_already_paid_out() {
+        let (mut j, idx) = hire_unclear();
+        resume_hire_seen(&mut j, idx, ok(&u128_json(0)), ok(&u128_json(30 * USD)));
+        let v = j.get_job();
+        assert_eq!(v.children[0].state, ChildState::Open);
+        assert_eq!(v.children_pending, 0);
+        assert_eq!(v.children_open, 1);
+        assert!(!calls().iter().any(|c| c.1 == "close_unfunded"));
+        Ctx::new(ROOT, T1).set();
+        j.child_closed(U128(0), Some(true), None);
+        books_after_t1_paid_its_worker(&j);
+    }
+
+    #[test]
+    fn resume_hire_still_rolls_back_a_child_that_was_never_funded() {
+        let (mut j, idx) = hire_unclear();
+        resume_hire_seen(&mut j, idx, ok(&u128_json(0)), ok(&u128_json(0)));
+        let v = j.get_job();
+        assert_eq!(v.children[0].state, ChildState::Failed);
+        assert_eq!(v.ft_balance.0, 100 * USD);
+        assert!(calls().contains(&(T1.into(), "close_unfunded".into())));
+    }
+
+    /// An unfunded child (its window lapsed, anyone settled it) closing
+    /// while the parent still lists the hire in flight: the hire is undone
+    /// and the child may delete itself.
+    #[test]
+    fn an_unfunded_child_closing_while_its_hire_is_in_flight_rolls_it_back() {
+        let (mut j, _) = hire_unclear();
+        Ctx::new(ROOT, T1).set();
+        j.child_closed(U128(0), Some(false), Some(U128(0)));
+        let v = j.get_job();
+        assert_eq!(v.children[0].state, ChildState::Failed);
+        assert_eq!(v.children_pending, 0);
+        assert_eq!(v.ft_balance.0, 100 * USD);
+        assert_eq!(v.allocated.0, 0);
+    }
+
+    /// A child that does not say what it was funded with (older code) is
+    /// still refused while its hire is in flight.
+    #[test]
+    #[should_panic(expected = "caller is not an open child")]
+    fn a_notice_without_funding_from_a_hire_in_flight_is_refused() {
+        let (mut j, _) = hire_unclear();
+        Ctx::new(ROOT, T1).set();
+        j.child_closed(U128(0), Some(true), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "not enough gas for resume_hire")]
+    fn resume_hire_needs_gas() {
+        let (mut j, idx) = hire_unclear();
+        let at = T0 + (RESUME_AFTER_SECS + 1) * NS_PER_SEC;
+        Ctx::new(ROOT, EVE).at(at).gas(Gas::from_tgas(20)).set();
+        j.resume_hire(idx);
+    }
+
+    /// A resume whose answer never ran (out of gas) can run again later.
+    #[test]
+    fn a_stuck_resume_hire_can_run_again() {
+        let (mut j, idx) = hire_unclear();
+        let at = T0 + (RESUME_AFTER_SECS + 1) * NS_PER_SEC;
+        Ctx::new(ROOT, EVE).at(at).set();
+        j.resume_hire(idx);
+        let again = at + (RESUME_AFTER_SECS + 1) * NS_PER_SEC;
+        Ctx::new(ROOT, EVE).at(again).set();
+        j.resume_hire(idx);
+        Ctx::new(ROOT, ROOT)
+            .at(again)
+            .results(vec![ok(&u128_json(30 * USD)), ok(&u128_json(30 * USD))])
+            .set();
+        assert!(j.on_resume_hire(idx));
+        assert_eq!(j.get_job().children_open, 1);
+    }
+
+    /// `on_resume_hire` rolls back at its static gas alone (a resume at
+    /// the minimum): the close request and both bond transfers fit.
+    #[test]
+    fn resume_hire_rollback_fits_its_static_gas() {
+        let (mut j, idx) = hire_unclear();
+        j.children[idx as usize].bond = U128(NearToken::from_near(1).as_yoctonear());
+        j.children[idx as usize].backer = Some(acc(EVE));
+        j.children[idx as usize].backed = U128(NearToken::from_near(1).as_yoctonear());
+        let at = T0 + (RESUME_AFTER_SECS + 1) * NS_PER_SEC;
+        Ctx::new(ROOT, EVE).at(at).gas(GAS_RESUME_HIRE_MIN).set();
+        drop(j.resume_hire(idx));
+        let used = env::used_gas();
+        assert!(
+            used.as_gas() + WASM.as_gas() <= GAS_RESUME_HIRE_MIN.as_gas(),
+            "resume_hire used {used}"
+        );
+        Ctx::new(ROOT, ROOT)
+            .at(at)
+            .gas(GAS_ON_RESUME_HIRE)
+            .results(vec![ok(&u128_json(0)), ok(&u128_json(0))])
+            .set();
+        j.on_resume_hire(idx);
+        let used = env::used_gas();
+        assert!(
+            used.as_gas() + WASM.as_gas() <= GAS_ON_RESUME_HIRE.as_gas(),
+            "on_resume_hire used {used}"
+        );
+        assert_eq!(j.get_job().children[0].state, ChildState::Failed);
+    }
+}
+
+mod close_notice_repeat {
+    use super::*;
+
+    /// The unfunded child never saw the parent's answer and sends the same
+    /// notice again: it succeeds (so the child can delete) and moves nothing.
+    #[test]
+    fn a_repeated_notice_from_an_unfunded_child_is_a_no_op() {
+        let mut j = funded_root(100 * USD);
+        let idx = hire_one(&mut j, WORKER, 30 * USD);
+        Ctx::new(ROOT, ROOT).results(vec![ok(b"")]).set();
+        j.on_child_created(idx);
+        Ctx::new(ROOT, T1).set();
+        j.child_closed(U128(0), Some(false), Some(U128(0)));
+        let before = j.get_job();
+        assert_eq!(before.children[0].state, ChildState::Failed);
+        Ctx::new(ROOT, T1).set();
+        j.child_closed(U128(0), Some(false), Some(U128(0)));
+        let after = j.get_job();
+        assert_eq!(after.ft_balance, before.ft_balance);
+        assert_eq!(after.allocated, before.allocated);
+        assert_eq!(after.children_pending, 0);
+        assert_eq!(events("child_closed_again").len(), 1);
+        assert!(get_created_receipts().is_empty(), "no bond paid twice");
+    }
+
+    /// A child the parent marked Failed that says it was funded is still
+    /// refused: the parent cannot tell what it would be crediting.
+    #[test]
+    #[should_panic(expected = "caller is not an open child")]
+    fn a_funded_notice_from_a_failed_child_is_refused() {
+        let mut j = funded_root(100 * USD);
+        let idx = hire_one(&mut j, WORKER, 30 * USD);
+        Ctx::new(ROOT, ROOT).results(vec![ok(b"")]).set();
+        j.on_child_created(idx);
+        Ctx::new(ROOT, T1).set();
+        j.child_closed(U128(0), Some(false), Some(U128(0)));
+        Ctx::new(ROOT, T1).set();
+        j.child_closed(U128(0), Some(true), Some(U128(30 * USD)));
     }
 }

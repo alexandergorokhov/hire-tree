@@ -26,6 +26,8 @@ use std::sync::Arc;
 const USD: u128 = 1_000_000;
 const SPEC: &str = "abababababababababababababababababababababababababababababababab";
 const SIGNER: &str = "1111111111111111111111111111111111111111";
+/// The job's `GAS_SETTLE_MIN`.
+const SETTLE_MIN_TGAS: u64 = 250;
 /// One yoctoNEAR per byte costs 1e19 yocto: NEAR's storage price.
 const YOCTO_PER_BYTE: u128 = 10_000_000_000_000_000_000;
 
@@ -123,10 +125,30 @@ impl World {
         args: Value,
         deposit: NearToken,
     ) -> Result<Value, String> {
+        self.call_gas(
+            who,
+            contract,
+            method,
+            args,
+            deposit,
+            NearGas::from_tgas(300),
+        )
+        .await
+    }
+
+    async fn call_gas(
+        &self,
+        who: &Acc,
+        contract: &AccountId,
+        method: &str,
+        args: Value,
+        deposit: NearToken,
+        gas: NearGas,
+    ) -> Result<Value, String> {
         let r = Contract(contract.clone())
             .call_function(method, args)
             .transaction()
-            .gas(NearGas::from_tgas(300))
+            .gas(gas)
             .deposit(deposit)
             .with_signer(who.id.clone(), who.signer.clone())
             .send_to(&self.net)
@@ -428,9 +450,21 @@ async fn g1_delete_only_after_confirmed_transfer_and_zero_balance() {
     //    pays it 30, the rest (5) reaches the parent. The balance check then
     //    sees 1 unit the ledger never had: it is not booked (it could be a
     //    refunded ft_transfer_call in flight) but swept to the parent; only
-    //    after a second check reads 0 is the account deleted.
+    //    after a second check reads 0 is the account deleted. Settle gets
+    //    exactly its minimum (the job's GAS_SETTLE_MIN, 250 Tgas): payee
+    //    registration, both legs, one sweep, the parent notice and the
+    //    delete all fit in it.
     let (root_near_before, _, _) = w.account_state(&root).await.unwrap();
-    w.ok(&lead, &t1, "settle", json!({})).await;
+    w.call_gas(
+        &lead,
+        &t1,
+        "settle",
+        json!({}),
+        NearToken::from_yoctonear(0),
+        NearGas::from_tgas(SETTLE_MIN_TGAS),
+    )
+    .await
+    .unwrap_or_else(|e| panic!("settle: {e}"));
     assert_eq!(w.ft(&worker.id).await, 30 * USD);
     assert!(w.account_state(&t1).await.is_none(), "t1 deleted");
     let (root_near_after, _, _) = w.account_state(&root).await.unwrap();

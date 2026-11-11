@@ -20,9 +20,9 @@ it were real. Each row names the test that shows the answer.
 | Strand tokens by deleting an account with a balance | delete only in the balance callback when the token says 0; a surplus is swept up the tree first | `stray_tokens_are_swept_up_then_the_job_deletes`, sandbox G1 |
 | Lock a job forever with a refused `ft_transfer_call` timed to land during the balance check (the read sees tokens the token refunds a block later) | a surplus is never booked; it is swept, and counts only if the sweep transfer succeeds; a failed sweep changes nothing | `phantom_surplus_from_a_refunded_transfer_call_cannot_lock_settle` |
 | A worker never registers on the token, so settle can never pay it and the tree is stuck | settle and note sale register the payee first (NEP-145 refunds if already registered) | sandbox G1, `settle_delivered_sub_registers_then_pays_worker_first` |
-| A settle callback runs out of gas and the job is stuck in Settling | settle needs 150 Tgas (every leg's callback budget fits); one transfer in flight per leg; `resume_settle` after 10 min decides from the real balance; attempt numbers refuse the late callback | `resume_*`, `late_original_callback_cannot_act_after_resume`, `settle_at_minimum_gas_budget_reserves_enough_for_every_leg` |
+| A settle callback runs out of gas and the job is stuck in Settling | settle needs 250 Tgas (every path of the chain, receipt fees included, reaches the delete at exactly that, checked end to end); one transfer in flight per leg; `resume_settle` after 10 min decides from the real balance; attempt numbers refuse the late callback | `resume_*`, `late_original_callback_cannot_act_after_resume`, `settle_at_minimum_gas_budget_reserves_enough_for_every_leg` |
 | A phantom transfer during `resume_settle`'s read makes a paid leg look unpaid (payee paid twice) | surplus never booked; only the manager may resume in the first day, so the payee cannot pick the moment | `resume_never_books_extra_tokens`, `stranger_cannot_resume_in_the_first_day` |
-| A hire's callbacks are lost or the fund result is ambiguous: tree stuck in "children pending" | `resume_hire` after 10 min reads the child's real balance: full opens it, zero rolls back and closes it | `stuck_hire::*`, `fund_failure_waits_then_resume_rolls_back_and_closes_child` |
+| A hire's callbacks are lost or the fund result is ambiguous: tree stuck in "children pending" | `resume_hire` after 10 min reads the child's own books and its real balance: funded opens it (even if it already paid out), never funded and empty rolls back and closes it; a funded child that settles first is closed by its own `child_closed`, which says what it was funded with | `stuck_hire::*`, `fund_failure_waits_then_resume_rolls_back_and_closes_child`, `resume_hire_opens_a_funded_child_that_already_paid_out`, `a_funded_child_whose_fund_callback_was_lost_closes_on_its_notice` |
 | A sub-job runs out of NEAR after ~10 hires and a hire callback aborts | each hire must attach 0.035 NEAR; the job keeps 5 mNEAR for the child's token registration and its own record | `hire_creates_child_from_global_contract` |
 | The root's final payout to an unregistered manager fails forever | the root registers the manager first (refunded if already registered) | `root_fee_and_bond_go_to_the_manager_the_rest_back_to_the_client` (asserts `storage_deposit` for the manager first) |
 | Spam posts drain the factory's NEAR | each post uses 0.06 NEAR the client prepaid; budget >= 1 fUSD; a window under 60 s is refused, and a root that was never funded still settles (no stuck roots) | factory `post_without_prepaid_near_refunded`, `dust_budget_refunded`, `a_window_shorter_than_a_minute_is_refused`; job `a_root_that_was_never_funded_still_settles` |
@@ -207,9 +207,17 @@ for the bid calls.
   own key and the shared tool list. Outside agents join through `hiretree mcp`.
 - `child_closed` is acknowledged: a settled child deletes itself only after
   the parent took the notice; if it failed, the child stays Settled with
-  `close_pending` and anyone can `resume_close` it; a repeat credits nothing
+  `close_pending` and anyone can `resume_close` it, and the resend carries
+  the caller's spare gas, so an out-of-gas notice can succeed the second
+  time; a repeat credits nothing
   (`a_failed_parent_notice_keeps_the_child_alive_until_resume_close`,
-  `a_repeated_child_closed_credits_nothing`). `close_unfunded` is still
+  `a_resent_notice_gives_child_closed_the_callers_spare_gas`,
+  `a_repeated_child_closed_credits_nothing`). A notice from a child whose
+  hire the parent still lists in flight is decided by the `funded` it
+  carries. Limit: a child the parent has marked Failed is still refused for
+  good. `resume_hire` now reads the child's books, so a funded child is
+  marked Failed only if its `get_funded` read fails while the token reports
+  0 (the case of a child that was never created). `close_unfunded` is still
   fire-and-forget: the parent's books are rolled back first, so if it
   failed only the empty child's few mNEAR of storage would stay behind.
 - NEAR from a failed create goes back to the job, not the manager (a few

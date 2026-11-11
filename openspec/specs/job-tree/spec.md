@@ -41,8 +41,13 @@ The job keeps `HIRE_KEEP_NEAR` (5 mNEAR: the child's token registration and
 its own child record) and sends the rest to the child, so a job never pays
 for hires from its own storage. State before promises; a create failure
 rolls back. A failed fund call is ambiguous, so the hire stays in flight
-until `resume_hire` (anyone, after `RESUME_AFTER_SECS`) reads the child's
-real balance: full -> Open, zero -> rolled back and the child closed.
+until `resume_hire` (anyone, after `RESUME_AFTER_SECS`, at least 100 Tgas)
+reads the child's own books (`get_funded`) and its real balance: funded
+with its total -> Open, even if it already paid out and holds nothing;
+never funded and holding nothing (or no child to answer, and nothing) ->
+rolled back and the child closed. A resume whose answer never came back can
+run again after `RESUME_AFTER_SECS`.
+- unit: `resume_hire_opens_a_funded_child_that_already_paid_out`, `resume_hire_still_rolls_back_a_child_that_was_never_funded`, `resume_hire_needs_gas`, `a_stuck_resume_hire_can_run_again`, `resume_hire_rollback_fits_its_static_gas`
 - unit: `hire_creates_child_from_global_contract`, `non_manager_cannot_hire`, `hire_over_budget_refused`, `bond_cannot_be_hired_with`, `create_failure_rolls_back`, `fund_failure_waits_then_resume_rolls_back_and_closes_child`, `lost_hire_callback_with_funded_child_opens_it`, `lost_hire_callback_with_empty_child_rolls_back`, `unknown_child_balance_keeps_waiting`, `resume_hire_too_early`, `late_create_callback_after_resume_refused`, `partial_funding_keeps_books_right`, `funding_callback_cannot_run_twice`
 - sandbox: `g4_global_contract_and_hire_create_sub_accounts`
 

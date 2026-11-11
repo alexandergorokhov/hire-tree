@@ -27,6 +27,20 @@ open or in-flight child, and not while disputed.
 - THEN it panics "illegal transition"
 - unit: `double_settle_refused`
 
+### Requirement: Enough gas for the whole chain
+`settle` and `resume_settle` SHALL refuse less than `GAS_SETTLE_MIN` (250
+Tgas). Each callback's static gas is a floor; the gas the call is given
+beyond its own use flows down the chain to the next callback. At exactly the
+minimum every path reaches the delete with 5 Tgas per step to spare for its
+own wasm, counting receipt fees: a paid sub-job with a rest, a routed payee,
+one sweep of stray tokens, a root, and a resume from a stuck payee leg. The
+unit tests use near-sdk's test fee table, which charges more per receipt than
+the local node does, so the minimum is conservative.
+
+#### Scenario: Settle at the minimum
+- unit: `settle_at_minimum_gas_budget_reserves_enough_for_every_leg`, `settle_at_minimum_gas_routed_pay_reaches_the_delete`, `settle_at_minimum_gas_sweeps_stray_tokens_and_reaches_the_delete`, `settle_at_minimum_gas_root_reaches_the_delete`, `resume_settle_at_minimum_gas_reaches_the_delete`, `settle_with_low_gas_refused`
+- sandbox: G1 settles with exactly 250 Tgas attached (payee registration, one sweep, the parent notice and the delete)
+
 ### Requirement: One transfer in flight at a time
 Settle SHALL run in legs: payee leg (register the payee on the token, then
 pay `amount` only if the work was delivered), rest leg (the rest to the
@@ -68,9 +82,14 @@ detached (a callback may not return a joint promise).
 - unit: `zero_real_balance_notifies_the_parent_then_deletes_on_its_answer`, `root_delete_goes_to_factory_without_child_closed`; sandbox: G1
 
 #### Scenario: The parent's notice fails
-- WHEN `child_closed` fails on the parent (a panic, out of gas)
-- THEN the child is not deleted: it stays Settled with `close_pending` (not in flight) and emits `close_pending`; anyone may call `resume_close` at once, which sends the same notice again (the record is not sent again) and deletes after the parent answers
-- unit: `a_failed_parent_notice_keeps_the_child_alive_until_resume_close`, `resume_close_needs_gas`, `parent_ack_rejects_outside_callers`
+- WHEN `child_closed` fails on the parent (out of gas on a large parent state)
+- THEN the child is not deleted: it stays Settled with `close_pending` (not in flight) and emits `close_pending`; anyone may call `resume_close` at once, which sends the same notice again (the record is not sent again) and deletes after the parent answers. `child_closed` is sent with weight 1, so it gets its 10 Tgas floor plus a share of the caller's spare gas: a resend with more gas attached can succeed where the first send ran out. A panic that a resend cannot change (an unknown or failed child) stays a panic, and the child stays Settled
+- unit: `a_failed_parent_notice_keeps_the_child_alive_until_resume_close`, `a_resent_notice_gives_child_closed_the_callers_spare_gas`, `child_closed_fits_its_gas_on_a_full_parent`, `resume_close_needs_gas`, `resume_close_at_minimum_gas_reaches_the_delete`, `parent_ack_rejects_outside_callers`
+
+#### Scenario: The parent still lists the hire in flight
+- WHEN a funded child settles while its parent still lists the hire as Funding or Resuming (the parent's fund callback was lost or its result unclear, and nobody has resumed it yet)
+- THEN the notice carries `funded` (the child's own books): funded -> the parent opens the hire, closes it and credits `returned` against the allocation (children pending drops, a late fund or resume callback then does nothing); funded with nothing -> the hire is rolled back. A notice without `funded` (older code) is refused as before
+- unit: `the_notice_reports_what_the_child_was_funded_with`, `a_funded_child_whose_fund_callback_was_lost_closes_on_its_notice`, `a_notice_during_resume_hire_closes_the_child_and_the_late_answer_is_refused`, `an_unfunded_child_closing_while_its_hire_is_in_flight_rolls_it_back`, `a_notice_without_funding_from_a_hire_in_flight_is_refused`
 
 #### Scenario: The parent's answer never comes back
 - WHEN the callback after `child_closed` never ran
@@ -83,7 +102,7 @@ detached (a callback may not return a joint promise).
 #### Scenario: A repeated notice credits nothing
 - WHEN a child already closed on the parent sends `child_closed` again (it never saw the first answer)
 - THEN the call succeeds (so the child can delete) and changes nothing: no second credit, no bond paid twice; a stranger or a failed child is still refused
-- unit: `a_repeated_child_closed_credits_nothing`, `unknown_caller_cannot_close_a_child`, `failed_child_cannot_close`
+- unit: `a_repeated_child_closed_credits_nothing`, `unknown_caller_cannot_close_a_child`, `failed_child_cannot_close`, `a_repeated_notice_from_an_unfunded_child_is_a_no_op`, `a_funded_notice_from_a_failed_child_is_refused`
 
 #### Scenario: Tokens above the ledger
 - WHEN the balance check reads more than the ledger holds (stray tokens, or a refused `ft_transfer_call` that the token will refund a block later)

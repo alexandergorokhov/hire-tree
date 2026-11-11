@@ -37,8 +37,9 @@ Run `make test` and `make lint` before every commit. Use
 - Delete an account only in a callback, after every transfer succeeded and
   the token reports a zero balance, and (sub-jobs) after the parent's
   `child_closed` succeeded. The beneficiary is the parent.
-- `child_closed` accepts only a known, open child; a repeat from a child it
-  already closed is a no-op.
+- `child_closed` accepts only a known, open child, or one whose hire is
+  still in flight when the notice says what it was funded with; a repeat
+  from a child it already closed is a no-op.
 - Checked math everywhere (`ht_core::money`, `ht_core::Ledger`).
 
 ## Where things are

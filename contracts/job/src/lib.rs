@@ -30,7 +30,8 @@ use ht_core::{transition, Event, Ledger, Split, Status};
 use near_sdk::json_types::{Base58CryptoHash, Base64VecU8, U128, U64};
 use near_sdk::serde_json::{self, json};
 use near_sdk::{
-    env, near, require, AccountId, Gas, NearToken, PanicOnDefault, Promise, PromiseOrValue,
+    env, near, require, AccountId, Gas, GasWeight, NearToken, PanicOnDefault, Promise,
+    PromiseOrValue,
 };
 
 #[cfg(test)]
@@ -69,6 +70,9 @@ const GAS_FT_TRANSFER: Gas = Gas::from_tgas(10);
 const GAS_FT_TRANSFER_CALL: Gas = Gas::from_tgas(50);
 const GAS_FT_BALANCE_OF: Gas = Gas::from_tgas(5);
 const GAS_CLOSE_UNFUNDED: Gas = Gas::from_tgas(10);
+/// The parent's `child_closed`: its floor. It also takes an equal share of
+/// the sender's spare gas (weight 1), so a resend through `resume_close`
+/// with more gas attached gives it more.
 const GAS_CHILD_CLOSED: Gas = Gas::from_tgas(10);
 /// The child's callback after `child_closed`: deletes on success.
 const GAS_ON_PARENT_ACK: Gas = Gas::from_tgas(10);
@@ -76,15 +80,22 @@ const GAS_ON_PARENT_ACK: Gas = Gas::from_tgas(10);
 pub const GAS_RESUME_CLOSE_MIN: Gas = Gas::from_tgas(50);
 const GAS_ON_CHILD_FUNDED: Gas = Gas::from_tgas(25);
 const GAS_ON_CHILD_CREATED: Gas = Gas::from_tgas(100);
-// Each callback's static gas covers the static gas of what it schedules
-// plus its own work (checked in `settle_at_minimum_gas_budget_...`).
+// Each settle callback's static gas is its floor; the gas `settle` is given
+// beyond its own use flows down the chain to the next callback (weight 1).
+// `GAS_SETTLE_MIN` is sized by running every path of that chain at exactly
+// the minimum, receipt fees included (the `settle_gas` tests).
 const GAS_ON_BALANCE_CHECKED: Gas = Gas::from_tgas(40);
 /// The track-record report to the registry (factory) at delete.
 pub const GAS_RECORD: Gas = Gas::from_tgas(10);
 const GAS_ON_REST_PAID: Gas = Gas::from_tgas(50);
 const GAS_ON_PAYEE_PAID: Gas = Gas::from_tgas(80);
 const GAS_ON_RESUME: Gas = Gas::from_tgas(80);
-const GAS_ON_RESUME_HIRE: Gas = Gas::from_tgas(20);
+const GAS_ON_RESUME_HIRE: Gas = Gas::from_tgas(30);
+/// The child's `get_funded` view, read by `resume_hire`.
+const GAS_GET_FUNDED: Gas = Gas::from_tgas(10);
+/// Least prepaid gas `resume_hire` accepts: two reads and the callback's
+/// static gas (enough for a rollback alone), plus its own work.
+pub const GAS_RESUME_HIRE_MIN: Gas = Gas::from_tgas(100);
 const GAS_ON_RESUME_NOTE: Gas = Gas::from_tgas(20);
 /// A settle leg with no callback after this long counts as stuck and anyone
 /// may `resume_settle` it.
@@ -110,8 +121,9 @@ const TOO_LATE: &str = "too late to award: the winner needs at least 60 s of the
 pub const MAX_LISTED_PAYERS: usize = 16;
 /// The largest record a read may return.
 const MAX_RECORD_LEN: usize = 2048;
-/// Least prepaid gas `settle` accepts.
-pub const GAS_SETTLE_MIN: Gas = Gas::from_tgas(150);
+/// Least prepaid gas `settle` (and `resume_settle`) accepts: every path of
+/// the chain fits, a routed payee and one sweep of stray tokens included.
+pub const GAS_SETTLE_MIN: Gas = Gas::from_tgas(250);
 
 /// Most deliveries (and so quality checks) one job accepts.
 pub const MAX_DELIVERIES: u32 = 3;
@@ -1707,9 +1719,21 @@ impl Job {
                 .detach();
             return false;
         }
+        self.open_hire(i, used);
+        emit(
+            "hired",
+            json!({ "child": self.children[i].account, "worker": self.children[i].worker, "total": U128(used) }),
+        );
+        true
+    }
+
+    /// A hire in flight turned out funded with `used` (of its total): it
+    /// is open. Less than the total (not expected: a job keeps all or
+    /// nothing) frees the rest, so the books stay right.
+    fn open_hire(&mut self, i: usize, used: u128) {
+        let total = self.children[i].total.0;
         self.children_pending -= 1;
         if used < total {
-            // Not expected (a job keeps all or nothing); keep the books right.
             if let Err(e) = self.ledger.release(total - used) {
                 fail(e);
             }
@@ -1726,24 +1750,29 @@ impl Job {
         }
         self.children[i].state = ChildState::Open;
         self.children_open += 1;
-        emit(
-            "hired",
-            json!({ "child": self.children[i].account, "worker": self.children[i].worker, "total": U128(used) }),
-        );
-        true
     }
 
     /// Anyone, if a hire's create/fund callbacks never finished after
-    /// `RESUME_AFTER_SECS`. The child's real token balance decides: it holds
-    /// its total -> it is open; it holds nothing -> roll back and close it.
+    /// `RESUME_AFTER_SECS` (or an earlier resume's answer never came back).
+    /// The child's own books decide first: funded with its total -> it is
+    /// open, even if it already paid out and holds nothing; funded with
+    /// nothing -> roll back and close it. Without an answer from the child
+    /// (it was never created) its real token balance decides as before.
     pub fn resume_hire(&mut self, idx: u32) -> Promise {
+        require!(
+            env::prepaid_gas() >= GAS_RESUME_HIRE_MIN,
+            "not enough gas for resume_hire (attach at least 100 Tgas)"
+        );
         let c = self
             .children
             .get(idx as usize)
             .cloned()
             .unwrap_or_else(|| env::panic_str("no such child"));
         require!(
-            matches!(c.state, ChildState::Creating | ChildState::Funding),
+            matches!(
+                c.state,
+                ChildState::Creating | ChildState::Funding | ChildState::Resuming
+            ),
             "hire is not in flight"
         );
         require!(
@@ -1752,6 +1781,7 @@ impl Job {
         );
         // Bump the stage marker so a late original callback is refused.
         self.children[idx as usize].state = ChildState::Resuming;
+        self.children[idx as usize].since_ns = env::block_timestamp();
         Promise::new(self.token.clone())
             .function_call(
                 "ft_balance_of",
@@ -1759,6 +1789,12 @@ impl Job {
                 NO_DEPOSIT,
                 GAS_FT_BALANCE_OF,
             )
+            .and(Promise::new(c.account.clone()).function_call(
+                "get_funded",
+                b"{}".to_vec(),
+                NO_DEPOSIT,
+                GAS_GET_FUNDED,
+            ))
             .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(GAS_ON_RESUME_HIRE)
@@ -1775,43 +1811,49 @@ impl Job {
             "hire is not being resumed"
         );
         let total = self.children[i].total.0;
-        let real = env::promise_result_checked(0, MAX_RESULT_LEN)
-            .ok()
-            .and_then(|b| serde_json::from_slice::<U128>(&b).ok());
-        match real {
-            Some(U128(r)) if r >= total => {
-                self.children_pending -= 1;
-                self.children[i].state = ChildState::Open;
-                self.children_open += 1;
-                emit(
-                    "hired",
-                    json!({ "child": self.children[i].account, "resumed": true }),
-                );
-                true
-            }
-            Some(U128(0)) => {
-                self.rollback_hire(i, "resume");
-                Promise::new(self.children[i].account.clone())
-                    .function_call(
-                        "close_unfunded",
-                        b"{}".to_vec(),
-                        NO_DEPOSIT,
-                        GAS_CLOSE_UNFUNDED,
-                    )
-                    .detach();
-                false
-            }
-            _ => {
-                // Unknown or partial: keep waiting; anyone may resume again.
-                self.children[i].state = ChildState::Funding;
-                self.children[i].since_ns = env::block_timestamp();
-                emit(
-                    "hire_resume_unclear",
-                    json!({ "child": self.children[i].account }),
-                );
-                false
-            }
+        let read = |n: u64| {
+            env::promise_result_checked(n, MAX_RESULT_LEN)
+                .ok()
+                .and_then(|b| serde_json::from_slice::<U128>(&b).ok())
+                .map(|u| u.0)
+        };
+        let (real, funded) = (read(0), read(1));
+        // A funded child may already have paid out (balance 0) and be
+        // waiting to tell us: its own books say it was funded, so it is
+        // open and its `child_closed` is credited, never rolled back.
+        let open = match funded {
+            Some(f) => f >= total,
+            None => matches!(real, Some(r) if r >= total),
+        };
+        let never_funded = real == Some(0) && matches!(funded, None | Some(0));
+        if open {
+            self.open_hire(i, total);
+            emit(
+                "hired",
+                json!({ "child": self.children[i].account, "resumed": true }),
+            );
+            return true;
         }
+        if never_funded {
+            self.rollback_hire(i, "resume");
+            Promise::new(self.children[i].account.clone())
+                .function_call(
+                    "close_unfunded",
+                    b"{}".to_vec(),
+                    NO_DEPOSIT,
+                    GAS_CLOSE_UNFUNDED,
+                )
+                .detach();
+            return false;
+        }
+        // Unknown or partial: keep waiting; anyone may resume again.
+        self.children[i].state = ChildState::Funding;
+        self.children[i].since_ns = env::block_timestamp();
+        emit(
+            "hire_resume_unclear",
+            json!({ "child": self.children[i].account }),
+        );
+        false
     }
 
     fn rollback_hire(&mut self, i: usize, stage: &str) {
@@ -2604,7 +2646,7 @@ impl Job {
     pub fn settle(&mut self) -> PromiseOrValue<bool> {
         require!(
             env::prepaid_gas() >= GAS_SETTLE_MIN,
-            "not enough gas for settle (attach at least 150 Tgas)"
+            "not enough gas for settle (attach at least 250 Tgas)"
         );
         let prev = self.status;
         let settling = transition(prev, Event::StartSettle).unwrap_or_else(|e| fail(e));
@@ -2981,7 +3023,7 @@ impl Job {
         require!(self.status == Status::Settling, "not settling");
         require!(
             env::prepaid_gas() >= GAS_SETTLE_MIN,
-            "not enough gas for resume_settle (attach at least 150 Tgas)"
+            "not enough gas for resume_settle (attach at least 250 Tgas)"
         );
         let p = self
             .payout
@@ -3134,14 +3176,22 @@ impl Job {
             since_ns: env::block_timestamp(),
             in_flight: true,
         });
+        // Weight 1: the notice shares the spare gas with its callback, so a
+        // `resume_close` with more gas attached gives `child_closed` more
+        // (a fixed amount would fail the same way on every resend).
         Promise::new(self.parent.clone())
-            .function_call(
+            .function_call_weight(
                 "child_closed",
-                json!({ "returned": U128(self.returned_to_parent), "paid": self.worker_paid() })
-                    .to_string()
-                    .into_bytes(),
+                json!({
+                    "returned": U128(self.returned_to_parent),
+                    "paid": self.worker_paid(),
+                    "funded": U128(self.ledger.funded),
+                })
+                .to_string()
+                .into_bytes(),
                 NO_DEPOSIT,
                 GAS_CHILD_CLOSED,
+                GasWeight(1),
             )
             .then(
                 Self::ext(env::current_account_id())
@@ -3220,22 +3270,56 @@ impl Job {
     /// once this call succeeded. Only a known child is accepted: an open one
     /// is closed and its remainder credited; a repeat from a child already
     /// closed (it never saw our first answer) succeeds and changes nothing.
-    /// `returned` is what it sent back to us.
-    pub fn child_closed(&mut self, returned: U128, paid: Option<bool>) {
+    /// `returned` is what it sent back to us; `funded` what we funded it
+    /// with (its own books). A child whose hire we still list in flight
+    /// (the fund callback was lost or unclear, or `resume_hire` is reading)
+    /// is decided by `funded`: funded -> opened, then closed as any other;
+    /// never funded -> the hire is undone. Without `funded` (older code)
+    /// such a notice is refused as before.
+    pub fn child_closed(&mut self, returned: U128, paid: Option<bool>, funded: Option<U128>) {
         let caller = env::predecessor_account_id();
-        if self
-            .children
-            .iter()
-            .any(|c| c.account == caller && c.state == ChildState::Closed)
-        {
+        // A repeat: already closed, or already undone as never funded (an
+        // unfunded child that never saw our first answer). Nothing moves.
+        if self.children.iter().any(|c| {
+            c.account == caller
+                && (c.state == ChildState::Closed
+                    || (c.state == ChildState::Failed && funded == Some(U128(0))))
+        }) {
             emit("child_closed_again", json!({ "child": caller }));
             return;
         }
+        const NOT_OPEN: &str = "caller is not an open child of this job";
         let i = self
             .children
             .iter()
-            .position(|c| c.account == caller && c.state == ChildState::Open)
-            .unwrap_or_else(|| env::panic_str("caller is not an open child of this job"));
+            .position(|c| {
+                c.account == caller
+                    && matches!(
+                        c.state,
+                        ChildState::Open | ChildState::Funding | ChildState::Resuming
+                    )
+            })
+            .unwrap_or_else(|| env::panic_str(NOT_OPEN));
+        if self.children[i].state != ChildState::Open {
+            let U128(f) = funded.unwrap_or_else(|| env::panic_str(NOT_OPEN));
+            if f == 0 {
+                // Never funded: the tokens never left. Anything it sent us
+                // anyway (swept stray tokens) is plain balance.
+                self.rollback_hire(i, "closed_unfunded");
+                if let Err(e) = self.ledger.credit(returned.0, 0) {
+                    fail(e);
+                }
+                emit(
+                    "child_closed",
+                    json!({ "child": caller, "returned": returned, "paid": paid, "funded": U128(0) }),
+                );
+                return;
+            }
+            // Funded: a late fund or resume callback now finds it Closed
+            // and does nothing.
+            self.open_hire(i, f.min(self.children[i].total.0));
+            emit("hired", json!({ "child": caller, "by_notice": true }));
+        }
         self.children[i].state = ChildState::Closed;
         self.children_open = self
             .children_open
@@ -3259,6 +3343,12 @@ impl Job {
     }
 
     // ------------------------------------------------------------ views
+
+    /// What the parent funded this job with (`resume_hire` on the parent
+    /// reads it: a child that already paid out holds nothing but was funded).
+    pub fn get_funded(&self) -> U128 {
+        U128(self.ledger.funded)
+    }
 
     pub fn get_job(&self) -> JobView {
         JobView {
