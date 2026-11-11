@@ -3,7 +3,8 @@
 ## Purpose
 Close a job bottom-up: pay the payee, return the rest, prove the real token
 balance is zero, delete the account to the parent. Never pay anyone twice,
-never strand money, never get stuck for good.
+never strand money, never get stuck for good (the parent is never left
+waiting for a child that is already gone).
 
 ## Requirements
 
@@ -54,13 +55,35 @@ carries an attempt number.
 - unit: `rest_failure_never_pays_payee_twice`
 
 ### Requirement: Delete only at a confirmed zero balance
-The account SHALL be deleted only in the balance-leg callback when the token
-reports zero; the beneficiary is the parent; the parent is told via
-`child_closed(returned)`.
+The balance-leg callback SHALL go on only when the token reports zero. A
+root then deletes itself (beneficiary: the factory). A sub-job tells its
+parent `child_closed(returned, paid)` and deletes itself (beneficiary: the
+parent) only in the callback after that call succeeded, so the parent has
+closed the child and taken its allocation back before the account is gone.
+The notice and its callback are one chain; the track-record call stays
+detached (a callback may not return a joint promise).
 
 #### Scenario: Zero balance
-- THEN the account is deleted to the parent and `child_closed` reports what came back
-- unit: `zero_real_balance_deletes_and_notifies_parent`; sandbox: G1
+- THEN the parent is sent `child_closed` with what came back; nothing is deleted until it answers; on success the account is deleted to the parent
+- unit: `zero_real_balance_notifies_the_parent_then_deletes_on_its_answer`, `root_delete_goes_to_factory_without_child_closed`; sandbox: G1
+
+#### Scenario: The parent's notice fails
+- WHEN `child_closed` fails on the parent (a panic, out of gas)
+- THEN the child is not deleted: it stays Settled with `close_pending` (not in flight) and emits `close_pending`; anyone may call `resume_close` at once, which sends the same notice again (the record is not sent again) and deletes after the parent answers
+- unit: `a_failed_parent_notice_keeps_the_child_alive_until_resume_close`, `resume_close_needs_gas`, `parent_ack_rejects_outside_callers`
+
+#### Scenario: The parent's answer never comes back
+- WHEN the callback after `child_closed` never ran
+- THEN `resume_close` is refused while the notice is in flight, and allowed after `RESUME_AFTER_SECS` (600 s); a late failure of an older notice changes nothing, and any success deletes
+- unit: `resume_close_waits_while_the_notice_is_in_flight`, `resume_close_resends_a_notice_whose_answer_was_lost`, `a_late_failed_answer_cannot_stall_a_newer_notice`
+
+#### Scenario: Only a settled sub-job with a pending notice
+- unit: `resume_close_only_for_a_settled_child_with_a_pending_notice`, `resume_close_refused_before_settle`
+
+#### Scenario: A repeated notice credits nothing
+- WHEN a child already closed on the parent sends `child_closed` again (it never saw the first answer)
+- THEN the call succeeds (so the child can delete) and changes nothing: no second credit, no bond paid twice; a stranger or a failed child is still refused
+- unit: `a_repeated_child_closed_credits_nothing`, `unknown_caller_cannot_close_a_child`, `failed_child_cannot_close`
 
 #### Scenario: Tokens above the ledger
 - WHEN the balance check reads more than the ledger holds (stray tokens, or a refused `ft_transfer_call` that the token will refund a block later)

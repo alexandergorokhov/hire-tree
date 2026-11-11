@@ -6,7 +6,10 @@
 //!
 //! Each account holds that job's fake USDC. `settle` runs bottom-up: pay the
 //! payee, send the rest to the parent (root: back to the client), confirm the
-//! real token balance is zero, then delete the account (beneficiary: parent).
+//! real token balance is zero, tell the parent (`child_closed`), and only
+//! once the parent has answered delete the account (beneficiary: parent).
+//! If the parent's answer fails the child stays, Settled with a pending
+//! notice, and anyone may `resume_close` it.
 //!
 //! Built: init, funding, bond, hire, deliver (with or without a NEAR AI
 //! Cloud receipt, verified by `env::ecrecover`), approve, settle in legs,
@@ -67,15 +70,19 @@ const GAS_FT_TRANSFER_CALL: Gas = Gas::from_tgas(50);
 const GAS_FT_BALANCE_OF: Gas = Gas::from_tgas(5);
 const GAS_CLOSE_UNFUNDED: Gas = Gas::from_tgas(10);
 const GAS_CHILD_CLOSED: Gas = Gas::from_tgas(10);
+/// The child's callback after `child_closed`: deletes on success.
+const GAS_ON_PARENT_ACK: Gas = Gas::from_tgas(10);
+/// Least prepaid gas `resume_close` accepts (notice + callback + own work).
+pub const GAS_RESUME_CLOSE_MIN: Gas = Gas::from_tgas(50);
 const GAS_ON_CHILD_FUNDED: Gas = Gas::from_tgas(25);
 const GAS_ON_CHILD_CREATED: Gas = Gas::from_tgas(100);
 // Each callback's static gas covers the static gas of what it schedules
 // plus its own work (checked in `settle_at_minimum_gas_budget_...`).
-const GAS_ON_BALANCE_CHECKED: Gas = Gas::from_tgas(35);
+const GAS_ON_BALANCE_CHECKED: Gas = Gas::from_tgas(40);
 /// The track-record report to the registry (factory) at delete.
 pub const GAS_RECORD: Gas = Gas::from_tgas(10);
-const GAS_ON_REST_PAID: Gas = Gas::from_tgas(45);
-const GAS_ON_PAYEE_PAID: Gas = Gas::from_tgas(75);
+const GAS_ON_REST_PAID: Gas = Gas::from_tgas(50);
+const GAS_ON_PAYEE_PAID: Gas = Gas::from_tgas(80);
 const GAS_ON_RESUME: Gas = Gas::from_tgas(80);
 const GAS_ON_RESUME_HIRE: Gas = Gas::from_tgas(20);
 const GAS_ON_RESUME_NOTE: Gas = Gas::from_tgas(20);
@@ -295,6 +302,18 @@ pub struct Payout {
     pub since_ns: u64,
 }
 
+/// A settled sub-job's notice to its parent (`child_closed`). The child
+/// deletes itself only after the parent answered it; until then it stays.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CloseNotice {
+    /// Bumped on every send; a late failure of an older send changes nothing.
+    pub attempt: u32,
+    pub since_ns: u64,
+    /// A send is waiting for the parent's answer.
+    pub in_flight: bool,
+}
+
 #[near(serializers = [json])]
 pub struct JobView {
     pub account: AccountId,
@@ -337,6 +356,8 @@ pub struct JobView {
     pub registry: AccountId,
     pub by_bid: bool,
     pub payout_via: Option<AccountId>,
+    /// Settled sub-job still waiting for its parent to take the notice.
+    pub close_pending: Option<CloseNotice>,
 }
 
 #[near(contract_state)]
@@ -414,6 +435,8 @@ pub struct Job {
     /// payee's balance there. Set by the payee before settle; dropped if the
     /// receiver refuses any of it, so the next settle pays plainly.
     payout_via: Option<AccountId>,
+    /// Settled sub-job: the `child_closed` notice not yet answered.
+    close_pending: Option<CloseNotice>,
 }
 
 fn emit(event: &str, data: serde_json::Value) {
@@ -573,6 +596,7 @@ impl Job {
             registry: registry.unwrap_or_else(env::predecessor_account_id),
             by_bid: bid == Some(true),
             payout_via: None,
+            close_pending: None,
         };
         emit(
             "job_created",
@@ -2554,7 +2578,8 @@ impl Job {
     /// 1. payee leg: register the payee on the token (a no-op refund if it
     ///    already is), then pay it `amount` (only if the work was delivered);
     /// 2. rest leg: send the rest to the parent (root: back to the client);
-    /// 3. balance leg: ask the token for the real balance; delete only at zero.
+    /// 3. balance leg: ask the token for the real balance; only at zero tell
+    ///    the parent (`child_closed`) and delete after it answered.
     ///
     /// A failed transfer keeps its tokens here, the job goes back to its
     /// status before settle, and settle can run again without paying anyone
@@ -3055,9 +3080,9 @@ impl Job {
             "settled",
             json!({ "account": me, "beneficiary": self.parent, "returned_to_parent": U128(self.returned_to_parent) }),
         );
-        let delete = Promise::new(me).delete_account(self.parent.clone());
         if self.root {
-            return delete;
+            // A root tells nobody: its parent is the factory.
+            return Promise::new(me).delete_account(self.parent.clone());
         }
         if let Some(worker) = self.worker.clone() {
             // The worker's track record (fire-and-forget; evidence, not proof).
@@ -3096,7 +3121,19 @@ impl Job {
                 .detach();
         }
         // A callback may not return a joint promise (the runtime refuses it,
-        // found on the sandbox), so the parent notice is detached.
+        // found on the sandbox), so the record call above is detached and
+        // the parent notice is the one chain returned: the account is
+        // deleted only in `on_parent_ack`, after the parent took the notice.
+        self.send_close_notice(1)
+    }
+
+    /// `child_closed` to the parent, then `on_parent_ack`. Records the send.
+    fn send_close_notice(&mut self, attempt: u32) -> Promise {
+        self.close_pending = Some(CloseNotice {
+            attempt,
+            since_ns: env::block_timestamp(),
+            in_flight: true,
+        });
         Promise::new(self.parent.clone())
             .function_call(
                 "child_closed",
@@ -3106,14 +3143,94 @@ impl Job {
                 NO_DEPOSIT,
                 GAS_CHILD_CLOSED,
             )
-            .detach();
-        delete
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_ON_PARENT_ACK)
+                    .on_parent_ack(attempt),
+            )
     }
 
-    /// Called by a settled child just before it is deleted. Only a known,
-    /// open child is accepted. `returned` is what it sent back to us.
+    /// The parent's answer to `child_closed`. Success (from any send: the
+    /// parent ignores a repeat) means the parent has this child closed and
+    /// its allocation back: delete, beneficiary the parent. Failure of the
+    /// latest send: stay alive, Settled, with the notice pending, so anyone
+    /// can `resume_close`. A late failure of an older send changes nothing.
+    #[private]
+    pub fn on_parent_ack(&mut self, attempt: u32) -> PromiseOrValue<bool> {
+        assert_self();
+        require!(self.status == Status::Settled, "not settled");
+        let mut c = self
+            .close_pending
+            .clone()
+            .unwrap_or_else(|| env::panic_str("no parent notice pending"));
+        if result_ok(0) {
+            // Kept (not in flight) until the account is gone: should the
+            // delete itself fail, `resume_close` can run again.
+            c.in_flight = false;
+            self.close_pending = Some(c);
+            emit("parent_acked", json!({ "parent": self.parent }));
+            return PromiseOrValue::Promise(
+                Promise::new(env::current_account_id()).delete_account(self.parent.clone()),
+            );
+        }
+        if c.attempt != attempt {
+            return PromiseOrValue::Value(false);
+        }
+        c.in_flight = false;
+        emit(
+            "close_pending",
+            json!({ "parent": self.parent, "attempt": c.attempt }),
+        );
+        self.close_pending = Some(c);
+        PromiseOrValue::Value(false)
+    }
+
+    /// Anyone: send a settled sub-job's `child_closed` notice again (then
+    /// delete once the parent answers). At once after a failed send; after
+    /// `RESUME_AFTER_SECS` if the last send's answer never came back. The
+    /// notice is the same each time and the parent credits it only once.
+    pub fn resume_close(&mut self) -> Promise {
+        require!(self.status == Status::Settled, "not settled");
+        require!(
+            env::prepaid_gas() >= GAS_RESUME_CLOSE_MIN,
+            "not enough gas for resume_close (attach at least 50 Tgas)"
+        );
+        let c = self
+            .close_pending
+            .clone()
+            .unwrap_or_else(|| env::panic_str("no parent notice pending"));
+        require!(
+            !c.in_flight
+                || env::block_timestamp()
+                    >= c.since_ns.saturating_add(RESUME_AFTER_SECS * NS_PER_SEC),
+            "parent notice in flight; wait RESUME_AFTER_SECS"
+        );
+        let attempt = c
+            .attempt
+            .checked_add(1)
+            .unwrap_or_else(|| env::panic_str("attempt overflow"));
+        emit(
+            "close_resumed",
+            json!({ "parent": self.parent, "attempt": attempt }),
+        );
+        self.send_close_notice(attempt)
+    }
+
+    /// Called by a settled child before it deletes itself; it deletes only
+    /// once this call succeeded. Only a known child is accepted: an open one
+    /// is closed and its remainder credited; a repeat from a child already
+    /// closed (it never saw our first answer) succeeds and changes nothing.
+    /// `returned` is what it sent back to us.
     pub fn child_closed(&mut self, returned: U128, paid: Option<bool>) {
         let caller = env::predecessor_account_id();
+        if self
+            .children
+            .iter()
+            .any(|c| c.account == caller && c.state == ChildState::Closed)
+        {
+            emit("child_closed_again", json!({ "child": caller }));
+            return;
+        }
         let i = self
             .children
             .iter()
@@ -3185,6 +3302,7 @@ impl Job {
             registry: self.registry.clone(),
             by_bid: self.by_bid,
             payout_via: self.payout_via.clone(),
+            close_pending: self.close_pending.clone(),
         }
     }
 }

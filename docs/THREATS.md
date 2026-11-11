@@ -205,8 +205,13 @@ for the bid calls.
   and a check nobody answers leaves the work unpaid unless the lead approves.
 - The demo agents run as one process taking turns; each role only uses its
   own key and the shared tool list. Outside agents join through `hiretree mcp`.
-- `child_closed` and `close_unfunded` are fire-and-forget; if one ever
-  failed, the parent would need a manual fix (not seen in tests).
+- `child_closed` is acknowledged: a settled child deletes itself only after
+  the parent took the notice; if it failed, the child stays Settled with
+  `close_pending` and anyone can `resume_close` it; a repeat credits nothing
+  (`a_failed_parent_notice_keeps_the_child_alive_until_resume_close`,
+  `a_repeated_child_closed_credits_nothing`). `close_unfunded` is still
+  fire-and-forget: the parent's books are rolled back first, so if it
+  failed only the empty child's few mNEAR of storage would stay behind.
 - NEAR from a failed create goes back to the job, not the manager (a few
   mNEAR; it flows up the tree on delete).
 - The lead's fee is fixed by the client at post; the rest of the root's

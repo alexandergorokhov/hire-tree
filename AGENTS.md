@@ -35,8 +35,10 @@ Run `make test` and `make lint` before every commit. Use
   restores state. No `unwrap` on promise results.
 - Callbacks are `#[private]` and also call `assert_self()`.
 - Delete an account only in a callback, after every transfer succeeded and
-  the token reports a zero balance. The beneficiary is the parent.
-- `child_closed` accepts only a known, open child.
+  the token reports a zero balance, and (sub-jobs) after the parent's
+  `child_closed` succeeded. The beneficiary is the parent.
+- `child_closed` accepts only a known, open child; a repeat from a child it
+  already closed is a no-op.
 - Checked math everywhere (`ht_core::money`, `ht_core::Ledger`).
 
 ## Where things are

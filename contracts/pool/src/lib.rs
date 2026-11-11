@@ -17,6 +17,13 @@
 //!    settle, sending the unspent budget back), or joining closed short of
 //!    the target, or the launch failed, the pool reads its own balance.
 //!    Each member then `claim`s its pro-rata share.
+//!
+//! At most one step that waits on a callback is in flight at a time (a
+//! launch, a finish, or one claim), with an attempt number. If its callback
+//! never runs (out of gas, a panic, a token that does not answer), anyone
+//! may `resume` it after `RESUME_AFTER_SECS`: a finish (reads only) goes back
+//! to where it was; a launch or a claim is decided from the pool's real token
+//! balance, so nobody is paid twice. A late original callback is refused.
 
 use near_sdk::json_types::{U128, U64};
 use near_sdk::serde::Deserialize;
@@ -47,6 +54,13 @@ const GAS_ON_JOB_GONE: Gas = Gas::from_tgas(25);
 const GAS_ON_BALANCE: Gas = Gas::from_tgas(10);
 const GAS_TRANSFER: Gas = Gas::from_tgas(10);
 const GAS_ON_CLAIMED: Gas = Gas::from_tgas(5);
+const GAS_ON_RESUME: Gas = Gas::from_tgas(10);
+/// Least prepaid gas `resume` accepts (balance read + callback + own work).
+pub const GAS_RESUME_MIN: Gas = Gas::from_tgas(40);
+/// A step with no callback after this long counts as stuck; anyone may
+/// `resume` it.
+pub const RESUME_AFTER_SECS: u64 = 600;
+const NS_PER_SEC: u64 = 1_000_000_000;
 
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -63,6 +77,31 @@ pub enum State {
     Finishing,
     /// Members may claim their share of `payout`.
     Done,
+}
+
+/// A step whose callback the pool waits for.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Step {
+    /// The budget went to the factory (`ft_transfer_call`).
+    Launch,
+    /// `finish` reads the job and the balance; no money moves.
+    Finish,
+    /// One member's claim transfer.
+    Claim,
+}
+
+/// The one step in flight. Callbacks carry `attempt`; `resume` bumps it, so
+/// a late original callback cannot act.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct InFlight {
+    pub step: Step,
+    pub attempt: u32,
+    pub since_ns: u64,
+    /// Claim only: the member and the amount sent.
+    pub member: u32,
+    pub amount: U128,
 }
 
 #[near(serializers = [borsh, json])]
@@ -102,10 +141,12 @@ pub struct Pool {
     approve_sent: bool,
     /// What members share at `Done`: the pool's whole balance then.
     payout: u128,
-    /// Claims sent so far (including ones in flight).
+    /// Claims sent so far (including the one in flight).
     paid_out: u128,
-    /// Claim transfers not yet answered; a recount waits for them.
-    in_flight: u32,
+    /// The step waiting for its callback, if any (a recount waits for it).
+    pub(crate) pending: Option<InFlight>,
+    /// Last attempt number handed out.
+    attempt: u32,
     /// State to return to if `finish` cannot complete.
     before_finish: State,
 }
@@ -180,7 +221,8 @@ impl Pool {
             approve_sent: false,
             payout: 0,
             paid_out: 0,
-            in_flight: 0,
+            pending: None,
+            attempt: 0,
             before_finish: State::Open,
         }
     }
@@ -255,6 +297,7 @@ impl Pool {
             "attach at least 240 Tgas"
         );
         self.state = State::Launching;
+        let attempt = self.start(Step::Launch, 0, 0);
         let msg = json!({
             "manager": self.terms.manager, "spec_hash": self.terms.spec_hash,
             "window_secs": self.terms.window_secs, "treasury": self.terms.treasury,
@@ -282,7 +325,7 @@ impl Pool {
             .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(GAS_ON_LAUNCHED)
-                    .on_launched(),
+                    .on_launched(attempt),
             )
     }
 
@@ -290,8 +333,10 @@ impl Pool {
     /// Anything else (refused, or no answer): the post failed and the
     /// budget is, or will be, back here; `finish` shares what is held.
     #[private]
-    pub fn on_launched(&mut self) -> State {
+    pub fn on_launched(&mut self, attempt: u32) -> State {
+        self.current(Step::Launch, attempt);
         require!(self.state == State::Launching, "not launching");
+        self.pending = None;
         let used = result_bytes()
             .and_then(|b| serde_json::from_slice::<U128>(&b).ok())
             .map(|u| u.0)
@@ -419,12 +464,13 @@ impl Pool {
             State::LaunchFailed => {}
             // Recount: tokens that arrived after the first count (a late
             // refund, a gift) are shared too.
-            State::Done => require!(self.in_flight == 0, "claims in flight: try again"),
+            State::Done => require!(self.pending.is_none(), "claims in flight: try again"),
             State::Posted => require!(self.job.is_some(), "bind the job first"),
             _ => env::panic_str("cannot finish in this state"),
         }
         self.before_finish = prev;
         self.state = State::Finishing;
+        let attempt = self.start(Step::Finish, 0, 0);
         match (&self.job, prev) {
             (Some(job), State::Posted) => Promise::new(job.clone())
                 .function_call(
@@ -436,27 +482,29 @@ impl Pool {
                 .then(
                     Self::ext(env::current_account_id())
                         .with_static_gas(GAS_ON_JOB_GONE)
-                        .on_job_checked(),
+                        .on_job_checked(attempt),
                 ),
-            _ => self.read_balance(),
+            _ => self.read_balance(attempt),
         }
     }
 
-    fn read_balance(&self) -> Promise {
-        Promise::new(self.token.clone())
-            .function_call(
-                "ft_balance_of",
-                json!({ "account_id": env::current_account_id() })
-                    .to_string()
-                    .into_bytes(),
-                NearToken::from_yoctonear(0),
-                GAS_VIEW,
-            )
-            .then(
-                Self::ext(env::current_account_id())
-                    .with_static_gas(GAS_ON_BALANCE)
-                    .on_balance(),
-            )
+    fn balance_of_self(&self) -> Promise {
+        Promise::new(self.token.clone()).function_call(
+            "ft_balance_of",
+            json!({ "account_id": env::current_account_id() })
+                .to_string()
+                .into_bytes(),
+            NearToken::from_yoctonear(0),
+            GAS_VIEW,
+        )
+    }
+
+    fn read_balance(&self, attempt: u32) -> Promise {
+        self.balance_of_self().then(
+            Self::ext(env::current_account_id())
+                .with_static_gas(GAS_ON_BALANCE)
+                .on_balance(attempt),
+        )
     }
 
     /// The job answered: it still exists, so it has not settled. Back to
@@ -464,22 +512,26 @@ impl Pool {
     /// call to fail for another reason, tokens arriving later are still
     /// shared: anyone may `finish` again to recount.)
     #[private]
-    pub fn on_job_checked(&mut self) -> Option<Promise> {
+    pub fn on_job_checked(&mut self, attempt: u32) -> Option<Promise> {
+        self.current(Step::Finish, attempt);
         require!(self.state == State::Finishing, "not finishing");
         if env::promise_result_checked(0, 16_384).is_ok() {
             self.state = self.before_finish;
+            self.pending = None;
             emit(
                 "finish_refused",
                 json!({ "reason": "the job has not settled yet" }),
             );
             return None;
         }
-        Some(self.read_balance())
+        Some(self.read_balance(attempt))
     }
 
     #[private]
-    pub fn on_balance(&mut self) -> U128 {
+    pub fn on_balance(&mut self, attempt: u32) -> U128 {
+        self.current(Step::Finish, attempt);
         require!(self.state == State::Finishing, "not finishing");
+        self.pending = None;
         let Some(bal) = result_bytes().and_then(|b| serde_json::from_slice::<U128>(&b).ok()) else {
             self.state = self.before_finish;
             emit("finish_refused", json!({ "reason": "balance unreadable" }));
@@ -503,11 +555,14 @@ impl Pool {
             .iter()
             .position(|m| m.account == who)
             .unwrap_or_else(|| env::panic_str("only members can claim"));
+        // One transfer in flight at a time, so a stuck one can be decided
+        // from the real balance alone (see `resume`).
+        require!(self.pending.is_none(), "a claim is in flight: try again");
         let share = self.share(i);
         require!(share > 0, "nothing to claim");
         self.members[i].claimed = U128(self.members[i].claimed.0 + share);
         self.paid_out += share;
-        self.in_flight += 1;
+        let attempt = self.start(Step::Claim, i as u32, share);
         Promise::new(self.token.clone())
             .function_call(
                 "ft_transfer",
@@ -520,24 +575,150 @@ impl Pool {
             .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(GAS_ON_CLAIMED)
-                    .on_claimed(i as u32, U128(share)),
+                    .on_claimed(attempt),
             )
     }
 
     #[private]
-    pub fn on_claimed(&mut self, i: u32, share: U128) -> bool {
+    pub fn on_claimed(&mut self, attempt: u32) -> bool {
+        let p = self.current(Step::Claim, attempt);
         let ok = env::promise_result_checked(0, 64).is_ok();
-        self.in_flight -= 1;
+        self.resolve_claim(&p, ok, false);
+        ok
+    }
+
+    fn resolve_claim(&mut self, p: &InFlight, ok: bool, resumed: bool) {
+        self.pending = None;
+        let i = p.member as usize;
         if !ok {
-            let m = &mut self.members[i as usize];
-            m.claimed = U128(m.claimed.0 - share.0);
-            self.paid_out -= share.0;
+            let m = &mut self.members[i];
+            m.claimed = U128(m.claimed.0 - p.amount.0);
+            self.paid_out -= p.amount.0;
         }
         emit(
             "claimed",
-            json!({ "member": self.members[i as usize].account, "amount": share, "ok": ok }),
+            json!({ "member": self.members[i].account, "amount": p.amount, "ok": ok, "resumed": resumed }),
         );
-        ok
+    }
+
+    /// Record a new step in flight and return its attempt number.
+    fn start(&mut self, step: Step, member: u32, amount: u128) -> u32 {
+        self.attempt = self
+            .attempt
+            .checked_add(1)
+            .unwrap_or_else(|| env::panic_str("attempt overflow"));
+        self.pending = Some(InFlight {
+            step,
+            attempt: self.attempt,
+            since_ns: env::block_timestamp(),
+            member,
+            amount: U128(amount),
+        });
+        self.attempt
+    }
+
+    /// The step in flight, if `step` and `attempt` match it. A superseded
+    /// callback panics without changing anything.
+    fn current(&self, step: Step, attempt: u32) -> InFlight {
+        let p = self
+            .pending
+            .clone()
+            .unwrap_or_else(|| env::panic_str("stale callback: nothing in flight"));
+        require!(p.step == step && p.attempt == attempt, "stale callback");
+        p
+    }
+
+    /// Anyone, when the step in flight has had no callback for
+    /// `RESUME_AFTER_SECS` (it ran out of gas or panicked). Bumps the attempt
+    /// first, so the late original callback can no longer act.
+    /// - finish: only reads were in flight; the pool goes back to the state
+    ///   before `finish`, and anyone may finish again.
+    /// - launch, claim: reads the pool's real token balance and decides from
+    ///   it alone whether the transfer happened (`on_resume`).
+    pub fn resume(&mut self) -> PromiseOrValue<bool> {
+        let p = self
+            .pending
+            .clone()
+            .unwrap_or_else(|| env::panic_str("nothing is stuck: no step in flight"));
+        require!(
+            env::block_timestamp() >= p.since_ns.saturating_add(RESUME_AFTER_SECS * NS_PER_SEC),
+            "not stuck yet; wait RESUME_AFTER_SECS"
+        );
+        require!(
+            env::prepaid_gas() >= GAS_RESUME_MIN,
+            "not enough gas for resume (attach at least 40 Tgas)"
+        );
+        let attempt = self.start(p.step, p.member, p.amount.0);
+        emit("resumed", json!({ "step": p.step, "attempt": attempt }));
+        match p.step {
+            Step::Finish => {
+                require!(self.state == State::Finishing, "not finishing");
+                self.state = self.before_finish;
+                self.pending = None;
+                emit(
+                    "finish_refused",
+                    json!({ "reason": "resumed: finish again" }),
+                );
+                PromiseOrValue::Value(true)
+            }
+            Step::Launch | Step::Claim => PromiseOrValue::Promise(
+                self.balance_of_self().then(
+                    Self::ext(env::current_account_id())
+                        .with_static_gas(GAS_ON_RESUME)
+                        .on_resume(attempt),
+                ),
+            ),
+        }
+    }
+
+    /// The real balance after a stuck launch or claim. Only one transfer is
+    /// ever in flight, so the balance alone says whether it happened:
+    /// - launch: the pool held the whole target before; less than the target
+    ///   now means the factory kept the budget (Posted), otherwise it came
+    ///   back (LaunchFailed, members get it back);
+    /// - claim: had it happened the pool holds `payout - paid_out` (paid_out
+    ///   counts it); at least that plus the claim means it did not, and the
+    ///   member may claim again.
+    ///
+    /// Tokens that arrived since are never counted here (a recount shares
+    /// them). No answer from the token: stay stuck; resume again later.
+    #[private]
+    pub fn on_resume(&mut self, attempt: u32) -> bool {
+        let p = self
+            .pending
+            .clone()
+            .unwrap_or_else(|| env::panic_str("stale callback: nothing in flight"));
+        require!(p.attempt == attempt, "stale callback");
+        let Some(U128(real)) = result_bytes().and_then(|b| serde_json::from_slice::<U128>(&b).ok())
+        else {
+            emit("resume_failed", json!({ "step": p.step }));
+            return false;
+        };
+        match p.step {
+            Step::Launch => {
+                require!(self.state == State::Launching, "not launching");
+                self.pending = None;
+                self.state = if real < self.target {
+                    State::Posted
+                } else {
+                    State::LaunchFailed
+                };
+                emit(
+                    "launched",
+                    json!({ "state": self.state, "resumed": true, "balance": U128(real) }),
+                );
+            }
+            Step::Claim => {
+                let base = self.payout.saturating_sub(self.paid_out);
+                let failed_at = base
+                    .checked_add(p.amount.0)
+                    .unwrap_or_else(|| env::panic_str("overflow"));
+                let happened = real < failed_at;
+                self.resolve_claim(&p, happened, true);
+            }
+            Step::Finish => env::panic_str("finish resumes without a read"),
+        }
+        true
     }
 
     fn share(&self, i: usize) -> u128 {
@@ -555,7 +736,7 @@ impl Pool {
             "closes_ns": U64(self.closes_ns), "members": self.members,
             "state": self.state, "job_n": self.job_n, "job": self.job,
             "approve_sent": self.approve_sent, "payout": U128(self.payout),
-            "paid_out": U128(self.paid_out),
+            "paid_out": U128(self.paid_out), "pending": self.pending,
         })
     }
 }

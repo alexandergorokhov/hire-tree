@@ -14,19 +14,19 @@ the table gives the NEAR price at which the result flips.
 |---|---|---|
 | Post a job (factory creates the job account) | 30.3 | 0.00303 |
 | Open a bid slot | 2.6 | 0.00026 |
-| One bid | 2.7 | 0.00027 |
+| One bid | 2.8 | 0.00028 |
 | `award_best`, 4 bidders (reads 4 records) | 41.8 | 0.00418 |
-| `award_best`, 16 bidders, 16-payer list | 75.3 | 0.00753 |
+| `award_best`, 16 bidders, 16-payer list | 75.4 | 0.00754 |
 | Deliver (signature check) | 2.6 | 0.00026 |
 | Submit the signed judge answer | 3.2 | 0.00032 |
-| Close the check round | 2.4 | 0.00024 |
+| Close the check round | 2.5 | 0.00025 |
 | Approve | 2.4 | 0.00024 |
-| Settle, pay, delete the sub-job | 21.8 | 0.00218 |
+| Settle, pay, delete the sub-job | 24.4 | 0.00244 |
 
 **One whole part** (post, hire, deliver, signed check, approve, settle, both
-accounts deleted; 9 transactions): **108.4 Tgas = 0.0108 NEAR**.
-Paid out through the NEAR Intents Verifier instead (10 transactions): 117.1 Tgas
-= 0.0117 NEAR, so the Intents leg adds 8.7 Tgas.
+accounts deleted; 9 transactions): **111.2 Tgas = 0.0111 NEAR**.
+Paid out through the NEAR Intents Verifier instead (10 transactions): 119.9 Tgas
+= 0.0120 NEAR, so the Intents leg adds 8.7 Tgas.
 
 Storage comes back: each job account holds about 0.035 NEAR while it
 lives and returns it when it deletes; a bid holds 0.001 NEAR until the
@@ -36,7 +36,7 @@ global job contract, deployed once per network (about 29 testnet NEAR).
 ## What size of work this fits
 
 On-chain cost stays under 1% of the price for any part worth more than
-**1.08 NEAR** (100 x 0.0108). Below that, batch several parts into one job
+**1.11 NEAR** (100 x 0.0111). Below that, batch several parts into one job
 or keep them off-chain. A sub-part bought by a contractor adds one account
 and its own deliver, check and settle, roughly the same cost again.
 

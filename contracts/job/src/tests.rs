@@ -1538,8 +1538,45 @@ fn paid_sub() -> Job {
     j
 }
 
+fn delete_to() -> Option<AccountId> {
+    get_created_receipts()
+        .into_iter()
+        .flat_map(|r| r.actions)
+        .find_map(|a| match a {
+            MockAction::DeleteAccount { beneficiary_id, .. } => Some(beneficiary_id),
+            _ => None,
+        })
+}
+
+fn close_attempt(j: &Job) -> u32 {
+    j.get_job()
+        .close_pending
+        .expect("parent notice pending")
+        .attempt
+}
+
+/// The parent's answer to `child_closed` reaches the child's callback.
+fn ack(j: &mut Job, ok_: bool) -> PromiseOrValue<bool> {
+    let a = close_attempt(j);
+    ack_at(j, a, ok_)
+}
+
+fn ack_at(j: &mut Job, a: u32, ok_: bool) -> PromiseOrValue<bool> {
+    Ctx::new(T1, T1).at(AFTER).results(vec![res(ok_)]).set();
+    j.on_parent_ack(a)
+}
+
+/// A settled sub-job has told its parent and waits for the answer: nothing
+/// is deleted yet. On a successful answer it deletes itself to the parent.
+fn deletes_after_parent_ack(j: &mut Job) -> bool {
+    assert!(!deleted(), "no delete before the parent's answer");
+    assert!(calls().contains(&(ROOT.into(), "child_closed".into())));
+    assert!(matches!(ack(j, true), PromiseOrValue::Promise(_)));
+    delete_to() == Some(acc(ROOT))
+}
+
 #[test]
-fn zero_real_balance_deletes_and_notifies_parent() {
+fn zero_real_balance_notifies_the_parent_then_deletes_on_its_answer() {
     let mut j = paid_sub();
     assert!(matches!(
         balance_cb(&mut j, T1, ok(&u128_json(0))),
@@ -1547,19 +1584,141 @@ fn zero_real_balance_deletes_and_notifies_parent() {
     ));
     assert_eq!(j.get_job().status, "Settled");
     assert!(j.get_job().payout.is_none());
-    let receipts = get_created_receipts();
-    let del = receipts
-        .iter()
-        .find(|r| r.receiver_id == acc(T1))
-        .and_then(|r| {
-            r.actions.iter().find_map(|a| match a {
-                MockAction::DeleteAccount { beneficiary_id, .. } => Some(beneficiary_id.clone()),
-                _ => None,
-            })
-        });
-    assert_eq!(del, Some(acc(ROOT)), "beneficiary is the parent");
-    assert!(calls().contains(&(ROOT.into(), "child_closed".into())));
+    // The notice and its callback are one chain; the delete waits for it.
+    let c = calls();
+    assert!(c.contains(&(ROOT.into(), "child_closed".into())));
+    assert!(c.contains(&(T1.into(), "on_parent_ack".into())));
     assert_eq!(call_args("child_closed")["returned"], (5 * USD).to_string());
+    assert!(!deleted(), "the child stays until the parent has answered");
+    let cp = j.get_job().close_pending.unwrap();
+    assert!(cp.in_flight);
+    // The parent answered: delete, beneficiary the parent.
+    assert!(matches!(ack(&mut j, true), PromiseOrValue::Promise(_)));
+    assert_eq!(delete_to(), Some(acc(ROOT)), "beneficiary is the parent");
+}
+
+#[test]
+fn a_failed_parent_notice_keeps_the_child_alive_until_resume_close() {
+    let mut j = paid_sub();
+    balance_cb(&mut j, T1, ok(&u128_json(0)));
+    // child_closed panicked or ran out of gas on the parent.
+    assert!(matches!(ack(&mut j, false), PromiseOrValue::Value(false)));
+    assert!(
+        !deleted(),
+        "never delete without the parent's acknowledgement"
+    );
+    let v = j.get_job();
+    assert_eq!(v.status, "Settled");
+    let cp = v.close_pending.unwrap();
+    assert!(!cp.in_flight);
+    assert_eq!(events("close_pending").len(), 1);
+    // Anyone may send the notice again at once; it is the same notice.
+    let first = cp.attempt;
+    Ctx::new(T1, EVE).at(AFTER).gas(GAS_RESUME_CLOSE_MIN).set();
+    j.resume_close();
+    let c = calls();
+    assert!(c.contains(&(ROOT.into(), "child_closed".into())));
+    assert!(c.contains(&(T1.into(), "on_parent_ack".into())));
+    assert!(!deleted());
+    let args = call_args("child_closed");
+    assert_eq!(args["returned"], (5 * USD).to_string());
+    assert_eq!(args["paid"], true);
+    assert!(!calls().iter().any(|x| x.1 == "record"), "record sent once");
+    assert!(close_attempt(&j) > first);
+    // This time the parent answers: the child deletes to it.
+    assert!(matches!(ack(&mut j, true), PromiseOrValue::Promise(_)));
+    assert_eq!(delete_to(), Some(acc(ROOT)));
+}
+
+#[test]
+#[should_panic(expected = "parent notice in flight")]
+fn resume_close_waits_while_the_notice_is_in_flight() {
+    let mut j = paid_sub();
+    balance_cb(&mut j, T1, ok(&u128_json(0)));
+    Ctx::new(T1, EVE).at(AFTER + NS_PER_SEC).set();
+    j.resume_close();
+}
+
+#[test]
+fn resume_close_resends_a_notice_whose_answer_was_lost() {
+    // The callback itself never ran (out of gas): after RESUME_AFTER_SECS
+    // the notice may be sent again; the parent ignores a repeat.
+    let mut j = paid_sub();
+    balance_cb(&mut j, T1, ok(&u128_json(0)));
+    let since = j.get_job().close_pending.unwrap().since_ns;
+    Ctx::new(T1, EVE)
+        .at(since + RESUME_AFTER_SECS * NS_PER_SEC)
+        .set();
+    j.resume_close();
+    assert!(calls().contains(&(ROOT.into(), "child_closed".into())));
+    assert!(j.get_job().close_pending.unwrap().in_flight);
+}
+
+#[test]
+#[should_panic(expected = "no parent notice pending")]
+fn resume_close_only_for_a_settled_child_with_a_pending_notice() {
+    let mut j = funded_root(10 * USD);
+    Ctx::new(ROOT, CLIENT).set();
+    j.approve();
+    Ctx::new(ROOT, EVE).set();
+    j.settle();
+    rest_cb(&mut j, ROOT, true);
+    balance_cb(&mut j, ROOT, ok(&u128_json(0)));
+    assert!(j.get_job().close_pending.is_none(), "a root tells nobody");
+    Ctx::new(ROOT, EVE).at(STUCK).set();
+    j.resume_close();
+}
+
+#[test]
+#[should_panic(expected = "not settled")]
+fn resume_close_refused_before_settle() {
+    let mut j = delivered_sub(USD, USD);
+    Ctx::new(T1, EVE).at(STUCK).set();
+    j.resume_close();
+}
+
+#[test]
+#[should_panic(expected = "not enough gas for resume_close")]
+fn resume_close_needs_gas() {
+    let mut j = paid_sub();
+    balance_cb(&mut j, T1, ok(&u128_json(0)));
+    ack(&mut j, false);
+    Ctx::new(T1, EVE).at(AFTER).gas(Gas::from_tgas(10)).set();
+    j.resume_close();
+}
+
+#[test]
+fn a_late_failed_answer_cannot_stall_a_newer_notice() {
+    let mut j = paid_sub();
+    balance_cb(&mut j, T1, ok(&u128_json(0)));
+    let first = close_attempt(&j);
+    let since = j.get_job().close_pending.unwrap().since_ns;
+    Ctx::new(T1, EVE)
+        .at(since + RESUME_AFTER_SECS * NS_PER_SEC)
+        .set();
+    j.resume_close();
+    // The first notice's failure arrives late: it changes nothing.
+    assert!(matches!(
+        ack_at(&mut j, first, false),
+        PromiseOrValue::Value(false)
+    ));
+    assert!(j.get_job().close_pending.unwrap().in_flight);
+    // Any success, even a late one, means the parent has us closed.
+    assert!(matches!(
+        ack_at(&mut j, first, true),
+        PromiseOrValue::Promise(_)
+    ));
+    assert_eq!(delete_to(), Some(acc(ROOT)));
+}
+
+#[test]
+#[should_panic(expected = "callback: caller must be this contract")]
+fn parent_ack_rejects_outside_callers() {
+    let mut j = paid_sub();
+    balance_cb(&mut j, T1, ok(&u128_json(0)));
+    let a = close_attempt(&j);
+    Ctx::new(T1, EVE).at(AFTER).results(vec![ok(b"")]).set();
+    j.on_parent_ack(a);
 }
 
 #[test]
@@ -1610,7 +1769,7 @@ fn stray_tokens_are_swept_up_then_the_job_deletes() {
         balance_cb(&mut j, T1, ok(&u128_json(0))),
         PromiseOrValue::Promise(_)
     ));
-    assert!(deleted());
+    assert!(deletes_after_parent_ack(&mut j));
 }
 
 #[test]
@@ -1632,7 +1791,7 @@ fn phantom_surplus_from_a_refunded_transfer_call_cannot_lock_settle() {
         balance_cb(&mut j, T1, ok(&u128_json(0))),
         PromiseOrValue::Promise(_)
     ));
-    assert!(deleted());
+    assert!(deletes_after_parent_ack(&mut j));
 }
 
 #[test]
@@ -1793,7 +1952,7 @@ fn resume_rest_leg_then_balance_leg_deletes() {
         PromiseOrValue::Promise(_)
     ));
     assert_eq!(j.get_job().status, "Settled");
-    assert!(deleted());
+    assert!(deletes_after_parent_ack(&mut j));
 }
 
 #[test]
@@ -1847,13 +2006,24 @@ fn unknown_caller_cannot_close_a_child() {
 }
 
 #[test]
-#[should_panic(expected = "not an open child")]
-fn child_cannot_close_twice() {
+fn a_repeated_child_closed_credits_nothing() {
+    // The child resends its notice when it never saw the parent's answer;
+    // the repeat succeeds (so the child can delete) and credits nothing.
     let mut j = funded_root(100 * USD);
     hired(&mut j, WORKER, 30 * USD);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(0), None);
-    j.child_closed(U128(0), None);
+    j.child_closed(U128(5 * USD), Some(true));
+    let once = j.get_job();
+    assert_eq!(once.ft_balance.0, 75 * USD);
+    Ctx::new(ROOT, T1).set();
+    j.child_closed(U128(5 * USD), Some(true));
+    let twice = j.get_job();
+    assert_eq!(twice.ft_balance.0, 75 * USD, "not credited twice");
+    assert_eq!(twice.children_open, 0);
+    assert_eq!(twice.allocated, once.allocated);
+    assert_eq!(twice.unallocated, once.unallocated);
+    assert_eq!(events("child_closed_again").len(), 1);
+    assert!(get_created_receipts().is_empty(), "no bond paid twice");
 }
 
 #[test]
@@ -2767,10 +2937,20 @@ mod stuck_hire {
                     + Gas::from_tgas(5).as_gas()
         );
         assert!(GAS_ON_RESUME.as_gas() >= GAS_ON_PAYEE_PAID.as_gas());
-        // The balance callback schedules the delete, child_closed and record.
+        // The balance callback schedules child_closed, its ack callback
+        // (which deletes) and the record.
         assert!(
             GAS_ON_BALANCE_CHECKED.as_gas()
-                >= GAS_CHILD_CLOSED.as_gas() + GAS_RECORD.as_gas() + Gas::from_tgas(10).as_gas()
+                >= GAS_CHILD_CLOSED.as_gas()
+                    + GAS_ON_PARENT_ACK.as_gas()
+                    + GAS_RECORD.as_gas()
+                    + Gas::from_tgas(10).as_gas()
+        );
+        assert!(
+            GAS_RESUME_CLOSE_MIN.as_gas()
+                >= GAS_CHILD_CLOSED.as_gas()
+                    + GAS_ON_PARENT_ACK.as_gas()
+                    + Gas::from_tgas(5).as_gas()
         );
         assert!(
             GAS_SETTLE_MIN.as_gas()

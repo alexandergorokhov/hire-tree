@@ -74,11 +74,46 @@ fn full() -> Pool {
     p
 }
 
-fn posted() -> Pool {
+/// The attempt of the step in flight (launch, finish or claim).
+fn att(p: &Pool) -> u32 {
+    p.pending.as_ref().expect("a step in flight").attempt
+}
+
+/// `launch` without its promises: the pool is Launching at `now_s`.
+fn launching(now_s: u64) -> Pool {
     let mut p = full();
-    p.state = State::Launching;
-    cb(vec![ok(json!(U128(90 * USD)))]);
-    assert_eq!(p.on_launched(), State::Posted);
+    ctx_full("anyone.test", now_s, POST_NEAR, 300, vec![]);
+    p.launch();
+    p
+}
+
+fn launched(p: &mut Pool, r: PromiseResult) -> State {
+    let a = att(p);
+    cb(vec![r]);
+    p.on_launched(a)
+}
+
+fn job_checked(p: &mut Pool, r: PromiseResult) -> bool {
+    let a = att(p);
+    cb(vec![r]);
+    p.on_job_checked(a).is_some()
+}
+
+fn balance(p: &mut Pool, r: PromiseResult) -> U128 {
+    let a = att(p);
+    cb(vec![r]);
+    p.on_balance(a)
+}
+
+fn claimed(p: &mut Pool, r: PromiseResult) -> bool {
+    let a = att(p);
+    cb(vec![r]);
+    p.on_claimed(a)
+}
+
+fn posted() -> Pool {
+    let mut p = launching(120);
+    assert_eq!(launched(&mut p, ok(json!(U128(90 * USD)))), State::Posted);
     p
 }
 
@@ -96,10 +131,8 @@ fn done(payout: u128) -> Pool {
     let mut p = bound();
     ctx("anyone.test", 200);
     p.finish();
-    cb(vec![PromiseResult::Failed]);
-    p.on_job_checked();
-    cb(vec![ok(json!(U128(payout)))]);
-    p.on_balance();
+    job_checked(&mut p, PromiseResult::Failed);
+    balance(&mut p, ok(json!(U128(payout))));
     p
 }
 
@@ -257,15 +290,12 @@ fn launch_prepays_and_posts_the_whole_budget_as_client() {
 
 #[test]
 fn a_refused_post_is_a_failed_launch_and_members_get_it_back() {
-    let mut p = full();
-    p.state = State::Launching;
-    cb(vec![ok(json!(U128(0)))]);
-    assert_eq!(p.on_launched(), State::LaunchFailed);
+    let mut p = launching(120);
+    assert_eq!(launched(&mut p, ok(json!(U128(0)))), State::LaunchFailed);
     ctx("anyone.test", 130);
     p.finish();
     assert_eq!(calls()[0].1, "ft_balance_of");
-    cb(vec![ok(json!(U128(90 * USD)))]);
-    p.on_balance();
+    balance(&mut p, ok(json!(U128(90 * USD))));
     ctx("b.test", 140);
     p.claim();
     let a: serde_json::Value = serde_json::from_slice(&calls()[0].2).unwrap();
@@ -275,10 +305,8 @@ fn a_refused_post_is_a_failed_launch_and_members_get_it_back() {
 
 #[test]
 fn no_answer_from_the_token_is_a_failed_launch() {
-    let mut p = full();
-    p.state = State::Launching;
-    cb(vec![PromiseResult::Failed]);
-    assert_eq!(p.on_launched(), State::LaunchFailed);
+    let mut p = launching(120);
+    assert_eq!(launched(&mut p, PromiseResult::Failed), State::LaunchFailed);
 }
 
 #[test]
@@ -359,17 +387,14 @@ fn finish_waits_until_the_job_account_is_gone() {
         ("job-3.hub.op.test", "get_job")
     );
     // The job answered: not settled yet.
-    cb(vec![ok(json!({ "status": "Open" }))]);
-    assert!(p.on_job_checked().is_none());
+    assert!(!job_checked(&mut p, ok(json!({ "status": "Open" }))));
     assert_eq!(p.get_pool()["state"], json!("Posted"));
     // Later: the account is gone, so read the balance.
     ctx("anyone.test", 300);
     p.finish();
-    cb(vec![PromiseResult::Failed]);
-    assert!(p.on_job_checked().is_some());
+    assert!(job_checked(&mut p, PromiseResult::Failed));
     assert_eq!(calls()[0].1, "ft_balance_of");
-    cb(vec![ok(json!(U128(42 * USD)))]);
-    assert_eq!(p.on_balance(), U128(42 * USD));
+    assert_eq!(balance(&mut p, ok(json!(U128(42 * USD)))), U128(42 * USD));
     assert_eq!(p.get_pool()["state"], json!("Done"));
 }
 
@@ -389,8 +414,7 @@ fn a_pool_that_missed_its_target_refunds_after_closing() {
     join(&mut p, "b.test", 10, 110);
     ctx("anyone.test", 800);
     p.finish();
-    cb(vec![ok(json!(U128(40 * USD)))]);
-    p.on_balance();
+    balance(&mut p, ok(json!(U128(40 * USD))));
     ctx("b.test", 810);
     p.claim();
     let a: serde_json::Value = serde_json::from_slice(&calls()[0].2).unwrap();
@@ -402,10 +426,8 @@ fn an_unreadable_balance_goes_back_to_the_previous_state() {
     let mut p = bound();
     ctx("anyone.test", 200);
     p.finish();
-    cb(vec![PromiseResult::Failed]);
-    p.on_job_checked();
-    cb(vec![PromiseResult::Failed]);
-    p.on_balance();
+    job_checked(&mut p, PromiseResult::Failed);
+    balance(&mut p, PromiseResult::Failed);
     assert_eq!(p.get_pool()["state"], json!("Posted"));
 }
 
@@ -429,8 +451,7 @@ fn a_failed_claim_can_be_retried() {
     let mut p = done(60 * USD);
     ctx("a.test", 400);
     p.claim();
-    cb(vec![PromiseResult::Failed]);
-    assert!(!p.on_claimed(0, U128(20 * USD)));
+    assert!(!claimed(&mut p, PromiseResult::Failed));
     ctx("a.test", 410);
     p.claim();
     assert_eq!(calls()[0].1, "ft_transfer");
@@ -441,19 +462,18 @@ fn tokens_arriving_after_finish_are_shared_by_a_recount() {
     let mut p = done(60 * USD);
     ctx("a.test", 400);
     p.claim();
-    cb(vec![ok(json!(null))]);
-    assert!(p.on_claimed(0, U128(20 * USD)));
+    assert!(claimed(&mut p, ok(json!(null))));
     // 30 more arrive late; the pool now holds 40 + 30.
     ctx("anyone.test", 500);
     p.finish();
     assert_eq!(calls()[0].1, "ft_balance_of");
-    cb(vec![ok(json!(U128(70 * USD)))]);
-    assert_eq!(p.on_balance(), U128(90 * USD));
+    assert_eq!(balance(&mut p, ok(json!(U128(70 * USD)))), U128(90 * USD));
     // a already had 20 of its 30; b gets the full 30.
     ctx("a.test", 510);
     p.claim();
     let a: serde_json::Value = serde_json::from_slice(&calls()[0].2).unwrap();
     assert_eq!(a["amount"], json!(U128(10 * USD)));
+    assert!(claimed(&mut p, ok(json!(null))));
     ctx("b.test", 510);
     p.claim();
     let b: serde_json::Value = serde_json::from_slice(&calls()[0].2).unwrap();
@@ -476,4 +496,222 @@ fn outsiders_cannot_claim() {
     let mut p = done(60 * USD);
     ctx("lead.test", 400);
     p.claim();
+}
+
+// ================================================================ resume
+
+const STUCK_AFTER: u64 = RESUME_AFTER_SECS;
+
+/// `resume` at `now_s`, then the token's answer to the balance read.
+fn resume_with(p: &mut Pool, now_s: u64, real: PromiseResult) -> bool {
+    ctx("anyone.test", now_s);
+    p.resume();
+    assert_eq!(
+        (calls()[0].0.as_str(), calls()[0].1.as_str()),
+        (TOKEN, "ft_balance_of")
+    );
+    let a = att(p);
+    ctx_full(POOL, now_s, NearToken::from_yoctonear(0), 300, vec![real]);
+    p.on_resume(a)
+}
+
+#[test]
+#[should_panic(expected = "nothing is stuck")]
+fn resume_needs_a_step_in_flight() {
+    let mut p = bound();
+    ctx("anyone.test", 5_000);
+    p.resume();
+}
+
+#[test]
+#[should_panic(expected = "not stuck yet")]
+fn resume_waits_until_the_step_is_stuck() {
+    let mut p = launching(120);
+    ctx("anyone.test", 120 + STUCK_AFTER - 1);
+    p.resume();
+}
+
+#[test]
+#[should_panic(expected = "not enough gas for resume")]
+fn resume_needs_gas() {
+    let mut p = launching(120);
+    ctx_full(
+        "anyone.test",
+        120 + STUCK_AFTER,
+        NearToken::from_yoctonear(0),
+        10,
+        vec![],
+    );
+    p.resume();
+}
+
+#[test]
+fn a_stuck_launch_whose_budget_left_resumes_to_posted() {
+    // on_launched never ran; the factory kept the budget (balance 0).
+    let mut p = launching(120);
+    assert!(resume_with(&mut p, 120 + STUCK_AFTER, ok(json!(U128(0)))));
+    assert_eq!(p.get_pool()["state"], json!("Posted"));
+    assert!(p.pending.is_none());
+}
+
+#[test]
+fn a_stuck_launch_whose_budget_came_back_resumes_to_launch_failed() {
+    let mut p = launching(120);
+    assert!(resume_with(
+        &mut p,
+        120 + STUCK_AFTER,
+        ok(json!(U128(90 * USD)))
+    ));
+    assert_eq!(p.get_pool()["state"], json!("LaunchFailed"));
+    // Members get it back.
+    ctx("anyone.test", 2_000);
+    p.finish();
+    balance(&mut p, ok(json!(U128(90 * USD))));
+    ctx("a.test", 2_010);
+    p.claim();
+    let a: serde_json::Value = serde_json::from_slice(&calls()[0].2).unwrap();
+    assert_eq!(a["amount"], json!(U128(30 * USD)));
+}
+
+#[test]
+fn a_late_launch_answer_after_resume_changes_nothing() {
+    let mut p = launching(120);
+    let first = att(&p);
+    resume_with(&mut p, 120 + STUCK_AFTER, ok(json!(U128(90 * USD))));
+    cb(vec![ok(json!(U128(90 * USD)))]);
+    let late = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| p.on_launched(first)));
+    assert!(late.is_err(), "stale callback refused");
+    assert_eq!(p.get_pool()["state"], json!("LaunchFailed"));
+}
+
+#[test]
+fn an_unanswered_resume_stays_stuck_and_can_retry() {
+    let mut p = launching(120);
+    assert!(!resume_with(
+        &mut p,
+        120 + STUCK_AFTER,
+        PromiseResult::Failed
+    ));
+    assert_eq!(p.get_pool()["state"], json!("Launching"));
+    assert!(p.pending.is_some());
+    assert!(resume_with(
+        &mut p,
+        120 + 2 * STUCK_AFTER,
+        ok(json!(U128(0)))
+    ));
+    assert_eq!(p.get_pool()["state"], json!("Posted"));
+}
+
+#[test]
+fn a_stuck_finish_goes_back_and_can_run_again() {
+    // finish's callbacks never ran: no money moved, so resume just puts the
+    // pool back where it was.
+    let mut p = bound();
+    ctx("anyone.test", 200);
+    p.finish();
+    let first = att(&p);
+    ctx("anyone.test", 200 + STUCK_AFTER);
+    p.resume();
+    assert!(calls().is_empty(), "no read needed: nothing was in flight");
+    assert_eq!(p.get_pool()["state"], json!("Posted"));
+    assert!(p.pending.is_none());
+    // A late answer of the lost round is refused.
+    cb(vec![PromiseResult::Failed]);
+    let late = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| p.on_job_checked(first)));
+    assert!(late.is_err());
+    ctx("anyone.test", 2_000);
+    p.finish();
+    assert!(job_checked(&mut p, PromiseResult::Failed));
+    assert_eq!(balance(&mut p, ok(json!(U128(60 * USD)))), U128(60 * USD));
+}
+
+#[test]
+fn a_stale_balance_from_a_lost_finish_cannot_inflate_the_payout() {
+    // A recount's balance read (60) is lost; after resume a member claims
+    // 20; the next recount starts. The old read must not land, or the 20
+    // already paid would be counted twice.
+    let mut p = done(60 * USD);
+    ctx("anyone.test", 300);
+    p.finish();
+    let old = att(&p);
+    ctx("anyone.test", 300 + STUCK_AFTER);
+    p.resume();
+    assert_eq!(p.get_pool()["state"], json!("Done"));
+    ctx("a.test", 1_000);
+    p.claim();
+    assert!(claimed(&mut p, ok(json!(null))));
+    ctx("anyone.test", 1_100);
+    p.finish();
+    cb(vec![ok(json!(U128(60 * USD)))]);
+    let late = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| p.on_balance(old)));
+    assert!(late.is_err(), "stale balance refused");
+    assert_eq!(balance(&mut p, ok(json!(U128(40 * USD)))), U128(60 * USD));
+}
+
+#[test]
+#[should_panic(expected = "a claim is in flight")]
+fn one_claim_in_flight_at_a_time() {
+    let mut p = done(60 * USD);
+    ctx("a.test", 400);
+    p.claim();
+    ctx("b.test", 400);
+    p.claim();
+}
+
+#[test]
+fn a_stuck_claim_that_was_paid_is_not_paid_again() {
+    // a's 20 left (the pool holds 40 = 60 - 20) but on_claimed never ran.
+    let mut p = done(60 * USD);
+    ctx("a.test", 400);
+    p.claim();
+    assert!(resume_with(
+        &mut p,
+        400 + STUCK_AFTER,
+        ok(json!(U128(40 * USD)))
+    ));
+    assert!(p.pending.is_none());
+    assert_eq!(p.get_pool()["paid_out"], json!(U128(20 * USD)));
+    ctx("a.test", 2_000);
+    let again = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| p.claim()));
+    assert!(again.is_err(), "nothing left to claim");
+    // Others claim as usual.
+    ctx("b.test", 2_000);
+    p.claim();
+    let b: serde_json::Value = serde_json::from_slice(&calls()[0].2).unwrap();
+    assert_eq!(b["amount"], json!(U128(20 * USD)));
+}
+
+#[test]
+fn a_stuck_claim_that_failed_can_be_claimed_again() {
+    // The pool still holds all 60: a's transfer never happened.
+    let mut p = done(60 * USD);
+    ctx("a.test", 400);
+    p.claim();
+    assert!(resume_with(
+        &mut p,
+        400 + STUCK_AFTER,
+        ok(json!(U128(60 * USD)))
+    ));
+    assert_eq!(p.get_pool()["paid_out"], json!(U128(0)));
+    ctx("a.test", 2_000);
+    p.claim();
+    let a: serde_json::Value = serde_json::from_slice(&calls()[0].2).unwrap();
+    assert_eq!(a["amount"], json!(U128(20 * USD)));
+}
+
+#[test]
+fn a_late_claim_answer_after_resume_changes_nothing() {
+    let mut p = done(60 * USD);
+    ctx("a.test", 400);
+    p.claim();
+    let first = att(&p);
+    resume_with(&mut p, 400 + STUCK_AFTER, ok(json!(U128(40 * USD))));
+    cb(vec![PromiseResult::Failed]);
+    let late = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| p.on_claimed(first)));
+    assert!(late.is_err(), "stale callback refused");
+    assert_eq!(
+        p.get_pool()["paid_out"],
+        json!(U128(20 * USD)),
+        "not reverted"
+    );
 }

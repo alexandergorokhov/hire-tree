@@ -48,3 +48,37 @@ arrive late are shared too.
 - WHEN the pool launches, the lead finishes the job (fee 9, work 60) and two members vote to approve
 - THEN the job deletes itself, 21 comes back to the pool, and each member claims 7
 - sandbox: `agents_story_with_mock_model` (job 3)
+
+### Requirement: A stuck pool can be resumed without paying twice
+At most one step that waits on a callback SHALL be in flight: a launch, a
+finish, or one claim (`claim` refuses while one is in flight). Each carries
+an attempt number. If its callback never ran, anyone SHALL be able to call
+`resume` after `RESUME_AFTER_SECS` (600 s) with 40 Tgas. It bumps the
+attempt first, so the late original callback is refused and changes
+nothing.
+- finish (reads only, no money moves): the pool goes back to its state
+  before `finish`; finish may run again.
+- launch: the pool's real token balance decides. Below the target: the
+  factory kept the budget, Posted. Otherwise it came back, LaunchFailed, and
+  members get it back.
+- claim: had the transfer happened the pool holds `payout - paid_out`; at
+  least that plus the claim means it did not, and the claim is undone so the
+  member may claim again. Tokens above that are never counted here (a
+  recount shares them). Known limit: a gift of at least the claim arriving
+  while the claim is stuck makes a paid claim look unpaid; the member is then
+  paid twice out of that gift, never out of other members' shares.
+- No answer from the token: the step stays stuck and `resume` can run again.
+
+#### Scenario: Too early, nothing stuck, too little gas
+- unit: `resume_waits_until_the_step_is_stuck`, `resume_needs_a_step_in_flight`, `resume_needs_gas`
+
+#### Scenario: Stuck launch
+- unit: `a_stuck_launch_whose_budget_left_resumes_to_posted`, `a_stuck_launch_whose_budget_came_back_resumes_to_launch_failed`, `a_late_launch_answer_after_resume_changes_nothing`, `an_unanswered_resume_stays_stuck_and_can_retry`
+
+#### Scenario: Stuck finish
+- WHEN a finish's callbacks never ran, and a member claims after the resume
+- THEN the pool is back where it was, and the lost round's balance read cannot land later and count the paid claim twice
+- unit: `a_stuck_finish_goes_back_and_can_run_again`, `a_stale_balance_from_a_lost_finish_cannot_inflate_the_payout`
+
+#### Scenario: Stuck claim
+- unit: `one_claim_in_flight_at_a_time`, `a_stuck_claim_that_was_paid_is_not_paid_again`, `a_stuck_claim_that_failed_can_be_claimed_again`, `a_late_claim_answer_after_resume_changes_nothing`
