@@ -38,7 +38,7 @@ Rules (HACKATHON.md Procedure 2): say it was built at NEAR HACKATHON, tag @NEARP
 |---|---|
 | `projectName` | `Hire Tree` |
 | `leadName` | owner's name |
-| `email` | owner's email (max 2 submissions per email; Agent Exit is the other) |
+| `email` | an owner email NOT used for the Agent Exit submission: the API rejects a second submission with the same email (409, "unique across the hackathon") |
 | `size` | `1` |
 | `tracks` | `["swarms", "agents", "security"]` |
 | `nearAddress` | owner's **mainnet** payout account (`name.near` or 64-hex implicit) |
