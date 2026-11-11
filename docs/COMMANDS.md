@@ -5,7 +5,7 @@ Every `make` target, what it needs and what it shows. The short list is in the R
 | Command | What it does |
 |---|---|
 | `make setup` | downloads the crates |
-| `make test` | 509 unit + property tests, all `ok`: core (69 + 10 property tests: 5 over 10,000 random job trees with random transfer failures, 5 on the award rule), job contract (305), factory (47), pool (25), mock checker (2), mock-usdc (7), agents (44) |
+| `make test` | every offline unit and property test (counts in the README's judge fast path; `make test` fails if they are stale) |
 | `make lint` | rustfmt check, clippy `-D warnings`, a check that every test the specs and THREATS.md name exists, a check that every swarm number in `docs/SWARM.md` matches `web/swarm.json`, checks that every table in this README and `docs/RESULTS.md` matches the runs in `runs/seeds/`, `runs/storm/` and `runs/wash/`, that `docs/ECONOMICS.md` matches `runs/gas.json`, and the sha256 of the vendored NEAR Intents wasm; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make mcp-setup`, then an MCP client in this folder | `.mcp.json` starts `scripts/mcp-local.sh`: tools `guide`, `accounts`, `wait`, `do_work`, `judge_check`, `cash_out`, `run_story` plus every agent tool, each with `as` to pick the acting account |
