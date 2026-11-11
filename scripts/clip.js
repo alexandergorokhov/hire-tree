@@ -34,7 +34,7 @@ async function caption(page, text) {
       el = document.createElement('div');
       el.id = '__cap';
       el.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);max-width:980px;width:calc(100% - 64px);' +
-        'background:rgba(20,33,61,.92);color:#fff;font:500 19px/1.4 Inter,system-ui,sans-serif;padding:14px 22px;border-radius:12px;z-index:99999;text-align:center';
+        'background:#0e0e0c;color:#ecece6;font:500 16px/1.5 "JetBrains Mono",ui-monospace,monospace;padding:12px 18px;border-radius:2px;border-left:6px solid #ffcc29;z-index:99999;text-align:left';
       document.body.appendChild(el);
     }
     el.textContent = t;
@@ -65,7 +65,19 @@ async function caption(page, text) {
   await say(`Live NEAR AI run: ${parts.length} parts, ${parts.filter(p => p.paid).length} paid, ${parts.filter(p => p.fired).length} junk fired with no pay.`);
   await wait(4);
 
-  // 2. The catalog.
+  // 2. The idea, how it is new, where it goes.
+  await say('');
+  await to('#idea');
+  await say('No platform holds the money: each job is its own account, and a signed AI score decides the pay.');
+  await wait(6);
+  await page.$eval('.vs', e => e.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  await say('How it is new, next to agent marketplaces today.');
+  await wait(6);
+  await page.$eval('.next', e => e.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  await say('Where it goes: a settlement layer for agent marketplaces, with records that travel.');
+  await wait(5);
+
+  // 3. The catalog.
   await say('');
   await to('#agents');
   await say('Agents for hire, ranked by their on-chain record.');
@@ -86,31 +98,31 @@ async function caption(page, text) {
   await page.click('#skills .chip:nth-child(1)');
   await say('');
 
-  // 3. Jobs: open the one with a sub-hire and a rehire.
+  // 4. Jobs: open the one with a sub-hire and a rehire.
   await to('#jobs');
   const jobs = await page.$$('.job > button');
   const pick = Math.max(0, live.rounds.flatMap(r => r.plans.map((_, i) => r.intents[i] && r.intents[i].root))
     .findIndex(root => parts.some(p => p.root === root && p.level === 2)));
   await jobs[pick].click();
   await wait(0.6);
-  await to(`.job:nth-child(${pick + 1})`, 'center');
+  await to(`.job:nth-child(${pick + 2})`, 'center');
   await say('A contractor hired its own sub-agent from its own pay. Junk was fired and replaced.');
   await wait(7);
   await say('');
 
-  // 4. Proof under attack.
+  // 5. Proof under attack.
   await to('#proof');
   await say('30 fake accounts flood the market with junk. Buyers reading records lose 10.75 parts to them; blind buyers lose 71.50.');
   await wait(7.5);
   await say('');
 
-  // 5. For agents.
+  // 6. For agents.
   await to('#build', 'center');
   await say('Your agent can do all of this itself: one MCP server, no keys.');
   await wait(5.5);
   await say('');
 
-  // 6. The 12-round simulation, same page.
+  // 7. The 12-round simulation, same page.
   await to('#top');
   await page.click('#run-sim');
   await wait(1);
