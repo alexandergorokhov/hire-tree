@@ -1836,19 +1836,19 @@
         {
           "client": "price",
           "lead": "quality",
-          "lead_fee": 4.869068,
+          "lead_fee": 4.867394,
           "reserve": 4.0
         },
         {
           "client": "quality",
           "lead": "price",
-          "lead_fee": 5.130335,
+          "lead_fee": 5.122849,
           "reserve": 5.0
         },
         {
           "client": "budget",
           "lead": "budget",
-          "lead_fee": 6.277336,
+          "lead_fee": 6.271457,
           "reserve": 6.0
         }
       ],
@@ -2592,19 +2592,19 @@
         {
           "client": "price",
           "lead": "quality",
-          "lead_fee": 5.479177,
+          "lead_fee": 5.483191,
           "reserve": 4.5
         },
         {
           "client": "quality",
           "lead": "price",
-          "lead_fee": 5.50098,
+          "lead_fee": 5.50533,
           "reserve": 5.0
         },
         {
           "client": "budget",
           "lead": "budget",
-          "lead_fee": 5.520926,
+          "lead_fee": 5.525766,
           "reserve": 5.5
         }
       ],
@@ -3340,19 +3340,19 @@
         {
           "client": "price",
           "lead": "price",
-          "lead_fee": 6.062557,
+          "lead_fee": 6.051915,
           "reserve": 5.0
         },
         {
           "client": "quality",
           "lead": "quality",
-          "lead_fee": 6.082648,
+          "lead_fee": 6.072108,
           "reserve": 5.0
         },
         {
           "client": "budget",
           "lead": "budget",
-          "lead_fee": 6.102573,
+          "lead_fee": 6.092213,
           "reserve": 5.0
         }
       ],
@@ -4138,19 +4138,19 @@
         {
           "client": "price",
           "lead": "budget",
-          "lead_fee": 5.468399,
+          "lead_fee": 5.47111,
           "reserve": 4.5
         },
         {
           "client": "quality",
           "lead": "quality",
-          "lead_fee": 5.488425,
+          "lead_fee": 5.491304,
           "reserve": 5.0
         },
         {
           "client": "budget",
           "lead": "price",
-          "lead_fee": 5.508259,
+          "lead_fee": 5.511433,
           "reserve": 5.5
         }
       ],
@@ -4911,19 +4911,19 @@
         {
           "client": "price",
           "lead": "quality",
-          "lead_fee": 6.053879,
+          "lead_fee": 6.058917,
           "reserve": 5.0
         },
         {
           "client": "quality",
           "lead": "budget",
-          "lead_fee": 6.077299,
+          "lead_fee": 6.079154,
           "reserve": 5.0
         },
         {
           "client": "budget",
           "lead": "price",
-          "lead_fee": 6.101228,
+          "lead_fee": 6.099245,
           "reserve": 5.0
         }
       ],
@@ -5640,19 +5640,19 @@
         {
           "client": "price",
           "lead": "price",
-          "lead_fee": 5.473573,
+          "lead_fee": 5.473914,
           "reserve": 4.5
         },
         {
           "client": "quality",
           "lead": "budget",
-          "lead_fee": 5.49389,
+          "lead_fee": 5.494011,
           "reserve": 5.0
         },
         {
           "client": "budget",
           "lead": "quality",
-          "lead_fee": 5.515854,
+          "lead_fee": 5.514151,
           "reserve": 5.5
         }
       ],
@@ -6509,19 +6509,19 @@
         {
           "client": "price",
           "lead": "budget",
-          "lead_fee": 6.050989,
+          "lead_fee": 6.059784,
           "reserve": 5.0
         },
         {
           "client": "quality",
           "lead": "price",
-          "lead_fee": 6.070947,
+          "lead_fee": 6.08155,
           "reserve": 5.0
         },
         {
           "client": "budget",
           "lead": "quality",
-          "lead_fee": 6.090948,
+          "lead_fee": 6.101712,
           "reserve": 5.0
         }
       ],
@@ -7576,19 +7576,19 @@
         {
           "client": "price",
           "lead": "quality",
-          "lead_fee": 5.476079,
+          "lead_fee": 5.473607,
           "reserve": 4.5
         },
         {
           "client": "quality",
           "lead": "price",
-          "lead_fee": 5.496169,
+          "lead_fee": 5.492835,
           "reserve": 5.0
         },
         {
           "client": "budget",
           "lead": "budget",
-          "lead_fee": 5.516138,
+          "lead_fee": 5.513206,
           "reserve": 5.5
         }
       ],
@@ -8491,19 +8491,19 @@
         {
           "client": "price",
           "lead": "price",
-          "lead_fee": 6.06785,
+          "lead_fee": 6.04743,
           "reserve": 5.0
         },
         {
           "client": "quality",
           "lead": "quality",
-          "lead_fee": 6.087993,
+          "lead_fee": 6.067511,
           "reserve": 5.0
         },
         {
           "client": "budget",
           "lead": "budget",
-          "lead_fee": 6.10819,
+          "lead_fee": 6.089241,
           "reserve": 5.0
         }
       ],
@@ -9471,19 +9471,19 @@
         {
           "client": "price",
           "lead": "budget",
-          "lead_fee": 5.500236,
+          "lead_fee": 5.470969,
           "reserve": 4.5
         },
         {
           "client": "quality",
           "lead": "quality",
-          "lead_fee": 5.522241,
+          "lead_fee": 5.492977,
           "reserve": 5.0
         },
         {
           "client": "budget",
           "lead": "price",
-          "lead_fee": 5.54252,
+          "lead_fee": 5.51311,
           "reserve": 5.5
         }
       ],
@@ -10350,19 +10350,19 @@
         {
           "client": "price",
           "lead": "quality",
-          "lead_fee": 6.069063,
+          "lead_fee": 6.059814,
           "reserve": 5.0
         },
         {
           "client": "quality",
           "lead": "budget",
-          "lead_fee": 6.089204,
+          "lead_fee": 6.079888,
           "reserve": 5.0
         },
         {
           "client": "budget",
           "lead": "price",
-          "lead_fee": 6.109356,
+          "lead_fee": 6.101896,
           "reserve": 5.0
         }
       ],
@@ -11268,19 +11268,19 @@
         {
           "client": "price",
           "lead": "price",
-          "lead_fee": 5.47033,
+          "lead_fee": 5.466065,
           "reserve": 4.5
         },
         {
           "client": "quality",
           "lead": "budget",
-          "lead_fee": 5.492156,
+          "lead_fee": 5.486324,
           "reserve": 5.0
         },
         {
           "client": "budget",
           "lead": "quality",
-          "lead_fee": 5.512018,
+          "lead_fee": 5.508236,
           "reserve": 5.5
         }
       ],

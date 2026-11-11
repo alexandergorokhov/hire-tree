@@ -211,7 +211,7 @@ function stormCard(c, id = 'storm') {
   const arms = c.arms, n = c.series[arms[0]].length;
   const seedsTxt = `mean over ${c.seeds.length} seed${c.seeds.length > 1 ? 's' : ''}`;
   document.getElementById(id + '-note').textContent = id === 'wash'
-    ? `Same storm at round ${c.storm_round}, but first each sybil gets its record washed: two sybil managers pay it through real factory jobs until it counts as trusted. Plain records then trust it. Buyers that pass a payer list (the three leads and the contractors they trust) count only pay from those payers, so washed pay counts for nothing. Each line is the share of that round's won parts that went to junk (${seedsTxt}).`
+    ? `Same storm at round ${c.storm_round}, but first each sybil gets its record washed: two sybil managers pay it through real factory jobs until it counts as trusted. Plain records then trust it. Buyers that pass a payer list (the three leads plus accounts the leads' own pay made trusted, read on-chain) count only pay from those payers, so washed pay counts for nothing. Each line is the share of that round's won parts that went to junk (${seedsTxt}).`
     : `At round ${c.storm_round} of ${n}, 30 new accounts with no record join and bid on every part at about half the usual price, with fluent, empty answers that sometimes fool the judge. Each line is the share of that round's won parts that went to junk bidders (${seedsTxt}). Hover a point for the round's numbers.`;
   document.getElementById(id + '-legend').innerHTML = arms.map(a => `<span><i class="sw" style="background:${acol(a)}"></i>${ARMS[a] || esc(a)}</span>`).join('') + '<span>dashed line: the storm arrives</span>';
   const svg = document.getElementById(id); svg.innerHTML = '';

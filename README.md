@@ -16,6 +16,7 @@ when done. It is the settlement layer an agent market can plug in:
 | As an AI agent | `make mcp-setup`, then open Claude Code (or any MCP client) in this folder and ask: *"Call guide, join the market as a research agent, win a part, subcontract a piece of it out of your own pay and keep the margin."* [More](#for-ai-judges-mcp) |
 | Watch the market | `make swarm-quick` (3 rounds, ~20 min) or `make swarm` (12 rounds, ~85 min), then open `web/swarm.html`: 3 leads, 36 bidding agents, junk fired on-chain, winners not scripted (the committed run uses the scripted test model). [What emerged](#swarm) |
 | Step through one story | `make demo && make web`: 23 scenes, every agent decision and transaction |
+| Check the numbers | `make test` (497 offline tests) and `python3 scripts/swarm-seeds.py --storm --check --readme`: recomputes the result below from the committed runs in seconds, no node |
 
 **Result.** When 30 sybil accounts flood the market with half-price junk,
 buyers that read on-chain records let them win 10.75 parts per run,
@@ -75,7 +76,10 @@ recomputes this table from them):
 - **Blind:** buyers ignore records and never audit.
 - **Audit-all:** buyers ignore records but audit every pass.
 
-Mean per run of 12 rounds:
+Mean per run of 12 rounds. A *good part* is a part a lead bought, paid,
+from a worker that is not junk; *fUSD per good part* is all the leads
+spent divided by good parts. *Sub-parts* are the parts the lead's winning
+contractors bought one level down (deeper levels are not counted).
 
 | | With records | Blind | Audit-all |
 |---|---|---|---|
@@ -143,8 +147,7 @@ fool the judge. Mean per run over 4 seeds (every run is in `runs/storm/`;
 to its own sybils and pays them, so each crosses the trusted line (30 fUSD
 from 2 payers) before the storm. `make swarm-seeds STORM=6 WASH=1
 ARMS="rec allow"` runs that attack. Arm `allow` is the same buyers passing
-`award_best` a `payers` list: the three leads plus the contractors they
-trust. The factory keeps who paid each worker how much
+`award_best` a `payers` list: the three leads plus every account that the leads' own pay has made trusted (read on-chain; the buyer does not know who is a contractor or a sybil). The factory keeps who paid each worker how much
 (`get_record_from`), so pay from anyone else counts for nothing. Mean per
 run over 4 seeds (`runs/wash/`; `make lint` recomputes these):
 
@@ -167,7 +170,10 @@ run over 4 seeds (`runs/wash/`; `make lint` recomputes these):
   some honest pay no longer counts, so more good workers look like
   newcomers and junk competes with them on price. The storm accounts still
   take a fifth of wins after round 6 (19.50 parts), not zero.
-- **Caveat.** Under CPU load, 3 audits in the payer-list runs came too
+- **No inside knowledge.** The buyers build the list from on-chain records
+  only. An earlier version that used the agents' hidden types picked the
+  same winners on all 4 seeds.
+- **Caveat.** Under CPU load, 2 audits in the payer-list runs came too
   late (the job window had closed), so those passes stood unaudited; the
   run counts them as `late_audits`. That favours the storm.
 
@@ -220,7 +226,7 @@ No keys, no NEAR AI account, no testnet NEAR.
 |---|---|
 | `make setup` | downloads the crates |
 | `make test` | 497 unit + property tests, all `ok`: core (69 + 10 property tests: 5 over 10,000 random job trees with random transfer failures, 5 on the award rule), job contract (295), factory (47), pool (25), mock checker (2), mock-usdc (7), agents (42) |
-| `make lint` | rustfmt check, clippy `-D warnings`, a check that every test the specs and THREATS.md name exists, a check that every swarm number in `docs/SWARM.md` matches `web/swarm.json`, and a check that the control table below matches the runs in `runs/seeds/`; exit 0 |
+| `make lint` | rustfmt check, clippy `-D warnings`, a check that every test the specs and THREATS.md name exists, a check that every swarm number in `docs/SWARM.md` matches `web/swarm.json`, and checks that the control, junk storm and washed storm tables below match the runs in `runs/seeds/`, `runs/storm/` and `runs/wash/`; exit 0 |
 | `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
 | `make mcp-setup`, then an MCP client in this folder | `.mcp.json` starts `scripts/mcp-local.sh`: tools `guide`, `accounts`, `wait`, `do_work`, `judge_check`, `run_story` plus every agent tool, each with `as` to pick the acting account |
 | `make mcp-test` | `test result: ok. 3 passed`: the guide's walk-through; a guest agent that wins a round at 20 fUSD (paid 19.80 early), delivers junk in round 2 (2/10, unpaid), and loses round 3 on its record although it bid lowest; and a guest agent that wins a part, subcontracts a piece to the house out of its own pay, and keeps the margin |

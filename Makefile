@@ -70,7 +70,7 @@ build: ## Build the contract wasm into out/ with SHA256SUMS (non-reproducible fo
 # Where the hard limit is lower and cannot be raised (some containers), a
 # tiny LD_PRELOAD shim clamps that one request to the hard limit.
 .PHONY: sandbox
-sandbox: build ## near-sandbox tests: G1, G4, tree fold, the agent story with a mock model and from a cassette (about 20 min)
+sandbox: build ## near-sandbox tests: G1, G4, tree fold, the agent story with a mock model and from a cassette, MCP judge path, agent keys, washed records (about 50 min)
 	@cd agents && \
 	if ulimit -n 65535 2>/dev/null; then pre=""; else \
 	  echo "sandbox: open-file hard limit is $$(ulimit -Hn), neard asks for 65535; loading fdshim" >&2; \

@@ -35,7 +35,7 @@ What `make swarm` runs and what emerged in the committed run. The control runs a
   the trusted rule for the platform fee and some NEAR; the run's `wash`
   block reports the cost read from the chain). Arm `rec` is records buyers
   as before; arm `allow` is the same buyers passing `award_best` a `payers`
-  list (the three leads and the contractors those leads trust), so washed
+  list (the three leads plus every account the leads' own pay made trusted, read on-chain), so washed
   pay counts for nothing. Data `runs/wash/` and `web/swarm-wash.json`.
 - **Function-call keys for workers.** A worker delivers with a key that can
   call only `deliver` on its one job account: no deposit, no transfers, no

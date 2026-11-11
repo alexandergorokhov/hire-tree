@@ -47,7 +47,7 @@ also the cheaper one: about half the cost per good part.
 **Washed storm.** The sybils first pay themselves through real jobs until
 their records look trusted (about 10 fUSD of fees per run). Plain records
 then fail: 72.00 storm wins. Buyers that pass `award_best` a payer list
-(the leads and the contractors they trust) count only that pay, and the
+(the leads plus accounts the leads' own pay made trusted) count only that pay, and the
 storm wins 19.50, lower on every seed (4 seeds, `runs/wash/`).
 
 **Calm market.** Same market, no storm: records gave junk fewer wins than

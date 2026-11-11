@@ -444,7 +444,9 @@ async fn record_of(
     tools.call(keeper, "get_record", &a).await
 }
 
-/// The allowlist of the moment: the leads and the trusted contractors.
+/// The allowlist of the moment: the leads, plus every market account that
+/// the leads' own pay has made trusted. Built from on-chain records only:
+/// the buyer does not know who is a contractor, junk or a storm sybil.
 async fn allowlist(
     tools: &Tools<'_>,
     keeper: &Acc,
@@ -453,10 +455,7 @@ async fn allowlist(
 ) -> Result<Vec<String>, String> {
     let lead_ids: Vec<String> = leads.iter().map(|l| l.0.id.to_string()).collect();
     let mut contractors = vec![];
-    for a in agents
-        .iter()
-        .filter(|a| a.strategy == Strategy::Contractor && !a.storm && !a.gone)
-    {
+    for a in agents.iter() {
         let rec = record_of(tools, keeper, a.acc.id.as_str(), Some(&lead_ids)).await?;
         contractors.push((a.acc.id.to_string(), rec));
     }
