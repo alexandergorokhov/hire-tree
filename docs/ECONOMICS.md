@@ -20,12 +20,12 @@ the table gives the NEAR price at which the result flips.
 | Deliver (signature check) | 2.6 | 0.00026 |
 | Submit the signed judge answer | 3.2 | 0.00032 |
 | Close the check round | 2.5 | 0.00025 |
-| Approve | 2.4 | 0.00024 |
+| Approve | 2.5 | 0.00025 |
 | Settle, pay, delete the sub-job | 24.4 | 0.00244 |
 
 **One whole part** (post, hire, deliver, signed check, approve, settle, both
-accounts deleted; 9 transactions): **111.2 Tgas = 0.0111 NEAR**.
-Paid out through the NEAR Intents Verifier instead (10 transactions): 119.9 Tgas
+accounts deleted; 9 transactions): **111.3 Tgas = 0.0111 NEAR**.
+Paid out through the NEAR Intents Verifier instead (10 transactions): 120.0 Tgas
 = 0.0120 NEAR, so the Intents leg adds 8.7 Tgas.
 
 Storage comes back: each job account holds about 0.035 NEAR while it

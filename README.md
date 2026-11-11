@@ -21,7 +21,7 @@ money, and from how many payers). *Junk*: deliveries that fail the check;
 |---|---|
 | Read it, nothing to install | [MCP-TRANSCRIPT.md](docs/MCP-TRANSCRIPT.md): every tool call an agent makes over MCP and the server's full answer; the market page: `make web`, then http://localhost:8080/swarm.html (python3 only) |
 | Real NEAR AI, no key | `make verify-cassette`: re-checks the 54 NEAR AI signatures in `demo/cassette.json` (recorded live, model Qwen/Qwen3-VL-30B-A3B-Instruct, signer `2665cce9…`) in seconds; `make demo-replay` replays the whole story from them on a local node |
-| Check the numbers, no node | `make test` (530 offline tests), then `python3 scripts/swarm-seeds.py --storm --check --readme`: recomputes the result below from the committed runs in seconds |
+| Check the numbers, no node | `make test` (550 offline tests), then `python3 scripts/swarm-seeds.py --storm --check --readme`: recomputes the result below from the committed runs in seconds |
 | As an AI agent | `make mcp-setup`, then open Claude Code (or any MCP client) in this folder and ask: *"Call guide, join the market as a research agent, win a part, subcontract a piece of it out of your own pay and keep the margin."* [More](#for-ai-judges-mcp) |
 | Watch the market | `make swarm-quick` (3 rounds, ~20 min), then open `web/swarm.html`: 3 leads, 36 bidding agents, junk fired on-chain, winners not scripted |
 | Step through one story | `make demo && make web`: 23 scenes, every agent decision and transaction |
@@ -43,7 +43,7 @@ storm wins. Buyers that count only pay from payers they trust (a `payers`
 list in `award_best`) bring it back to **19.50**. In a calm market, records
 still cut junk wins on every seed, for about 3% more per good part.
 
-One part costs **0.0111 NEAR** of gas end to end (111.2 Tgas, measured);
+One part costs **0.0111 NEAR** of gas end to end (111.3 Tgas, measured);
 storage comes back when the accounts delete ([ECONOMICS.md](docs/ECONOMICS.md)).
 The model in these runs is a scripted test model; `make record-swarm`
 sends the same prompts to NEAR AI.
@@ -116,7 +116,7 @@ No keys, no NEAR AI account, no testnet NEAR.
 | Command | What it does |
 |---|---|
 | `make setup` | downloads the crates |
-| `make test` | 530 unit + property tests, all `ok`: core (69 + 10 property tests: 5 over 10,000 random job trees with random transfer failures, 5 on the award rule), job contract (313), factory (47), pool (38), mock checker (2), mock-usdc (7), agents (44) |
+| `make test` | 550 unit + property tests, all `ok`: core (69 + 10 property tests: 5 over 10,000 random job trees with random transfer failures, 5 on the award rule), job contract (333), factory (47), pool (38), mock checker (2), mock-usdc (7), agents (44) |
 | `make lint` | rustfmt check, clippy `-D warnings`, a check that every test the specs and THREATS.md name exists, a check that every swarm number in `docs/SWARM.md` matches `web/swarm.json`, checks that every table in this README and `docs/RESULTS.md` matches the runs in `runs/seeds/`, `runs/storm/` and `runs/wash/`, that `docs/ECONOMICS.md` matches `runs/gas.json`, and the sha256 of the vendored NEAR Intents wasm; exit 0 |
 | `make mcp-test` | `test result: ok. 4 passed`: the guide's walk-through; the contract picking the winner with `award_best`; a guest agent that routes its pay into the NEAR Intents Verifier, wins a round at 20 fUSD (paid 19.80 early) and cashes out to 3.96 wNEAR through a signed `token_diff` swap with the house solver, delivers junk in round 2 (2/10, unpaid), and loses round 3 on its record although it bid lowest; and a guest agent that wins a part, subcontracts a piece to the house out of its own pay, and keeps the margin |
 | `make sandbox` | a local NEAR node runs the 14 tests in `agents/tests/`: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model and replayed from a cassette, the MCP judge path, agent keys, the washed-record attack against `award_best` with and without a payer list, the NEAR Intents payout and swap on the official Verifier wasm, and gas per step; about 55 min |
