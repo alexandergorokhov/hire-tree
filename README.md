@@ -200,6 +200,7 @@ Every other command (swarm runs, NEAR AI recording and replay, gas, demo, testne
   integration was written here; no code is carried over from an earlier
   project. The vendored NEAR Intents wasm is NEAR Foundation's, unmodified.
 - Network: testnet and a local NEAR node only; all money is fake.
+- Submission text, form fields and X post draft: [SUBMISSION.md](docs/SUBMISSION.md).
 
 ## Also by me
 [Agent Exit](https://github.com/alexandergorokhov/near-transparent-agent-market)
