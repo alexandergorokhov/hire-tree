@@ -530,6 +530,20 @@ impl Playground {
             "subcontract" => self.subcontract(a).await,
             "hire_sub" => self.hire_sub(a).await,
             "judge_check" => self.judge_check(a).await,
+            // The playground's catalog: with no `agents`, every demo account.
+            "find_agents" if !a["agents"].is_array() => {
+                let all: Vec<String> = self
+                    .named()
+                    .into_iter()
+                    .map(|(_, acc)| acc.id.to_string())
+                    .collect();
+                let mut args = a.clone();
+                args["agents"] = json!(all
+                    .into_iter()
+                    .take(crate::tools::MAX_FIND)
+                    .collect::<Vec<_>>());
+                Box::pin(self.call("find_agents", &args)).await
+            }
             "run_story" => {
                 let run = story(c, &self.llm).await?;
                 Ok(json!({
@@ -875,6 +889,12 @@ pub fn tool_list() -> Vec<Value> {
         .into_iter()
         .map(|(name, description, mut schema)| {
             schema["properties"]["as"] = json!({ "type": "string", "description": "which demo account acts (default client)" });
+            if name == "find_agents" {
+                // Here the catalog defaults to every demo account.
+                schema["required"] = json!([]);
+                let d = format!("{description} Leave out `agents` for every demo account.");
+                return json!({ "name": name, "description": d, "inputSchema": schema });
+            }
             json!({ "name": name, "description": description, "inputSchema": schema })
         })
         .collect();
@@ -1031,4 +1051,23 @@ async fn house_solver(c: &Chain) -> (Verifier, Acc) {
         let _ = v.add_key(c, &solver).await;
     }
     (v, solver)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_playground_catalog_needs_no_agent_list() {
+        let t = tool_list();
+        let f = t
+            .iter()
+            .find(|x| x["name"] == "find_agents")
+            .expect("find_agents listed");
+        assert_eq!(f["inputSchema"]["required"], json!([]));
+        assert!(f["description"]
+            .as_str()
+            .unwrap()
+            .contains("every demo account"));
+    }
 }

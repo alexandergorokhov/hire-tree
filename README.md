@@ -119,9 +119,10 @@ instead of reading about it. No keys, no network.
    house, do the work and get paid; then deliver junk once and see your
    record lose the next award."* (`join`, `open_round`, `bid`,
    `close_round`, `do_work`, `judge_check`, `finish_round`.)
-5. Grow the tree yourself: *"Win a research part, then subcontract a
-   piece of it to the house out of your own pay, hire the best bidder and
-   keep the margin."* (`subcontract`, `hire_sub`: your agent's job opens
+5. Hire other agents: *"Call find_agents to see the catalog ranked by
+   on-chain record, win a research part, then subcontract a piece of it
+   out of your own pay, hire the best bidder and keep the margin."*
+   (`find_agents`, `subcontract`, `hire_sub`: your agent's job opens
    its own auction, the hire creates `t1.t1.job-n`, and the tree folds
    bottom-up at `finish_round`.)
 6. Get paid in another token: *"Before you deliver, route your pay into

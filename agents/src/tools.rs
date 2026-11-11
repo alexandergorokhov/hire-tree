@@ -85,6 +85,8 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
         ("settle", "Anyone: settle a job (pay, return the rest, delete at zero).", s(json!({ "job": str_ }), &["job"])),
         ("get_job", "Anyone: a job's state.", s(json!({ "job": str_ }), &["job"])),
         ("get_record", "Anyone: a worker's track record kept by the factory. With `payers` (up to 16 manager accounts), its paid money and payer count count only what those managers paid.", s(json!({ "account": str_, "payers": { "type": "array", "items": str_ } }), &["account"])),
+        ("find_agents", "Anyone, before hiring: rank candidate agents by their on-chain records (up to 32 `agents`; with `payers`, only money those managers paid counts). Best first: least junk, then most fUSD paid, then most different payers. Then hire one with `hire` or `open_bids` + `award_best`, or name it `manager` in post_job.",
+         s(json!({ "agents": { "type": "array", "items": str_ }, "payers": { "type": "array", "items": str_ } }), &["agents"])),
         ("join_pool", "Client: put `amount` into a collective-purchase pool; the pool keeps at most what its target still needs.",
          s(json!({ "pool": str_, "amount": str_ }), &["pool", "amount"])),
         ("launch_pool", "Anyone: the target is raised; the pool posts its job through the factory as the client. Attaches 0.06 NEAR.",
@@ -415,14 +417,103 @@ impl Tools<'_> {
                 c.view(&c.hub, "get_record", json!({ "account_id": s(a, "account")? }))
                     .await
             }
+            "find_agents" => {
+                let agents = a["agents"].as_array().ok_or("missing agents")?;
+                if agents.is_empty() || agents.len() > MAX_FIND {
+                    return Err(format!("agents: 1 to {MAX_FIND} accounts"));
+                }
+                let mut rows = vec![];
+                for x in agents {
+                    let acct = x.as_str().ok_or("agents are account ids")?;
+                    acct.parse::<AccountId>().map_err(|e| format!("agents: {e}"))?;
+                    let r = if a["payers"].is_array() {
+                        c.view(&c.hub, "get_record_from", json!({ "account_id": acct, "payers": a["payers"] })).await?
+                    } else {
+                        c.view(&c.hub, "get_record", json!({ "account_id": acct })).await?
+                    };
+                    rows.push((acct.to_string(), r));
+                }
+                Ok(json!(rank_agents(rows)))
+            }
             other => Err(format!("unknown tool {other}")),
         }
     }
 }
 
+/// The most candidates one `find_agents` call reads.
+pub const MAX_FIND: usize = 32;
+
+fn num(r: &Value, k: &str) -> u128 {
+    match &r[k] {
+        Value::String(s) => s.parse().unwrap_or(0),
+        v => v.as_u64().unwrap_or(0) as u128,
+    }
+}
+
+/// A catalog of hireable agents from their on-chain records, best first:
+/// least junk, then most fUSD paid, then most different payers, then name.
+pub fn rank_agents(rows: Vec<(String, Value)>) -> Vec<Value> {
+    let mut v: Vec<(String, Value)> = rows;
+    v.sort_by(|(a, x), (b, y)| {
+        num(x, "junk")
+            .cmp(&num(y, "junk"))
+            .then(num(y, "paid_value").cmp(&num(x, "paid_value")))
+            .then(num(y, "payers").cmp(&num(x, "payers")))
+            .then(a.cmp(b))
+    });
+    v.into_iter()
+        .map(|(acct, r)| {
+            let (delivered, paid, scored) = (num(&r, "delivered"), num(&r, "paid"), num(&r, "scored"));
+            json!({
+                "account": acct,
+                "jobs": num(&r, "jobs"),
+                "paid": paid,
+                "junk": num(&r, "junk"),
+                "pass_rate": if delivered == 0 { Value::Null } else { json!(paid as f64 / delivered as f64) },
+                "avg_score": if scored == 0 { Value::Null } else { json!(num(&r, "score_sum") as f64 / scored as f64) },
+                "paid_value": num(&r, "paid_value").to_string(),
+                "unpaid_value": num(&r, "unpaid_value").to_string(),
+                "payers": num(&r, "payers"),
+            })
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn rec(junk: u32, paid_value: &str, payers: u32, delivered: u32, paid: u32) -> Value {
+        json!({ "jobs": delivered, "delivered": delivered, "checked": delivered, "junk": junk, "paid": paid,
+                "score_sum": paid * 8, "scored": paid, "paid_value": paid_value, "unpaid_value": "0", "payers": payers })
+    }
+
+    #[test]
+    fn find_agents_ranks_clean_paid_records_first() {
+        let out = rank_agents(vec![
+            ("junk.near".into(), rec(2, "90000000", 3, 5, 3)),
+            ("new.near".into(), rec(0, "0", 0, 0, 0)),
+            ("solid.near".into(), rec(0, "50000000", 2, 4, 4)),
+            ("wide.near".into(), rec(0, "50000000", 5, 4, 4)),
+        ]);
+        let order: Vec<&str> = out.iter().map(|r| r["account"].as_str().unwrap()).collect();
+        assert_eq!(order, ["wide.near", "solid.near", "new.near", "junk.near"]);
+        assert_eq!(out[0]["pass_rate"], json!(1.0));
+        assert_eq!(out[0]["avg_score"], json!(8.0));
+        assert_eq!(
+            out[2]["pass_rate"],
+            Value::Null,
+            "no deliveries yet: no rate, not 0%"
+        );
+        assert_eq!(out[3]["paid_value"], json!("90000000"));
+    }
+
+    #[test]
+    fn find_agents_is_listed_and_needs_agents() {
+        assert!(list()
+            .iter()
+            .any(|(n, _, s)| *n == "find_agents" && s["required"] == json!(["agents"])));
+    }
 
     #[test]
     fn a_hostile_stake_is_refused_not_a_crash() {

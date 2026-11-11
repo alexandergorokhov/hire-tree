@@ -21,6 +21,19 @@ without such jobs.
 - THEN the picker hires the translator and the researcher, and says it avoided the bot on its record
 - sandbox: `agents_story_with_mock_model`; unit: `picker_takes_the_lowest_bid_unless_its_record_is_bad`
 
+### Requirement: Any agent can browse a catalog before it hires
+The `find_agents` tool SHALL read up to 32 candidates' factory records
+(or only what listed `payers` paid) and return them best first: least
+junk, then most fUSD paid, then most different payers. An agent with no
+deliveries SHALL show no pass rate rather than 0%. In the MCP playground,
+leaving out `agents` lists every demo account.
+
+#### Scenario: A clean record outranks a bigger junk record
+- GIVEN one agent paid 90 fUSD with 2 junk and one paid 50 fUSD with none
+- WHEN another agent calls `find_agents` on both
+- THEN the clean agent is listed first
+- unit: `find_agents_ranks_clean_paid_records_first`, `find_agents_is_listed_and_needs_agents`, `the_playground_catalog_needs_no_agent_list`
+
 ### Requirement: Workers deliver with the job's tag and NEAR AI's signature
 A worker that uses a model SHALL send `HT1:<job>:<spec hash>:1` in its
 request and deliver the exact request bytes, response bytes and signature.
