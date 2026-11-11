@@ -647,7 +647,13 @@ impl Job {
         if amount != quote {
             return self.refund(amount, "buy_note: amount must equal quote_note");
         }
-        if env::prepaid_gas().saturating_sub(env::used_gas()) < GAS_BUY_MIN {
+        // A routed payment is an ft_transfer_call: it needs more gas.
+        let need = if self.payout_via.is_some() {
+            GAS_BUY_MIN.saturating_add(GAS_FT_TRANSFER_CALL)
+        } else {
+            GAS_BUY_MIN
+        };
+        if env::prepaid_gas().saturating_sub(env::used_gas()) < need {
             return self.refund(amount, "buy_note: not enough gas (attach 100 Tgas)");
         }
         let worker = self
@@ -660,27 +666,27 @@ impl Job {
         self.note_price = amount.0;
         self.note_sold = true;
         self.payee = Some(sender.clone());
-        // The seller's route was for its own pay; the buyer picks its own.
-        self.payout_via = None;
         emit(
             "note_sale_started",
             json!({ "buyer": sender, "worker": worker, "price": amount, "face": U128(self.ledger.amount) }),
         );
-        let pay = Promise::new(self.token.clone())
-            .function_call(
-                "storage_deposit",
-                json!({ "account_id": worker, "registration_only": true })
-                    .to_string()
-                    .into_bytes(),
-                TOKEN_STORAGE_NEAR,
-                GAS_STORAGE_DEPOSIT,
-            )
-            .then(self.ft_transfer(worker.clone(), amount.0))
-            .then(
-                Self::ext(env::current_account_id())
-                    .with_static_gas(GAS_ON_NOTE_PAID)
-                    .on_note_paid(worker, amount),
-            );
+        // The worker's route (NEAR Intents) applies to the note price too;
+        // it stays set until `on_note_paid`, which reads it.
+        let pay = match self.payout_via.clone() {
+            Some(via) => self.register(via.clone()).then(self.ft_transfer_call(
+                via,
+                amount.0,
+                worker.to_string(),
+            )),
+            None => self
+                .register(worker.clone())
+                .then(self.ft_transfer(worker.clone(), amount.0)),
+        };
+        let pay = pay.then(
+            Self::ext(env::current_account_id())
+                .with_static_gas(GAS_ON_NOTE_PAID)
+                .on_note_paid(worker, amount),
+        );
         PromiseOrValue::Promise(pay)
     }
 
@@ -691,7 +697,17 @@ impl Job {
         assert_self();
         require!(self.note_pending, "no note sale in flight");
         self.note_pending = false;
-        if result_ok(0) {
+        // A routed payment counts only if the receiver kept all of it. The
+        // route was the seller's: after the sale (or its failure) it is gone.
+        let ok = if self.payout_via.take().is_some() {
+            env::promise_result_checked(0, MAX_RESULT_LEN)
+                .ok()
+                .and_then(|b| serde_json::from_slice::<U128>(&b).ok())
+                == Some(price)
+        } else {
+            result_ok(0)
+        };
+        if ok {
             emit(
                 "note_sold",
                 json!({ "buyer": self.payee, "worker": worker, "price": price }),
@@ -2555,6 +2571,7 @@ impl Job {
             !matches!(self.status, Status::Settling | Status::Settled),
             "too late: settle has started"
         );
+        require!(!self.note_pending, "note sale in flight");
         emit("payout_via", json!({ "payee": self.payee, "via": via }));
         self.payout_via = via;
     }

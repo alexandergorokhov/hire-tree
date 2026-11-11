@@ -289,8 +289,11 @@ fn a_judges_agent_competes_in_the_open_market() {
     ))
     .unwrap();
     let me = j["account"].as_str().unwrap().to_string();
+    let acc: Value = serde_json::from_str(&c.ok("accounts", json!({}))).unwrap();
+    let verifier = acc["intents_verifier"].as_str().unwrap().to_string();
 
-    let round = |c: &mut Client, junk: bool| -> Value {
+    // `route`: judgebot has its pay land in the NEAR Intents Verifier.
+    let round = |c: &mut Client, junk: bool, route: bool| -> Value {
         let r: Value = serde_json::from_str(&c.ok("open_round", json!({}))).unwrap();
         let job = r["job"].as_str().unwrap().to_string();
         let slot = r["slots"]
@@ -315,6 +318,12 @@ fn a_judges_agent_competes_in_the_open_market() {
             .clone();
         if mine["award"] == me.as_str() {
             let sub = mine["sub_job"].as_str().unwrap();
+            if route {
+                c.ok(
+                    "payout_via",
+                    json!({ "as": "judgebot", "job": sub, "via": verifier }),
+                );
+            }
             let mut w = json!({ "as": "judgebot", "job": sub, "task": task });
             if junk {
                 w["text"] = json!("lorem ipsum dolor sit amet");
@@ -326,8 +335,9 @@ fn a_judges_agent_competes_in_the_open_market() {
         json!({ "award": mine, "finish": f })
     };
 
-    // Round 1: the lowest bid and no bad record: judgebot wins, is paid 19.80 now.
-    let r1 = round(&mut c, false);
+    // Round 1: the lowest bid and no bad record: judgebot wins and is paid
+    // 19.80 now, into the NEAR Intents Verifier (its route), not its wallet.
+    let r1 = round(&mut c, false, true);
     assert_eq!(r1["award"]["award"], json!(me), "{r1}");
     let wk = r1["finish"]["workers"]
         .as_array()
@@ -335,9 +345,17 @@ fn a_judges_agent_competes_in_the_open_market() {
         .iter()
         .find(|w| w["as"] == "judgebot")
         .unwrap();
-    assert_eq!(wk["fUSD"], "19.80", "{r1}");
+    assert_eq!(wk["fUSD"], "0.00", "paid into the Verifier: {r1}");
+    // Cash out through NEAR Intents: 19.80 fUSD -> 3.96 wNEAR in its wallet.
+    let out: Value = serde_json::from_str(&c.ok("cash_out", json!({ "as": "judgebot" }))).unwrap();
+    assert_eq!(out["swapped"]["gave_fusd_units"], "19800000", "{out}");
+    assert_eq!(
+        out["wnear_in_your_account"], "3960000000000000000000000",
+        "{out}"
+    );
+    assert_eq!(out["verifier_fusd_left"], "0", "{out}");
     // Round 2: judgebot wins again but delivers junk: 2/10, not paid.
-    let r2 = round(&mut c, true);
+    let r2 = round(&mut c, true, false);
     assert_eq!(r2["award"]["award"], json!(me), "{r2}");
     let wk = r2["finish"]["workers"]
         .as_array()
@@ -345,9 +363,9 @@ fn a_judges_agent_competes_in_the_open_market() {
         .iter()
         .find(|w| w["as"] == "judgebot")
         .unwrap();
-    assert_eq!(wk["fUSD"], "19.80", "junk earns nothing: {r2}");
+    assert_eq!(wk["fUSD"], "0.00", "junk earns nothing: {r2}");
     // Round 3: lowest bid again, but its record (2 jobs, 1 paid) loses the award.
-    let r3 = round(&mut c, false);
+    let r3 = round(&mut c, false, false);
     assert_ne!(r3["award"]["award"], json!(me), "{r3}");
     assert!(
         r3["award"]["reason"].as_str().unwrap().contains("avoided"),

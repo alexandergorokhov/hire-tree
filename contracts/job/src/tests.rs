@@ -2237,6 +2237,51 @@ mod check_note_dispute {
     }
 
     #[test]
+    fn a_routed_worker_is_paid_now_into_the_intents_verifier() {
+        let mut j = checked();
+        Ctx::new(T1, WORKER).set();
+        j.set_payout_via(Some(acc("intents.test")));
+        buy(&mut j, TREASURY, QUOTE);
+        assert!(transfers().is_empty(), "no plain transfer");
+        assert_eq!(call_args("storage_deposit")["account_id"], "intents.test");
+        let c = call_args("ft_transfer_call");
+        assert_eq!(c["receiver_id"], "intents.test");
+        assert_eq!(c["amount"], QUOTE.to_string());
+        assert_eq!(c["msg"], WORKER);
+        // The Verifier kept it all: sold; the treasury, now the payee, has no route.
+        assert_eq!(
+            note_paid(&mut j, ok(format!("\"{QUOTE}\"").as_bytes())),
+            U128(0)
+        );
+        let v = j.get_job();
+        assert!(v.note_sold && !v.note_pending);
+        assert_eq!(v.payout_via, None);
+    }
+
+    #[test]
+    fn a_refused_routed_note_payment_undoes_the_sale_and_drops_the_route() {
+        let mut j = checked();
+        Ctx::new(T1, WORKER).set();
+        j.set_payout_via(Some(acc("intents.test")));
+        buy(&mut j, TREASURY, QUOTE);
+        // Used 0: the Verifier refunded; the treasury gets its price back.
+        assert_eq!(note_paid(&mut j, ok(b"\"0\"")), U128(QUOTE));
+        let v = j.get_job();
+        assert!(!v.note_sold);
+        assert_eq!(v.payee, Some(acc(WORKER)));
+        assert_eq!(v.payout_via, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "note sale in flight")]
+    fn no_route_change_while_a_note_sale_is_in_flight() {
+        let mut j = checked();
+        buy(&mut j, TREASURY, QUOTE);
+        Ctx::new(T1, TREASURY).set();
+        j.set_payout_via(Some(acc("intents.test")));
+    }
+
+    #[test]
     fn second_sale_refused() {
         let mut j = checked();
         buy(&mut j, TREASURY, QUOTE);

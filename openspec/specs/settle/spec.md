@@ -120,6 +120,16 @@ dropped and the next settle pays plainly.
 - THEN the leg is not paid, the route is dropped, and resettle pays by plain transfer
 - unit: `a_refused_deposit_falls_back_to_a_plain_transfer_on_resettle`, `a_failed_call_is_not_paid`
 
+#### Scenario: An early pay sale (Job Note) follows the route too
+- WHEN a checked worker with a route sells its payout early to the lead's treasury
+- THEN the price goes `ft_transfer_call(verifier, price, msg = worker)` and the sale stands only if the Verifier kept it all; a refused payment undoes the sale and drops the route; the route cannot change while the sale is in flight
+- unit: `a_routed_worker_is_paid_now_into_the_intents_verifier`, `a_refused_routed_note_payment_undoes_the_sale_and_drops_the_route`, `no_route_change_while_a_note_sale_is_in_flight`
+
+#### Scenario: A guest agent cashes out over MCP
+- WHEN a judge's agent routes its pay with the `payout_via` tool, wins a round, and calls `cash_out`
+- THEN its 19.80 fUSD in the Verifier is swapped with the house solver at 0.2 wNEAR per fUSD and withdrawn: 3.96 wNEAR in its own account, 0 left in the Verifier
+- sandbox: `a_judges_agent_competes_in_the_open_market`
+
 #### Scenario: Swap and cash out on the real Verifier
 - WHEN a job pays a worker through the official Verifier wasm on a local node
 - THEN the worker and a solver swap with signed NEP-413 `token_diff` intents (one side alone is refused, a replay fails on the spent nonce) and the worker withdraws the token it swapped into

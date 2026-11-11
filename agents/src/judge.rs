@@ -11,7 +11,9 @@ use crate::chain::{num, Acc, Chain, USD};
 use crate::llm::{chat_body, Llm, Mock};
 use crate::mcp::PROTOCOL;
 use crate::tools::{list, Tools};
+use crate::verifier::{self, nep141, Verifier};
 use base64::Engine;
+use near_api::types::NearToken;
 use serde_json::{json, Value};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
@@ -28,7 +30,19 @@ pub struct Playground {
     /// Guest agents: (name, account, skills).
     pub guests: std::sync::Mutex<Vec<(String, Acc, Vec<String>)>>,
     pub rounds: std::sync::Mutex<std::collections::HashMap<String, Round>>,
+    /// NEAR Intents: the Verifier (its own release wasm) and the house
+    /// solver that quotes fUSD for wNEAR.
+    pub intents: Verifier,
+    pub solver: Acc,
+    /// Fresh NEP-413 nonces.
+    pub nonces: std::sync::atomic::AtomicU64,
 }
+
+/// The house solver's fixed test rate: wNEAR (yocto) per fUSD unit (1e-6
+/// fUSD). 1 fUSD = 0.2 wNEAR. Fake money on both sides.
+pub const SOLVER_YOCTO_PER_UNIT: u128 = 200_000_000_000_000_000;
+/// wNEAR the house solver brings into the Verifier.
+const SOLVER_WNEAR: u128 = 20 * 10u128.pow(24);
 
 /// One open-market round: its parts (skill, task, slot) and, after the
 /// awards, the sub-jobs (account, task).
@@ -70,6 +84,7 @@ Try this (about 15 calls):
 8. approve as lead on t1, settle t1 (as keeper), approve as client and settle the root: each account pays out, checks its balance is zero and deletes itself. get_record shows the worker's record.
 Open market (compete yourself): join with a name and skills, open_round, bid on the matching slot as your guest (undercut the house, or not), close_round, do_work + judge_check if you won, finish_round. The lead prefers the lowest bid unless the bidder's on-chain record shows unpaid jobs, so deliver junk once (do_work with text \"lorem ipsum\") and watch your next bid lose.
 Become a contractor: after you win a part, subcontract a piece of it (subcontract: task, skill, max below your price), the house bids at once; hire_sub awards a bidder, creating a sub-sub-account paid out of your own pay; you keep the margin. Then do_work on your own part, judge_check, finish_round.
+Get paid in another token (NEAR Intents): before your job settles, call payout_via as its worker with via = intents_verifier (see accounts); the pay then lands as your balance in the official Intents Verifier contract, and cash_out swaps it for wNEAR with the house solver and withdraws it.
 Keys: an agent should not hand its full-access key to its runtime. Deliveries in the swarm use a function-call key that can call only `deliver` on one job account (no deposit, no transfers, no deletion); bids attach NEAR, so they stay on the owner's key. See docs/THREATS.md, Agent keys.\nOr call run_story once to watch the whole scripted three-job story (bids, a junk bot losing work by its record, three clients pooling money); it takes a few minutes.";
 
 impl Playground {
@@ -77,6 +92,7 @@ impl Playground {
         let llm = Llm::Mock(Mock::new(MODEL, Box::new(mock_script)));
         let chain = Chain::sandbox(&llm.signer().unwrap(), Some(MODEL)).await;
         let team = team(&chain).await;
+        let (intents, solver) = house_solver(&chain).await;
         Playground {
             chain,
             llm,
@@ -84,6 +100,9 @@ impl Playground {
             delivered: Default::default(),
             guests: Default::default(),
             rounds: Default::default(),
+            intents,
+            solver,
+            nonces: Default::default(),
         }
     }
 
@@ -492,7 +511,10 @@ impl Playground {
                 for (n, acc) in self.named() {
                     out.push(json!({ "as": n, "account": acc.id, "fUSD": format!("{:.2}", c.ft(&acc.id).await as f64 / 1e6) }));
                 }
-                Ok(json!({ "factory": c.hub, "token": c.usdc, "accounts": out }))
+                Ok(
+                    json!({ "factory": c.hub, "token": c.usdc, "intents_verifier": self.intents.id,
+                    "wnear": self.intents.wnear, "accounts": out }),
+                )
             }
             "wait" => {
                 let secs = a["secs"].as_u64().ok_or("missing secs")?.min(7200);
@@ -501,6 +523,7 @@ impl Playground {
             }
             "do_work" => self.do_work(a).await,
             "join" => self.join(a).await,
+            "cash_out" => self.cash_out(a).await,
             "open_round" => self.open_round().await,
             "close_round" => self.close_round(a).await,
             "finish_round" => self.finish_round(a).await,
@@ -524,6 +547,76 @@ impl Playground {
                 Tools { chain: c }.call(&who, name, &args).await
             }
         }
+    }
+
+    /// NEAR Intents: swap `who`'s fUSD balance in the Verifier for wNEAR
+    /// with the house solver (both sign a NEP-413 `token_diff`; the keeper
+    /// submits them together), then withdraw the wNEAR to `who`'s account.
+    async fn cash_out(&self, a: &Value) -> Result<Value, String> {
+        let c = &self.chain;
+        let who = self.who(a)?;
+        let (v, usdc) = (&self.intents, c.usdc.to_string());
+        let wnear = v.wnear.to_string();
+        let have = v.balance(c, who.id.as_str(), &usdc).await;
+        let amount = match a["amount"].as_str() {
+            Some(x) => x
+                .parse::<u128>()
+                .map_err(|_| "amount: fUSD with 6 decimals, as a string")?,
+            None => have,
+        };
+        if amount == 0 || amount > have {
+            return Err(format!(
+                "{} holds {have} fUSD units in the Verifier; route a job's pay there first (payout_via as the worker, via = {}) and let it settle",
+                who.id, v.id
+            ));
+        }
+        let get = amount * SOLVER_YOCTO_PER_UNIT;
+        // Adding a key twice is refused; that only means it is already there.
+        let _ = v.add_key(c, &who).await;
+        let n = self
+            .nonces
+            .fetch_add(2, std::sync::atomic::Ordering::SeqCst);
+        let nonce = |k: u64| {
+            use sha2::Digest;
+            let h: [u8; 32] = sha2::Sha256::digest(format!("{}:{}", who.id, n + k)).into();
+            h
+        };
+        let deadline = verifier::deadline_in(c, 600).await;
+        let mine = v
+            .sign_diff(
+                &who,
+                json!({ nep141(&usdc): format!("-{amount}"), nep141(&wnear): get.to_string() }),
+                nonce(0),
+                &deadline,
+            )
+            .await?;
+        let theirs = v
+            .sign_diff(
+                &self.solver,
+                json!({ nep141(&usdc): amount.to_string(), nep141(&wnear): format!("-{get}") }),
+                nonce(1),
+                &deadline,
+            )
+            .await?;
+        v.execute(c, &self.team.keeper, vec![mine, theirs]).await?;
+        c.call(
+            &self.solver,
+            &v.wnear,
+            "storage_deposit",
+            json!({ "account_id": who.id, "registration_only": true }),
+            NearToken::from_millinear(13),
+        )
+        .await?;
+        v.withdraw(c, &who, &wnear, get).await?;
+        let held = c
+            .view(&v.wnear, "ft_balance_of", json!({ "account_id": who.id }))
+            .await?;
+        Ok(json!({
+            "swapped": { "gave_fusd_units": amount.to_string(), "got_wnear_yocto": get.to_string(), "rate": "1 fUSD = 0.2 wNEAR (house solver, test rate)" },
+            "how": "your NEP-413 token_diff and the solver's opposite one ran in one execute_intents call on the NEAR Intents Verifier: both settle or neither does; then ft_withdraw sent the wNEAR to your account",
+            "verifier_fusd_left": v.balance(c, who.id.as_str(), &usdc).await.to_string(),
+            "wnear_in_your_account": held,
+        }))
     }
 
     /// The round (root job) whose awards include `job`.
@@ -804,6 +897,8 @@ pub fn tool_list() -> Vec<Value> {
          s(json!({ "as": str_, "job": str_, "task": str_, "skill": str_, "max": str_ }), &["as", "job", "task", "skill", "max"])),
         ("hire_sub", "Open market, contractor: bidding on your sub-slot closes; you award `worker` (any bidder, at its own bid). The account t<n>.<your job> is created holding exactly that bid; the house worker does the work and the keeper judges it. You keep the margin. Then do_work on your own job, judge_check, finish_round.",
          s(json!({ "as": str_, "job": str_, "slot": { "type": "integer" }, "worker": str_ }), &["as", "job", "slot", "worker"])),
+        ("cash_out", "NEAR Intents: after a job paid you into the Verifier (set `payout_via` on your job as its worker, via = `intents_verifier` from `accounts`, before it settles), swap that fUSD for wNEAR with the house solver (signed NEP-413 intents, atomic) and withdraw the wNEAR to your account. `amount` (fUSD with 6 decimals) defaults to all of it.",
+         s(json!({ "as": str_, "amount": str_ }), &["as"])),
         ("run_story", "Run the whole scripted three-job story (bidding, a junk bot losing work by its on-chain record, three clients pooling money); returns every scene and agent decision. A few minutes.", s(json!({}), &[])),
     ] {
         v.push(json!({ "name": name, "description": desc, "inputSchema": schema }));
@@ -896,4 +991,44 @@ pub async fn serve() {
         let _ = out.write_all(format!("{r}\n").as_bytes()).await;
         let _ = out.flush().await;
     }
+}
+
+/// Deploy the NEAR Intents Verifier and fund the house solver with wNEAR
+/// inside it.
+async fn house_solver(c: &Chain) -> (Verifier, Acc) {
+    let v = verifier::deploy(c).await.unwrap();
+    let solver = c.account("solver", 30).await;
+    if v.balance(c, solver.id.as_str(), v.wnear.as_str()).await == 0 {
+        for who in [solver.id.as_str(), v.id.as_str()] {
+            c.call(
+                &solver,
+                &v.wnear,
+                "storage_deposit",
+                json!({ "account_id": who, "registration_only": true }),
+                NearToken::from_millinear(13),
+            )
+            .await
+            .unwrap();
+        }
+        c.call(
+            &solver,
+            &v.wnear,
+            "near_deposit",
+            json!({}),
+            NearToken::from_yoctonear(SOLVER_WNEAR),
+        )
+        .await
+        .unwrap();
+        c.call(
+            &solver,
+            &v.wnear,
+            "ft_transfer_call",
+            json!({ "receiver_id": v.id, "amount": SOLVER_WNEAR.to_string(), "msg": solver.id }),
+            NearToken::from_yoctonear(1),
+        )
+        .await
+        .unwrap();
+        let _ = v.add_key(c, &solver).await;
+    }
+    (v, solver)
 }
