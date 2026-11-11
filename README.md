@@ -38,6 +38,7 @@ money, and from how many payers). *Junk*: deliveries that fail the check;
 ```
 make test             # 582 offline tests: all ok
 make verify-cassette  # 54 live NEAR AI signatures re-checked: all by one signer
+make attest           # that signer is the key inside NEAR AI's Intel TDX quote
 python3 scripts/swarm-seeds.py --storm --check --readme   # recomputes the result below
 ```
 
@@ -65,8 +66,12 @@ still cut junk wins on every seed, for about 3% more per good part.
 
 One part costs **0.0112 NEAR** of gas end to end (112.2 Tgas, measured);
 storage comes back when the accounts delete ([ECONOMICS.md](docs/ECONOMICS.md)).
-The model in these runs is a scripted test model; `make record-swarm`
-sends the same prompts to NEAR AI.
+The model in these runs is a scripted test model. The same market with
+**live NEAR AI** doing the work, the judging, the model bids and the
+contractors' make-or-buy (3 rounds, 9 jobs, Qwen/Qwen3-VL-30B-A3B-Instruct,
+102 signed answers in `demo/swarm-cassette.json`): 29 parts sold, 21 passed
+and paid, 8 junk wins fired without pay, every `swarm-check` rule ok
+(`web/swarm.html?data=live`; `make swarm-replay` reproduces it offline).
 
 ## NEAR primitives used
 
@@ -129,7 +134,7 @@ instead of reading about it. No keys, no network.
 ## Judge fast path
 Prerequisites: `rustup` (it installs Rust 1.97.0 and the wasm32 target from
 `rust-toolchain.toml`), a C compiler (`cc`, for a small file-limit shim),
-`python3` (for `make web`), and network access once for `make setup` (crates)
+`python3` (for `make web`; `make attest` and `make lint` also need its `cryptography` package), and network access once for `make setup` (crates)
 and the first local-node run (it downloads the `near-sandbox` binary).
 No keys, no NEAR AI account, no testnet NEAR.
 
@@ -167,8 +172,13 @@ Every other command (swarm runs, NEAR AI recording and replay, gas, demo, testne
   decisions are the model's own and can differ run to run. The signed text follows NEAR AI Cloud's format
   (`model:sha256(request):sha256(response)`); `make nearai-check` confirms it
   against the live service, and `demo/cassette.json` (54 live NEAR AI calls,
-  Qwen/Qwen3-VL-30B-A3B-Instruct) replays real NEAR AI answers and signatures. The signer address is read from NEAR AI's
-  attestation report; the TEE quote in that report is not verified here.
+  Qwen/Qwen3-VL-30B-A3B-Instruct) replays real NEAR AI answers and signatures. The signer is pinned by the owner
+  (`HT_SIGNER`) and `make attest` checks it offline against NEAR AI's
+  attestation report (`demo/nearai-attestation.json`): the key hashes to the
+  signer, the Intel TDX quote's report_data holds the signer and our nonce,
+  and the quote, Quoting Enclave and PCK signatures chain up to Intel's SGX
+  root. Intel TCB status and NVIDIA GPU measurements need online collateral
+  and are not checked.
 - Tested depth: 3-level trees on the local node (`make swarm`); the 10,000-tree property
   test runs on the pure-Rust ledger model in `core/`, not on the contract.
 - NEAR Intents: the local node runs the Verifier's own release wasm

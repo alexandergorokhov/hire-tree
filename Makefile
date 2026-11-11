@@ -43,6 +43,7 @@ lint: ## rustfmt check + clippy -D warnings + every test the specs name exists +
 	python3 scripts/test-swarm-check.py
 	python3 scripts/test-swarm-storm.py
 	python3 scripts/swarm-seeds.py --check --readme
+	python3 -I scripts/check-attestation.py demo/nearai-attestation.json
 	@if [ -f web/swarm-blind.json ]; then python3 scripts/swarm-compare.py web/swarm.json web/swarm-blind.json --readme; fi
 	@if [ -d runs/storm ]; then python3 scripts/swarm-seeds.py --storm --check --readme; fi
 	@if [ -d runs/wash ]; then python3 scripts/swarm-seeds.py --wash --check --readme; fi
@@ -178,6 +179,10 @@ record-cassette: build ## [NEAR AI key] run the story on a local node with real 
 	@$(SBX) $(HT) demo --llm record:$(CASSETTE).new --scene $(CURDIR)/web/scene.json
 	@cd agents && $(HT) verify-cassette $(CASSETTE).new
 	@mv $(CASSETTE).new $(CASSETTE) && echo "cassette saved: $(CASSETTE); check it replays with make demo-replay"
+
+.PHONY: attest
+attest: ## Check offline that the cassettes' NEAR AI signer is the key in the TDX quote (demo/nearai-attestation.json): key, report_data, quote/QE/PCK signatures, Intel root
+	python3 -I scripts/check-attestation.py demo/nearai-attestation.json
 
 .PHONY: verify-cassette
 verify-cassette: ## Re-check every NEAR AI signature in the cassette (offline)
