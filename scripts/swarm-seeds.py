@@ -12,13 +12,13 @@ mean, min and max per arm.
 
 --check   recompute from the raw runs and fail if web/swarm-seeds.json
           differs (does not write it).
---readme  fail unless README.md states every mean it prints.
+--readme  fail unless README.md or docs/RESULTS.md states every mean it prints.
 --storm   the junk-storm runs instead: runs/storm/<arm>-<seed>.json (made by
           `make swarm-seeds STORM=6`) into web/swarm-storm.json: per arm and
           seed the totals, and per arm the mean per-round series (junk share
           of wins, fUSD paid to junk, storm earnings, fUSD held by storm keys).
           Nothing is written or checked when there are no storm runs.
-          With --readme, fail unless README.md states the storm means in
+          With --readme, fail unless README.md or docs/RESULTS.md states the storm means in
           STORM_README.
 --wash    the washed-storm runs: runs/wash/<arm>-<seed>.json (made by
           `make swarm-seeds STORM=6 WASH=1 ARMS="rec allow blind audit"`)
@@ -27,7 +27,7 @@ mean, min and max per arm.
           blind and audit, plus what washing cost the storm (platform fee
           fUSD, fUSD outlay, NEAR, sybils washed). Nothing is written or
           checked when there are no wash runs. With --readme, fail unless
-          README.md states the wash means in WASH_README and how many seeds
+          README.md or docs/RESULTS.md states the wash means in WASH_README and how many seeds
           the payer list cut storm wins on.
 """
 import glob, json, os, re, sys
@@ -126,7 +126,7 @@ def storm_summary(kind="storm"):
         out["claim"] = f"fewer storm wins with the payer list on {fewer} of {len(seeds)} seeds"
         print(out["claim"])
     if "--readme" in sys.argv:
-        readme = re.sub(r"\s+", " ", open("README.md").read())
+        readme = re.sub(r"\s+", " ", (open("README.md").read() + open("docs/RESULTS.md").read()))
         if "claim" in out:
             ok = out["claim"] in readme
             print(("ok  " if ok else "FAIL"), f"README states: {out['claim']}")
@@ -190,7 +190,7 @@ else:
     json.dump(out, open("web/swarm-seeds.json", "w"), indent=1)
 
 if "--readme" in sys.argv:
-    readme = re.sub(r"\s+", " ", open("README.md").read())
+    readme = re.sub(r"\s+", " ", (open("README.md").read() + open("docs/RESULTS.md").read()))
     for a in arms:
         for k in keys:
             s = f"{out['mean'][a][k]:.2f}"

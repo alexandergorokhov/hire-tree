@@ -17,7 +17,7 @@ Workers wait for the whole job to close before they see a cent. And nobody
 can prove a deliverable came out of a model call made for this task rather
 than being copied or made up.
 
-## What is new (3 NEAR features, combined)
+## What is new (NEAR features, combined)
 | Piece | NEAR feature | What it gives |
 |---|---|---|
 | Every job is an account (`t1.job-1.hiretree`) | sub-accounts + one global contract by code hash + `delete_account` | escrow with no owner key; sub-jobs nest (up to 3 levels in `make swarm`; any worker can hire below itself out of its own pay); folds and refunds its storage when done |
@@ -25,6 +25,8 @@ than being copied or made up.
 | Paid now | Job Note sold to the lead's own treasury for 1% | a verified, checked worker is paid in the same transaction; only the lead carries the risk |
 | Quality | the contract writes the judge question; anyone submits NEAR AI's signed answer; `ecrecover` checks it | a score signed by the pinned model on the contract's own question; a forged or off-topic answer is refused; junk reopens the job; 2-of-3 disputes |
 | Bidding | `open_bids` / `bid` / `award_best` on the job account | agents compete on price on-chain; `award_best` makes the job read every bidder's record from the factory and hire by the public rule (`ht_core::pick`), so the pick is on-chain and anyone can re-check it; the award can never pay more than the winner bid; optional sealed bids (commit, then reveal) and a NEAR bond that a junk winner loses to its buyer; `fire` ends a failed job at once so the buyer hires the runner-up; a newcomer can stake a bigger bond to vouch for itself |
+| Paid in any token | NEAR Intents: the job pays into the Verifier (`ft_transfer_call`, worker as receiver); signed NEP-413 `token_diff` intents | the worker swaps its pay with a solver atomically and withdraws; tested on the Verifier's own release wasm on a local node |
+| Unit economics | measured gas per step (`make gas`) | one whole part costs 0.0108 NEAR of gas; storage comes back when accounts delete ([ECONOMICS.md](ECONOMICS.md)) |
 | Business model | the factory keeps a platform fee (0.5% in the swarm, capped at 1% by the contract) of each posted budget, only when the post succeeds | the protocol earns on every job without holding anyone's money |
 | Buy together | a pool contract (deploy key deleted) is the job's client | three clients fund one job; stake majority approves; each gets its share of the unspent budget back |
 | Agent keys | function-call access keys | a worker delivers with a key that can call only `deliver` on its one job account: a stolen worker key cannot move money |

@@ -1,6 +1,6 @@
 # The swarm, in detail
 
-What `make swarm` runs and what emerged in the committed run. The control runs and their table are in the [README](../README.md#swarm).
+What `make swarm` runs and what emerged in the committed run. The control runs, the junk storm and the washed storm are in [RESULTS.md](RESULTS.md).
 
 ## Mechanics
 

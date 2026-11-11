@@ -409,7 +409,7 @@ pub struct Job {
     /// job on. A plain `hire` asks nobody.
     by_bid: bool,
     /// Where the payee wants its pay: `None` is a plain transfer; an account
-    /// (the NEAR Intents Verifier, `intents.near` on mainnet) gets it by
+    /// (the NEAR Intents Verifier on this network) gets it by
     /// `ft_transfer_call` with the payee as receiver, so the pay lands as the
     /// payee's balance there. Set by the payee before settle; dropped if the
     /// receiver refuses any of it, so the next settle pays plainly.

@@ -1,7 +1,7 @@
-# Next: two designs not built for the hackathon
+# Next: designs not (fully) built for the hackathon
 
-Both were on the plan. Each is written down here, with the reason it is
-not in the code yet.
+Both were on the plan. Each is written down here, with what is built and
+the reason the rest is not in the code yet.
 
 ## 1. A judge panel of several models
 
@@ -27,15 +27,16 @@ signed-receipt path is the part of the contract a judge trusts most;
 changing it without a real receipt to test against adds risk for a small
 gain.
 
-## 2. A NEAR Intents payout leg
+## 2. A NEAR Intents payout leg (built)
 
-**Design.** The worker names an asset and chain at award (for example
-USDC on Base). At settle, the payee leg becomes an `ft_transfer_call` of
-fUSD to `intents.near` with a deposit message for the worker, and the
-worker's agent swaps or withdraws through the 1Click API. The job account
-still deletes itself once its balance is zero, so nothing changes in the
-fold.
+Built on the local node with the Verifier's own release wasm (defuse 0.2.10
+from github.com/near/intents, vendored in `vendor/near-intents/`). The
+worker calls `set_payout_via(verifier)` on its job; at settle the payee leg
+is `ft_transfer_call(verifier, pay, msg = worker)`, so the pay lands as the
+worker's balance in the Verifier. The worker and a solver then swap with
+signed NEP-413 `token_diff` intents and the worker withdraws. See
+`agents/src/verifier.rs` and `agents/tests/intents.rs`.
 
-**Why not now.** NEAR Intents runs on mainnet only (contest FAQ Q-007),
-and this project is testnet and local node only, with fake test USD. A
-leg that cannot run in the demo would be a claim, not a feature.
+Still not built: the cross-chain leg (the 1Click API, for example USDC on
+Base). NEAR Intents' live solvers and bridges run on mainnet only (contest
+FAQ Q-007), and this project stays on testnet and a local node.

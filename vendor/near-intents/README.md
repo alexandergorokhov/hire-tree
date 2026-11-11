@@ -3,9 +3,8 @@
 Release wasm files from <https://github.com/near/intents>, commit
 `fce0936b1699e0591204ce152a78afc1c1338b35`, folder `releases/`, MIT licence
 (`LICENSE`, NEAR Foundation). Used only on the local node, by
-`agents/src/verifier.rs` and `agents/tests/intents.rs`. On testnet or mainnet
-the job's `payout_via` points at the deployed Verifier (`intents.near` on
-mainnet) instead.
+`agents/src/verifier.rs` and `agents/tests/intents.rs`. On another network
+the job's `payout_via` points at the Verifier deployed there instead.
 
 | File | What | sha256 |
 |---|---|---|

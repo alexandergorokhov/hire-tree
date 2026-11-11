@@ -5,7 +5,7 @@
 
 Same market, same agents, same contract; only the buyers' use of on-chain
 records differs. Prints one row per measure. With --readme, also checks that
-README.md states the control-run numbers it prints.
+README.md or docs/RESULTS.md states the control-run numbers it prints.
 """
 import json
 import sys
@@ -46,7 +46,7 @@ def main():
     for k in ma:
         print(f"{k:<18}{ma[k]:>10}{mb[k]:>10}")
     if "--readme" in sys.argv:
-        readme = open("README.md").read()
+        readme = (open("README.md").read() + open("docs/RESULTS.md").read())
         want = [
             f"{mb['bad share last']}% of wins in the last {len(b['rounds']) // 3} rounds",
             f"{mb['bad wins']} junk wins",

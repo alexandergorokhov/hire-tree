@@ -1,4 +1,4 @@
-//! NEAR Intents: the official Verifier contract (`intents.near` on mainnet)
+//! NEAR Intents: the official Verifier contract (the one NEAR Intents runs)
 //! as the place where a worker's pay lands and is swapped.
 //!
 //! The local node runs the Verifier's own release wasm (defuse 0.2.10 and

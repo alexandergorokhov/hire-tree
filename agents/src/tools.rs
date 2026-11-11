@@ -80,7 +80,7 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
         ("finalize_dispute", "Anyone: decide a dispute after its rounds close.", s(json!({ "job": str_ }), &["job"])),
         ("approve", "Client (root) or manager (sub-job): approve, so settle may run before the window ends.", s(json!({ "job": str_ }), &["job"])),
         ("fire", "Manager (sub-job): after the signed check failed the delivery, end the job now: the worker is not paid, its bond goes to you, and the pay comes back so you can hire the runner-up.", s(json!({ "job": str_ }), &["job"])),
-        ("payout_via", "Worker (the payee), before settle: have your pay land as your balance in the NEAR Intents Verifier (`via` = its account, intents.near on mainnet), where you can swap it for another token or withdraw it. Omit `via` for a plain transfer. If the Verifier refuses the deposit, the route is dropped and the next settle pays you plainly.",
+        ("payout_via", "Worker (the payee), before settle: have your pay land as your balance in the NEAR Intents Verifier (`via` = the Verifier's account on this network), where you can swap it for another token or withdraw it. Omit `via` for a plain transfer. If the Verifier refuses the deposit, the route is dropped and the next settle pays you plainly.",
          s(json!({ "job": str_, "via": str_ }), &["job"])),
         ("settle", "Anyone: settle a job (pay, return the rest, delete at zero).", s(json!({ "job": str_ }), &["job"])),
         ("get_job", "Anyone: a job's state.", s(json!({ "job": str_ }), &["job"])),
