@@ -7,7 +7,8 @@
 //! Terms:
 //! - `amount`: the job's own pay, owed to its payee (worker or note holder).
 //!   On a root job: the lead's fee cap, earned pro rata to the paid parts
-//!   (`fee_earned`); the unearned part goes back to the client.
+//!   over at least half the work budget (`fee_earned`, `fee_floor`); the
+//!   unearned part goes back to the client.
 //! - `funded`: tokens received as funding (client on the root, parent on a sub-job).
 //! - `bond`: the lead's bond (root only). Never allocatable to children.
 //! - `allocated`: tokens sent, or in flight, to children.
@@ -15,7 +16,7 @@
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
-use crate::money::{add, earned_fee, note_quote, sub, MoneyError};
+use crate::money::{add, earned_fee, fee_floor, note_quote, sub, MoneyError};
 use crate::state::Status;
 
 #[derive(BorshSerialize, BorshDeserialize, Debug, Clone, Default, PartialEq, Eq)]
@@ -212,15 +213,23 @@ impl Ledger {
         })
     }
 
+    /// The root's spend floor: half its work budget (`funded - amount`,
+    /// what the client funded for parts: the posted budget less the fee
+    /// cap; the bond is not in it), rounded up. See `money::fee_floor`.
+    pub fn fee_floor(&self) -> u128 {
+        fee_floor(self.funded.saturating_sub(self.amount)).unwrap_or(u128::MAX)
+    }
+
     /// The part of the lead's fee (`amount` on a root) that the lead has
-    /// earned: pro rata to the parts that passed (`paid` of `hired`, summed
-    /// prices; see `money::earned_fee`). A root that was never funded owes
-    /// no fee (nothing was posted).
+    /// earned: pro rata to the parts that passed, over at least the spend
+    /// floor (`paid` of `max(hired, fee_floor)`, summed prices; see
+    /// `money::earned_fee`). A root that was never funded owes no fee
+    /// (nothing was posted).
     pub fn fee_earned(&self, paid: u128, hired: u128) -> Result<u128, MoneyError> {
         if self.funded == 0 {
             return Ok(0);
         }
-        earned_fee(self.amount, paid, hired)
+        earned_fee(self.amount, paid, hired, self.fee_floor())
     }
 
     /// The root's split: the manager (payee) gets the fee it earned
@@ -507,12 +516,12 @@ mod tests {
         let mut l = Ledger::new(10);
         l.fund(100).unwrap();
         l.add_bond(5).unwrap();
-        let s = l.settle_split_root(1, 1).unwrap();
+        let s = l.settle_split_root(45, 45).unwrap();
         assert_eq!(s.to_payee, 15);
         l.begin_payout(Split { to_rest: 0, ..s }).unwrap();
         l.payee_result(15, 4).unwrap();
         assert_eq!(
-            l.settle_split_root(1, 1).unwrap(),
+            l.settle_split_root(45, 45).unwrap(),
             Split {
                 to_payee: 11,
                 to_rest: 90
@@ -631,18 +640,42 @@ mod tests {
     fn root_fee_is_pro_rata_and_rounds_down() {
         let mut l = Ledger::new(10);
         l.fund(100).unwrap();
-        l.allocate(40).unwrap();
-        l.credit(10, 40).unwrap(); // 30 paid, 10 refunded
-                                   // 10 * 30 / 40 = 7.5 -> 7; the client gets the unit.
-        assert_eq!(l.fee_earned(30, 40), Ok(7));
+        l.allocate(60).unwrap();
+        l.credit(15, 60).unwrap(); // 45 paid, 15 refunded
+                                   // 10 * 45 / 60 = 7.5 -> 7; the client gets the unit.
+        assert_eq!(l.fee_earned(45, 60), Ok(7));
         assert_eq!(
-            l.settle_split_root(30, 40).unwrap(),
+            l.settle_split_root(45, 60).unwrap(),
             Split {
                 to_payee: 7,
-                to_rest: 63
+                to_rest: 48
             }
         );
         // Paid can never count for more than hired: the fee is a cap.
-        assert_eq!(l.fee_earned(50, 40), Ok(10));
+        assert_eq!(l.fee_earned(80, 60), Ok(10));
+    }
+
+    #[test]
+    fn the_fee_floor_is_half_the_work_budget() {
+        // Budget 100, fee cap 10: the client funded 90 for parts.
+        let mut l = Ledger::new(10);
+        l.fund(100).unwrap();
+        l.add_bond(5).unwrap();
+        assert_eq!(l.fee_floor(), 45, "the bond is not work budget");
+        // One tiny part that passed: 10 * 1 / 45 = 0, not the whole fee.
+        assert_eq!(l.fee_earned(1, 1), Ok(0));
+        assert_eq!(
+            l.settle_split_root(1, 1).unwrap(),
+            Split {
+                to_payee: 5,
+                to_rest: 100
+            }
+        );
+        // 30% of the work budget, all passed: 60% of the fee.
+        assert_eq!(l.fee_earned(27, 27), Ok(6));
+        // 60%, all passed: the whole fee.
+        assert_eq!(l.fee_earned(54, 54), Ok(10));
+        // Never funded: no floor and no fee.
+        assert_eq!(Ledger::new(10).fee_floor(), 0);
     }
 }

@@ -44,11 +44,14 @@ The short version is in the [README](../README.md#how-it-works).
 8. **Fold.** After the window (or approval), `settle` runs bottom-up, one
    transfer at a time: pay the note holder, return the rest to the parent
    (at the root: the lead gets its bond back plus the fee it earned,
-   `fee x paid / hired` rounded down, where `hired` sums the prices (pay,
-   not sub-budget) of the parts the lead hired, at any depth, and `paid`
-   those whose work passed the check; a failed part whose task another
-   part passed is left out; everything else, the unearned fee too,
-   goes back to the client), confirm the real token balance is zero, delete the account
+   `fee x paid / max(hired, floor)` rounded down, where `hired` sums the
+   prices (pay, not sub-budget) of the parts the lead hired, at any depth,
+   and `paid` those whose work passed the check; a failed part whose task
+   another part passed is left out; `floor` is half the work budget (what
+   the client funded for parts: the budget less the fee cap), so a lead
+   earns the whole fee only once work worth at least half the work budget
+   passed, and one tiny part that passes earns next to nothing;
+   everything else, the unearned fee too, goes back to the client), confirm the real token balance is zero, delete the account
    (storage NEAR goes to the parent). Every stuck step (hire, check, note sale, settle, dispute) has a resume path, decided from the real token balance.
 9. **Buy together (pool).** Clients who would not fund a job alone join a
    pool contract (`ft_transfer_call(pool, share, "join")`; one pool per

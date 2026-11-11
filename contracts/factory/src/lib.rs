@@ -46,7 +46,8 @@ struct PostMsg {
     window_secs: u64,
     treasury: Option<AccountId>,
     /// The lead's fee cap. At settle the lead earns it pro rata to the root's
-    /// parts that were paid; the rest goes back to the client.
+    /// parts that passed, over at least half the work budget; the rest goes
+    /// back to the client.
     lead_fee: Option<U128>,
 }
 

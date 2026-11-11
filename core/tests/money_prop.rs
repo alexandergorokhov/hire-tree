@@ -10,11 +10,12 @@
 //!
 //! At the end everything settles bottom-up and the tree is empty. The root
 //! carries a random lead fee: the lead's take is exactly
-//! `fee * paid / hired` over the root's own closed children (never more
-//! than the fee) plus its bond, and the rest goes back to the client.
+//! `fee * paid / max(hired, floor)` over the root's own closed children
+//! (`floor`: half the work budget; never more than the fee) plus its
+//! bond, and the rest goes back to the client.
 //! Cases: `PROP_CASES` (default 10,000).
 
-use ht_core::money::{earned_fee, mul_div_floor, note_quote};
+use ht_core::money::{earned_fee, fee_floor, mul_div_floor, note_quote};
 use ht_core::{transition, Event, Ledger, Split, Status};
 use proptest::prelude::*;
 
@@ -394,11 +395,15 @@ proptest! {
         prop_assert_eq!(w.treasury_got, w.note_face);
         prop_assert_eq!(w.treasury_got - w.treasury_spent, w.note_fees);
         // The lead got its bond plus exactly the fee it earned: pro rata to
-        // the root's paid parts, rounded down, never more than the fee; no
-        // part paid, no fee.
+        // the root's paid parts over at least half the work budget, rounded
+        // down, never more than the fee; no part paid, no fee.
         prop_assert!(w.paid <= w.hired);
-        let earned = earned_fee(w.fee, w.paid, w.hired).unwrap();
+        let floor = fee_floor(w.funding - w.fee).unwrap();
+        let earned = earned_fee(w.fee, w.paid, w.hired, floor).unwrap();
         prop_assert!(earned <= w.fee);
+        if w.hired < floor {
+            prop_assert!(earned < w.fee || w.fee == 0, "under the floor: never the whole fee");
+        }
         if w.paid == 0 {
             prop_assert_eq!(earned, 0);
         }
@@ -410,23 +415,39 @@ proptest! {
         fee in any::<u128>(),
         a in any::<u128>(),
         b in any::<u128>(),
-        small in any::<(u64, u64, u64)>(),
+        floor in prop_oneof![Just(0u128), any::<u128>()],
+        small in any::<(u64, u64, u64, u64)>(),
     ) {
         let (paid, hired) = (a.min(b), a.max(b));
-        let got = earned_fee(fee, paid, hired).unwrap();
+        let got = earned_fee(fee, paid, hired, floor).unwrap();
         prop_assert!(got <= fee);
-        // Monotone in what was paid; everything paid earns the whole fee.
-        prop_assert!(earned_fee(fee, paid / 2, hired).unwrap() <= got);
-        if hired > 0 {
-            prop_assert_eq!(earned_fee(fee, hired, hired).unwrap(), fee);
+        // Monotone in what was paid; everything paid earns the whole fee
+        // once the lead hired at least the floor.
+        prop_assert!(earned_fee(fee, paid / 2, hired, floor).unwrap() <= got);
+        if hired > 0 && hired >= floor {
+            prop_assert_eq!(earned_fee(fee, hired, hired, floor).unwrap(), fee);
+        }
+        // The floor is respected: under it the lead never earns the whole
+        // fee, and a higher floor never pays more.
+        if hired < floor && fee > 0 {
+            prop_assert!(got < fee);
+        }
+        prop_assert!(earned_fee(fee, paid, hired, floor.saturating_add(floor / 2 + 1)).unwrap() <= got);
+        if hired > 0 && floor <= hired {
             // Symmetric in fee and paid (both are factors of one product).
             prop_assert_eq!(mul_div_floor(paid, fee.min(hired), hired).unwrap(),
-                earned_fee(fee.min(hired), paid, hired).unwrap());
+                earned_fee(fee.min(hired), paid, hired, floor).unwrap());
         }
-        let (f, x, y) = (small.0 as u128, small.1 as u128, small.2 as u128);
+        let (f, x, y, l) = (small.0 as u128, small.1 as u128, small.2 as u128, small.3 as u128);
         let (p, h) = (x.min(y), x.max(y));
-        let want = (f * p).checked_div(h).unwrap_or(0);
-        prop_assert_eq!(earned_fee(f, p, h).unwrap(), want);
+        let want = if p == 0 { 0 } else { (f * p) / h.max(l) };
+        prop_assert_eq!(earned_fee(f, p, h, l).unwrap(), want);
+    }
+
+    #[test]
+    fn the_fee_floor_is_half_the_work_budget_rounded_up(budget in any::<u128>()) {
+        let floor = fee_floor(budget).unwrap();
+        prop_assert_eq!(floor, budget / 2 + budget % 2);
     }
 
     #[test]

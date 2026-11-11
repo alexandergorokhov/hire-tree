@@ -2140,7 +2140,8 @@ pub async fn run(
             let root = root.clone();
             // Every part is closed: the fee the root pays its lead is final
             // (the lead fee is a cap, earned pro rata to the parts that
-            // passed; a failed part whose task a runner-up passed is left out).
+            // passed, over at least half the work budget; a failed part
+            // whose task a runner-up passed is left out).
             let job = tools
                 .call(&keeper, "get_job", &json!({ "job": root }))
                 .await?;
@@ -2330,7 +2331,7 @@ pub async fn run(
         "leads": LEADS.iter().enumerate().map(|(l, (n, r))| json!({ "lead": n, "record_weight": r.record_weight,
             "max_pct": r.max_pct, "spent": lead_spent[l] as f64 / 1e6, "unfilled": lead_unfilled[l] })).collect::<Vec<_>>(),
         "junk_respawns": respawns, "bid_errors": bid_errors, "late_reveals": late_reveals, "late_audits": late_audits, "award_rule": "on-chain (award_best)", "award_mismatches": award_mismatches, "backer_asks_too_low": asks_too_low, "premiums": premium,
-        "platform_fee_bps": SWARM_FEE_BPS, "job_budget": JOB_BUDGET, "bond_near": BOND_YOCTO as f64 / 1e24, "sealed_lead": "quality", "platform_fees": num(&settings["fees"]) as f64 / 1e6,
+        "platform_fee_bps": SWARM_FEE_BPS, "job_budget": JOB_BUDGET, "fee_floor_bps": ht_core::money::FEE_FLOOR_BPS as u64, "bond_near": BOND_YOCTO as f64 / 1e24, "sealed_lead": "quality", "platform_fees": num(&settings["fees"]) as f64 / 1e6,
         "model": match llm {
             Llm::Mock(_) => "scripted test model (not NEAR AI) for work, judging, the model bidder and contractors' make-or-buy; agents adapt their asks; buyers pick by price, on-chain record and a learned newcomer premium".to_string(),
             _ => format!("NEAR AI Cloud ({model}) for work, judging, the model bidder and contractors' make-or-buy, every answer signed; agents adapt their asks; buyers pick by price, on-chain record and a learned newcomer premium"),

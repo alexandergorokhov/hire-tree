@@ -414,8 +414,9 @@ pub struct JobView {
     /// Settled sub-job still waiting for its parent to take the notice.
     pub close_pending: Option<CloseNotice>,
     /// Root: the part of the lead's fee earned so far, pro rata to the
-    /// closed parts whose work passed (`fee_parts`; what settle pays once
-    /// every part is closed). None on a sub-job.
+    /// closed parts whose work passed, over at least half the work budget
+    /// (`fee_parts`, `Ledger::fee_floor`; what settle pays once every part
+    /// is closed). None on a sub-job.
     pub lead_fee_earned: Option<U128>,
 }
 
@@ -605,7 +606,8 @@ impl Job {
             _ => env::panic_str("exactly one of client (root job) or worker (sub-job)"),
         };
         // Root: `amount` is the lead's fee cap, set by the client at post
-        // (may be 0). The lead earns it pro rata to its paid parts; the rest
+        // (may be 0). The lead earns it pro rata to its paid parts, over at
+        // least half the work budget (`Ledger::fee_floor`); the rest
         // of the budget, the unearned fee included, goes back to the client
         // at settle.
         if !root {
@@ -2875,8 +2877,9 @@ impl Job {
             Status::Delivered => self.checker.is_none() && self.judge.is_none(),
             _ => false,
         };
-        // Root: the fee the lead earned (pro rata to its paid parts) + its
-        // bond to the manager, the rest back to the client.
+        // Root: the fee the lead earned (pro rata to its paid parts, over
+        // at least half the work budget) + its bond to the manager, the
+        // rest back to the client.
         let split = if self.root {
             let (paid, hired) = self.fee_parts();
             let earned = self
@@ -2886,7 +2889,8 @@ impl Job {
             emit(
                 "lead_fee",
                 json!({ "fee": U128(self.ledger.amount), "earned": U128(earned),
-                    "paid": U128(paid), "hired": U128(hired) }),
+                    "paid": U128(paid), "hired": U128(hired),
+                    "floor": U128(self.ledger.fee_floor()) }),
             );
             self.ledger.settle_split_root(paid, hired)
         } else {

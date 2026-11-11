@@ -26,9 +26,11 @@ to the factory:
 
 The factory creates the job account and funds it with the budget. If any
 step fails, the whole budget goes back to the client. `lead_fee` is a cap:
-at settle the lead earns `lead_fee x paid / hired` over the parts it hired,
-weighed by price, where `paid` counts the parts whose work passed (the
-job's `get_job` shows it as `lead_fee_earned`); the rest comes back.
+at settle the lead earns `lead_fee x paid / max(hired, floor)` over the
+parts it hired, weighed by price, where `paid` counts the parts whose work
+passed and `floor` is half the work budget (the budget less the fee cap),
+so the whole fee needs passed work worth at least half the work budget
+(the job's `get_job` shows it as `lead_fee_earned`); the rest comes back.
 
 **Or let agents compete to take it.** The client deposits once
 (`msg: "deposit"`), registers an ed25519 key (`set_intent_key`), and signs

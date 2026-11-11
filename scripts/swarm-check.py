@@ -77,12 +77,23 @@ if any("no_runner_up" in p for _, p in unreplaced) or not unreplaced:
     check(not any((p.get("no_runner_up") or "").startswith("hire failed") for _, p in unreplaced), "no runner-up hire failed")
 check(any(p["sealed"] for p in won), "sealed bids were used")
 # The lead fee is a cap, earned pro rata to the root's own parts that
-# passed: fee x paid / hired over the level-1 parts it bought, each weighed
-# by its price, rounded down. A failed part whose task another of those
-# parts passed (the runner-up) counts for nothing. The swarm's leads hire no
-# sub-budgets, so nothing is reported from below level 1.
-# Runs made before the rule have no lead_fee_paid and are skipped.
+# passed: fee x paid / max(hired, floor) over the level-1 parts it bought,
+# each weighed by its price, rounded down. A failed part whose task another
+# of those parts passed (the runner-up) counts for nothing. The swarm's
+# leads hire no sub-budgets, so nothing is reported from below level 1.
+# The spend floor is fee_floor_bps (50%) of the root's work budget (what
+# the factory funded it with, the job budget less the platform fee, less
+# the lead's fee cap), rounded up. Runs made before the floor do not record
+# fee_floor_bps and are checked without it; runs made before the rule have
+# no lead_fee_paid and are skipped.
 units = lambda x: round(x * 1e6)
+def fee_floor(f):
+    bps = d.get("fee_floor_bps")
+    if not bps:
+        return 0
+    budget = units(d.get("job_budget", 70))
+    work = max(budget - budget * d["platform_fee_bps"] // 10000 - units(f["lead_fee"]), 0)
+    return -(-work * bps // 10000)
 def task_of(r, p):
     # The task's hash (runs before it was logged: the part a runner-up replaced).
     if "spec" in p:
@@ -95,7 +106,7 @@ def earned(r, f):
     done = {task_of(r, p) for p in mine if p["paid"]}
     hired = sum(units(p["price"]) for p in mine if p["paid"] or task_of(r, p) not in done)
     paid_ = sum(units(p["price"]) for p in mine if p["paid"])
-    return units(f["lead_fee"]) * paid_ // hired if hired else 0
+    return units(f["lead_fee"]) * paid_ // max(hired, fee_floor(f)) if hired else 0
 fills = [(r, f) for r in d["rounds"] for f in r.get("intents", []) if "lead_fee_paid" in f]
 if fills:
     off = []
@@ -103,7 +114,8 @@ if fills:
         want = earned(r, f)
         if units(f["lead_fee_paid"]) != want:
             off.append(f"round {r['round']} {f['lead']}: {f['lead_fee_paid']} != {want / 1e6}")
-    check(not off, f"every lead earned its fee pro rata to its parts that passed ({len(fills)} jobs{', off: ' + '; '.join(off[:3]) if off else ''})")
+    floor = f", over at least {d['fee_floor_bps'] / 100:g}% of the work budget" if d.get("fee_floor_bps") else ""
+    check(not off, f"every lead earned its fee pro rata to its parts that passed{floor} ({len(fills)} jobs{', off: ' + '; '.join(off[:3]) if off else ''})")
 check(abs(d["platform_fees"] - fee) < 0.01, f"factory fees = {jobs} jobs x {d.get('job_budget', 70)} x {d['platform_fee_bps'] / 100}% = {fee:.2f}")
 
 if "--same-as" in sys.argv:

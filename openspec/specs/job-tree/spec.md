@@ -17,8 +17,11 @@ sub-account of its creator.
 A root's `amount` SHALL be the lead's fee cap, set by the client at post (by
 the factory from a signed job offer's Dutch auction, or by a pool from its
 terms). It is never hireable. The lead SHALL earn it pro rata to the parts
-whose work passed: at settle the manager gets
-`fee * paid / hired` (rounded down) plus its bond. Each job sums over its
+whose work passed, over at least a spend floor: at settle the manager gets
+`fee * paid / max(hired, floor)` (rounded down) plus its bond, where
+`floor` is half the root's work budget (`funded - fee`, what the client
+funded for parts; the bond is not in it), rounded up in the client's
+favour. Each job sums over its
 closed children that its manager hired (a worker's contractors are inside
 that worker's price; a hire rolled back never counts), each weighed by its
 price (the hire's `amount`, not its sub-budget):
@@ -52,10 +55,15 @@ manager.
 - unit: `a_lead_whose_every_part_failed_earns_no_fee`; core: `a_root_with_no_paid_part_pays_no_fee`
 
 #### Scenario: Some parts paid
-- WHEN parts worth 30 passed and parts worth 10 did not (fee 10)
+- WHEN parts worth 30 passed and parts worth 10 did not (fee 10, budget 50: floor 20)
 - THEN the lead earns 10 * 30 / 40 = 7.5 and the client gets the other 2.5 back; with thirds the fee rounds down and the client gets the unit
 - unit: `the_lead_fee_is_earned_pro_rata_to_the_paid_parts`, `the_earned_fee_rounds_down_in_the_clients_favour`; core: `root_fee_is_pro_rata_and_rounds_down`, `earned_fee_never_overflows`
 - sandbox: `scene_full_tree_on_local_node` (fee 10; parts 30 and 20 paid, 10 refunded by a dispute: the lead gets 8.333333, the client 41.666667)
+
+#### Scenario: A spend floor
+- WHEN the client posts 100 with a fee cap of 10 (work budget 90, floor 45) and the lead hires one part of 1 base unit that passes, and nothing else
+- THEN the lead earns 10 * 1 / 45 USD = 0 and gets only its bond; a lead that spent 54 (60%) with every part passed earns the whole 10; one that spent 27 (30%) with every part passed earns 10 * 27 / 45 = 6 (60%)
+- unit: `a_lead_that_hires_one_tiny_part_earns_almost_no_fee`, `a_lead_that_spends_over_half_the_work_budget_on_passed_parts_earns_the_whole_fee`, `a_lead_that_spends_under_half_the_work_budget_earns_the_fee_pro_rata_to_the_floor`; core: `the_fee_floor_is_half_the_work_budget`, `earned_fee_divides_by_at_least_the_spend_floor`, `the_spend_floor_rounds_up_in_the_clients_favour`; property: `earned_fee_is_exact_and_capped`, `the_fee_floor_is_half_the_work_budget_rounded_up`
 
 #### Scenario: No parts hired
 - WHEN the root closes without a child (or only with hires that were rolled back)
@@ -78,8 +86,8 @@ manager.
 - unit: `a_sub_budget_cannot_hide_failed_parts_from_the_lead_fee`, `a_sub_job_reports_the_parts_its_manager_hired_under_it`
 
 #### Scenario: Weighed by price, not by sub-budget
-- WHEN a part of price 1 with an unused sub-budget of 89 passed and a part of 10 failed (fee 10)
-- THEN the lead earns 10 x 1 / 11, not 10 x 90 / 100
+- WHEN a part of price 1 with an unused sub-budget of 89 passed and a part of 10 failed (fee 10, budget 100)
+- THEN the lead earns 10 x 1 / 45 (the 11 hired are under the floor of 45), not 10 x 90 / 100
 - unit: `the_fee_weighs_each_part_by_its_price_not_its_sub_budget`
 
 #### Scenario: A failed part redone
@@ -89,7 +97,7 @@ manager.
 
 #### Scenario: The fee earned so far is public
 - WHEN anyone reads the root's `get_job`
-- THEN `lead_fee_earned` shows the fee settle would pay now (null on a sub-job), and settle emits `lead_fee` with the fee, the earned part and both sums
+- THEN `lead_fee_earned` shows the fee settle would pay now (null on a sub-job), and settle emits `lead_fee` with the fee, the earned part, both sums and the floor
 - unit: `the_view_shows_the_lead_fee_earned_so_far`
 
 #### Scenario: Money is conserved with the fee rule

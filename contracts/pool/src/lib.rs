@@ -4,7 +4,8 @@
 //!
 //! 1. `new`: the organiser sets the job (manager, spec hash, window, lead
 //!    fee cap), the target budget and how long joining stays open. The lead
-//!    earns the fee pro rata to its paid parts; the unearned part comes
+//!    earns the fee pro rata to its paid parts (over at least half the
+//!    work budget); the unearned part comes
 //!    back to the pool with the unspent budget.
 //! 2. Members join with `ft_transfer_call(pool, amount, "join")`. The pool
 //!    keeps at most what the target still needs and refunds the rest.

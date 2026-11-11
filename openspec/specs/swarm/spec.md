@@ -96,11 +96,14 @@ picks workers first). The first to fill asks 0.5 fUSD more next round, the
 last 0.5 less. The run logs each fill with its lead fee (the cap) and, read
 from the root's `get_job` once every part closed, the fee it earned
 (`lead_fee_paid`): `scripts/swarm-check.py` SHALL find it equal to
-`fee x paid / hired` over that lead's level-1 parts, weighed by price,
-rounded down, where `paid` counts the parts that passed and a failed part
-whose task a runner-up passed is left out (each part logs its task's hash
-as `spec`).
-- unit: `scripts/test-swarm-check.py` (a run that paid the whole fee whatever the outcome fails; so does one that counts a failed part its runner-up redid)
+`fee x paid / max(hired, floor)` over that lead's level-1 parts, weighed
+by price, rounded down, where `paid` counts the parts that passed and a
+failed part whose task a runner-up passed is left out (each part logs its
+task's hash as `spec`). `floor` is `fee_floor_bps` (logged by the run,
+5000) of the root's work budget (the job budget less the platform fee,
+less the fee cap), rounded up; a run made before the floor logs no
+`fee_floor_bps` and is checked without it.
+- unit: `scripts/test-swarm-check.py` (a run that paid the whole fee whatever the outcome fails; so does one that counts a failed part its runner-up redid, and one that logs fee_floor_bps but ignores the floor)
 
 ### Requirement: The lead's model plans the tree
 The lead that fills an intent SHALL ask its model which catalog parts the

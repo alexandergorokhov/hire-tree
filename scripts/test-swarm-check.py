@@ -45,7 +45,15 @@ def case_audit_against_votes(d):
 def with_earned_fees(d, rule="contract"):
     # Fill in lead_fee_paid as the contract pays it, or by a broken rule:
     # "whole" pays the whole fee whatever the outcome (the old rule);
-    # "count_replaced" also counts a failed part its runner-up redid.
+    # "count_replaced" also counts a failed part its runner-up redid;
+    # "no_floor" divides by what was hired even below the spend floor;
+    # "old" is the rule before the floor, in a run that records none.
+    if rule == "old":
+        d.pop("fee_floor_bps", None)
+    else:
+        d["fee_floor_bps"] = 5000
+    budget = round(d["job_budget"] * 1e6)
+    funded = budget - budget * d["platform_fee_bps"] // 10000
     for r in d["rounds"]:
         for f in r["intents"]:
             mine = [p for p in r["parts"] if p.get("winner") and p["level"] == 1 and p.get("lead") == f["lead"]]
@@ -58,7 +66,8 @@ def with_earned_fees(d, rule="contract"):
             hired = sum(round(p["price"] * 1e6) for p in counted)
             paid = sum(round(p["price"] * 1e6) for p in mine if p["paid"])
             fee = round(f["lead_fee"] * 1e6)
-            f["lead_fee_paid"] = (fee if rule == "whole" else (fee * paid // hired if hired else 0)) / 1e6
+            floor = 0 if rule in ("no_floor", "old") else -(-(funded - fee) // 2)
+            f["lead_fee_paid"] = (fee if rule == "whole" else (fee * paid // max(hired, floor) if hired else 0)) / 1e6
 
 
 def case_lead_fee_paid_whatever_the_outcome(d):
@@ -69,7 +78,11 @@ def case_lead_fee_counts_a_part_its_runner_up_redid(d):
     with_earned_fees(d, rule="count_replaced")
 
 
-CASES = [case_paid_flag_without_money, case_fired_a_good_worker, case_fees_off, case_overpaid, case_audit_against_votes, case_lead_fee_paid_whatever_the_outcome, case_lead_fee_counts_a_part_its_runner_up_redid]
+def case_lead_fee_ignores_the_spend_floor(d):
+    with_earned_fees(d, rule="no_floor")
+
+
+CASES = [case_paid_flag_without_money, case_fired_a_good_worker, case_fees_off, case_overpaid, case_audit_against_votes, case_lead_fee_paid_whatever_the_outcome, case_lead_fee_counts_a_part_its_runner_up_redid, case_lead_fee_ignores_the_spend_floor]
 
 
 def run(d, readme=None):
@@ -89,8 +102,14 @@ fails += code != 0
 d = copy.deepcopy(base)
 with_earned_fees(d)
 code, out = run(d)
-ok = code == 0 and "every lead earned its fee pro rata" in out
-print(("ok  " if ok else "FAIL"), "a run whose leads earned their fees pro rata passes")
+ok = code == 0 and "every lead earned its fee pro rata to its parts that passed, over at least 50% of the work budget" in out
+print(("ok  " if ok else "FAIL"), "a run whose leads earned their fees pro rata over the spend floor passes")
+fails += not ok
+d = copy.deepcopy(base)
+with_earned_fees(d, rule="old")
+code, out = run(d)
+ok = code == 0 and "every lead earned its fee pro rata to its parts that passed (" in out
+print(("ok  " if ok else "FAIL"), "a run made before the spend floor (no fee_floor_bps) passes by the old rule")
 fails += not ok
 for case in CASES:
     d = copy.deepcopy(base)
