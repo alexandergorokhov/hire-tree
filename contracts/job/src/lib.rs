@@ -730,6 +730,13 @@ impl Job {
         if self.status != Status::Open || !self.window_open() {
             return self.refund(amount, "fund: job is not open");
         }
+        // Root: the lead's fee floor is half of `funded - fee`, so it is
+        // set when the lead first hires. A top-up after that would raise
+        // the floor and cut the fee the lead already earned (the client
+        // tops up 10,000 after the parts passed, then approves).
+        if self.root && (!self.children.is_empty() || self.ledger.allocated > 0) {
+            return self.refund(amount, "fund: the lead has already hired");
+        }
         if self.root && self.ledger.funded.saturating_add(amount.0) < self.ledger.amount {
             return self.refund(amount, "fund: the budget must cover the lead's fee");
         }

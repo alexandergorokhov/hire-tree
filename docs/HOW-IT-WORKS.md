@@ -48,7 +48,8 @@ The short version is in the [README](../README.md#how-it-works).
    prices (pay, not sub-budget) of the parts the lead hired, at any depth,
    and `paid` those whose work passed the check; a failed part whose task
    another part passed is left out; `floor` is half the work budget (what
-   the client funded for parts: the budget less the fee cap), so a lead
+   the client funded for parts: the budget less the fee cap, fixed at the
+   lead's first hire: after it the root refunds any top-up), so a lead
    earns the whole fee only once work worth at least half the work budget
    passed, and one tiny part that passes earns next to nothing;
    everything else, the unearned fee too, goes back to the client), confirm the real token balance is zero, delete the account

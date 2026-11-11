@@ -21,7 +21,9 @@ whose work passed, over at least a spend floor: at settle the manager gets
 `fee * paid / max(hired, floor)` (rounded down) plus its bond, where
 `floor` is half the root's work budget (`funded - fee`, what the client
 funded for parts; the bond is not in it), rounded up in the client's
-favour. Each job sums over its
+favour. The floor SHALL be set when the lead first hires: once the root has
+a child or anything allocated, it SHALL refund any further `fund`, so a
+late top-up cannot raise the floor and cut a fee already earned. Each job sums over its
 closed children that its manager hired (a worker's contractors are inside
 that worker's price; a hire rolled back never counts), each weighed by its
 price (the hire's `amount`, not its sub-budget):
@@ -64,6 +66,11 @@ manager.
 - WHEN the client posts 100 with a fee cap of 10 (work budget 90, floor 45) and the lead hires one part of 1 base unit that passes, and nothing else
 - THEN the lead earns 10 * 1 / 45 USD = 0 and gets only its bond; a lead that spent 54 (60%) with every part passed earns the whole 10; one that spent 27 (30%) with every part passed earns 10 * 27 / 45 = 6 (60%)
 - unit: `a_lead_that_hires_one_tiny_part_earns_almost_no_fee`, `a_lead_that_spends_over_half_the_work_budget_on_passed_parts_earns_the_whole_fee`, `a_lead_that_spends_under_half_the_work_budget_earns_the_fee_pro_rata_to_the_floor`; core: `the_fee_floor_is_half_the_work_budget`, `earned_fee_divides_by_at_least_the_spend_floor`, `the_spend_floor_rounds_up_in_the_clients_favour`; property: `earned_fee_is_exact_and_capped`, `the_fee_floor_is_half_the_work_budget_rounded_up`
+
+#### Scenario: A late top-up cannot cut the fee
+- WHEN the client posts 100 with a fee cap of 10, the lead hires a part of 54 that passes, and the client then funds the root another 1000 before approving
+- THEN the root refunds the 1000 (the lead has already hired), the floor stays 45 and the lead still gets the whole 10; before the first hire a top-up is taken
+- unit: `a_client_top_up_after_the_parts_passed_does_not_cut_the_lead_fee`, `a_client_can_top_up_the_root_before_the_lead_hires`
 
 #### Scenario: No parts hired
 - WHEN the root closes without a child (or only with hires that were rolled back)

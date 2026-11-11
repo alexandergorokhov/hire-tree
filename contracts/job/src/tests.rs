@@ -479,6 +479,44 @@ fn a_lead_that_spends_under_half_the_work_budget_earns_the_fee_pro_rata_to_the_f
 }
 
 #[test]
+fn a_client_top_up_after_the_parts_passed_does_not_cut_the_lead_fee() {
+    // Budget 100, fee cap 10, work budget 90, floor 45. The lead hires a
+    // part of 54 (60%) and it passes: it has earned the whole fee. A late
+    // top-up of 1000 would make the floor 545 and the fee 10 x 54 / 545.
+    // Once the lead has hired, the root takes no more funding: the top-up
+    // is refunded and the lead still gets its 10.
+    let mut j = root_funded_with_fee(10 * USD, 100 * USD);
+    hired_in(&mut j, ROOT, WORKER, 54 * USD, 0, task(1));
+    root_child_closed(&mut j, 1, 0, true);
+    assert_eq!(j.get_job().lead_fee_earned, Some(U128(10 * USD)));
+    Ctx::new(ROOT, TOKEN).set();
+    assert_eq!(
+        value(j.ft_on_transfer(acc(CLIENT), U128(1000 * USD), "fund".into())),
+        1000 * USD,
+        "a top-up after the first hire is refunded"
+    );
+    assert_eq!(j.get_job().funded.0, 100 * USD);
+    assert_eq!(j.get_job().lead_fee_earned, Some(U128(10 * USD)));
+    settle_root(&mut j);
+    assert_eq!(events("lead_fee")[0]["floor"], (45 * USD).to_string());
+    assert_eq!(transfers(), vec![(LEAD.into(), (10 * USD).to_string())]);
+    payee_cb(&mut j, ROOT, true);
+    assert_eq!(transfers(), vec![(CLIENT.into(), (36 * USD).to_string())]);
+}
+
+#[test]
+fn a_client_can_top_up_the_root_before_the_lead_hires() {
+    let mut j = root_funded_with_fee(10 * USD, 100 * USD);
+    Ctx::new(ROOT, TOKEN).set();
+    assert_eq!(
+        value(j.ft_on_transfer(acc(CLIENT), U128(50 * USD), "fund".into())),
+        0
+    );
+    assert_eq!(j.get_job().funded.0, 150 * USD);
+    assert_eq!(j.get_job().unallocated.0, 140 * USD);
+}
+
+#[test]
 fn the_earned_fee_rounds_down_in_the_clients_favour() {
     // Work budget 40, spend floor 20: 10 paid of 30 hired.
     let mut j = root_funded_with_fee(10 * USD, 50 * USD);

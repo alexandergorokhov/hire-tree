@@ -216,6 +216,8 @@ impl Ledger {
     /// The root's spend floor: half its work budget (`funded - amount`,
     /// what the client funded for parts: the posted budget less the fee
     /// cap; the bond is not in it), rounded up. See `money::fee_floor`.
+    /// The job contract keeps `funded` fixed once the root has hired (it
+    /// refunds a later `fund`), so a late top-up cannot raise the floor.
     pub fn fee_floor(&self) -> u128 {
         fee_floor(self.funded.saturating_sub(self.amount)).unwrap_or(u128::MAX)
     }
