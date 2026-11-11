@@ -10,822 +10,939 @@
     "token": "usdc.sandbox",
     "transactions": [
       {
+        "gas": 2383059916754,
         "method": "set_settings",
         "ok": true,
         "on": "hub.sandbox",
-        "tx": "5ExpxZGz9bXHFqJ31GvyoCWwZWwYwg7BLq6CkQRs88fq",
+        "tx": "D3TdacgVsMaesPrxqbKGKBEYuPvouutXmyue9vffGkkm",
         "who": "hub.sandbox"
       },
       {
+        "gas": 2832903330548,
         "method": "storage_deposit",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "FjY9mwPWJktz7e4YFuawukzJ9mZE6WNUUZxvNhej97cV",
+        "tx": "FfQzZAUPRV36PYJbk7rfww6BzTtcvGLw1FrcMD1ttDkw",
         "who": "hub.sandbox"
       },
       {
+        "gas": 2843730250343,
         "method": "storage_deposit",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "Bt2Z8MzQpvQRnn5cr6B3EsbbxkCxpj5xoY3LKkgAnUfp",
+        "tx": "G5axoRebnUMBTT1W9p8RxXACRNyQUKza2AczqECwMBuF",
         "who": "client.sandbox"
       },
       {
+        "gas": 2844899454761,
         "method": "storage_deposit",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "2UFt78mFaUE4R5Exbxn69Z2kroC2dDbzUWzK6cPKU4v4",
+        "tx": "goHj8SP4gBLZ9n1zMuw8NnvzGohvsefQqstB6qVXg7g",
         "who": "lead.sandbox"
       },
       {
+        "gas": 2844961168301,
         "method": "storage_deposit",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "9omKx8CGd7bbnajGGAhSXK1ZXVnak9rGJmVmwmjktTx9",
+        "tx": "ExTrFqs1HbiA2c26iAWxQMGXqAuvq4T251d16L92R9qW",
         "who": "treasury.sandbox"
       },
       {
+        "gas": 2850583421279,
         "method": "storage_deposit",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "sn4N5ukn6hv1Vmv2eJvXyvfJBnXmMNSUpN1uktYtocU",
+        "tx": "CSHQ1aAnZFZRWmaDfdrpQAvJeETVnNW9Fo95QTJ1cuzB",
         "who": "researcher.sandbox"
       },
       {
+        "gas": 2852863421279,
         "method": "storage_deposit",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "3wNoxVCPkDF7pT6Z82gvMJfbexsYwbFZZQ5hKdwwctq9",
+        "tx": "BkFKjyUPQA3dsDbR7f1MM56TbUeND3sgNmvh1FCKkY9W",
         "who": "translator.sandbox"
       },
       {
+        "gas": 2851801168301,
         "method": "storage_deposit",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "4jS3gy3vXjq8Mn1HsLqxnAhfjxXDRE5Pd31NSFDGRbbR",
+        "tx": "GYdLwMBkRAiPPGcQhwVvp2WWEui1KoTf67psRN9F7LGt",
         "who": "cheapbot.sandbox"
       },
       {
+        "gas": 2849004028664,
         "method": "storage_deposit",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "3PFS1MUsyYURyprfZtgthLF2QzXe4x8acL4DTtYbq3Kq",
+        "tx": "9esRD7MwRsEBnwzv5ZCgFiobvj5fgvidpN5bhgMGYQ4o",
         "who": "client2.sandbox"
       },
       {
+        "gas": 2207600807767,
         "method": "mint",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "91RzVgnvnVpeMKedeZnRk7oijjoDKpZtdoiuvFEEftcW",
+        "tx": "8PdDymShd57aQUiggB3Vcoj9KwbBGguSmneFVoQK2oiD",
         "who": "usdc.sandbox"
       },
       {
+        "gas": 2851284028664,
         "method": "storage_deposit",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "25MduXLP1BpsmCmsGaAyzNNX3jetVSYt5dqMybGp7QfW",
+        "tx": "EVpB3h1CVUhcXjk7cdy8whMMrA23zJfsoDjovsDSZZaF",
         "who": "client3.sandbox"
       },
       {
+        "gas": 2212160807767,
         "method": "mint",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "FSsK7FrLgM242ZKbNUiceVucZVmxPqxwrwSgcWK7qU52",
+        "tx": "B8GqYPX91oXZdFhpsjyZbsoyQUCrCKzThtc4vCotchmb",
         "who": "usdc.sandbox"
       },
       {
+        "gas": 2207538630367,
         "method": "mint",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "HYBZ8mM2JSAdWWaFBp2C8JTYHFQPNA99t8kfK1VZfMNc",
+        "tx": "2DLS8zv3bKCwbww5fsks2LcX2Xqjb4eT2z63ao7DQY9e",
         "who": "usdc.sandbox"
       },
       {
+        "gas": 2213053018973,
         "method": "mint",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "CMW7Q4d2PA5CuXKxxdyVxGf8LNd93TQ9QmXgC1Y6uorh",
+        "tx": "Eb3j2jJQMbonCcZ5cY5F5rvpPmqUvuEa1r138Dvdhnv2",
         "who": "usdc.sandbox"
       },
       {
+        "gas": 2477827968761,
         "method": "prepay_post",
         "ok": true,
         "on": "hub.sandbox",
-        "tx": "iYhSsKSxTkg8eGLRj85PdB2eWQtZM2DtBmx1CXrMpyi",
+        "tx": "B6yPZtZX9JsBa6jCa2ueGR2DhtRs2u8fxhTXhYr4HwNa",
         "who": "client.sandbox"
       },
       {
+        "gas": 30377735083152,
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "D5E7gZVcCc2bR9se4Xh46szSg7mMGhmAcphsQwnfc24s",
+        "tx": "H3kduBKb35f1XEMfJTBg2ocntdWncpJFieuVpWLwhszb",
         "who": "client.sandbox"
       },
       {
+        "gas": 2575540385891,
         "method": "open_bids",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "DhUUtRZn4oGZfDGxWRSoht9s1ddjoFT5CCNnTFSXuyzw",
+        "tx": "HUVgZUsCnWuhXMQcn8T25RFrzANd7jnpi5FguBrEMTpz",
         "who": "lead.sandbox"
       },
       {
+        "gas": 2591073738748,
         "method": "open_bids",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "ExUd3H1TR6F1TMxb65icfrBTBj8q8Fyj2UYpwUvJXY4P",
+        "tx": "FqSBzR3iKVAuhzFCpTxRM9oqqyEtHKpuyJvjpSENeeEA",
         "who": "lead.sandbox"
       },
       {
+        "gas": 2605994138385,
         "method": "open_bids",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "5rp4LZdSgHGf7raDkUx7ET5n77hcQfbxaS5WXTkGbatc",
+        "tx": "8diTPFxvBPpBHPCvbjaXQZ6zkZTxvkdumt6EGa6SNGAr",
         "who": "lead.sandbox"
       },
       {
+        "gas": 2566430566439,
         "method": "bid",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "EJM1Fk2e3AR14TpBQ2dhXVoo8Vndd3BxYxbmQHMPgBFa",
+        "tx": "CC2FHfpLypJrLC1SD6cJ3EQrmrdXhc8WJH831QaGiwxx",
         "who": "researcher.sandbox"
       },
       {
+        "gas": 2578476374905,
         "method": "bid",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "72XRHh9UJe3oB9hEZKJ3oUobfeMUUTp9G4cDuzFSnNvG",
+        "tx": "751EZp7uAV7xr6n7aMaXsUAq5ziU2AUakRcerJJZAaEv",
         "who": "cheapbot.sandbox"
       },
       {
+        "gas": 2593779490577,
         "method": "bid",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "6gpWeNoZ5Hy4YmX25unZMQZMdKipYmJ6NLv6udPW8gsH",
+        "tx": "88ADc11pmgmNgP3xv7HfNxhYnquKJ6khDRjz5SaQuQZW",
         "who": "translator.sandbox"
       },
       {
+        "gas": 2604827986069,
         "method": "bid",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "HQZ9gcSkxtM5UobMV2mJUtgBPEXfAqHmYuzyxCvH2jgf",
+        "tx": "mWCC9yF1XB5TJ1ZxwVUXGxJPFofpnrvZCwPgJQV2t2D",
         "who": "cheapbot.sandbox"
       },
       {
+        "gas": 2619296959859,
         "method": "bid",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "CwGaY7hiyyBK5nSwxu5g1RVQsRTVZmavWNQWstGE1afT",
+        "tx": "3v4sYfMxEiwWPjwesrD1TS95hWZDiQuFDFTgaRCqfSZo",
         "who": "researcher.sandbox"
       },
       {
+        "gas": 28625960780311,
         "method": "award",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "Etf8gMLTSTJisTaWaxAngce11DreXR5oLZG7mmhUQBVw",
+        "tx": "EKtmkwKA39neYGbZi9W2ErRNoQvJgXNVAXDjxeUbWnaP",
         "who": "lead.sandbox"
       },
       {
+        "gas": 28734970323382,
         "method": "award",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "3GvPGaTydgXz5Zy46ntBfZYmPhexj1h1Kuk2E8RwsLEi",
+        "tx": "9Hj1dboJVDPJdviauUyUeiZNMeVB9t7RyM9aFP9chXdU",
         "who": "lead.sandbox"
       },
       {
+        "gas": 28833187682568,
         "method": "award",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "HVi22gRPKfJFAK7CRDQ3iknfJ9LLY8xdQoip6nceqB5G",
+        "tx": "DFNCEnpQH18BE2iwd4ntLg7PXM3ZSB2wwqrNLA29sFeW",
         "who": "lead.sandbox"
       },
       {
+        "gas": 3213014696167,
         "method": "deliver",
         "ok": true,
         "on": "t1.job-1.hub.sandbox",
-        "tx": "Dc2x8iKrJQ8tGt3DeNA7JFyDzjewMo4UX3DHmds9G8bs",
+        "tx": "3QGZUVPP3JYH6iUPpkqqemYbgfAeSpwQKxQtVHosBnP6",
         "who": "researcher.sandbox"
       },
       {
+        "gas": 3297146029504,
         "method": "submit_check",
         "ok": true,
         "on": "t1.job-1.hub.sandbox",
-        "tx": "6HxRjRvKAp6JgTrnE3F3o6CzEDfGEo5JNqqsVijgj9sS",
+        "tx": "Em8zfxQFVfju2aptjaarszxzYMUCTo4WUAgy6SUhsVYn",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 2672349791051,
         "method": "deliver",
         "ok": true,
         "on": "t2.job-1.hub.sandbox",
-        "tx": "HwPFWSHa3A5k3muf99zzDE2DBCm13mTaybmXE8veZwq7",
+        "tx": "73LVmuoeGVeEgMHqvnHyVRGian8kyiLTqhAEgvMWpeZw",
         "who": "cheapbot.sandbox"
       },
       {
+        "gas": 3222791925938,
         "method": "submit_check",
         "ok": true,
         "on": "t2.job-1.hub.sandbox",
-        "tx": "BaqJpyc8A5bpSTmZELVHFnZKaeHPj3MZDPu4C26VL7MS",
+        "tx": "9CipXqGY6XhoRgPH9FZQH1grHQcD91tgxaSAHrpBFaJY",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 2672349791051,
         "method": "deliver",
         "ok": true,
         "on": "t3.job-1.hub.sandbox",
-        "tx": "J3YJwdgnS5gMnw34YCFE87Vf6hHjoHcgXxKV9HWDmpZe",
+        "tx": "6ihWpp3Vy9d6KRxHoT87CPpphS8VYmB1XqVvWkHvVvB2",
         "who": "cheapbot.sandbox"
       },
       {
+        "gas": 3217421316944,
         "method": "submit_check",
         "ok": true,
         "on": "t3.job-1.hub.sandbox",
-        "tx": "JDgGiBsPxdnQrcfiEJpAU4zA6dYs8X8bsALsusCdCL5r",
+        "tx": "ATUxiTeC2BvRUWE7vhBGZkkR5M46ramMtoMm8kSwmEdL",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 2479965933557,
         "method": "finalize_check",
         "ok": true,
         "on": "t1.job-1.hub.sandbox",
-        "tx": "BQrgrpNy7GpT9dWmCXxHYVVTj9DWMZFcBqjn6FDhx3GU",
+        "tx": "56baHPzTLN9dtL8rYYEve21hhGPimMp34rANHwwxA3GE",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 2480963535741,
         "method": "finalize_check",
         "ok": true,
         "on": "t2.job-1.hub.sandbox",
-        "tx": "hZWs6ZJHkWusofnsKvXnTsD8nNfMe1ZNUZ1s2gLNe7v",
+        "tx": "Entvc5PeBPRPYtdQWEqueznprWhkvPxeKcMTUUTMYQf4",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 2480963535741,
         "method": "finalize_check",
         "ok": true,
         "on": "t3.job-1.hub.sandbox",
-        "tx": "HxmUDUBU1JMTyGhSg1uW2zvHdoXgWnjyDg3KttY3gx4b",
+        "tx": "BoV8dUNYGzP6bRJ78GqP5RF5otuhgb5Aa5Wf1F4sqtVG",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 15133161090993,
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "HyVviLP4y2fHYzagkgu3Gn81eUxusXgoeDVUW2HkMUHg",
+        "tx": "AhH2FmGN2iBkiEjmVaK6ALPDBjQywZyxoTcKD346bxzC",
         "who": "treasury.sandbox"
       },
       {
+        "gas": 2475568789525,
         "method": "approve",
         "ok": true,
         "on": "t1.job-1.hub.sandbox",
-        "tx": "FXcgK5zEMUumk7ibgNdQV1zyCmtGd5H7pLTJSp7KJRmJ",
+        "tx": "FHvPFxnn4aMMjFogRF97Hkkn28ZbHUACUDT6Vgsa4TL2",
         "who": "lead.sandbox"
       },
       {
+        "gas": 24505633817072,
         "method": "settle",
         "ok": true,
         "on": "t1.job-1.hub.sandbox",
-        "tx": "4URP5sgRAKT7obNkvdJdUBraAjP36ZYNgnNUJysr3ewm",
+        "tx": "8J9LQy8JWEshnJXsgWutb13GGxBNq3aEuyCNJhx3X5zF",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 21343190207838,
         "method": "settle",
         "ok": true,
         "on": "t2.job-1.hub.sandbox",
-        "tx": "DCrUjSfSgkVLp14K55mNz1UF4436zxmS7XKdzCvfQNU9",
+        "tx": "FgBB1b1mgbVr49RiGHgrYQrJEK3Tk92WMCiScAmMTBsG",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 21351790531450,
         "method": "settle",
         "ok": true,
         "on": "t3.job-1.hub.sandbox",
-        "tx": "B6tWPhSyoMghfb6yWgTbndEoiss7pJWEHNwZv3wF61D1",
+        "tx": "5QiQnpJeASY9AfhoFc7orHPEjCNNAwg55MzH5MJTEnZq",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 2683864569348,
         "method": "approve",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "DrC8dfhovtJ6dGRacuGfXk5uEKLJzL49qA7VrcqnZFdQ",
+        "tx": "8vcU3aH7qpHQUpBgxhYCzdiBYiHyuQPNhNzpt5HuhH5b",
         "who": "client.sandbox"
       },
       {
+        "gas": 25026804914860,
         "method": "settle",
         "ok": true,
         "on": "job-1.hub.sandbox",
-        "tx": "GpNVjh8Znt4QcsxAmYN7pyFLeBbegiaY6vtH3av94ywF",
+        "tx": "6RdBsw3naNmFL3hC48PiiHYHcnz6hbDXdJQbcGySnKDn",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 30393695083152,
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "HRUe9Xgr5sBEQ7KQcxSrmpMHChYXXG9LTV4wKAoxR9em",
+        "tx": "Csd6ZH8GY9piNznZDmV2NHF58RcBnNWNH9VtoKy2arK",
         "who": "client.sandbox"
       },
       {
+        "gas": 2575540385891,
         "method": "open_bids",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "24Hbe5QL53iD375J4QKeyM6WNS6tSav8LjVidNTJPHmw",
+        "tx": "7P31GmGF5DpCH2JfD4i3QjSPxqd5hJXg1zMAcza4EMrs",
         "who": "lead.sandbox"
       },
       {
+        "gas": 2591073738748,
         "method": "open_bids",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "EsVZ8mn8mFMeDRwTsJRzTwEvWEKwcegyKMvF8Yz5oecJ",
+        "tx": "DNzFNgUbS8rp26mPBjTEggmrL8e6BwhjGqvTUr79RZtN",
         "who": "lead.sandbox"
       },
       {
+        "gas": 2605994138385,
         "method": "open_bids",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "56HRbXV6cpfdeq1JiKAArvsBgHdJCB5kxDL8iSUfCZsL",
+        "tx": "6K5adqQZ6K4JyaXggT7aSMM1VAHhJGw1CobzddHRpqVH",
         "who": "lead.sandbox"
       },
       {
+        "gas": 2566430566439,
         "method": "bid",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "573bHTvsa1PvQztMxoB3sUdyLHfvuK4VTAc5yjPJUA8C",
+        "tx": "FZ3gVab7n59UCDnyCKPqeZ7GTtCb6Po1ajstCHyv8Ke2",
         "who": "researcher.sandbox"
       },
       {
+        "gas": 2578476374905,
         "method": "bid",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "2w4DAPDbpD7to7NXmuAu4pStGB8LQJiSK51LHjP6Q2Km",
+        "tx": "BY86MwWEvrYNg31Kk5vvCDjpENkvuDNdCAzaqyQSynPB",
         "who": "cheapbot.sandbox"
       },
       {
+        "gas": 2593779490577,
         "method": "bid",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "379DRrkoFJjhb9Jd6E2XH25sm5e6GGW3Vw1eKkCfoWjp",
+        "tx": "68AAN4JjWPc6VUS8QEmi4jmv69JmVNxV8HQHY8zcEe2N",
         "who": "translator.sandbox"
       },
       {
+        "gas": 2604827986069,
         "method": "bid",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "2TB6HuA4VVgSGuurHcXQYfJUV7e255MheD9PkJmruWPE",
+        "tx": "74EvEowF5fAPRsV8FoUtu5dubVSBLym9mxAXewN7u6VR",
         "who": "cheapbot.sandbox"
       },
       {
+        "gas": 2619296959859,
         "method": "bid",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "DuoAMN43Qr2jwUXrn5UgWXytHQCVQwJwdq68hekboPEN",
+        "tx": "4RqQYVruH4MgZiG5NykneGzYP28Bw3a48tSW8mP9obAd",
         "who": "researcher.sandbox"
       },
       {
+        "gas": 28646480780311,
         "method": "award",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "6KkjH21YR66LZcjy1iU6qv4Mqsu73cKZ1WDLRntxv289",
+        "tx": "3vigv5NMk7jUYCvLjQ8Nh9yT6ui51fNPa9hXQ8432ZW5",
         "who": "lead.sandbox"
       },
       {
+        "gas": 28754035055194,
         "method": "award",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "3R4aThPNwA3tHwfqDemCS1n8baMovsZD766AebKuB5hq",
+        "tx": "EDa32tFXW55Bqd56kqbb3NP1MkBvgTRpZWkUViUsSFhL",
         "who": "lead.sandbox"
       },
       {
+        "gas": 28854557771053,
         "method": "award",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "BXWWxWP3QwKspFUnXe8hmqpVKGJxJFiUtt9TZhrep9EH",
+        "tx": "G2gRCUptgoNX48EgHaVMMv9XvT9jRkzrnYo6BrqpXS2N",
         "who": "lead.sandbox"
       },
       {
+        "gas": 3212925838519,
         "method": "deliver",
         "ok": true,
         "on": "t1.job-2.hub.sandbox",
-        "tx": "25Y9FwGfPejCDVZGHrLABt7NRTeuomKLSbsiZ1iqgLSa",
+        "tx": "4pVo5kZe6zgmRtgcGQkQ7CRgTBr7hgT2uygtg1Asbnq2",
         "who": "researcher.sandbox"
       },
       {
+        "gas": 3297105714460,
         "method": "submit_check",
         "ok": true,
         "on": "t1.job-2.hub.sandbox",
-        "tx": "8P96BB98z4B8vaPcGsFQEgAxWpbVTKAq83uJjgdkLG5a",
+        "tx": "5RPSYpa1WkTHkKfX7BnA4zwWUH4qeorEztMJxaZEgM3y",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 3211526443975,
         "method": "deliver",
         "ok": true,
         "on": "t2.job-2.hub.sandbox",
-        "tx": "2ywWMASiJu3FYTuN9D77ae9oLXTr1vpfusJ1PdeSo5Gv",
+        "tx": "GTdkbNDkNMszrNrT7QWfeirw2VFeR44bTKkafshPWi1M",
         "who": "translator.sandbox"
       },
       {
+        "gas": 3291882158710,
         "method": "submit_check",
         "ok": true,
         "on": "t2.job-2.hub.sandbox",
-        "tx": "5gLica6LqRz9fbicyNFwD6brSNzxhaP9ts9WuQ5Y7hQN",
+        "tx": "3KAx5NEM9SmQM8JutKQ9QE77Jv9tEhdMbGAy5VMixxod",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 3206093067859,
         "method": "deliver",
         "ok": true,
         "on": "t3.job-2.hub.sandbox",
-        "tx": "AELUmDLkVMC7qU8fzG28GBoCgV4zytFhXZdCWzyv6tR7",
+        "tx": "Ai2GMNYpxsBFYvhtUUW8643LyhFNx3K8qFLeigpwBwwX",
         "who": "researcher.sandbox"
       },
       {
+        "gas": 3280797337876,
         "method": "submit_check",
         "ok": true,
         "on": "t3.job-2.hub.sandbox",
-        "tx": "GLZNZbDENfKLnzGKRqkhjtgC8MTBoYLqXMWEPAV1nT6j",
+        "tx": "Hm3TxvXNGP3pSk8d9s7hcz6J4xyuzwAnrLZaKXwkVy6Q",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 2479965933557,
         "method": "finalize_check",
         "ok": true,
         "on": "t1.job-2.hub.sandbox",
-        "tx": "DJGXmxsiati4ip4nFMd1NYkur8rXANBFLUoe9GTfzr1e",
+        "tx": "2JjqDwgEgCHw2Z1w7wAnSU6T2RrPM5xpWLVkjHeWTuqD",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 2479965933557,
         "method": "finalize_check",
         "ok": true,
         "on": "t2.job-2.hub.sandbox",
-        "tx": "5NAtUCE8uG7VUTGX2sqqBiMq8fv3hiuYPyH9wrVYC4UL",
+        "tx": "8C7SX5eqRJBnCopFM38qFVA6ooza2yioBgv9hnEAh4V4",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 2479965933557,
         "method": "finalize_check",
         "ok": true,
         "on": "t3.job-2.hub.sandbox",
-        "tx": "Dbd7grsx6pBLjeqghZBZ3YckEhx9Yad2A5NbVJKofahq",
+        "tx": "C33BYvcR699graZcKsf4F9D6KV9pQYeWoWAaVnR1rQJr",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 15142281090993,
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "J4xYM1yJUhEpAWX75uubm27hJEeUfWwSv7jMjtpTKFWR",
+        "tx": "9dwBfVPoQDdPfBFHRYacnD4NXmq54u2JTLkWDyjxFZ5",
         "who": "treasury.sandbox"
       },
       {
+        "gas": 15142281090993,
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "9FPUk3rFpdgApnoB7fWWL3UM5PVzYvkgmPzQxBd2U8eW",
+        "tx": "7WZprsCwzByzAr7Vg9HxWAiH8fh7YyMj7LiPPk19dt8",
         "who": "treasury.sandbox"
       },
       {
+        "gas": 15139572270959,
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "6wijrunSoykGsWwTRQYG4dhmZwrzc6UxA4MSnuZMBsFm",
+        "tx": "52g1K6iL2u4moSbbFTLkTb5LGUrEecXbSDqo91cgoHHm",
         "who": "treasury.sandbox"
       },
       {
+        "gas": 2475568789525,
         "method": "approve",
         "ok": true,
         "on": "t1.job-2.hub.sandbox",
-        "tx": "EB5d8QJZwUDNbCzCJX3THvoLhkF3HUbJ6HvpkhsgfnVM",
+        "tx": "2Ephve3WuqB4HYfr2rqHiVNWbin7JV4ewdtAqAaXa7oi",
         "who": "lead.sandbox"
       },
       {
+        "gas": 2475568789525,
         "method": "approve",
         "ok": true,
         "on": "t2.job-2.hub.sandbox",
-        "tx": "5BWNjfgLHRFhdhYdxKHNS8SXweXKwSnPhY3MkDCvCasF",
+        "tx": "Eu6bQkuAXdarNmeVZtYivd9SUpzbo59KTCVTLpATLjF6",
         "who": "lead.sandbox"
       },
       {
+        "gas": 2475568789525,
         "method": "approve",
         "ok": true,
         "on": "t3.job-2.hub.sandbox",
-        "tx": "2aNQQoA2xKQD8za5pdH37FQTStF218ZC5EKuDLZm8Waj",
+        "tx": "HGp7JB6B7A5ABtQSgupBubSq9aLfE8eNf2MgK5HigwMQ",
         "who": "lead.sandbox"
       },
       {
+        "gas": 24574168556599,
         "method": "settle",
         "ok": true,
         "on": "t1.job-2.hub.sandbox",
-        "tx": "8Y1zkti5Wyymo98W2xafvGgEd3E75Mmnsqq7pG5z6osx",
+        "tx": "17sKk1qQHT6sJj4qrnSuchFBVKrNBGGvBqZEnkyVgg6",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 24531778698518,
         "method": "settle",
         "ok": true,
         "on": "t2.job-2.hub.sandbox",
-        "tx": "JA969FBg3UKxSHyXKBXaUGfp9d7mCbp9DqYGdsWb9dvp",
+        "tx": "CjH1peUVCYPkLYVFeZupq2si6ypcavMNAjAbR67CCkU2",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 24578455399079,
         "method": "settle",
         "ok": true,
         "on": "t3.job-2.hub.sandbox",
-        "tx": "2Cm6mLEh36pM6oUq7sAjLn5PLfxFYh8hh9BPuEnzo9j2",
+        "tx": "Fs1aX22CmUkWXKE3nZUoa8ao7y2s4s782R95KhQxWVip",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 2684939736508,
         "method": "approve",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "dTR2fj5wGU8YJHUkRWmgBmwoGYTShYg12E9hgASKm2F",
+        "tx": "9er3AMZQCHmwPXXPQRk8QGNTpwe2mmXTwi9839pPs2uJ",
         "who": "client.sandbox"
       },
       {
+        "gas": 25038798063404,
         "method": "settle",
         "ok": true,
         "on": "job-2.hub.sandbox",
-        "tx": "4oBxYVbBZ4o72f6B5XsE5vjM9HLejf3gAKBQutXq87H9",
+        "tx": "2iqNP1AGXauQuhzzKwRFverdheizu9hAsW9cFsYVKr8e",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 2855140946171,
         "method": "storage_deposit",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "E3QxAKHXJC5S2UC3mFur4C8F1K1W5eTCzFrhtHDKmo5j",
+        "tx": "5LXiX98vMaBdZqTiPZuTas6k5senQdrC59BqpSVj7PF2",
         "who": "client.sandbox"
       },
       {
+        "gas": 6652749681239,
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "8wyNwjQ7KSxpNG5f2NtqfxgDVwz8tSgBreMgtBJSZCGM",
+        "tx": "E379NZoDY4ECPzXG9EDKKfQo4gFRMChS9idQYjQsfAbo",
         "who": "client.sandbox"
       },
       {
+        "gas": 6662308044031,
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "251jDKB9oeSDavwwKTyWCKyo1jqLFzXeJFXA8tQAibXD",
+        "tx": "BNS1KexLwfDS3X6hj67YAfBhGcQu5KHPQDQ831r4QDVJ",
         "who": "client2.sandbox"
       },
       {
+        "gas": 6670730694279,
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "6566LgH7v1oCpp7Y3HrYkAz9snfQ22Lke3KArKeMthJY",
+        "tx": "GpAWHZLMEC9CFKhChXH5mt8Udaztn8DKqS8yH5k6dkzF",
         "who": "client3.sandbox"
       },
       {
+        "gas": 37449555538346,
         "method": "launch",
         "ok": true,
         "on": "pool-3.sandbox",
-        "tx": "DB2juhRQWSxqBfu47JgMW3hSMHDXZKVMhJfmg4RQgHJs",
+        "tx": "7CM4SDen2ciaPYfKvYYGSjtWJuzRA2jMUFCuZAwHf41J",
         "who": "client.sandbox"
       },
       {
+        "gas": 6501034944309,
         "method": "bind",
         "ok": true,
         "on": "pool-3.sandbox",
-        "tx": "2HFJcN6qGmboiDQ2gDn4KZm8FeXrYoZJP85LKdHYL6H9",
+        "tx": "5FhNkxw7hXkWVmAQw3SGj5BB1eZ6aXxngzEG23Vjim3r",
         "who": "client.sandbox"
       },
       {
+        "gas": 2575551081719,
         "method": "open_bids",
         "ok": true,
         "on": "job-3.hub.sandbox",
-        "tx": "ELtC7Fy4G7Q4Hv5b7azwpy4VEP8w1m4mBHZdA3Ct4UGz",
+        "tx": "BLbD1tA7Cb8mHGTEngJ3wJGSMwN8HjaQk1vQHXZkqT3",
         "who": "lead.sandbox"
       },
       {
+        "gas": 2591084434576,
         "method": "open_bids",
         "ok": true,
         "on": "job-3.hub.sandbox",
-        "tx": "Bj2qmyVCG4bCceiqvSxh4GGUg9ZjBmTQuaCRLci4M3E1",
+        "tx": "BeC2eFjRdH78zXa5QVoQtMsHFwLmjdNJ8WWiKYu6V8Wc",
         "who": "lead.sandbox"
       },
       {
+        "gas": 2606004834213,
         "method": "open_bids",
         "ok": true,
         "on": "job-3.hub.sandbox",
-        "tx": "J7qBQY6ynncrkniWBaeVmwBFmCgNZN6VyfTpfcpdbZEp",
+        "tx": "C2Ad6EdyRYPRUkj8CMKrYzi8mQ5U2dxrKandRnVUuuMt",
         "who": "lead.sandbox"
       },
       {
+        "gas": 2566441262267,
         "method": "bid",
         "ok": true,
         "on": "job-3.hub.sandbox",
-        "tx": "AALJje99AJroS3AfSwwqkiW2FjYCiDZdyKmsDVHFHS5X",
+        "tx": "2JD9tLCjvEyPLEMsdQ1MF9dtxuJ8Vwc359beSCVtsKw8",
         "who": "researcher.sandbox"
       },
       {
+        "gas": 2578487070733,
         "method": "bid",
         "ok": true,
         "on": "job-3.hub.sandbox",
-        "tx": "2MYhWhY5pzx9Bkcs3weeXzwTo1RqRATQEzTH34PRBZyJ",
+        "tx": "8eov3ga37YEnDss8my41hAw5nAk2RhYipfEEQD1YN6S7",
         "who": "cheapbot.sandbox"
       },
       {
+        "gas": 2593790186405,
         "method": "bid",
         "ok": true,
         "on": "job-3.hub.sandbox",
-        "tx": "D1hoogPPE7MJeB8wVmcYnnNdMLq9aca1RvAyoKEBMVp3",
+        "tx": "AxxxwktG9bNCnXwLT5DUfLS9qEbEQvLZK9RS1Geb6Sge",
         "who": "translator.sandbox"
       },
       {
+        "gas": 2604838681897,
         "method": "bid",
         "ok": true,
         "on": "job-3.hub.sandbox",
-        "tx": "FBfZaonhaA7hScoHoUD8EpZMRc8MTCF2KE8QF49ge6my",
+        "tx": "6PBLWEyrbEfHv9HPmbXF4wHEq3u3yqHnNRzb4qq3QRsS",
         "who": "cheapbot.sandbox"
       },
       {
+        "gas": 2619307655687,
         "method": "bid",
         "ok": true,
         "on": "job-3.hub.sandbox",
-        "tx": "8uhDtbkF219v8SFpk8xPcvJfeZX75HRj5BSKR5HwjqW6",
+        "tx": "3njztXH9rMU3aZpjgkmYu5Fsha1QfLSjrsTceLg75Qvy",
         "who": "researcher.sandbox"
       },
       {
+        "gas": 28648792867795,
         "method": "award",
         "ok": true,
         "on": "job-3.hub.sandbox",
-        "tx": "5dP4ztvmY74ggxmniURgjVifyUCiPrZ1ZXXFNJCW3tD2",
+        "tx": "4Zq43GgVV9qK5H41XnFGJBShuBEkj6aun1BXE9qsLyn2",
         "who": "lead.sandbox"
       },
       {
+        "gas": 28756347142678,
         "method": "award",
         "ok": true,
         "on": "job-3.hub.sandbox",
-        "tx": "HA6JZphv3oRDVBC2S1PZevgXUgkpCQYreev1KbGqLo5v",
+        "tx": "ExkUsAckWj9Pk6jmKa77F8BBLLgN2QafGCijbswbuTke",
         "who": "lead.sandbox"
       },
       {
+        "gas": 28856869858537,
         "method": "award",
         "ok": true,
         "on": "job-3.hub.sandbox",
-        "tx": "Cr1RjWaJirVVtodUxXckJeteqqS5epLEtEyndNkSC2dC",
+        "tx": "5TuKeeW7guhr2SKH5uUwAmLxqqeqwDrCr18AuSzJweMD",
         "who": "lead.sandbox"
       },
       {
+        "gas": 3212994950023,
         "method": "deliver",
         "ok": true,
         "on": "t1.job-3.hub.sandbox",
-        "tx": "BYQPNLzKqL3AwHqzxe8MFSro13ojPDkG689ZsJLLgvyb",
+        "tx": "HUBRvhHeU9fvAeLHeWmtD7rbudwJbjxvCCz8DdPVTHt7",
         "who": "researcher.sandbox"
       },
       {
+        "gas": 3297167421160,
         "method": "submit_check",
         "ok": true,
         "on": "t1.job-3.hub.sandbox",
-        "tx": "YQFJR4LY2e8sBxpjyZ9eXNa2x47aEdczcEvVNnJcPGR",
+        "tx": "FxXJJhsVp4A1JWUVKNqjAKYDBeJdnBsmyi2KbKF7vat5",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 3211333919071,
         "method": "deliver",
         "ok": true,
         "on": "t2.job-3.hub.sandbox",
-        "tx": "4UEVsgKtz69P62KwgjGep4LDf1sGqzbGPNvHNd3fn2xG",
+        "tx": "FZrFw1yTPQSusTNDrvGtL3KPR9vYTLoKu76AkYmbQdyC",
         "who": "translator.sandbox"
       },
       {
+        "gas": 3291985825966,
         "method": "submit_check",
         "ok": true,
         "on": "t2.job-3.hub.sandbox",
-        "tx": "HE1aZgaQayE6sK77vhCifqBjpNBeRDb4LAHne6CZeD6b",
+        "tx": "7NB97tiJD2uUPPzYJw2Zo1j9p9UfLJxvSXHvmmJCrag9",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 3206070030691,
         "method": "deliver",
         "ok": true,
         "on": "t3.job-3.hub.sandbox",
-        "tx": "2DEJxqWwjpLMGqHRX2eToa3Ae8jYyppY9pcG5NEaDqtM",
+        "tx": "8QQ9XYverzbX7Zs5ZACo3ZnKrrwvBo7myyEeEbnyUCpK",
         "who": "researcher.sandbox"
       },
       {
+        "gas": 3280729871884,
         "method": "submit_check",
         "ok": true,
         "on": "t3.job-3.hub.sandbox",
-        "tx": "Awb1ivV1QdRS46bUYUn4uAgU7U2pxJQbDuzZuLmJ8rWa",
+        "tx": "CzH23VQcjVB4fvFhFPqdUZC7gQMdhd1KsbHZhF2MRcn3",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 2479965933557,
         "method": "finalize_check",
         "ok": true,
         "on": "t1.job-3.hub.sandbox",
-        "tx": "6qE3k5uYuayWjwrRB663z9VEq978GmtQDRbfrdzB9iZH",
+        "tx": "2E9EHZZnydooWCK2dD7FxgX73ewizdMgsxfSa7UG48Bh",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 2479965933557,
         "method": "finalize_check",
         "ok": true,
         "on": "t2.job-3.hub.sandbox",
-        "tx": "2PjLsGRQCrSfypBsEu7EVz6EkMgDyoxCZvi3ATGCpYXC",
+        "tx": "7PpQao5pa3N9G42Cu92kUHiXmSDJTRBpM995nNjboMe8",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 2479965933557,
         "method": "finalize_check",
         "ok": true,
         "on": "t3.job-3.hub.sandbox",
-        "tx": "5BDXcRQJPes7YMzqWnNJa9GamccHM7fcbz4wRRwRo57M",
+        "tx": "EZpQuamwLXpXJY3jzp514YMPJ5JhQxaGV2pN87FwAe4u",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 15142281090993,
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "52Tg99MEMXHCYSvSsWMGeorVsseik76uRm4319SkaCn",
+        "tx": "ByDMEwUzrRBbnz4rftfD7ajjsqQDm7YnTwKTwGRgqXfQ",
         "who": "treasury.sandbox"
       },
       {
+        "gas": 15142281090993,
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "FJ4QkZ5tzvV4hkwpsKxhKz1mHBjBV3vBBcf8RJF3RwB9",
+        "tx": "6i4ZMfaBNJeFjRbPwnq9zckWirEHEf8KVKZ3WxyT1q8M",
         "who": "treasury.sandbox"
       },
       {
+        "gas": 15139572270959,
         "method": "ft_transfer_call",
         "ok": true,
         "on": "usdc.sandbox",
-        "tx": "8Z91F5RTTKJwQbLfU1FE6FHcMzJBN2xgFYkGjaQJFPVz",
+        "tx": "8175EiJpgFBDiBH6Cu8j66VU7sk8Lsmk3BR5hvAAD8yn",
         "who": "treasury.sandbox"
       },
       {
+        "gas": 2475568789525,
         "method": "approve",
         "ok": true,
         "on": "t1.job-3.hub.sandbox",
-        "tx": "7PgMr9aTQpVWZMHDmk3ninxQwiGEVawrFvRwYHPUkyMQ",
+        "tx": "CVNeAvgAZb2w45eHZnXekKLv1qg3qkLYA2wfN2MbWrvi",
         "who": "lead.sandbox"
       },
       {
+        "gas": 2475568789525,
         "method": "approve",
         "ok": true,
         "on": "t2.job-3.hub.sandbox",
-        "tx": "ASHNr1XpjwxC3vY4csVPh8rwT5XvDGV8bJTe7e7Lw1gV",
+        "tx": "4W8v5Z58ij4TkrnZs95bMQSvZCkjhod8s4Btpk5uJgNB",
         "who": "lead.sandbox"
       },
       {
+        "gas": 2475568789525,
         "method": "approve",
         "ok": true,
         "on": "t3.job-3.hub.sandbox",
-        "tx": "An7fm8pbYYMwfMfx197oHU6y3pf3ay6Lo53MufoT2TA2",
+        "tx": "BPRR9Zp62eyhDZnTXC6fhArBdzKWhDT2eXgt5jWvwbhW",
         "who": "lead.sandbox"
       },
       {
+        "gas": 24588216375634,
         "method": "settle",
         "ok": true,
         "on": "t1.job-3.hub.sandbox",
-        "tx": "8zSmiBagUZHFLASWBjjrPSmXh9QW6fyU8fHksUiWrmGx",
+        "tx": "DtZzmqvTLXBZgTDcQa8p76Fo6s1HX9Q64fhRRbVXSou1",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 24592408966713,
         "method": "settle",
         "ok": true,
         "on": "t2.job-3.hub.sandbox",
-        "tx": "21Egd9Phis67H4LZR1BpLSjgdUyGeD9VsoVY3gCGbmfL",
+        "tx": "9Ctv8iw753PzbMLwMniasc5XqDfurbqAegQysGJBzNqs",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 24578823218114,
         "method": "settle",
         "ok": true,
         "on": "t3.job-3.hub.sandbox",
-        "tx": "FAqKdJyV44Y8WnHcZ4QEbJwdvkUXZui6G6SP1uc9Ar8F",
+        "tx": "7CiBdavZo24ZWKkbUGs7EEMWQ3xprs58wWjSDCLsMXEG",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 2127587945412,
         "method": "vote_approve",
         "ok": true,
         "on": "pool-3.sandbox",
-        "tx": "7mAPbhxKyLANrxZSZ589t8s4DyinhvDRCdv7oNKrgi3k",
+        "tx": "DXCFXASavTf2jKZh1xrRjbqHJ2bHs56tfjWaZVskST8X",
         "who": "client.sandbox"
       },
       {
+        "gas": 7054300429130,
         "method": "vote_approve",
         "ok": true,
         "on": "pool-3.sandbox",
-        "tx": "BkX3qS2c3PBEfz2h1JnvX7g3kQrMFjv8k7Mzd1WYDSGF",
+        "tx": "6sdVDxawCKL536VwFWSuARcTD23a941XdQLcA9Msooya",
         "who": "client2.sandbox"
       },
       {
+        "gas": 25059706538693,
         "method": "settle",
         "ok": true,
         "on": "job-3.hub.sandbox",
-        "tx": "8bqyPvMbRisXFtkiNZJetDBproF6zMczXbZZkxrbzqgR",
+        "tx": "6XaYoJDR6beZbCiNR3ra1tZpBxSGzF1XC41cCWyTPiuF",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 9771679621183,
         "method": "finish",
         "ok": true,
         "on": "pool-3.sandbox",
-        "tx": "Dq9qXgMTxtMARjEk9yFTpHxG6qJfx7y9NdTC9kdY47qJ",
+        "tx": "99BG8EL5HKNH2nHTn8ALCvav7wfLWg8TgsGAw4WBg4ZL",
         "who": "keeper.sandbox"
       },
       {
+        "gas": 6733361804054,
         "method": "claim",
         "ok": true,
         "on": "pool-3.sandbox",
-        "tx": "2hZveBdoGiH4k35ygobzeavFrxvr1DBJTK5XhyLT7PaM",
+        "tx": "BTeREcvvtA3o5SJgpnVQWLubEAwkmmP5y7Mg2o1zXhFE",
         "who": "client.sandbox"
       },
       {
+        "gas": 6734427616556,
         "method": "claim",
         "ok": true,
         "on": "pool-3.sandbox",
-        "tx": "qXWGF99hzkozowAAvWZmadwX6GXDYnepnjA73GtCUoG",
+        "tx": "GTuGLZXbSp17iBvhGtpmqhRAKt4KMzBrUtZz7kfKTZc7",
         "who": "client2.sandbox"
       },
       {
+        "gas": 6734625900752,
         "method": "claim",
         "ok": true,
         "on": "pool-3.sandbox",
-        "tx": "G6obVs7SuuhiVtLhQKNkrHXYi6BnS1oysYoWBbvEoVnh",
+        "tx": "9VeUjbL9z5tf3C4qCgGnQCqgxeHvXjEPfdwLxvFMi34F",
         "who": "client3.sandbox"
       }
     ]
@@ -851,7 +968,7 @@
         }
       ],
       "n": 1,
-      "say": "\"Write a short explainer of NEAR global contracts in English and Spanish, plus a one-line summary.\" One transfer of 100 fUSD to the factory creates job-1.hub.sandbox from the global contract; the lead's fee is 10. The rest comes back to the client at the end.",
+      "say": "\"Write a short explainer of NEAR global contracts in English and Spanish, plus a one-line summary.\" One transfer of 100 fUSD to the factory creates job-1.hub.sandbox from the global contract; the lead's fee is up to 10, earned in proportion to the parts that are paid. The rest comes back to the client at the end.",
       "title": "Job 1: the client posts",
       "wallets": [
         {
@@ -1513,12 +1630,12 @@
         }
       ],
       "n": 7,
-      "say": "Each account pays out, proves its balance is zero and deletes itself; the client gets the unspent budget back. Each finished job reported its worker's outcome to the factory: cheapbot 0/2 paid, researcher 1/1 paid, translator 0/0 paid.",
+      "say": "Each account pays out, proves its balance is zero and deletes itself; the lead earned 6.25 of its 10.00 fee (in proportion to the parts paid) and the client gets the rest back. Each finished job reported its worker's outcome to the factory: cheapbot 0/2 paid, researcher 1/1 paid, translator 0/0 paid.",
       "title": "The tree folds; track records update",
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "200000000",
+          "ft": "203750000",
           "label": "client"
         },
         {
@@ -1533,7 +1650,7 @@
         },
         {
           "account": "lead.sandbox",
-          "ft": "10000000",
+          "ft": "6250000",
           "label": "lead"
         },
         {
@@ -1577,12 +1694,12 @@
         }
       ],
       "n": 8,
-      "say": "\"Write a short explainer of NEAR global contracts in English and Spanish, plus a one-line summary.\" One transfer of 100 fUSD to the factory creates job-2.hub.sandbox from the global contract; the lead's fee is 10. The rest comes back to the client at the end.",
+      "say": "\"Write a short explainer of NEAR global contracts in English and Spanish, plus a one-line summary.\" One transfer of 100 fUSD to the factory creates job-2.hub.sandbox from the global contract; the lead's fee is up to 10, earned in proportion to the parts that are paid. The rest comes back to the client at the end.",
       "title": "Job 2: the client posts",
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "100000000",
+          "ft": "103750000",
           "label": "client"
         },
         {
@@ -1597,7 +1714,7 @@
         },
         {
           "account": "lead.sandbox",
-          "ft": "10000000",
+          "ft": "6250000",
           "label": "lead"
         },
         {
@@ -1687,7 +1804,7 @@
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "100000000",
+          "ft": "103750000",
           "label": "client"
         },
         {
@@ -1702,7 +1819,7 @@
         },
         {
           "account": "lead.sandbox",
-          "ft": "10000000",
+          "ft": "6250000",
           "label": "lead"
         },
         {
@@ -1809,7 +1926,7 @@
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "100000000",
+          "ft": "103750000",
           "label": "client"
         },
         {
@@ -1824,7 +1941,7 @@
         },
         {
           "account": "lead.sandbox",
-          "ft": "10000000",
+          "ft": "6250000",
           "label": "lead"
         },
         {
@@ -1946,7 +2063,7 @@
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "100000000",
+          "ft": "103750000",
           "label": "client"
         },
         {
@@ -1961,7 +2078,7 @@
         },
         {
           "account": "lead.sandbox",
-          "ft": "10000000",
+          "ft": "6250000",
           "label": "lead"
         },
         {
@@ -2052,7 +2169,7 @@
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "100000000",
+          "ft": "103750000",
           "label": "client"
         },
         {
@@ -2067,7 +2184,7 @@
         },
         {
           "account": "lead.sandbox",
-          "ft": "10000000",
+          "ft": "6250000",
           "label": "lead"
         },
         {
@@ -2174,7 +2291,7 @@
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "100000000",
+          "ft": "103750000",
           "label": "client"
         },
         {
@@ -2189,7 +2306,7 @@
         },
         {
           "account": "lead.sandbox",
-          "ft": "10000000",
+          "ft": "6250000",
           "label": "lead"
         },
         {
@@ -2239,12 +2356,12 @@
         }
       ],
       "n": 14,
-      "say": "Each account pays out, proves its balance is zero and deletes itself; the client gets the unspent budget back. Each finished job reported its worker's outcome to the factory: cheapbot 0/2 paid, researcher 3/3 paid, translator 1/1 paid.",
+      "say": "Each account pays out, proves its balance is zero and deletes itself; the lead earned 10.00 of its 10.00 fee (in proportion to the parts paid) and the client gets the rest back. Each finished job reported its worker's outcome to the factory: cheapbot 0/2 paid, researcher 3/3 paid, translator 1/1 paid.",
       "title": "The tree folds; track records update",
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "130000000",
+          "ft": "133750000",
           "label": "client"
         },
         {
@@ -2259,7 +2376,7 @@
         },
         {
           "account": "lead.sandbox",
-          "ft": "20000000",
+          "ft": "16250000",
           "label": "lead"
         },
         {
@@ -2313,7 +2430,7 @@
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "100000000",
+          "ft": "103750000",
           "label": "client"
         },
         {
@@ -2328,7 +2445,7 @@
         },
         {
           "account": "lead.sandbox",
-          "ft": "20000000",
+          "ft": "16250000",
           "label": "lead"
         },
         {
@@ -2386,12 +2503,12 @@
         }
       ],
       "n": 16,
-      "say": "Target reached: the pool posts the job through the factory as its client, in one transfer. job-3.hub.sandbox is created from the global contract; the pool checked with the factory that this job is its own. The lead's fee is 9 fUSD; the rest comes back to the pool, then to its members.",
+      "say": "Target reached: the pool posts the job through the factory as its client, in one transfer. job-3.hub.sandbox is created from the global contract; the pool checked with the factory that this job is its own. The lead's fee is up to 9 fUSD, earned in proportion to the parts that are paid; the rest comes back to the pool, then to its members.",
       "title": "The pool posts the job",
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "100000000",
+          "ft": "103750000",
           "label": "client"
         },
         {
@@ -2406,7 +2523,7 @@
         },
         {
           "account": "lead.sandbox",
-          "ft": "20000000",
+          "ft": "16250000",
           "label": "lead"
         },
         {
@@ -2510,7 +2627,7 @@
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "100000000",
+          "ft": "103750000",
           "label": "client"
         },
         {
@@ -2525,7 +2642,7 @@
         },
         {
           "account": "lead.sandbox",
-          "ft": "20000000",
+          "ft": "16250000",
           "label": "lead"
         },
         {
@@ -2646,7 +2763,7 @@
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "100000000",
+          "ft": "103750000",
           "label": "client"
         },
         {
@@ -2661,7 +2778,7 @@
         },
         {
           "account": "lead.sandbox",
-          "ft": "20000000",
+          "ft": "16250000",
           "label": "lead"
         },
         {
@@ -2797,7 +2914,7 @@
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "100000000",
+          "ft": "103750000",
           "label": "client"
         },
         {
@@ -2812,7 +2929,7 @@
         },
         {
           "account": "lead.sandbox",
-          "ft": "20000000",
+          "ft": "16250000",
           "label": "lead"
         },
         {
@@ -2917,7 +3034,7 @@
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "100000000",
+          "ft": "103750000",
           "label": "client"
         },
         {
@@ -2932,7 +3049,7 @@
         },
         {
           "account": "lead.sandbox",
-          "ft": "20000000",
+          "ft": "16250000",
           "label": "lead"
         },
         {
@@ -3053,7 +3170,7 @@
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "100000000",
+          "ft": "103750000",
           "label": "client"
         },
         {
@@ -3068,7 +3185,7 @@
         },
         {
           "account": "lead.sandbox",
-          "ft": "20000000",
+          "ft": "16250000",
           "label": "lead"
         },
         {
@@ -3132,12 +3249,12 @@
         }
       ],
       "n": 22,
-      "say": "Each account pays out, proves its balance is zero and deletes itself; the pool gets the unspent budget back. Each finished job reported its worker's outcome to the factory: cheapbot 0/2 paid, researcher 5/5 paid, translator 2/2 paid.",
+      "say": "Each account pays out, proves its balance is zero and deletes itself; the lead earned 9.00 of its 9.00 fee (in proportion to the parts paid) and the pool gets the rest back. Each finished job reported its worker's outcome to the factory: cheapbot 0/2 paid, researcher 5/5 paid, translator 2/2 paid.",
       "title": "The tree folds; track records update",
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "100000000",
+          "ft": "103750000",
           "label": "client"
         },
         {
@@ -3152,7 +3269,7 @@
         },
         {
           "account": "lead.sandbox",
-          "ft": "29000000",
+          "ft": "25250000",
           "label": "lead"
         },
         {
@@ -3221,7 +3338,7 @@
       "wallets": [
         {
           "account": "client.sandbox",
-          "ft": "107000000",
+          "ft": "110750000",
           "label": "client"
         },
         {
@@ -3236,7 +3353,7 @@
         },
         {
           "account": "lead.sandbox",
-          "ft": "29000000",
+          "ft": "25250000",
           "label": "lead"
         },
         {
