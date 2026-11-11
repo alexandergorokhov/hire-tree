@@ -127,6 +127,9 @@ washed again.
 if "--check" in sys.argv:
     ok = open("docs/ECONOMICS.md").read() == out
     print(("ok  " if ok else "FAIL"), "docs/ECONOMICS.md matches runs/gas.json and web/swarm-wash.json")
-    sys.exit(0 if ok else 1)
+    line = f"**{near(part):.4f} NEAR** of gas end to end ({tg(part):.1f} Tgas, measured)"
+    ok2 = line in open("README.md").read().replace("\n", " ")
+    print(("ok  " if ok2 else "FAIL"), "README states:", line)
+    sys.exit(0 if ok and ok2 else 1)
 open("docs/ECONOMICS.md", "w").write(out)
 print(f"wrote docs/ECONOMICS.md: one part {tg(part):.1f} Tgas = {near(part):.4f} NEAR")
