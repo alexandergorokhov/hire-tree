@@ -37,7 +37,7 @@ money, and from how many payers). *Junk*: deliveries that fail the check;
 
 ```
 make test             # 582 offline tests: all ok
-make verify-cassette  # 54 live NEAR AI signatures re-checked: all by one signer
+make verify-cassette  # 156 live NEAR AI signatures (story + swarm) re-checked: one signer
 make attest           # that signer is the key inside NEAR AI's Intel TDX quote
 python3 scripts/swarm-seeds.py --storm --check --readme   # recomputes the result below
 ```
@@ -62,7 +62,8 @@ Then the sybils first **wash** their records: they pay each other through
 real jobs so their records look trusted (about 10 test USD of fees per run). Plain records fall to 72.00
 storm wins. Buyers that count only pay from payers they trust (a `payers`
 list in `award_best`) bring it back to **19.50**. In a calm market, records
-still cut junk wins on every seed, for about 3% more per good part.
+still cut junk wins on every seed, for about 1 to 3% more per good part
+(12.68 fUSD against 12.52 blind and 12.30 audit-all).
 
 One part costs **0.0112 NEAR** of gas end to end (112.2 Tgas, measured);
 storage comes back when the accounts delete ([ECONOMICS.md](docs/ECONOMICS.md)).
@@ -192,8 +193,9 @@ Every other command (swarm runs, NEAR AI recording and replay, gas, demo, testne
   collective purchasing (pools), signed job offers filled by competing
   leads (a Dutch auction on the lead fee), sealed bids, underwriter bonds,
   and paying checked work early through the lead's treasury (Job Note).
-- Built in the window: the hackathon opened on 2026-11-01 and this
-  repository's first commit is 2026-11-04 (`git log --reverse`). Every NEAR
+- Built in the window: code written since the announcement on 2026-10-19
+  counts, submissions open 2026-11-01, and this repository's first commit
+  is 2026-11-04 (`git log --reverse`). Every NEAR
   integration was written here; no code is carried over from an earlier
   project. The vendored NEAR Intents wasm is NEAR Foundation's, unmodified.
 - Network: testnet and a local NEAR node only; all money is fake.

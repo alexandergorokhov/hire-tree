@@ -38,7 +38,7 @@ contractors bought one level down (deeper levels are not counted).
   audits, each of which costs two more model calls.
 - **What records cost.** A good part (paid, not from junk) costs 12.68 fUSD
   with records against 12.30 with audit-all and 12.52 blind: about 3% more
-  on average, because buyers skip cheap asks from accounts with bad
+  than audit-all and 1.3% more than blind on average, because buyers skip cheap asks from accounts with bad
   records. Per seed it swings from 8% cheaper to 11% dearer.
 - **Records make trees smaller.** Contractors buy about half as many
   sub-parts with records. Junk no longer sets the going rate, so the

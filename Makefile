@@ -185,8 +185,9 @@ attest: ## Check offline that the cassettes' NEAR AI signer is the key in the TD
 	python3 -I scripts/check-attestation.py demo/nearai-attestation.json
 
 .PHONY: verify-cassette
-verify-cassette: ## Re-check every NEAR AI signature in the cassette (offline)
+verify-cassette: ## Re-check every NEAR AI signature in both cassettes: the story and the live swarm (offline)
 	@cd agents && $(HT) verify-cassette $(CASSETTE)
+	@if [ -s $(SWARM_CASSETTE) ]; then cd agents && $(HT) verify-cassette $(SWARM_CASSETTE); fi
 
 .PHONY: testnet-dryrun
 testnet-dryrun: build ## The testnet code path (derived keys, tight funding, rerun reuse, real 5-min waits) against a local node; prints NEAR spent (~25 min)
