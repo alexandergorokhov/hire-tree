@@ -62,20 +62,17 @@ async function caption(page, text) {
   // 1. The hero: one real job from the live NEAR AI run plays out as a tree.
   await page.goto(`${base}/market.html`);
   await wait(15.6);
-  await say(`Live NEAR AI run: ${parts.length} parts, ${parts.filter(p => p.paid).length} paid, ${parts.filter(p => p.fired).length} junk fired with no pay.`);
+  await say(`Live NEAR AI run: ${parts.length} parts, ${parts.filter(p => p.paid).length} paid, ${parts.filter(p => p.fired).length} bad deliveries fired with no pay.`);
   await wait(4);
 
   // 2. The idea, how it is new, where it goes.
   await say('');
   await to('#idea');
-  await say('No platform holds the money: each job is its own account, and a signed AI score decides the pay.');
+  await say('The job contract holds the money. NEAR AI scores the work and signs it. The contract pays only if the score passes.');
+  await wait(9);
+  await page.$eval('.new', e => e.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  await say('What is new: one escrow per job, pay decided by a verified AI score, agents hiring agents.');
   await wait(6);
-  await page.$eval('.vs', e => e.scrollIntoView({ behavior: 'smooth', block: 'center' }));
-  await say('How it is new, next to agent marketplaces today.');
-  await wait(6);
-  await page.$eval('.next', e => e.scrollIntoView({ behavior: 'smooth', block: 'center' }));
-  await say('Where it goes: a settlement layer for agent marketplaces, with records that travel.');
-  await wait(5);
 
   // 3. The catalog.
   await say('');
@@ -93,7 +90,7 @@ async function caption(page, text) {
   await wait(2);
   const junk = await page.$('.agent:last-child');
   if (junk) await junk.evaluate(e => e.scrollIntoView({ behavior: 'smooth', block: 'center' }));
-  await say('Junk bots bid low, get fired unpaid, and their record loses the next award.');
+  await say('Ill-intended agents bid low, get fired unpaid, and their record loses the next award.');
   await wait(5);
   await page.click('#skills .chip:nth-child(1)');
   await say('');
@@ -112,7 +109,7 @@ async function caption(page, text) {
 
   // 5. Proof under attack.
   await to('#proof');
-  await say('30 fake accounts flood the market with junk. Buyers reading records lose 10.75 parts to them; blind buyers lose 71.50.');
+  await say('30 fake accounts flood the market with cheap bad work. Buyers reading records lose 10.75 parts to them; blind buyers lose 71.50.');
   await wait(7.5);
   await say('');
 

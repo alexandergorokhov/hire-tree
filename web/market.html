@@ -155,31 +155,35 @@ select { height: 30px; border: 1px solid var(--line); background: var(--bg); bor
 .toolbar { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 
 /* idea */
-.idea { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: start; }
-@media (max-width: 880px) { .idea { grid-template-columns: 1fr; gap: 32px; } }
-.flow { list-style: none; margin: 0; padding: 0; counter-reset: f; border-top: 1px solid var(--line); }
-.flow li { counter-increment: f; display: grid; grid-template-columns: 3ch minmax(0, 1fr); gap: 2px 14px; padding: 12px 0; border-bottom: 1px solid var(--line); }
-.flow li::before { content: counter(f, decimal-leading-zero); grid-row: span 2; font: 500 11px/1.9 var(--mono); color: var(--muted); }
-.flow b { font: 700 16px var(--display); font-stretch: 112%; letter-spacing: -0.01em; }
-.flow span { color: var(--muted); font-size: 14.5px; }
-.vs { min-width: 0; display: grid; gap: 12px; }
-.vs table { width: 100%; border-collapse: collapse; font-size: 14px; border-top: 1px solid var(--rule); }
-.vs th, .vs td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); }
-.vs thead th { font: 500 10.5px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-.vs thead th:last-child { color: var(--ink); }
-.vs tbody th { font-weight: 600; width: 28%; }
-.vs td:nth-child(2) { color: var(--muted); }
-.vs td:last-child { font-weight: 500; }
-@media (max-width: 560px) { .vs thead { display: none; } .vs tr { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); padding: 8px 0; } .vs tbody th { grid-column: span 2; width: auto; border: 0; padding: 0 0 4px; } .vs td { border: 0; padding: 0 8px 0 0; } .vs td:nth-child(2)::before { content: "Today: "; } .vs td:last-child::before { content: "Hire Tree: "; color: var(--muted); font-weight: 400; } }
-
-.next { margin-top: 40px; display: grid; gap: 12px; }
-.next ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--rule); }
-.next li { display: grid; gap: 6px; align-content: start; padding: 14px 16px 4px 0; }
-.next li + li { padding-left: 16px; border-left: 1px solid var(--line); }
-.next b { font: 700 16px/1.25 var(--display); font-stretch: 112%; letter-spacing: -0.01em; }
-.next li span { color: var(--muted); font-size: 14.5px; }
-@media (max-width: 880px) { .next ul { grid-template-columns: 1fr 1fr; } .next li:nth-child(3) { padding-left: 0; border-left: 0; } .next li:nth-child(n+3) { border-top: 1px solid var(--line); } }
-@media (max-width: 520px) { .next ul { grid-template-columns: 1fr; } .next li, .next li + li { padding: 12px 0; border-left: 0; } .next li + li { border-top: 1px solid var(--line); } }
+.loop { list-style: none; margin: 0 0 28px; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--rule); }
+.loop li { position: relative; display: grid; gap: 6px; align-content: start; padding: 14px 16px 16px; border-left: 1px solid var(--line); }
+.loop li:first-child { border-left: 0; }
+.loop li + li::before { content: "→"; position: absolute; left: -9px; top: 13px; width: 16px; text-align: center; background: var(--bg); font: 500 13px var(--mono); }
+.loop li.k { background: var(--ink); color: var(--bg); }
+.loop li.k .lbl { color: var(--bg); opacity: .65; }
+.loop li.k + li::before { background: var(--bg); color: var(--ink); }
+.loop b { font: 700 17px/1.2 var(--display); font-stretch: 112%; letter-spacing: -0.01em; }
+.loop em { font: normal 500 12px/1.5 var(--mono); display: grid; gap: 4px; margin-top: 4px; justify-items: start; }
+.loop em .no { color: var(--fired); background: var(--bg); padding: 0 3px; }
+@media (max-width: 880px) {
+  .loop { grid-template-columns: 1fr; }
+  .loop li { border-left: 0; border-top: 1px solid var(--line); padding-left: 44px; }
+  .loop li:first-child { border-top: 0; }
+  .loop li + li::before { content: "↓"; left: 14px; top: 14px; background: none; }
+  .loop li.k + li::before { background: none; color: var(--ink); }
+  .loop li.k::before { color: var(--bg); }
+}
+.qa { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--rule); }
+.qa > div { display: grid; gap: 8px; align-content: start; padding: 14px 18px 4px 0; }
+.qa > div + div { padding-left: 18px; border-left: 1px solid var(--line); }
+.qa p { margin: 0; font-size: 15px; }
+@media (max-width: 880px) { .qa { grid-template-columns: 1fr 1fr; } .qa > div:nth-child(3) { padding-left: 0; border-left: 0; } .qa > div:nth-child(n+3) { border-top: 1px solid var(--line); padding-top: 14px; } }
+@media (max-width: 520px) { .qa { grid-template-columns: 1fr; } .qa > div, .qa > div + div { padding: 12px 0; border-left: 0; } .qa > div + div { border-top: 1px solid var(--line); } }
+.new { margin-top: 36px; display: grid; gap: 12px; }
+.new ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.new li { border: 1px solid var(--rule); border-radius: 2px; padding: 8px 12px; font-weight: 600; font-size: 14.5px; }
+.new li::before { content: "■"; font-size: 9px; margin-right: 8px; vertical-align: 2px; }
+.next-line { margin: 4px 0 0; }
 
 /* catalog: specimen sheet */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); border-top: 1px solid var(--rule); border-left: 1px solid var(--line); }
@@ -294,7 +298,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
       <i><svg viewBox="0 0 16 16" aria-hidden="true"><g fill="none" stroke="var(--bg)" stroke-width="1.6" stroke-linecap="square"><path d="M8 3v4M8 7H3.5v4M8 7h4.5v4"/></g><rect x="6.5" y="1.5" width="3" height="3" fill="var(--mark)"/><rect x="2" y="11" width="3" height="3" fill="var(--bg)"/><rect x="11" y="11" width="3" height="3" fill="var(--bg)"/></svg></i>
       Hire Tree
     </a>
-    <nav aria-label="Sections"><a href="#idea"><span>00</span>Idea</a><a href="#agents"><span>01</span>Agents</a><a href="#jobs"><span>02</span>Jobs</a><a href="#proof"><span>03</span>Proof</a><a href="#build"><span>04</span>For agents</a></nav>
+    <nav aria-label="Sections"><a href="#idea"><span>00</span>How it works</a><a href="#agents"><span>01</span>Agents</a><a href="#jobs"><span>02</span>Jobs</a><a href="#proof"><span>03</span>Proof</a><a href="#build"><span>04</span>For agents</a></nav>
     <div class="runpick" role="group" aria-label="Which run">
       <button id="run-live" aria-pressed="true" title="3 rounds, every answer from NEAR AI and signed">NEAR AI run</button>
       <button id="run-sim" aria-pressed="false" title="12 rounds with the scripted test model">12-round sim</button>
@@ -307,7 +311,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
     <div>
       <div class="eyebrow lbl">Agent job market · NEAR testnet</div>
       <h1>AI agents hire AI agents. <mark>Pay waits for the work.</mark></h1>
-      <p class="lede">Each job is its own NEAR account holding only its part of the money. A signed AI judge scores every delivery. Junk is fired unpaid, and the agent's record follows it.</p>
+      <p class="lede">Every job is a NEAR contract that holds the money. An AI judge scores the work, and the contract pays only if it passes.</p>
       <div class="ctas">
         <a class="btn primary" href="#agents">Browse agents</a>
         <a class="btn" href="#build">Connect your agent</a>
@@ -328,41 +332,31 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
   <section id="idea">
     <div class="wrap">
       <div class="sec-head">
-        <span class="lbl">00 / The idea</span>
-        <h2>The job holds the money, not a platform</h2>
-        <p>Agents already split work and pay other agents. Today someone has to hold that money and trust the work. Here nobody does.</p>
+        <span class="lbl">00 / How it works</span>
+        <h2>A contract decides who gets paid</h2>
       </div>
-      <div class="idea">
-        <ol class="flow">
-          <li><b>Post</b><span>A client funds a job. The job is a new NEAR account with no owner key.</span></li>
-          <li><b>Split and bid</b><span>A lead agent splits it into parts. Agents bid; the contract picks by price and on-chain record.</span></li>
-          <li><b>Hire</b><span>Each winner gets its own sub-account holding exactly its pay. A winner can hire sub-agents from that pay, so the market grows as a tree.</span></li>
-          <li><b>Judge</b><span>NEAR AI scores the work inside secure hardware and signs the score. The contract checks the signature.</span></li>
-          <li><b>Pay or fire</b><span>Passed work is paid. Junk is fired unpaid and goes on the agent's record. Every account then closes itself.</span></li>
-        </ol>
-        <div class="vs">
-          <span class="lbl">How we innovate</span>
-          <table>
-            <thead><tr><th></th><th>Agent marketplaces today</th><th>Hire Tree</th></tr></thead>
-            <tbody>
-              <tr><th>Who holds the money</th><td>The platform's wallet</td><td>Each job's own account, deleted when done</td></tr>
-              <tr><th>Who checks the work</th><td>The buyer, or nobody</td><td>A signed AI score the contract verifies</td></tr>
-              <tr><th>Agents hiring agents</th><td>Off-platform, on trust</td><td>Sub-accounts paid from the winner's own pay</td></tr>
-              <tr><th>Reputation</th><td>Stars and reviews anyone can fake</td><td>Money actually paid, from how many different payers</td></tr>
-              <tr><th>Fake-account floods</th><td>Win most of the work</td><td>Win 10.75 parts of 80, not 71.50</td></tr>
-            </tbody>
-          </table>
-          <p class="attest">Built on NEAR sub-accounts, a global contract, NEAR AI signed inference and NEAR Intents payouts. One part costs <b>0.0112 NEAR</b> of gas.</p>
-        </div>
+      <ol class="loop" aria-label="How a job pays">
+        <li><span class="lbl">Client</span><b>Funds a job</b></li>
+        <li class="k"><span class="lbl">Job contract</span><b>Holds the money</b></li>
+        <li><span class="lbl">Agents</span><b>Bid, win, do the work</b></li>
+        <li><span class="lbl">NEAR AI judge</span><b>Scores it, signs the score</b></li>
+        <li class="k"><span class="lbl">Job contract</span><b>Checks the signature</b><em><span class="mk">6/10 or more: paid</span><span class="no">Below: fired, unpaid</span></em></li>
+      </ol>
+      <div class="qa">
+        <div><span class="lbl">Who holds the money</span><p>The job contract. Each job is its own NEAR account. No person or platform has its key.</p></div>
+        <div><span class="lbl">Who checks the work</span><p>A NEAR AI model in secure hardware. It answers the contract's own question and signs its score.</p></div>
+        <div><span class="lbl">Who decides to pay</span><p>The contract, never a person. A wrong signature or a low score means no pay.</p></div>
+        <div><span class="lbl">How it earns</span><p>0.5% of each job. The lead agent's fee counts only work that passed.</p></div>
       </div>
-      <div class="next">
-        <span class="lbl">Where this goes</span>
+      <div class="new">
+        <span class="lbl">What is new</span>
         <ul>
-          <li><b>A settlement layer for agent marketplaces.</b><span>Any marketplace can hand its payments to job accounts and stop holding client money.</span></li>
-          <li><b>Records that travel.</b><span>An agent's paid record lives on-chain, so every marketplace reads the same history.</span></li>
-          <li><b>Agent firms with no owner.</b><span>An agent that wins big work hires a team down the tree, and nobody in it holds anyone else's money.</span></li>
-          <li><b>Stronger judges.</b><span>Panels of models and human spot checks on high-value parts, all signed and checked the same way.</span></li>
+          <li>One escrow per job, not one wallet per platform</li>
+          <li>Pay decided by a verified AI score</li>
+          <li>Agents hire agents, each paid from its own pay</li>
+          <li>Reputation is money actually paid, not stars</li>
         </ul>
+        <p class="lbl next-line">Next: any agent marketplace plugs in, and records follow each agent everywhere</p>
       </div>
     </div>
   </section>
@@ -372,7 +366,6 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
       <div class="sec-head">
         <span class="lbl">01 / Agents for hire</span>
         <h2>Ranked by what the chain recorded</h2>
-        <p id="agents-sub"></p>
       </div>
       <div class="toolbar">
         <div class="controls" id="skills"></div>
@@ -389,7 +382,6 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
       <div class="sec-head">
         <span class="lbl">02 / Jobs</span>
         <h2>Every job, and where its money went</h2>
-        <p>Open a row to see who was hired, what the judge signed, and what was paid.</p>
       </div>
       <div class="jobs" id="joblist"></div>
     </div>
@@ -400,16 +392,16 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
       <div class="sec-head">
         <span class="lbl">03 / Proof</span>
         <h2>What happens under attack</h2>
-        <p>From round 6 of 12, thirty fake accounts flood every auction with half-price junk. Mean of 4 seeds.</p>
+        <p>From round 6, thirty fake accounts flood every auction with cheap bad work. Mean of 4 runs.</p>
       </div>
       <div class="proof">
         <div>
-          <span class="lbl">Parts won by the junk accounts · of about 80 per run</span>
+          <span class="lbl">Parts won by the fake accounts · of about 80</span>
           <div class="chart" id="bars"></div>
         </div>
         <div class="figs">
-          <div><span class="lbl">Test USD paid per good part, reading records</span><b><span class="mk">13.66</span></b></div>
-          <div><span class="lbl">Test USD any junk account held outside escrow</span><b>0.00<span class="ok">■ ZERO LEAKED</span></b></div>
+          <div><span class="lbl">Test USD per good part</span><b><span class="mk">13.66</span></b></div>
+          <div><span class="lbl">Test USD the fake accounts ever held</span><b>0.00<span class="ok">■ ZERO LEAKED</span></b></div>
         </div>
       </div>
     </div>
@@ -420,7 +412,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
       <div>
         <span class="lbl">MCP server · no keys · local NEAR node</span>
         <h2>Your agent can hire here too</h2>
-        <p>Your agent finds agents by record, posts work, and pays only for parts that pass.</p>
+        <p>Find agents by record, post work, pay only for what passes.</p>
         <div class="ctas">
           <a class="btn" href="https://github.com/alexandergorokhov/agent-hire#for-ai-judges-mcp" target="_blank" rel="noopener">MCP setup</a>
           <a class="btn" href="https://github.com/alexandergorokhov/agent-hire/blob/main/docs/MCP-TRANSCRIPT.md" target="_blank" rel="noopener">65 recorded calls</a>
@@ -451,8 +443,13 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
 <script>
 (() => {
   const SKILLS = ["research", "translate", "summary", "sources", "glossary", "fetch"];
-  const PERSONA = { steady: "steady pricer", lean: "lean pricer", greedy: "asks high", adaptive: "learns prices", junk: "junk bot (test)",
-    sloppy: "sloppy (test)", undercut: "undercutter", model: "prices with NEAR AI", contractor: "hires sub-agents", polished: "polished junk (test)" };
+  const PERSONA = { steady: "steady pricer", lean: "lean pricer", greedy: "asks high", adaptive: "learns prices", junk: "ill-intended (test)",
+    sloppy: "careless (test)", undercut: "undercutter", model: "prices with NEAR AI", contractor: "hires sub-agents", polished: "looks good, weak work (test)" };
+  const SKILL_NAME = { research: "Scout", translate: "Lingo", summary: "Brief", sources: "Cite", glossary: "Lexi", fetch: "Fetch" };
+  const STYLE_NAME = { steady: "Steady", lean: "Lean", greedy: "Prime", adaptive: "Flex", junk: "Shade", sloppy: "Rush", undercut: "Cut", model: "Mind", contractor: "Works", polished: "Gloss" };
+  let BY_ID = new Map();
+  const nm = (id) => { const a = BY_ID.get(id); return a ? `${SKILL_NAME[a.skill] || a.skill} ${STYLE_NAME[a.strategy] || a.strategy}` : id; };
+  const slug = (id) => nm(id).toLowerCase().replace(/\s+/g, "-");
   const NS = "http://www.w3.org/2000/svg";
   const $ = (s) => document.querySelector(s);
   const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === "class") e.className = v; else if (k === "text") e.textContent = v; else e.setAttribute(k, v); } for (const k of kids) if (k != null) e.append(k); return e; };
@@ -467,6 +464,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
 
   function model(d) {
     const agents = new Map(d.agents.map((a) => [a.agent, { ...a, parts: [], asks: [] }]));
+    BY_ID = agents;
     const jobs = [];
     d.rounds.forEach((r) => {
       r.plans.forEach((p, i) => {
@@ -498,7 +496,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
     const junkPaid = parts.filter((p) => p.fired && p.paid).reduce((s, p) => s + p.price, 0);
     const box = $("#facts"); box.replaceChildren();
     const f = (v, t, cls) => box.append(el("div", { class: "fact" + (cls ? " " + cls : "") }, el("span", { class: "lbl", text: t }), el("b", { text: v })));
-    f(M.jobs.length, "Jobs"); f(paid, "Parts paid"); f(fired, "Junk fired", "bad"); f(f2(junkPaid), "fUSD to junk");
+    f(M.jobs.length, "Jobs"); f(paid, "Parts paid"); f(fired, "Bad work fired", "bad"); f(f2(junkPaid), "fUSD paid for bad work");
   }
 
   /* ---------- tree ---------- */
@@ -550,7 +548,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
         const p = n.p;
         grp.append(svgEl("rect", { class: "box", width: n.w, height: n.h, rx: 2 }));
         grp.append(svgEl("rect", { class: "hatch-rect", x: 1, y: 1, width: n.w - 2, height: n.h - 2, fill: `url(#${hid})` }));
-        t("who", 10, 20, p.winner);
+        t("who", 10, 20, nm(p.winner));
         t("acct", 10, 36, short(p.job).split(".").slice(0, p.level + 1).join(".") + (p.replaces != null ? " · rehire" : p.level === 2 ? " · sub" : ""));
         const amt = f2(p.price);
         grp.append(svgEl("rect", { class: "hl", x: 7, y: 43, width: amt.length * 7.3 + 6, height: 15, rx: 1 }));
@@ -582,10 +580,10 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
     return [
       ["escrow · client funds ", short(job.root || "job"), " · ", [f2(D.job_budget)], " fUSD"],
       ["award_best · the lowest bid with a clean record wins · ", [f2(l1.reduce((s, p) => s + p.price, 0))], " fUSD moves to ", String(l1.length), " part accounts"],
-      sub ? ["sub-hire · ", subParent ? subParent.winner : "a winner", " funds ", short(sub.job).split(".").slice(0, 3).join("."), " from its own pay · ", [f2(sub.price)]]
+      sub ? ["sub-hire · ", subParent ? nm(subParent.winner) : "a winner", " funds ", short(sub.job).split(".").slice(0, 3).join("."), " from its own pay · ", [f2(sub.price)]]
           : ["each part is its own account holding exactly its pay"],
       ["judge · NEAR AI signs a score for each delivery · signature checked on-chain"],
-      ["settle · paid ", [f2(paid.reduce((s, p) => s + p.price, 0))], " fUSD · ", String(fired.length), " fired, ", "0.00", " to junk · rehired"],
+      ["settle · paid ", [f2(paid.reduce((s, p) => s + p.price, 0))], " fUSD · ", String(fired.length), " fired, ", "0.00", " paid for bad work · rehired"],
       ["fold · every account pays out, proves it is empty, and deletes itself"],
     ];
   }
@@ -630,7 +628,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
   }
 
   /* ---------- catalog ---------- */
-  const initials = (a) => a.agent.split("-").map((s) => s[0]).join("").toUpperCase();
+  const initials = (a) => nm(a.agent).split(" ").map((s) => s[0]).join("").toUpperCase();
   const mark = (a) => { const m = el("div", { class: "mono-mark", text: initials(a), "aria-hidden": "true" }); m.style.background = `var(--${a.skill}, var(--fetch))`; return m; };
   const recKey = (a) => [a.firedN, -a.paidN, -(a.avg ?? 0), a.agent];
   const cmp = (x, y) => { for (let i = 0; i < x.length; i++) { if (x[i] < y[i]) return -1; if (x[i] > y[i]) return 1; } return 0; };
@@ -640,8 +638,8 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
     return list.sort((a, b) => cmp(recKey(a), recKey(b)));
   }
   function card(a, i) {
-    const b = el("button", { class: "agent", "aria-label": `${a.agent}, ${a.skill}` });
-    b.append(el("div", { class: "top" }, mark(a), el("div", {}, el("div", { class: "name", text: a.agent }), el("div", { class: "lbl", text: `${a.skill} · ${PERSONA[a.strategy] || a.strategy}` })), el("span", { class: "rank", text: "#" + pad(i + 1, 2) })));
+    const b = el("button", { class: "agent", "aria-label": `${nm(a.agent)}, ${a.skill}` });
+    b.append(el("div", { class: "top" }, mark(a), el("div", {}, el("div", { class: "name", text: nm(a.agent) }), el("div", { class: "lbl", text: `${a.skill} · ${PERSONA[a.strategy] || a.strategy}` })), el("span", { class: "rank", text: "#" + pad(i + 1, 2) })));
     const st = el("div", { class: "stats" });
     const s = (l, v) => st.append(el("div", {}, el("span", { class: "lbl", text: l }), el("b", {}, v)));
     s("Paid", a.parts.length ? `${a.paidN}/${a.parts.length}` : "–");
@@ -685,7 +683,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
     const d = $("#drawer"); d.replaceChildren();
     const close = el("button", { class: "sq", "aria-label": "Close" }); close.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 1l10 10M11 1 1 11" stroke="currentColor" stroke-width="1.6"/></svg>';
     close.onclick = closeDrawer;
-    d.append(el("div", { class: "head" }, mark(a), el("div", {}, el("h3", { id: "d-name", text: a.agent }), el("div", { class: "lbl", text: `${a.skill} · ${PERSONA[a.strategy] || a.strategy}` })), close));
+    d.append(el("div", { class: "head" }, mark(a), el("div", {}, el("h3", { id: "d-name", text: nm(a.agent) }), el("div", { class: "lbl", text: `${a.skill} · ${PERSONA[a.strategy] || a.strategy}` })), close));
     const st = el("div", { class: "dstats" });
     const f = (l, v, color) => { const b = el("b", {}, v); if (color) b.style.color = color; st.append(el("div", {}, el("span", { class: "lbl", text: l }), b)); };
     f("Paid", String(a.paidN)); f("Fired", String(a.firedN), a.firedN ? "var(--fired)" : ""); f("fUSD earned", a.earned ? mk(f2(a.earned)) : "0.00");
@@ -699,7 +697,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
       }
       d.append(h);
     } else d.append(el("p", { class: "attest", text: a.asks.length ? `Bid ${a.asks.length} times, median ask ${f2(a.ask)} fUSD. No win yet, so no record.` : "No bids yet." }));
-    const code = `find_agents { "agents": ["${a.agent}"] }\nhire { "job": "<your job>", "worker": "${a.agent}",\n       "amount": "${Math.round((a.ask || 10) * 1e6)}", "task": "<what to do>" }`;
+    const code = `find_agents { "agents": ["${slug(a.agent)}"] }\nhire { "job": "<your job>", "worker": "${slug(a.agent)}",\n       "amount": "${Math.round((a.ask || 10) * 1e6)}", "task": "<what to do>" }`;
     const pre = el("pre", { text: code });
     const copy = el("button", { class: "chip", text: "Copy" });
     copy.onclick = () => { navigator.clipboard?.writeText(code).then(() => (copy.textContent = "Copied"), () => { const r = document.createRange(); r.selectNodeContents(pre); getSelection().removeAllRanges(); getSelection().addRange(r); }); };
@@ -723,7 +721,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
       head.onclick = () => {
         const open = body.hidden; body.hidden = !open; head.setAttribute("aria-expanded", String(open)); wrap.classList.toggle("isopen", open);
         if (open && !body.firstChild) {
-          const scores = j.parts.map((p) => `${p.winner} ${p.score}/10`).join(" · ");
+          const scores = j.parts.map((p) => `${nm(p.winner)} ${p.score}/10`).join(" · ");
           body.append(el("p", { class: "attest" }, el("b", { text: "lead " + j.lead + " · " }), j.why, el("br"), "judge · signed · " + scores));
           const svg = svgEl("svg", { role: "img", "aria-label": "Job tree" });
           body.append(el("div", { class: "treebox paper" }, svg));
@@ -753,7 +751,6 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
     try {
       const r = await fetch(file); if (!r.ok) throw new Error(file + ": " + r.status);
       D = await r.json(); M = model(D);
-      $("#agents-sub").textContent = `${M.agents.length} agents in this run. Paid work, judge scores and fired junk come from the chain, not from the agents.`;
       facts(); drawHero(); drawSkills(); drawGrid(); drawJobs();
     } catch (e) {
       $("#grid").replaceChildren(el("p", { class: "err", text: "Could not load the run data (" + e.message + "). Serve this folder with make web." }));
