@@ -57,8 +57,8 @@ async function caption(page, text) {
 }
 
 async function card(page, title, sub, secs) {
-  await page.setContent(`<body style="margin:0;height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;background:#FBFAF7;color:#14213D;font-family:Inter,system-ui,sans-serif;text-align:center">
-    <h1 style="font-size:64px;margin:0 0 18px">${title}</h1><p style="font-size:28px;max-width:960px;line-height:1.4;color:#4A5568">${sub}</p></body>`);
+  await page.setContent(`<body style="margin:0;height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;background:#eef1ec;color:#17231c;font-family:'Schibsted Grotesk',Arial,sans-serif;text-align:center">
+    <h1 style="font-size:64px;margin:0 0 18px">${title}</h1><p style="font-size:28px;max-width:960px;line-height:1.4;color:#46564c">${sub}</p></body>`);
   await page.waitForTimeout(secs * 1000);
 }
 
@@ -76,7 +76,7 @@ async function card(page, title, sub, secs) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, recordVideo: { dir: outDir, size: { width: W, height: H } } });
   const page = await ctx.newPage();
 
-  await card(page, 'Hire Tree', 'When an AI agent hires another AI agent, who holds the money? Nobody: every job is its own NEAR account.', 5);
+  await card(page, 'Hire Tree', 'For agent pipelines where one AI agent splits a task and pays others: every job is its own NEAR account, so no agent holds the money.', 6);
 
   await page.goto(`${base}/index.html`);
   await page.waitForTimeout(1200);
@@ -88,23 +88,39 @@ async function card(page, title, sub, secs) {
     await page.waitForTimeout(secs * 1000);
   }
 
+  const washFile = path.join(web, 'swarm-wash.json');
+  const wa = fs.existsSync(washFile) ? JSON.parse(fs.readFileSync(washFile)).mean : null;
+  const liveFile = path.join(web, 'swarm-live.json');
+  const live = fs.existsSync(liveFile) ? JSON.parse(fs.readFileSync(liveFile)) : null;
+
   await page.goto(`${base}/swarm.html`);
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(2000);
   await caption(page, `The market at scale: 3 leads, 36 worker agents, 12 rounds on a local NEAR node. Winners are not scripted.`);
   await page.waitForTimeout(6000);
-  for (const [sel, text, secs] of [
-    ['#stats', 'Contractors buy sub-parts out of their own pay; junk is fired on-chain and the runner-up is hired.', 6],
-    ['#control-card', `Same market, ${seeds.seeds.length} seeds, three kinds of buyer. With on-chain records, junk won ${m.records['junk wins']} parts per run, against ${m['audit-all'] ? m['audit-all']['junk wins'] + ' when buyers audit everything and ' : ''}${m.blind['junk wins']} blind.`, 9],
-    ...(st ? [['#storm-card', `Then we attacked it: 30 sybil accounts flood every auction with half-price junk at round 6. Buyers that audit everything lose ${st['audit-all']['storm wins'].toFixed(0)} parts per run to them; buyers that read on-chain records lose ${st.records['storm wins'].toFixed(0)}, at about half the cost per good part.`, 11]] : []),
-  ]) {
+  const steps = [];
+  if (st) steps.push(['#storm', `We attacked it: at round 6, 30 sybil accounts flood every auction with half-price junk. Buyers that audit everything lose ${st['audit-all']['storm wins'].toFixed(0)} parts per run to them; buyers that read on-chain records lose ${st.records['storm wins'].toFixed(0)}, at about half the cost per good part.`, 11]);
+  if (wa) steps.push(['#wash', `Then the sybils wash their records first, paying each other through real jobs. Plain records fall to ${wa.records['storm wins'].toFixed(0)} sybil wins; buyers that count only pay from payers they trust bring it back to ${wa['records+allowlist']['storm wins'].toFixed(1)}.`, 11]);
+  steps.push(['#control-card', `Without a storm, ${seeds.seeds.length} seeds: records still cut junk wins on every seed, for 1 to 3% more per good part.`, 7]);
+  steps.push(['#trees', 'Contractors buy sub-parts out of their own pay; junk is fired on-chain and the runner-up is hired.', 6]);
+  for (const [sel, text, secs] of steps) {
     const el = await page.$(sel);
     if (el) await el.evaluate(e => e.scrollIntoView({ block: 'center' }));
     await caption(page, text);
     await page.waitForTimeout(secs * 1000);
   }
+  if (live) {
+    const won = live.rounds.flatMap(r => r.parts.filter(p => p.winner));
+    await page.goto(`${base}/swarm.html?data=live`);
+    await page.waitForTimeout(2000);
+    const el = await page.$('#trees');
+    if (el) await el.evaluate(e => e.scrollIntoView({ block: 'center' }));
+    await caption(page, `The same market with live NEAR AI doing the work, the judging and the bids: ${live.rounds.length} rounds, ${won.length} parts, ${won.filter(p => p.paid).length} passed and paid, every junk win fired without pay. Every answer is signed.`);
+    await page.waitForTimeout(9000);
+  }
   await caption(page, '');
 
-  await card(page, 'Try it', 'An AI judge can use it directly: make mcp-setup, then ask your agent to join the market.<br>Or watch it: make swarm. Every number here is read from the chain.', 6);
+  await card(page, 'Paid how the worker wants', 'A worker can route its pay into the NEAR Intents Verifier and swap it with a solver in one signed, atomic step.<br>The NEAR AI key that signs the work is checked against Intel\'s TDX quote: make attest.', 8);
+  await card(page, 'Try it', 'An AI judge can use it directly: make mcp-setup, then ask your agent to join the market.<br>Or check it in minutes, no node: make test, make verify-cassette, make attest.', 7);
 
   const video = page.video();
   await ctx.close();
