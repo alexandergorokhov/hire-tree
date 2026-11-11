@@ -185,6 +185,17 @@ select { height: 30px; border: 1px solid var(--line); background: var(--bg); bor
 .new li::before { content: "■"; font-size: 9px; margin-right: 8px; vertical-align: 2px; }
 .next-line { margin: 4px 0 0; }
 
+.case { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: 32px; padding: 20px; margin-bottom: 28px; background: var(--card); border: 1px solid var(--rule); }
+@media (max-width: 880px) { .case { grid-template-columns: 1fr; gap: 16px; padding: 16px; } }
+.case h3 { font: 760 22px/1.15 var(--display); font-stretch: 112%; letter-spacing: -0.02em; margin: 8px 0 10px; text-wrap: balance; }
+.case-brief { margin: 0; color: var(--muted); font-size: 14px; }
+.case ol { list-style: none; margin: 0; padding: 0; counter-reset: s; display: grid; }
+.case li { counter-increment: s; display: grid; grid-template-columns: 3ch minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+.case li:last-child { border-bottom: 0; }
+.case li::before { content: counter(s, decimal-leading-zero); font: 500 11px/2 var(--mono); color: var(--muted); }
+.case .bad { color: var(--fired); font-weight: 600; }
+.case .good { color: var(--paid); font-weight: 600; }
+
 /* catalog: specimen sheet */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); border-top: 1px solid var(--rule); border-left: 1px solid var(--line); }
 .agent { text-align: left; background: transparent; border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0; padding: 18px 16px; cursor: pointer; display: grid; gap: 14px; align-content: start; }
@@ -334,6 +345,10 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
       <div class="sec-head">
         <span class="lbl">00 / How it works</span>
         <h2>A contract decides who gets paid</h2>
+      </div>
+      <div class="case" id="case">
+        <div><span class="lbl">Use case</span><h3>An AI editor hires other agents for a brief</h3><p class="case-brief" id="case-brief"></p></div>
+        <ol id="case-steps"></ol>
       </div>
       <ol class="loop" aria-label="How a job pays">
         <li><span class="lbl">Client</span><b>Funds a job</b></li>
@@ -616,8 +631,25 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
     $("#play-ico").innerHTML = on ? '<rect x="2" y="1" width="3" height="10"/><rect x="7" y="1" width="3" height="10"/>' : '<path d="M2.5 1v10l8-5z"/>';
     if (on) timer = setInterval(() => { step = (step + 1) % hero.caps.length; renderStep(); }, 2800);
   }
+  function drawCase(job) {
+    const span = (cls, s) => el("span", { class: cls, text: s });
+    const l1 = job.parts.filter((p) => p.level === 1 && p.replaces == null);
+    const sub = job.parts.find((p) => p.level === 2), par = sub && job.parts.find((p) => p.id === sub.parent);
+    const fired = job.parts.filter((p) => p.fired), re = job.parts.filter((p) => p.replaces != null && p.paid);
+    const paid = job.parts.filter((p) => p.paid).reduce((s, p) => s + p.price, 0);
+    $("#case-brief").textContent = "“" + job.brief + "”";
+    const steps = [
+      ["The editor posts the job with ", mk(f2(D.job_budget)), " fUSD. A lead agent splits it into ", String(l1.length), " parts and agents bid."],
+      sub && par ? [nm(par.winner), " wins the ", par.skill, " part and hires ", nm(sub.winner), " for ", sub.skill, ", paid from its own pay."] : null,
+      fired.length ? ["The judge scores ", ...fired.flatMap((p, i) => [i ? ", " : "", span("bad", `${nm(p.winner)} ${p.score}/10`)]), ". Fired, unpaid."] : null,
+      re.length ? [...re.flatMap((p, i) => [i ? ", " : "", span("good", `${nm(p.winner)} ${p.score}/10`)]), " is hired in its place and passes."] : null,
+      ["Workers that passed get ", mk(f2(paid)), " fUSD, the lead earns its fee, and the rest goes back to the editor. Nobody else ever held the money."],
+    ].filter(Boolean);
+    $("#case-steps").replaceChildren(...steps.map((s) => el("li", {}, el("span", {}, ...s))));
+  }
   function drawHero() {
     const job = heroJob();
+    drawCase(job);
     $("#hero-brief").replaceChildren(el("b", { text: "Job " + pad(job.n) }), job.brief);
     $("#hero-acct").textContent = short(job.root || "");
     hero = { job, t: drawTree($("#hero-tree"), job), caps: captions(job) };

@@ -68,8 +68,11 @@ async function caption(page, text) {
   // 2. The idea, how it is new, where it goes.
   await say('');
   await to('#idea');
+  await say('Use case: an AI editor hires other agents. Bad work is fired unpaid; only checked work is paid.');
+  await wait(8);
+  await page.$eval('.loop', e => e.scrollIntoView({ behavior: 'smooth', block: 'center' }));
   await say('The job contract holds the money. NEAR AI scores the work and signs it. The contract pays only if the score passes.');
-  await wait(9);
+  await wait(8);
   await page.$eval('.new', e => e.scrollIntoView({ behavior: 'smooth', block: 'center' }));
   await say('What is new: one escrow per job, pay decided by a verified AI score, agents hiring agents.');
   await wait(6);
