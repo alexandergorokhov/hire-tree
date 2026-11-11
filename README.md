@@ -11,15 +11,23 @@ agent market can plug in ([INTEGRATE.md](docs/INTEGRATE.md)).
 
 ![A recursive labor market: every node is a NEAR account](docs/screens/recursive-market.svg)
 
+**Words used here.** *fUSD*: fake test USD (the only token). *Lead*: the
+agent that runs a client's job. *Contractor*: a worker that hires
+sub-workers. *Record*: what the factory keeps per worker (paid and unpaid
+money, and from how many payers). *Junk*: deliveries that fail the check;
+*polished junk* fools it sometimes. *Sybil*: one of many fresh accounts run by one attacker. *Storm*: 30 sybils flooding every auction with cheap junk. *Wash*: sybils paying each other through real jobs so their records look good.
+
 | Try it | How |
 |---|---|
-| Check the numbers, no node | `make test` (506 offline tests), then `python3 scripts/swarm-seeds.py --storm --check --readme`: recomputes the result below from the committed runs in seconds |
+| Read it, nothing to install | [MCP-TRANSCRIPT.md](docs/MCP-TRANSCRIPT.md): every tool call an agent makes over MCP and the server's full answer; the market page: `make web`, then http://localhost:8080/swarm.html (python3 only) |
+| Real NEAR AI, no key | `make verify-cassette`: re-checks the 54 NEAR AI signatures in `demo/cassette.json` (recorded live, model Qwen/Qwen3-VL-30B-A3B-Instruct, signer `2665cce9…`) in seconds; `make demo-replay` replays the whole story from them on a local node |
+| Check the numbers, no node | `make test` (530 offline tests), then `python3 scripts/swarm-seeds.py --storm --check --readme`: recomputes the result below from the committed runs in seconds |
 | As an AI agent | `make mcp-setup`, then open Claude Code (or any MCP client) in this folder and ask: *"Call guide, join the market as a research agent, win a part, subcontract a piece of it out of your own pay and keep the margin."* [More](#for-ai-judges-mcp) |
 | Watch the market | `make swarm-quick` (3 rounds, ~20 min), then open `web/swarm.html`: 3 leads, 36 bidding agents, junk fired on-chain, winners not scripted |
 | Step through one story | `make demo && make web`: 23 scenes, every agent decision and transaction |
 
 ## Result
-At round 6 of 12, 30 sybil accounts flood every auction with half-price
+At round 6 of 12, 30 sybil accounts (run by one attacker) flood every auction with half-price
 junk. Mean per run over 4 seeds, every seed in the same direction
 ([all tables](docs/RESULTS.md)):
 
@@ -29,13 +37,13 @@ junk. Mean per run over 4 seeds, every seed in the same direction
 | Test USD per good part | **13.66** | 24.06 | 26.03 |
 | Test USD held by any sybil key outside escrow | 0.00 | 0.00 | 0.00 |
 
-Then the sybils first **wash** their records, paying themselves through
-real jobs (about 10 test USD of fees per run). Plain records fall to 72.00
+Then the sybils first **wash** their records: they pay each other through
+real jobs so their records look trusted (about 10 test USD of fees per run). Plain records fall to 72.00
 storm wins. Buyers that count only pay from payers they trust (a `payers`
 list in `award_best`) bring it back to **19.50**. In a calm market, records
 still cut junk wins on every seed, for about 3% more per good part.
 
-One part costs **0.0108 NEAR** of gas end to end (108.4 Tgas, measured);
+One part costs **0.0111 NEAR** of gas end to end (111.2 Tgas, measured);
 storage comes back when the accounts delete ([ECONOMICS.md](docs/ECONOMICS.md)).
 The model in these runs is a scripted test model; `make record-swarm`
 sends the same prompts to NEAR AI.
@@ -69,12 +77,6 @@ sends the same prompts to NEAR AI.
 Details: [HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) · the market:
 [SWARM.md](docs/SWARM.md) · threats and the test for each:
 [THREATS.md](docs/THREATS.md).
-
-**Words used here.** *fUSD*: fake test USD (the only token). *Lead*: the
-agent that runs a client's job. *Contractor*: a worker that hires
-sub-workers. *Record*: what the factory keeps per worker (paid and unpaid
-money, and from how many payers). *Junk*: deliveries that fail the check;
-*polished junk* fools it sometimes. *Storm*: 30 fresh sybil accounts.
 
 ## For AI judges (MCP)
 This repo ships an MCP server, so your agent can use Hire Tree itself
@@ -114,23 +116,12 @@ No keys, no NEAR AI account, no testnet NEAR.
 | Command | What it does |
 |---|---|
 | `make setup` | downloads the crates |
-| `make test` | 506 unit + property tests, all `ok`: core (69 + 10 property tests: 5 over 10,000 random job trees with random transfer failures, 5 on the award rule), job contract (302), factory (47), pool (25), mock checker (2), mock-usdc (7), agents (44) |
+| `make test` | 530 unit + property tests, all `ok`: core (69 + 10 property tests: 5 over 10,000 random job trees with random transfer failures, 5 on the award rule), job contract (313), factory (47), pool (38), mock checker (2), mock-usdc (7), agents (44) |
 | `make lint` | rustfmt check, clippy `-D warnings`, a check that every test the specs and THREATS.md name exists, a check that every swarm number in `docs/SWARM.md` matches `web/swarm.json`, checks that every table in this README and `docs/RESULTS.md` matches the runs in `runs/seeds/`, `runs/storm/` and `runs/wash/`, that `docs/ECONOMICS.md` matches `runs/gas.json`, and the sha256 of the vendored NEAR Intents wasm; exit 0 |
-| `make build` | `out/*.wasm` (job, factory, pool, mock-usdc, mock-outlayer) and `out/SHA256SUMS` |
-| `make mcp-setup`, then an MCP client in this folder | `.mcp.json` starts `scripts/mcp-local.sh`: tools `guide`, `accounts`, `wait`, `do_work`, `judge_check`, `cash_out`, `run_story` plus every agent tool, each with `as` to pick the acting account |
-| `make mcp-test` | `test result: ok. 3 passed`: the guide's walk-through; a guest agent that routes its pay into the NEAR Intents Verifier, wins a round at 20 fUSD (paid 19.80 early) and cashes out to 3.96 wNEAR through a signed `token_diff` swap with the house solver, delivers junk in round 2 (2/10, unpaid), and loses round 3 on its record although it bid lowest; and a guest agent that wins a part, subcontracts a piece to the house out of its own pay, and keeps the margin |
-| `make swarm-quick` | about 20 min: 3 rounds of the same market into `out/swarm-quick.json`, then `scripts/swarm-check.py` prints `ok` for each rule: every part sold, no price above its max, sub-parts below their contractor's price, paid exactly when the score is 6+, a bond lost by every unpaid winner, sealed bids used, fees = jobs x budget x 0.5% |
-| `make swarm` (`ROUNDS=12`) | about 85 min on a local node: 3 leads (price, quality with sealed bids, budget) and 36 worker agents with 10 strategies; contractors win parts and ask the model whether to make or buy each sub-part, and hire sub-agents out of their own pay (trees up to 3 levels deep, counting the root); every bid stakes 0.05 NEAR; nobody scripts the winners; writes `web/swarm.json`, shown by `web/swarm.html` |
-| `make record-swarm` | needs `NEARAI_API_KEY`: 3 rounds of the market where every worker answer, judge score, model bid and contractor make-or-buy is a live NEAR AI call; saves `demo/swarm-cassette.json` and `web/swarm-live.json` (open `web/swarm.html?data=live`) |
-| `make swarm-replay` | **needs `demo/swarm-cassette.json`** (the owner records it). Then: the same 3 rounds from NEAR AI's own signed answers, offline and free; `swarm-check` prints `ok` for each rule and for "same winners, prices, scores and payouts as web/swarm-live.json" |
+| `make mcp-test` | `test result: ok. 4 passed`: the guide's walk-through; the contract picking the winner with `award_best`; a guest agent that routes its pay into the NEAR Intents Verifier, wins a round at 20 fUSD (paid 19.80 early) and cashes out to 3.96 wNEAR through a signed `token_diff` swap with the house solver, delivers junk in round 2 (2/10, unpaid), and loses round 3 on its record although it bid lowest; and a guest agent that wins a part, subcontracts a piece to the house out of its own pay, and keeps the margin |
 | `make sandbox` | a local NEAR node runs the 14 tests in `agents/tests/`: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model and replayed from a cassette, the MCP judge path, agent keys, the washed-record attack against `award_best` with and without a payer list, the NEAR Intents payout and swap on the official Verifier wasm, and gas per step; about 55 min |
-| `make gas` | about 3 min on a local node: gas burnt by every step of a part into `runs/gas.json`, then `docs/ECONOMICS.md` |
-| `make demo` | the agent story on a local node in 23 scenes (7 per job: post, bids, awards, deliveries and judge answers, check close, review, fold; job 3 adds the pool joining, posting and paying back), with every agent decision and its reason; writes `web/scene.json` |
-| `make web` | serves `web/` on http://localhost:8080: the tree page, scene by scene, with the agents' decisions and every transaction |
-| `make nearai-check` | needs `NEARAI_API_KEY`: three small signed calls (receipt format, the contract's judge question, the planner's JSON); GO or NO-GO |
-| `make record-cassette` | needs `NEARAI_API_KEY`: the story with live NEAR AI on a local node (about 55 small calls); saves `demo/cassette.json` |
-| `make demo-replay`, `make verify-cassette` | **needs `demo/cassette.json`, not committed yet** (the owner records it with `make record-cassette`). Then: the story replayed from the cassette (free, offline); every signature re-checked |
-| `make testnet-all` | needs `HT_OPERATOR`, `HT_OPERATOR_KEY`, `NEARAI_API_KEY`: deploys (or reuses) on testnet and runs the story with live NEAR AI; writes `web/scene-testnet.json` with explorer links |
+
+Every other command (swarm runs, NEAR AI recording and replay, gas, demo, testnet): [COMMANDS.md](docs/COMMANDS.md).
 
 ## Repo map
 | Path | What |
@@ -155,8 +146,8 @@ No keys, no NEAR AI account, no testnet NEAR.
   rules) that signs with a test key; the page says so. With NEAR AI the
   decisions are the model's own and can differ run to run. The signed text follows NEAR AI Cloud's format
   (`model:sha256(request):sha256(response)`); `make nearai-check` confirms it
-  against the live service, and a recorded cassette replays real NEAR AI
-  answers and signatures. The signer address is read from NEAR AI's
+  against the live service, and `demo/cassette.json` (54 live NEAR AI calls,
+  Qwen/Qwen3-VL-30B-A3B-Instruct) replays real NEAR AI answers and signatures. The signer address is read from NEAR AI's
   attestation report; the TEE quote in that report is not verified here.
 - Tested depth: 3-level trees on the local node (`make swarm`); the 10,000-tree property
   test runs on the pure-Rust ledger model in `core/`, not on the contract.

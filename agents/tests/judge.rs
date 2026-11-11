@@ -58,6 +58,18 @@ impl Client {
             "{name} {args} -> {}",
             text.chars().take(200).collect::<String>()
         );
+        // `make mcp-transcript` keeps every call in full for docs/MCP-TRANSCRIPT.md.
+        if let Ok(path) = std::env::var("HT_MCP_TRANSCRIPT") {
+            use std::io::Write;
+            let test = std::thread::current().name().unwrap_or("").to_string();
+            let line = json!({ "test": test, "tool": name, "args": args, "result": text, "error": r["isError"] });
+            let mut f = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(path)
+                .unwrap();
+            writeln!(f, "{line}").unwrap();
+        }
         (text, r["isError"].as_bool().unwrap_or(true))
     }
 

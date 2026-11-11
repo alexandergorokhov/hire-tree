@@ -26,9 +26,11 @@ setup: ## Print toolchain versions and fetch crates (the only networked step)
 	@command -v cargo-near >/dev/null && cargo near --version || echo "cargo-near not installed: make build falls back to plain cargo" >&2
 
 .PHONY: test
-test: ## Unit + property tests, offline (PROP_CASES=10000 by default)
-	PROP_CASES=$(PROP_CASES) cargo test --workspace --locked --offline
-	cd agents && cargo test --locked --offline --lib --bins
+test: ## Unit + property tests, offline (PROP_CASES=10000 by default); fails if the README's test counts are stale
+	@mkdir -p out
+	PROP_CASES=$(PROP_CASES) cargo test --workspace --locked --offline 2>&1 | tee out/test.log
+	cd agents && cargo test --locked --offline --lib --bins 2>&1 | tee -a ../out/test.log
+	python3 scripts/test-counts.py out/test.log
 
 .PHONY: lint
 lint: ## rustfmt check + clippy -D warnings + every test the specs name exists + the README's swarm numbers match web/swarm.json
@@ -144,6 +146,12 @@ mcp-setup: build ## Build what the MCP playground needs (.mcp.json runs scripts/
 .PHONY: mcp-test
 mcp-test: mcp-setup ## Three MCP client sessions: the guide's walk-through, a guest agent competing in the open market, and a guest agent that becomes a contractor and hires a sub-agent (about 7 min)
 	cd agents && cargo test --locked --test judge -- --nocapture --test-threads=1
+
+.PHONY: mcp-transcript
+mcp-transcript: mcp-setup ## Record the MCP sessions in full to docs/MCP-TRANSCRIPT.md (about 7 min)
+	@mkdir -p out && rm -f out/mcp-transcript.jsonl
+	cd agents && HT_MCP_TRANSCRIPT=$(CURDIR)/out/mcp-transcript.jsonl cargo test --locked --test judge -- --test-threads=1
+	python3 scripts/mcp-transcript.py out/mcp-transcript.jsonl
 
 .PHONY: demo
 demo: build ## The agent story on a local NEAR node (mock model, free); writes web/scene.json (about 4 min)
