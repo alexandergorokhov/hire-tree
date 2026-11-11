@@ -1295,7 +1295,7 @@ pub async fn run(
             let job = c
                 .view(&root.parse().map_err(|_| "root")?, "get_job", json!({}))
                 .await?;
-            fills.push(json!({ "client": LEADS[k].0, "lead": LEADS[l].0, "lead_fee": num(&job["amount"]) as f64 / USD as f64,
+            fills.push(json!({ "client": LEADS[k].0, "lead": LEADS[l].0, "root": root, "lead_fee": num(&job["amount"]) as f64 / USD as f64,
                 "reserve": reserve[l] as f64 / USD as f64 }));
             fill_roots.push(root);
         }
@@ -2138,6 +2138,12 @@ pub async fn run(
         // Lead l filled client k's intent: client k approves that root.
         for (k, root) in fill_roots.iter().enumerate() {
             let root = root.clone();
+            // Every part is closed: the fee the root pays its lead is final
+            // (the lead fee is a cap, earned pro rata to the paid parts).
+            let job = tools
+                .call(&keeper, "get_job", &json!({ "job": root }))
+                .await?;
+            fills[k]["lead_fee_paid"] = json!(num(&job["lead_fee_earned"]) as f64 / USD as f64);
             let _ = tools
                 .call(&leads[k].1, "approve", &json!({ "job": root }))
                 .await;

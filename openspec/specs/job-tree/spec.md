@@ -14,14 +14,55 @@ sub-account of its creator.
 - unit: `root_init_sets_fields`, `sub_init_sets_worker_as_payee`, `init_must_be_called_by_parent_account`, `root_funding_below_the_fee_refunded`, `sub_with_zero_amount_refused`, `client_and_worker_both_refused`, `bad_spec_hash_refused`, `bad_signer_refused`, `window_too_long_refused`
 
 ### Requirement: Lead fee and client refund
-A root's `amount` SHALL be the lead's fee, set by the client at post. It is
-never hireable. At settle the manager gets fee + bond; everything else goes
-back to the client.
+A root's `amount` SHALL be the lead's fee cap, set by the client at post (by
+the factory from a signed job offer's Dutch auction, or by a pool from its
+terms). It is never hireable. The lead SHALL earn it pro rata to the parts
+that were paid: at settle the manager gets
+`fee * paid / hired` (rounded down) plus its bond, where `hired` is the sum
+of the totals of the root's own children that closed (a hire rolled back
+never counts) and `paid` the sum of those whose `child_closed` reported the
+worker paid (at settle, or early through a Job Note). A notice without an
+outcome (older code) counts as not paid. Only the root's direct children
+count: a sub-tree's own outcomes reach the root only through its child's
+outcome. Settle already requires every child closed, so the ratio is final.
+Everything else, the unearned part of the fee included, goes back to the
+client (or the pool that posted it). A root with no children, or none paid,
+pays no fee. The bond rule is unchanged: the bond always goes back to the
+manager.
 
 #### Scenario: Root settles
 - WHEN the client approves (or the window ends) and all children are closed
-- THEN the manager is registered and paid fee + bond, then the client is registered and paid the rest
+- THEN the manager is registered and paid its earned fee + bond, then the client is registered and paid the rest
 - unit: `root_fee_and_bond_go_to_the_manager_the_rest_back_to_the_client`, `settle_root_sends_remainder_back_to_client`, `root_registers_the_client_before_refunding_it`; core: `root_split_pays_fee_and_bond_to_manager_rest_to_client`
+
+#### Scenario: Every part fired or refunded
+- WHEN a lead hired parts and every one closed unpaid (fired, refunded by a dispute, or junk)
+- THEN it gets its bond back and no fee; the whole fee goes back to the client
+- unit: `a_lead_whose_every_part_failed_earns_no_fee`; core: `a_root_with_no_paid_part_pays_no_fee`
+
+#### Scenario: Some parts paid
+- WHEN parts worth 30 were paid and parts worth 10 were not (fee 10)
+- THEN the lead earns 10 * 30 / 40 = 7.5 and the client gets the other 2.5 back; with thirds the fee rounds down and the client gets the unit
+- unit: `the_lead_fee_is_earned_pro_rata_to_the_paid_parts`, `the_earned_fee_rounds_down_in_the_clients_favour`; core: `root_fee_is_pro_rata_and_rounds_down`, `earned_fee_never_overflows`
+- sandbox: `scene_full_tree_on_local_node` (fee 10; parts 30 and 20 paid, 10 refunded by a dispute: the lead gets 8.333333, the client 41.666667)
+
+#### Scenario: No parts hired
+- WHEN the root closes without a child (or only with hires that were rolled back)
+- THEN no fee is paid, only the bond
+- unit: `a_root_without_children_pays_no_lead_fee`, `a_rolled_back_hire_does_not_count_for_the_fee`
+
+#### Scenario: A part paid early through a Job Note
+- WHEN the lead's treasury bought a part's note (the worker was paid at once)
+- THEN the child reports it paid and it counts as paid for the fee
+- unit: `a_note_bought_part_counts_as_paid_for_the_lead_fee`
+
+#### Scenario: The fee earned so far is public
+- WHEN anyone reads the root's `get_job`
+- THEN `lead_fee_earned` shows the fee settle would pay now (null on a sub-job), and settle emits `lead_fee` with the fee, the earned part and both sums
+- unit: `the_view_shows_the_lead_fee_earned_so_far`
+
+#### Scenario: Money is conserved with the fee rule
+- core property: `money_prop` (a random root fee; the lead's take equals the rule exactly, never more than the fee)
 
 #### Scenario: Budget below the fee
 - WHEN the root is funded with less than its fee

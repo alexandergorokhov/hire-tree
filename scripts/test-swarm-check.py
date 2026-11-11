@@ -42,7 +42,23 @@ def case_audit_against_votes(d):
     p["audit"]["caught"] = not p["audit"]["caught"]
 
 
-CASES = [case_paid_flag_without_money, case_fired_a_good_worker, case_fees_off, case_overpaid, case_audit_against_votes]
+def with_earned_fees(d, old_rule=False):
+    # Fill in lead_fee_paid as the contract pays it (or, broken, the whole
+    # fee whatever the outcome: the old rule).
+    for r in d["rounds"]:
+        for f in r["intents"]:
+            mine = [p for p in r["parts"] if p.get("winner") and p["level"] == 1 and p.get("lead") == f["lead"]]
+            hired = sum(round(p["price"] * 1e6) for p in mine)
+            paid = sum(round(p["price"] * 1e6) for p in mine if p["paid"])
+            fee = round(f["lead_fee"] * 1e6)
+            f["lead_fee_paid"] = (fee if old_rule else (fee * paid // hired if hired else 0)) / 1e6
+
+
+def case_lead_fee_paid_whatever_the_outcome(d):
+    with_earned_fees(d, old_rule=True)
+
+
+CASES = [case_paid_flag_without_money, case_fired_a_good_worker, case_fees_off, case_overpaid, case_audit_against_votes, case_lead_fee_paid_whatever_the_outcome]
 
 
 def run(d, readme=None):
@@ -59,6 +75,12 @@ fails = 0
 code, out = run(base)
 print(("ok  " if code == 0 else "FAIL"), "the committed run passes")
 fails += code != 0
+d = copy.deepcopy(base)
+with_earned_fees(d)
+code, out = run(d)
+ok = code == 0 and "every lead earned its fee pro rata" in out
+print(("ok  " if ok else "FAIL"), "a run whose leads earned their fees pro rata passes")
+fails += not ok
 for case in CASES:
     d = copy.deepcopy(base)
     case(d)

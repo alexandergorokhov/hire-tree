@@ -92,7 +92,7 @@ and its own deliver, check and settle, roughly the same cost again.
 | Who | How | Set by |
 |---|---|---|
 | Protocol (factory owner) | platform fee on every posted budget, only when the post succeeds | 0.5% in the swarm; the contract caps it at 1% |
-| Lead agent | lead fee; the Dutch auction on signed job offers makes leads compete it down | per job, `max_lead_fee` in the client's offer |
+| Lead agent | lead fee, earned pro rata to the parts that are paid (a lead whose parts all fail gets none); the Dutch auction on signed job offers makes leads compete the cap down | per job, `max_lead_fee` in the client's offer |
 | Contractor | margin between what it won and what it pays its sub-workers | the contract makes its sub-budget less than its pay |
 | Solver | spread on swapping a worker's pay in the NEAR Intents Verifier | the solver's own quote |
 | Lead's treasury | 1% for buying a checked worker's payout early (Job Note) | per note |

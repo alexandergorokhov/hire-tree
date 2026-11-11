@@ -291,6 +291,12 @@ pub struct Child {
     pub backed: U128,
     #[serde(default)]
     pub premium: U128,
+    /// The outcome its `child_closed` reported: was its worker paid (at
+    /// settle, or early through a Job Note)? None while it is not closed,
+    /// or when the notice carried no outcome. On a root it decides how
+    /// much of the lead's fee is earned.
+    #[serde(default)]
+    pub paid: Option<bool>,
 }
 
 /// The one settle transfer (or balance check) in flight.
@@ -370,6 +376,10 @@ pub struct JobView {
     pub payout_via: Option<AccountId>,
     /// Settled sub-job still waiting for its parent to take the notice.
     pub close_pending: Option<CloseNotice>,
+    /// Root: the part of the lead's fee earned so far, pro rata to the
+    /// closed parts that were paid (what settle pays once every part is
+    /// closed). None on a sub-job.
+    pub lead_fee_earned: Option<U128>,
 }
 
 #[near(contract_state)]
@@ -539,8 +549,10 @@ impl Job {
             (None, Some(_)) => false,
             _ => env::panic_str("exactly one of client (root job) or worker (sub-job)"),
         };
-        // Root: `amount` is the lead's fee, set by the client at post (may
-        // be 0); the rest of the budget goes back to the client at settle.
+        // Root: `amount` is the lead's fee cap, set by the client at post
+        // (may be 0). The lead earns it pro rata to its paid parts; the rest
+        // of the budget, the unearned fee included, goes back to the client
+        // at settle.
         if !root {
             require!(amount.0 > 0, "a sub-job's amount must be greater than zero");
         }
@@ -566,7 +578,7 @@ impl Job {
             root,
             client,
             manager,
-            // Root: the manager collects its fee (and bond) at settle.
+            // Root: the manager collects its earned fee (and bond) at settle.
             payee,
             worker,
             token,
@@ -1589,6 +1601,7 @@ impl Job {
             backer: None,
             backed: U128(0),
             premium: U128(0),
+            paid: None,
         });
         self.children_pending += 1;
 
@@ -2522,6 +2535,30 @@ impl Job {
         }
     }
 
+    /// The root's parts for the lead's fee: (summed totals of its closed
+    /// children whose notice reported the worker paid, summed totals of all
+    /// its closed children). Hires that were rolled back never count; only
+    /// direct children count (a sub-tree reports through its child).
+    fn root_fee_parts(&self) -> (u128, u128) {
+        let mut paid = 0u128;
+        let mut hired = 0u128;
+        for c in self
+            .children
+            .iter()
+            .filter(|c| c.state == ChildState::Closed && !c.by_worker)
+        {
+            hired = hired
+                .checked_add(c.total.0)
+                .unwrap_or_else(|| env::panic_str("amount overflow"));
+            if c.paid == Some(true) {
+                paid = paid
+                    .checked_add(c.total.0)
+                    .unwrap_or_else(|| env::panic_str("amount overflow"));
+            }
+        }
+        (paid, hired)
+    }
+
     /// The worker hired sub-agents that have not closed yet.
     pub fn has_open_worker_hires(&self) -> bool {
         self.children
@@ -2675,9 +2712,20 @@ impl Job {
             }
             _ => false,
         };
-        // Root: fee + bond to the manager, the rest back to the client.
+        // Root: the fee the lead earned (pro rata to its paid parts) + its
+        // bond to the manager, the rest back to the client.
         let split = if self.root {
-            self.ledger.settle_split_root()
+            let (paid, hired) = self.root_fee_parts();
+            let earned = self
+                .ledger
+                .fee_earned(paid, hired)
+                .unwrap_or_else(|e| fail(e));
+            emit(
+                "lead_fee",
+                json!({ "fee": U128(self.ledger.amount), "earned": U128(earned),
+                    "paid": U128(paid), "hired": U128(hired) }),
+            );
+            self.ledger.settle_split_root(paid, hired)
         } else {
             self.ledger.settle_split(pay_payee)
         }
@@ -3321,6 +3369,7 @@ impl Job {
             emit("hired", json!({ "child": caller, "by_notice": true }));
         }
         self.children[i].state = ChildState::Closed;
+        self.children[i].paid = paid;
         self.children_open = self
             .children_open
             .checked_sub(1)
@@ -3393,6 +3442,10 @@ impl Job {
             by_bid: self.by_bid,
             payout_via: self.payout_via.clone(),
             close_pending: self.close_pending.clone(),
+            lead_fee_earned: self.root.then(|| {
+                let (paid, hired) = self.root_fee_parts();
+                U128(self.ledger.fee_earned(paid, hired).unwrap_or(0))
+            }),
         }
     }
 }

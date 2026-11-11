@@ -45,8 +45,8 @@ arrive late are shared too.
 
 #### Scenario: Three clients buy one job
 - GIVEN three clients each join with 30 of a 90 fUSD target
-- WHEN the pool launches, the lead finishes the job (fee 9, work 60) and two members vote to approve
-- THEN the job deletes itself, 21 comes back to the pool, and each member claims 7
+- WHEN the pool launches, the lead finishes the job (fee cap 9, work 60, every part paid so the whole fee is earned) and two members vote to approve
+- THEN the job deletes itself, 21 comes back to the pool, and each member claims 7 (an unpaid part would also send its share of the fee back to the pool: the root's fee rule, `job-tree`)
 - sandbox: `agents_story_with_mock_model` (job 3)
 
 ### Requirement: A stuck pool can be resumed without paying twice

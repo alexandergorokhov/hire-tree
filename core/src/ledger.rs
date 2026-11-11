@@ -6,7 +6,8 @@
 //!
 //! Terms:
 //! - `amount`: the job's own pay, owed to its payee (worker or note holder).
-//!   Zero on a root job: the lead is paid from the root's remainder.
+//!   On a root job: the lead's fee cap, earned pro rata to the paid parts
+//!   (`fee_earned`); the unearned part goes back to the client.
 //! - `funded`: tokens received as funding (client on the root, parent on a sub-job).
 //! - `bond`: the lead's bond (root only). Never allocatable to children.
 //! - `allocated`: tokens sent, or in flight, to children.
@@ -14,7 +15,7 @@
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
-use crate::money::{add, note_quote, sub, MoneyError};
+use crate::money::{add, earned_fee, note_quote, sub, MoneyError};
 use crate::state::Status;
 
 #[derive(BorshSerialize, BorshDeserialize, Debug, Clone, Default, PartialEq, Eq)]
@@ -201,13 +202,25 @@ impl Ledger {
         })
     }
 
-    /// The root's split: the manager (payee) gets its fee (`amount`, set by
-    /// the client at post) plus its bond back; everything else goes back to
-    /// the client.
-    /// A root that was never funded owes no fee (nothing was posted), so it
+    /// The part of the lead's fee (`amount` on a root) that the lead has
+    /// earned: pro rata to the parts that were paid (`paid` of `hired`, the
+    /// summed prices of the root's own parts that reached an outcome). A
+    /// root that was never funded owes no fee (nothing was posted).
+    pub fn fee_earned(&self, paid: u128, hired: u128) -> Result<u128, MoneyError> {
+        if self.funded == 0 {
+            return Ok(0);
+        }
+        earned_fee(self.amount, paid, hired)
+    }
+
+    /// The root's split: the manager (payee) gets the fee it earned
+    /// (`fee_earned(paid, hired)`; the client set the fee cap at post) plus
+    /// its bond back; everything else, the unearned fee included, goes back
+    /// to the client. So a lead whose parts were all fired or refunded, or
+    /// that hired nothing, gets only its bond. A root that was never funded
     /// can still settle and close.
-    pub fn settle_split_root(&self) -> Result<Split, MoneyError> {
-        let fee = if self.funded == 0 { 0 } else { self.amount };
+    pub fn settle_split_root(&self, paid: u128, hired: u128) -> Result<Split, MoneyError> {
+        let fee = self.fee_earned(paid, hired)?;
         let to_payee = if self.payee_paid {
             0
         } else {
@@ -440,7 +453,7 @@ mod tests {
     fn a_root_never_funded_settles_without_its_fee() {
         let l = Ledger::new(10);
         assert_eq!(
-            l.settle_split_root(),
+            l.settle_split_root(5, 5),
             Ok(Split {
                 to_payee: 0,
                 to_rest: 0
@@ -456,7 +469,8 @@ mod tests {
         assert_eq!(l.unallocated(), 90, "fee and bond are never hireable");
         l.allocate(60).unwrap();
         l.credit(20, 60).unwrap(); // a child returned 20 of its 60
-        let s = l.settle_split_root().unwrap();
+                                   // Its one part was paid: the whole fee is earned.
+        let s = l.settle_split_root(60, 60).unwrap();
         assert_eq!(
             s,
             Split {
@@ -468,11 +482,56 @@ mod tests {
         l.payout_result(s, true, false).unwrap();
         // Retry after a failed rest leg: the manager is not paid twice.
         assert_eq!(
-            l.settle_split_root().unwrap(),
+            l.settle_split_root(60, 60).unwrap(),
             Split {
                 to_payee: 0,
                 to_rest: 50
             }
         );
+    }
+
+    #[test]
+    fn a_root_with_no_paid_part_pays_no_fee() {
+        let mut l = Ledger::new(10);
+        l.fund(100).unwrap();
+        l.add_bond(5).unwrap();
+        l.allocate(40).unwrap();
+        l.credit(40, 40).unwrap(); // fired: all 40 came back
+                                   // Parts were hired but none was paid: only the bond goes back.
+        assert_eq!(
+            l.settle_split_root(0, 40).unwrap(),
+            Split {
+                to_payee: 5,
+                to_rest: 100
+            }
+        );
+        // No part hired at all: no fee either.
+        assert_eq!(
+            l.settle_split_root(0, 0).unwrap(),
+            Split {
+                to_payee: 5,
+                to_rest: 100
+            }
+        );
+        assert_eq!(l.fee_earned(0, 0), Ok(0));
+    }
+
+    #[test]
+    fn root_fee_is_pro_rata_and_rounds_down() {
+        let mut l = Ledger::new(10);
+        l.fund(100).unwrap();
+        l.allocate(40).unwrap();
+        l.credit(10, 40).unwrap(); // 30 paid, 10 refunded
+                                   // 10 * 30 / 40 = 7.5 -> 7; the client gets the unit.
+        assert_eq!(l.fee_earned(30, 40), Ok(7));
+        assert_eq!(
+            l.settle_split_root(30, 40).unwrap(),
+            Split {
+                to_payee: 7,
+                to_rest: 63
+            }
+        );
+        // Paid can never count for more than hired: the fee is a cap.
+        assert_eq!(l.fee_earned(50, 40), Ok(10));
     }
 }

@@ -32,7 +32,7 @@ failed post gives the credit back.
 
 #### Scenario: Lead fee
 - WHEN the msg names a `lead_fee`
-- THEN it becomes the root's `amount`; a fee above the budget is refunded
+- THEN it becomes the root's `amount` (the lead's fee cap, earned pro rata to the paid parts at settle: `job-tree`); a fee above the budget is refunded
 - unit: `lead_fee_goes_into_the_root_init_and_cannot_exceed_the_budget`
 
 #### Scenario: Create or fund fails
@@ -107,7 +107,8 @@ linearly (a Dutch auction) from 0 at `starts_ns` to `max_lead_fee` at
 `hiretree-intent:<json>`, that it names this factory, that it has not
 expired, been cancelled or filled (a nonce is used once), and that the
 deposit covers the budget; it then posts the job with the filler as
-manager and the current fee as lead fee. A failed post SHALL return the
+manager and the current fee as lead fee (a cap: the lead earns it pro
+rata to its paid parts, as on any root). A failed post SHALL return the
 budget to the deposit, not the wallet. The client MAY cancel a nonce
 (a nonce not yet spent attaches 0.001 NEAR for its storage) and
 withdraw its deposit. An intent MAY name `leads`: then only those accounts

@@ -8,10 +8,13 @@
 //! 2. each live job's internal ledger matches its real balance (a parent's
 //!    ledger may lag by what not-yet-closed children already sent back).
 //!
-//! At the end everything settles bottom-up and the tree is empty.
+//! At the end everything settles bottom-up and the tree is empty. The root
+//! carries a random lead fee: the lead's take is exactly
+//! `fee * paid / hired` over the root's own closed children (never more
+//! than the fee) plus its bond, and the rest goes back to the client.
 //! Cases: `PROP_CASES` (default 10,000).
 
-use ht_core::money::note_quote;
+use ht_core::money::{earned_fee, mul_div_floor, note_quote};
 use ht_core::{transition, Event, Ledger, Status};
 use proptest::prelude::*;
 
@@ -58,6 +61,8 @@ struct Node {
     /// A settle has started: like the contract (hire needs an open window,
     /// settle needs a closed one), no more hires.
     settle_started: bool,
+    /// What the parent funded it with (its price, for the root's fee).
+    total: u128,
 }
 
 struct World {
@@ -70,11 +75,17 @@ struct World {
     treasury_got: u128,
     note_face: u128,
     note_fees: u128,
+    /// The root's fee cap, and what the lead (root payee) was paid.
+    fee: u128,
+    lead_got: u128,
+    /// Summed prices of the root's closed children, and of the paid ones.
+    hired: u128,
+    paid: u128,
 }
 
 impl World {
-    fn new(funding: u128, bond: u128) -> Self {
-        let mut ledger = Ledger::new(0);
+    fn new(funding: u128, bond: u128, fee: u128) -> Self {
+        let mut ledger = Ledger::new(fee);
         ledger.fund(funding).unwrap();
         if bond > 0 {
             ledger.add_bond(bond).unwrap();
@@ -90,9 +101,14 @@ impl World {
                 returned: 0,
                 note_sold: false,
                 settle_started: false,
+                total: funding,
             }],
             funding,
             bond,
+            fee,
+            lead_got: 0,
+            hired: 0,
+            paid: 0,
             paid_out: 0,
             worker_got: 0,
             treasury_spent: 0,
@@ -149,6 +165,7 @@ impl World {
                     returned: 0,
                     note_sold: false,
                     settle_started: false,
+                    total,
                 });
             }
             Op::Deliver(n) => {
@@ -213,7 +230,10 @@ impl World {
         let pay_payee = matches!(prev, Status::Delivered | Status::Checked);
         self.nodes[n].settle_started = true;
         let split = if self.nodes[n].parent.is_none() {
-            self.nodes[n].ledger.settle_split_root().unwrap()
+            self.nodes[n]
+                .ledger
+                .settle_split_root(self.paid, self.hired)
+                .unwrap()
         } else {
             self.nodes[n].ledger.settle_split(pay_payee).unwrap()
         };
@@ -225,7 +245,9 @@ impl World {
         if payee_ok && split.to_payee > 0 {
             self.nodes[n].real -= split.to_payee;
             self.paid_out += split.to_payee;
-            if self.nodes[n].note_sold {
+            if self.nodes[n].parent.is_none() {
+                self.lead_got += split.to_payee;
+            } else if self.nodes[n].note_sold {
                 self.treasury_got += split.to_payee;
             } else {
                 self.worker_got += split.to_payee;
@@ -255,6 +277,15 @@ impl World {
                 let allocation = self.nodes[n].ledger.funded;
                 self.nodes[p].ledger.credit(returned, allocation).unwrap();
                 self.nodes[p].children_open -= 1;
+                if p == 0 {
+                    // The child's notice: was its worker paid (at settle,
+                    // or early through a note)?
+                    let node = &self.nodes[n];
+                    self.hired += node.total;
+                    if node.note_sold || node.ledger.payee_paid {
+                        self.paid += node.total;
+                    }
+                }
             }
         } else {
             self.nodes[n].status = transition(settling, Event::SettleFailed(prev)).unwrap();
@@ -316,9 +347,11 @@ proptest! {
     fn money_is_conserved_in_any_tree(
         funding in 1u64..=50_000_000,
         bond in 0u64..=5_000_000,
+        fee_pct in 0u64..=40,
         ops in prop::collection::vec(op(), 0..60),
     ) {
-        let mut w = World::new(funding as u128, bond as u128);
+        let fee = (funding * fee_pct / 100) as u128;
+        let mut w = World::new(funding as u128, bond as u128, fee);
         w.check_invariants();
         for op in &ops {
             w.apply(op);
@@ -333,6 +366,40 @@ proptest! {
         // is exactly the 1% fee on those notes.
         prop_assert_eq!(w.treasury_got, w.note_face);
         prop_assert_eq!(w.treasury_got - w.treasury_spent, w.note_fees);
+        // The lead got its bond plus exactly the fee it earned: pro rata to
+        // the root's paid parts, rounded down, never more than the fee; no
+        // part paid, no fee.
+        prop_assert!(w.paid <= w.hired);
+        let earned = earned_fee(w.fee, w.paid, w.hired).unwrap();
+        prop_assert!(earned <= w.fee);
+        if w.paid == 0 {
+            prop_assert_eq!(earned, 0);
+        }
+        prop_assert_eq!(w.lead_got, w.bond + earned);
+    }
+
+    #[test]
+    fn earned_fee_is_exact_and_capped(
+        fee in any::<u128>(),
+        a in any::<u128>(),
+        b in any::<u128>(),
+        small in any::<(u64, u64, u64)>(),
+    ) {
+        let (paid, hired) = (a.min(b), a.max(b));
+        let got = earned_fee(fee, paid, hired).unwrap();
+        prop_assert!(got <= fee);
+        // Monotone in what was paid; everything paid earns the whole fee.
+        prop_assert!(earned_fee(fee, paid / 2, hired).unwrap() <= got);
+        if hired > 0 {
+            prop_assert_eq!(earned_fee(fee, hired, hired).unwrap(), fee);
+            // Symmetric in fee and paid (both are factors of one product).
+            prop_assert_eq!(mul_div_floor(paid, fee.min(hired), hired).unwrap(),
+                earned_fee(fee.min(hired), paid, hired).unwrap());
+        }
+        let (f, x, y) = (small.0 as u128, small.1 as u128, small.2 as u128);
+        let (p, h) = (x.min(y), x.max(y));
+        let want = (f * p).checked_div(h).unwrap_or(0);
+        prop_assert_eq!(earned_fee(f, p, h).unwrap(), want);
     }
 
     #[test]

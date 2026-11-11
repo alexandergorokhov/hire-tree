@@ -173,11 +173,11 @@ impl<'a> Run<'a> {
         }
         if let Some(p) = &pool {
             self.story.step(c, "The pool posts the job",
-                &format!("Target reached: the pool posts the job through the factory as its client, in one transfer. {root} is created from the global contract; the pool checked with the factory that this job is its own. The lead's fee is {:.0} fUSD; the rest comes back to the pool, then to its members.", fee as f64 / 1e6)).await;
+                &format!("Target reached: the pool posts the job through the factory as its client, in one transfer. {root} is created from the global contract; the pool checked with the factory that this job is its own. The lead's fee is up to {:.0} fUSD, earned in proportion to the parts that are paid; the rest comes back to the pool, then to its members.", fee as f64 / 1e6)).await;
             let _ = p;
         } else {
             self.story.step(c, &format!("Job {n}: the client posts"),
-                &format!("\"{task}\" One transfer of {:.0} fUSD to the factory creates {root} from the global contract; the lead's fee is {:.0}. The rest comes back to the client at the end.", budget as f64 / 1e6, fee as f64 / 1e6)).await;
+                &format!("\"{task}\" One transfer of {:.0} fUSD to the factory creates {root} from the global contract; the lead's fee is up to {:.0}, earned in proportion to the parts that are paid. The rest comes back to the client at the end.", budget as f64 / 1e6, fee as f64 / 1e6)).await;
         }
 
         // 2. Plan.
@@ -526,6 +526,9 @@ impl<'a> Run<'a> {
                 let _ = self.tool(&client, "approve", json!({ "job": root })).await;
             }
         }
+        // Every part is closed: the fee the root will pay the lead is final.
+        let earned =
+            self.tool(&lead, "get_job", json!({ "job": root })).await?["lead_fee_earned"].clone();
         self.tool(&keeper, "settle", json!({ "job": root })).await?;
         let mut recs = vec![];
         for w in &self.team.workers {
@@ -535,7 +538,7 @@ impl<'a> Run<'a> {
             recs.push(format!("{} {}/{} paid", w.name, r["paid"], r["jobs"]));
         }
         self.story.step(c, "The tree folds; track records update",
-            &format!("Each account pays out, proves its balance is zero and deletes itself; {} gets the unspent budget back. Each finished job reported its worker's outcome to the factory: {}.", if pool.is_some() { "the pool" } else { "the client" }, recs.join(", "))).await;
+            &format!("Each account pays out, proves its balance is zero and deletes itself; the lead earned {} of its {:.2} fee (in proportion to the parts paid) and {} gets the rest back. Each finished job reported its worker's outcome to the factory: {}.", crate::scene::usd(&earned), fee as f64 / 1e6, if pool.is_some() { "the pool" } else { "the client" }, recs.join(", "))).await;
         if let Some(p) = &pool {
             self.tool(&keeper, "finish_pool", json!({ "pool": p }))
                 .await?;

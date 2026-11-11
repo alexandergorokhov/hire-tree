@@ -927,15 +927,16 @@ async fn scene_full_tree_on_local_node() {
     assert_eq!(tr, 50 * USD + 300_000, "treasury earned the 1% fee");
     assert_eq!(tl, 20 * USD);
     assert_eq!(jk, 0);
-    assert_eq!(ld, 10 * USD, "the lead's fee, set by the client at post");
+    // The fee cap is 10; parts worth 50 of the 60 hired were paid (junk's
+    // 10 was refunded by the dispute), so the lead earns 10 x 50 / 60.
+    assert_eq!(ld, 8_333_333, "the lead's fee, earned on the paid parts");
     assert_eq!(
-        cl,
-        40 * USD,
-        "client gets back the unspent 30 + refunded 10"
+        cl, 41_666_667,
+        "client gets back the unspent 30 + refunded 10 + the unearned fee 1.666667"
     );
     assert_eq!(r + (tr - 50 * USD) + tl + jk + ld + cl, 100 * USD);
     story.step(&w, "100 in, 100 out",
-        "researcher 29.70 + treasury fee 0.30 + translator 20 + junk 0 + lead fee 10 + back to the client 40 (unspent 30 + refunded 10) = 100 fUSD. No account is left holding anything.",
+        "researcher 29.70 + treasury fee 0.30 + translator 20 + junk 0 + lead fee 8.33 (10 x 50 / 60: the junk part was not paid) + back to the client 41.67 (unspent 30 + refunded 10 + unearned fee 1.67) = 100 fUSD. No account is left holding anything.",
         &jobs, &people).await;
     // Track records the jobs reported to the factory as they deleted.
     let rec = w

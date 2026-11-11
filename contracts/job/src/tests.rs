@@ -315,21 +315,143 @@ fn root_with_fee(fee: u128) -> Job {
     )
 }
 
-#[test]
-fn root_fee_and_bond_go_to_the_manager_the_rest_back_to_the_client() {
-    let mut j = root_with_fee(10 * USD);
+/// A root with this fee, funded with `budget` by the client.
+fn root_funded_with_fee(fee: u128, budget: u128) -> Job {
+    let mut j = root_with_fee(fee);
     Ctx::new(ROOT, TOKEN).set();
-    j.ft_on_transfer(acc(CLIENT), U128(100 * USD), "fund".into());
-    j.ft_on_transfer(acc(LEAD), U128(5 * USD), "bond".into());
-    assert_eq!(j.get_job().unallocated.0, 90 * USD, "fee is never hireable");
+    j.ft_on_transfer(acc(CLIENT), U128(budget), "fund".into());
+    j
+}
+
+/// Child `n` (t{n}) tells the root it closed, sending back `returned`.
+fn root_child_closed(j: &mut Job, n: u32, returned: u128, paid: bool) {
+    let child = format!("t{n}.{ROOT}");
+    Ctx::new(ROOT, &child).set();
+    j.child_closed(U128(returned), Some(paid), None);
+}
+
+/// The client approves the root and anyone settles it.
+fn settle_root(j: &mut Job) {
     Ctx::new(ROOT, CLIENT).set();
     j.approve();
     Ctx::new(ROOT, EVE).set();
     j.settle();
+}
+
+#[test]
+fn root_fee_and_bond_go_to_the_manager_the_rest_back_to_the_client() {
+    let mut j = root_funded_with_fee(10 * USD, 100 * USD);
+    Ctx::new(ROOT, TOKEN).set();
+    j.ft_on_transfer(acc(LEAD), U128(5 * USD), "bond".into());
+    assert_eq!(j.get_job().unallocated.0, 90 * USD, "fee is never hireable");
+    // Its one part was paid: the whole fee is earned.
+    hired(&mut j, WORKER, 30 * USD);
+    root_child_closed(&mut j, 1, 0, true);
+    settle_root(&mut j);
     assert_eq!(call_args("storage_deposit")["account_id"], LEAD);
     assert_eq!(transfers(), vec![(LEAD.into(), (15 * USD).to_string())]);
     payee_cb(&mut j, ROOT, true);
-    assert_eq!(transfers(), vec![(CLIENT.into(), (90 * USD).to_string())]);
+    assert_eq!(transfers(), vec![(CLIENT.into(), (60 * USD).to_string())]);
+}
+
+#[test]
+fn the_lead_fee_is_earned_pro_rata_to_the_paid_parts() {
+    let mut j = root_funded_with_fee(10 * USD, 100 * USD);
+    hired(&mut j, WORKER, 30 * USD);
+    hired(&mut j, WORKER2, 10 * USD);
+    root_child_closed(&mut j, 1, 0, true);
+    root_child_closed(&mut j, 2, 10 * USD, false);
+    settle_root(&mut j);
+    // 10 * 30 / 40 = 7.5 to the lead; the other 2.5 goes back.
+    assert_eq!(transfers(), vec![(LEAD.into(), 7_500_000.to_string())]);
+    let e = &events("lead_fee")[0];
+    assert_eq!(e["fee"], (10 * USD).to_string());
+    assert_eq!(e["earned"], 7_500_000.to_string());
+    assert_eq!(e["paid"], (30 * USD).to_string());
+    assert_eq!(e["hired"], (40 * USD).to_string());
+    payee_cb(&mut j, ROOT, true);
+    assert_eq!(transfers(), vec![(CLIENT.into(), 62_500_000.to_string())]);
+}
+
+#[test]
+fn the_earned_fee_rounds_down_in_the_clients_favour() {
+    let mut j = root_funded_with_fee(10 * USD, 100 * USD);
+    for (n, w) in [WORKER, WORKER2, EVE].iter().enumerate() {
+        hired(&mut j, w, 10 * USD);
+        root_child_closed(
+            &mut j,
+            n as u32 + 1,
+            if n == 0 { 0 } else { 10 * USD },
+            n == 0,
+        );
+    }
+    settle_root(&mut j);
+    assert_eq!(transfers(), vec![(LEAD.into(), 3_333_333.to_string())]);
+    payee_cb(&mut j, ROOT, true);
+    assert_eq!(transfers(), vec![(CLIENT.into(), 86_666_667.to_string())]);
+}
+
+#[test]
+fn a_lead_whose_every_part_failed_earns_no_fee() {
+    let mut j = root_funded_with_fee(10 * USD, 100 * USD);
+    Ctx::new(ROOT, TOKEN).set();
+    j.ft_on_transfer(acc(LEAD), U128(5 * USD), "bond".into());
+    hired(&mut j, WORKER, 30 * USD);
+    hired(&mut j, WORKER2, 20 * USD);
+    // Fired and refunded: all of it came back.
+    root_child_closed(&mut j, 1, 30 * USD, false);
+    root_child_closed(&mut j, 2, 20 * USD, false);
+    settle_root(&mut j);
+    // Only the bond goes back to the lead; the whole fee to the client.
+    assert_eq!(transfers(), vec![(LEAD.into(), (5 * USD).to_string())]);
+    assert_eq!(events("lead_fee")[0]["earned"], "0");
+    payee_cb(&mut j, ROOT, true);
+    assert_eq!(transfers(), vec![(CLIENT.into(), (100 * USD).to_string())]);
+}
+
+#[test]
+fn a_root_without_children_pays_no_lead_fee() {
+    let mut j = root_funded_with_fee(10 * USD, 100 * USD);
+    settle_root(&mut j);
+    // No payee leg at all: the client is registered and gets everything.
+    assert_eq!(call_args("storage_deposit")["account_id"], CLIENT);
+    assert_eq!(transfers(), vec![(CLIENT.into(), (100 * USD).to_string())]);
+    assert_eq!(events("lead_fee")[0]["hired"], "0");
+}
+
+#[test]
+fn a_rolled_back_hire_does_not_count_for_the_fee() {
+    let mut j = root_funded_with_fee(10 * USD, 100 * USD);
+    let idx = hire_one(&mut j, WORKER, 30 * USD);
+    Ctx::new(ROOT, ROOT)
+        .results(vec![PromiseResult::Failed])
+        .set();
+    j.on_child_created(idx);
+    assert_eq!(j.get_job().children[0].state, ChildState::Failed);
+    hired(&mut j, WORKER2, 20 * USD);
+    root_child_closed(&mut j, 2, 0, true);
+    settle_root(&mut j);
+    assert_eq!(transfers(), vec![(LEAD.into(), (10 * USD).to_string())]);
+    payee_cb(&mut j, ROOT, true);
+    assert_eq!(transfers(), vec![(CLIENT.into(), (70 * USD).to_string())]);
+}
+
+#[test]
+fn the_view_shows_the_lead_fee_earned_so_far() {
+    let mut j = root_funded_with_fee(10 * USD, 100 * USD);
+    assert_eq!(j.get_job().lead_fee_earned, Some(U128(0)));
+    hired(&mut j, WORKER, 30 * USD);
+    assert_eq!(j.get_job().lead_fee_earned, Some(U128(0)), "still open");
+    root_child_closed(&mut j, 1, 0, true);
+    let v = j.get_job();
+    assert_eq!(v.lead_fee_earned, Some(U128(10 * USD)));
+    assert_eq!(v.children[0].paid, Some(true));
+    hired(&mut j, WORKER2, 10 * USD);
+    root_child_closed(&mut j, 2, 10 * USD, false);
+    let v = j.get_job();
+    assert_eq!(v.lead_fee_earned, Some(U128(7_500_000)));
+    assert_eq!(v.children[1].paid, Some(false));
+    assert_eq!(funded_sub(USD, USD).get_job().lead_fee_earned, None);
 }
 
 #[test]
@@ -2357,6 +2479,21 @@ mod check_note_dispute {
         Ctx::new(T1, EVE).at(AFTER).set();
         j.settle();
         assert_eq!(transfers(), vec![(TREASURY.into(), PAY.to_string())]);
+    }
+
+    #[test]
+    fn a_note_bought_part_counts_as_paid_for_the_lead_fee() {
+        // The worker was paid early by the lead's treasury: the notice
+        // tells the parent the part was paid, so the root counts it for
+        // the lead's fee (`the_lead_fee_is_earned_pro_rata_to_the_paid_parts`).
+        let mut j = checked();
+        buy(&mut j, TREASURY, QUOTE);
+        note_paid(&mut j, ok(b""));
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+        payee_cb(&mut j, T1, true);
+        balance_cb(&mut j, T1, ok(&u128_json(0)));
+        assert_eq!(call_args("child_closed")["paid"], true);
     }
 
     #[test]

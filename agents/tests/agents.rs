@@ -43,12 +43,19 @@ async fn check_outcome(c: &Chain, run: &hire_tree_agents::agents::Run<'_>) {
     assert_eq!(res["paid"], json!(5), "researcher {res}");
     assert_eq!(tra["paid"], json!(2), "translator {tra}");
     assert_eq!(c.ft(&w("cheapbot")).await, 0);
-    // Money: each job costs the client fee 10 + paid parts; notes bought at 1% off.
-    // Job 1 pays research 30 only; job 2 pays 30 + 20 + 10.
+    // Money: each job costs the client the fee the lead earned + paid parts;
+    // notes bought at 1% off. The fee is earned pro rata to the parts paid:
+    // job 1 pays research 30 of the 48 hired (cheapbot's 12 and 6 failed),
+    // so its fee of 10 earns 10 x 30 / 48 = 6.25; job 2 pays 30 + 20 + 10
+    // and job 3 (pooled, fee 9) pays every part, so both earn the whole fee.
     let client = c.ft(&t.client.id).await;
     let lead = c.ft(&t.lead.id).await;
     let paid_out = c.ft(&w("researcher")).await + c.ft(&w("translator")).await;
-    assert_eq!(lead, 29 * USD, "lead keeps three fees (10 + 10 + 9)");
+    assert_eq!(
+        lead,
+        6_250_000 + 10 * USD + 9 * USD,
+        "lead keeps three earned fees (6.25 + 10 + 9)"
+    );
     let mut members = 0;
     for m in &t.members {
         // Each put in 30 of the pool's 90; 90 - 9 fee - 60 work = 21 came
@@ -64,8 +71,8 @@ async fn check_outcome(c: &Chain, run: &hire_tree_agents::agents::Run<'_>) {
     );
     assert_eq!(
         client,
-        240 * USD - 20 * USD - 90 * USD - 30 * USD + 7 * USD,
-        "client pays fees + delivered work only"
+        240 * USD - (6_250_000 + 30 * USD) - (10 * USD + 60 * USD) - 30 * USD + 7 * USD,
+        "client pays earned fees + delivered work only"
     );
     for (name, id) in &run.story.jobs {
         if name == "pool" {

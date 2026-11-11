@@ -45,7 +45,8 @@ struct PostMsg {
     spec_hash: String,
     window_secs: u64,
     treasury: Option<AccountId>,
-    /// The lead's fee, paid at settle; the rest goes back to the client.
+    /// The lead's fee cap. At settle the lead earns it pro rata to the root's
+    /// parts that were paid; the rest goes back to the client.
     lead_fee: Option<U128>,
 }
 
@@ -585,7 +586,8 @@ impl Factory {
     /// transaction): "get this spec done for `budget`; a lead may keep up to
     /// `max_lead_fee`". Any lead agent may fill it; the lead's fee rises from 0
     /// at `starts_ns` to `max_lead_fee` at `ends_ns` (a Dutch auction), so lead
-    /// agents compete on how soon they fill. The first valid fill posts the
+    /// agents compete on how soon they fill. The fee a fill locks in is a
+    /// cap: the job pays the lead only the part its paid parts earn. The first valid fill posts the
     /// job from the client's deposit with the caller as its manager; the
     /// nonce is then spent, so an intent fills once.
     pub fn fill_intent(

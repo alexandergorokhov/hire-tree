@@ -93,7 +93,11 @@ claimed.
 Each round each client SHALL sign a job intent for one of three briefs;
 leads fill them in order of their reserve fee (the lowest fills first and
 picks workers first). The first to fill asks 0.5 fUSD more next round, the
-last 0.5 less. The run logs each fill with its lead fee.
+last 0.5 less. The run logs each fill with its lead fee (the cap) and, read
+from the root's `get_job` once every part closed, the fee it earned
+(`lead_fee_paid`): `scripts/swarm-check.py` SHALL find it equal to
+`fee x paid / hired` over that lead's level-1 parts, rounded down.
+- unit: `scripts/test-swarm-check.py` (a run that paid the whole fee whatever the outcome fails)
 
 ### Requirement: The lead's model plans the tree
 The lead that fills an intent SHALL ask its model which catalog parts the

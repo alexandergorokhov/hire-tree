@@ -7,7 +7,7 @@ it were real. Each row names the test that shows the answer.
 | Actor | Wants |
 |---|---|
 | Client | good work, refund of unspent budget |
-| Lead (manager) | margin; hires workers from the client's budget |
+| Lead (manager) | its fee (a cap the client sets, earned pro rata to the parts that are paid); hires workers from the client's budget |
 | Lead's treasury | 1% for paying workers early |
 | Worker | to be paid, early if possible |
 | Cheater (any worker or stranger) | pay for junk, someone else's pay, or a stuck tree |
@@ -30,6 +30,7 @@ it were real. Each row names the test that shows the answer.
 | A contractor disputes honest sub-work and keeps the pay | signed panels that get no answer or disagree abstain; only two scored junk votes uphold | `a_dispute_with_empty_panels_is_rejected`, `a_buyer_cannot_win_a_dispute_with_one_low_answer_against_a_high_one` |
 | A hostile MCP caller crashes the playground | stake capped at 5 NEAR with checked sums; a panic in one call becomes an error reply | agents `a_hostile_stake_is_refused_not_a_crash` |
 | Money rule broken by any sequence | property test over 10,000 random trees with random transfer failures | `core/tests/money_prop.rs` |
+| A lead hires junk (or nothing), every part is fired or refunded, and it still collects its whole fee | the root's fee is a cap: settle pays the lead `fee x paid / hired` (rounded down, the client keeps the unit) over the root's own closed parts, where a part counts as paid when its `child_closed` reported the worker paid (a Job Note counts); no part paid or no part hired pays no fee, only the bond. The unearned fee goes back to the client (or the pool). The property test checks the lead's take against the rule in every random tree | `a_lead_whose_every_part_failed_earns_no_fee`, `a_root_without_children_pays_no_lead_fee`, `the_lead_fee_is_earned_pro_rata_to_the_paid_parts`, `the_earned_fee_rounds_down_in_the_clients_favour`, `a_rolled_back_hire_does_not_count_for_the_fee`, `a_note_bought_part_counts_as_paid_for_the_lead_fee`, `a_root_with_no_paid_part_pays_no_fee` |
 | A contractor (a sub-job's worker who hires) spends money that is not its own | it hires only out of its own pay (`Ledger::carve`), must keep part of it, cannot add a sub-budget; the lead's unallocated budget is untouched | `a_contractor_carves_its_own_pay_and_gets_refunds_back`, `a_contractor_cannot_bid_out_its_whole_pay` |
 | A contractor's sub-agent fails and the refund goes to the wrong account | a closed sub-job's return becomes the contractor's pay again (`restore`); a failed hire restores it too | `unspent_or_refunded_sub_pay_goes_back_to_the_contractor`, `a_failed_contractor_hire_restores_its_pay` |
 | The treasury buys a contractor's note, then a sub-job refund changes what the contractor is owed | the note is not sellable while the contractor's sub-jobs are open | `a_contractors_note_waits_for_its_sub_jobs` |
@@ -90,7 +91,7 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | Slot opened for more than the job holds | `max <= unallocated budget` | `slot_max_cannot_exceed_the_free_budget` |
 | Bid spam fills a slot | 16 bidders per slot, 16 slots per job; a bidder's second bid replaces its first | `bids_per_slot_are_capped`, `a_new_bid_replaces_the_bidders_old_one` |
 | Late bid or award before close | refused both ways | `late_bid_refused`, `award_before_close_refused` |
-| Lead bids through another account and awards itself | possible, as with a direct `hire`: the lead already chooses who works. The client's protection is the fixed lead fee, the judge's score and settle (unscored work is not paid unless approved) | not preventable on-chain |
+| Lead bids through another account and awards itself | possible, as with a direct `hire`: the lead already chooses who works. The client's protection is that the lead fee is earned only on paid parts, the judge's score and settle (unscored work is not paid unless approved) | not preventable on-chain |
 | Fake bidders fill the job's storage for free | a new bid attaches 0.001 NEAR for its own storage; at most 16 bids per slot, 16 slots | `a_new_bid_pays_for_its_storage` |
 | A backer is drained by a premium it never agreed to | the premium is fixed by the bidder before anyone backs, at most half the bidder's own bond, and paid only when the work is paid | `a_premium_above_half_the_bond_is_refused`, `a_backer_of_paid_work_gets_its_near_back_plus_the_premium` |
 | A junk bot backs itself to look vouched | the bidder and the buyer cannot back; a backing from a fresh account of the same operator is possible, but that account loses the NEAR on junk like a bigger bond would | `a_bidder_cannot_back_itself`, `a_backer_of_junk_loses_its_near_to_the_buyer` |
@@ -222,12 +223,23 @@ for the bid calls.
   failed only the empty child's few mNEAR of storage would stay behind.
 - NEAR from a failed create goes back to the job, not the manager (a few
   mNEAR; it flows up the tree on delete).
-- The lead's fee is fixed by the client at post; the rest of the root's
-  budget goes back to the client at settle (`root_fee_and_bond_go_to_the_manager_the_rest_back_to_the_client`).
-  Root (client) disputes are still cut; the client's protection is the fee
-  cap and the approval window.
-- Root (client) disputes are cut (plan cut order 4); a client's protection
-  is the approval window and that the lead only gets the remainder.
+- The lead's fee is a cap the client sets at post (or the Dutch auction of
+  a signed job offer, or a pool's terms). At settle the lead earns
+  `fee x paid / hired` over the root's own parts, so a lead whose parts
+  were all fired or refunded, or that hired nothing, gets only its bond;
+  everything else goes back to the client
+  (`root_fee_and_bond_go_to_the_manager_the_rest_back_to_the_client`,
+  `a_lead_whose_every_part_failed_earns_no_fee`). Root (client) disputes
+  are still cut (plan cut order 4): the client cannot dispute a part
+  itself. Its protection is the fee rule, the judge's check on every part,
+  and the approval window. Limits of the rule: the weight is each part's
+  price, so a lead that hires one small part from its own second account
+  and gets it paid (past the check, or by approving it when the check was
+  unclear, or in receipt-only mode with no checker) earns the whole fee; a fired part counts
+  against the fee even when its runner-up was paid (by design: the lead
+  earns less for picking a failing worker first); and a part
+  counts as paid when its worker was paid, including a Job Note the lead's
+  own treasury bought before a later upheld dispute.
 - The checker is pinned per factory, not per job; changing it affects only
   new jobs.
 - Testnet only; the lead's bond is recorded but not yet slashable.
