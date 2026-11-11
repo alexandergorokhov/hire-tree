@@ -1,0 +1,3042 @@
+{
+  "agents": [
+    {
+      "agent": "res-steady",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 85,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "research",
+      "storm": false,
+      "strategy": "steady",
+      "wins": 0
+    },
+    {
+      "agent": "res-lean",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 57,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "research",
+      "storm": false,
+      "strategy": "lean",
+      "wins": 0
+    },
+    {
+      "agent": "res-greedy",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 97,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "research",
+      "storm": false,
+      "strategy": "greedy",
+      "wins": 0
+    },
+    {
+      "agent": "res-adaptive",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 55,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "research",
+      "storm": false,
+      "strategy": "adaptive",
+      "wins": 0
+    },
+    {
+      "agent": "res-junk",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 2,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 45,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "research",
+      "storm": false,
+      "strategy": "junk",
+      "wins": 2
+    },
+    {
+      "agent": "res-sloppy",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 56,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "research",
+      "storm": false,
+      "strategy": "sloppy",
+      "wins": 0
+    },
+    {
+      "agent": "res-undercut",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 55,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "research",
+      "storm": false,
+      "strategy": "undercut",
+      "wins": 0
+    },
+    {
+      "agent": "res-model",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 46.035,
+      "final_rate": 45,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 3,
+        "delivered": 3,
+        "jobs": 3,
+        "junk": 0,
+        "paid": 3,
+        "paid_value": "46500000",
+        "payers": 2,
+        "score_sum": 26,
+        "scored": 3,
+        "unpaid_value": "0"
+      },
+      "skill": "research",
+      "storm": false,
+      "strategy": "model",
+      "wins": 3
+    },
+    {
+      "agent": "res-contractor",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 1,
+      "earned": 28.809,
+      "final_rate": 45,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 2,
+        "delivered": 2,
+        "jobs": 2,
+        "junk": 0,
+        "paid": 2,
+        "paid_value": "29100000",
+        "payers": 2,
+        "score_sum": 17,
+        "scored": 2,
+        "unpaid_value": "0"
+      },
+      "skill": "research",
+      "storm": false,
+      "strategy": "contractor",
+      "wins": 2
+    },
+    {
+      "agent": "res-polished",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 17.4,
+      "final_rate": 58,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 1,
+        "delivered": 1,
+        "jobs": 1,
+        "junk": 0,
+        "paid": 1,
+        "paid_value": "17400000",
+        "payers": 1,
+        "score_sum": 6,
+        "scored": 1,
+        "unpaid_value": "0"
+      },
+      "skill": "research",
+      "storm": false,
+      "strategy": "polished",
+      "wins": 1
+    },
+    {
+      "agent": "tra-steady",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 82,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "translate",
+      "storm": false,
+      "strategy": "steady",
+      "wins": 0
+    },
+    {
+      "agent": "tra-lean",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 61,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "translate",
+      "storm": false,
+      "strategy": "lean",
+      "wins": 0
+    },
+    {
+      "agent": "tra-greedy",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 100,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "translate",
+      "storm": false,
+      "strategy": "greedy",
+      "wins": 0
+    },
+    {
+      "agent": "tra-adaptive",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 55,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "translate",
+      "storm": false,
+      "strategy": "adaptive",
+      "wins": 0
+    },
+    {
+      "agent": "tra-junk",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 2,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 42,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "translate",
+      "storm": false,
+      "strategy": "junk",
+      "wins": 2
+    },
+    {
+      "agent": "tra-undercut",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 55,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "translate",
+      "storm": false,
+      "strategy": "undercut",
+      "wins": 0
+    },
+    {
+      "agent": "tra-model",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 30.096,
+      "final_rate": 42,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 3,
+        "delivered": 3,
+        "jobs": 3,
+        "junk": 0,
+        "paid": 3,
+        "paid_value": "30400000",
+        "payers": 3,
+        "score_sum": 21,
+        "scored": 3,
+        "unpaid_value": "0"
+      },
+      "skill": "translate",
+      "storm": false,
+      "strategy": "model",
+      "wins": 3
+    },
+    {
+      "agent": "tra-contractor",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 45,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "translate",
+      "storm": false,
+      "strategy": "contractor",
+      "wins": 0
+    },
+    {
+      "agent": "tra-polished",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 33.0,
+      "final_rate": 55,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 3,
+        "delivered": 3,
+        "jobs": 3,
+        "junk": 0,
+        "paid": 3,
+        "paid_value": "33000000",
+        "payers": 2,
+        "score_sum": 18,
+        "scored": 3,
+        "unpaid_value": "0"
+      },
+      "skill": "translate",
+      "storm": false,
+      "strategy": "polished",
+      "wins": 3
+    },
+    {
+      "agent": "sum-steady",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 82,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "summary",
+      "storm": false,
+      "strategy": "steady",
+      "wins": 0
+    },
+    {
+      "agent": "sum-lean",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 19.602,
+      "final_rate": 66,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 3,
+        "delivered": 3,
+        "jobs": 3,
+        "junk": 0,
+        "paid": 3,
+        "paid_value": "19800000",
+        "payers": 2,
+        "score_sum": 27,
+        "scored": 3,
+        "unpaid_value": "0"
+      },
+      "skill": "summary",
+      "storm": false,
+      "strategy": "lean",
+      "wins": 3
+    },
+    {
+      "agent": "sum-adaptive",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 55,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "summary",
+      "storm": false,
+      "strategy": "adaptive",
+      "wins": 0
+    },
+    {
+      "agent": "sum-junk",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 3,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 42,
+      "made": 0,
+      "quit": true,
+      "record": {
+        "checked": 0,
+        "delivered": 1,
+        "jobs": 1,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 2,
+        "scored": 1,
+        "unpaid_value": "4200000"
+      },
+      "skill": "summary",
+      "storm": false,
+      "strategy": "junk",
+      "wins": 3
+    },
+    {
+      "agent": "sum-undercut",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 55,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "summary",
+      "storm": false,
+      "strategy": "undercut",
+      "wins": 0
+    },
+    {
+      "agent": "sum-model",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 15.048,
+      "final_rate": 42,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 3,
+        "delivered": 3,
+        "jobs": 3,
+        "junk": 0,
+        "paid": 3,
+        "paid_value": "15200000",
+        "payers": 2,
+        "score_sum": 25,
+        "scored": 3,
+        "unpaid_value": "0"
+      },
+      "skill": "summary",
+      "storm": false,
+      "strategy": "model",
+      "wins": 3
+    },
+    {
+      "agent": "sum-polished",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 16.5,
+      "final_rate": 55,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 3,
+        "delivered": 3,
+        "jobs": 3,
+        "junk": 0,
+        "paid": 3,
+        "paid_value": "16500000",
+        "payers": 1,
+        "score_sum": 24,
+        "scored": 3,
+        "unpaid_value": "0"
+      },
+      "skill": "summary",
+      "storm": false,
+      "strategy": "polished",
+      "wins": 3
+    },
+    {
+      "agent": "sou-steady",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 89,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "sources",
+      "storm": false,
+      "strategy": "steady",
+      "wins": 0
+    },
+    {
+      "agent": "sou-lean",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 68,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "sources",
+      "storm": false,
+      "strategy": "lean",
+      "wins": 0
+    },
+    {
+      "agent": "sou-junk",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 1,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 44,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "sources",
+      "storm": false,
+      "strategy": "junk",
+      "wins": 1
+    },
+    {
+      "agent": "sou-contractor",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 72,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "sources",
+      "storm": false,
+      "strategy": "contractor",
+      "wins": 0
+    },
+    {
+      "agent": "glo-steady",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 89,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "glossary",
+      "storm": false,
+      "strategy": "steady",
+      "wins": 0
+    },
+    {
+      "agent": "glo-lean",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 68,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "glossary",
+      "storm": false,
+      "strategy": "lean",
+      "wins": 0
+    },
+    {
+      "agent": "glo-junk",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 44,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "glossary",
+      "storm": false,
+      "strategy": "junk",
+      "wins": 0
+    },
+    {
+      "agent": "fet-steady",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 93,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "fetch",
+      "storm": false,
+      "strategy": "steady",
+      "wins": 0
+    },
+    {
+      "agent": "fet-lean",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 65,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "fetch",
+      "storm": false,
+      "strategy": "lean",
+      "wins": 0
+    },
+    {
+      "agent": "fet-junk",
+      "backer_strict": 85,
+      "backs_lost": 0,
+      "bonds_lost": 0,
+      "bought": 0,
+      "earned": 0.0,
+      "final_rate": 48,
+      "made": 0,
+      "quit": false,
+      "record": {
+        "checked": 0,
+        "delivered": 0,
+        "jobs": 0,
+        "junk": 0,
+        "paid": 0,
+        "paid_value": "0",
+        "payers": 0,
+        "score_sum": 0,
+        "scored": 0,
+        "unpaid_value": "0"
+      },
+      "skill": "fetch",
+      "storm": false,
+      "strategy": "junk",
+      "wins": 0
+    }
+  ],
+  "allowlist": null,
+  "arm": "records",
+  "award_mismatches": 0,
+  "award_rule": "on-chain (award_best)",
+  "backer_asks_too_low": 2,
+  "bid_errors": 0,
+  "blind": false,
+  "bond_near": 0.049999999999999996,
+  "job_budget": 70,
+  "junk_respawns": 7,
+  "late_audits": 0,
+  "late_reveals": 0,
+  "leads": [
+    {
+      "lead": "price",
+      "max_pct": 100,
+      "record_weight": 150,
+      "spent": 97.7,
+      "unfilled": 0
+    },
+    {
+      "lead": "quality",
+      "max_pct": 100,
+      "record_weight": 400,
+      "spent": 82.5,
+      "unfilled": 0
+    },
+    {
+      "lead": "budget",
+      "max_pct": 75,
+      "record_weight": 150,
+      "spent": 84.1,
+      "unfilled": 0
+    }
+  ],
+  "model": "NEAR AI Cloud (Qwen/Qwen3-VL-30B-A3B-Instruct) for work, judging, the model bidder and contractors' make-or-buy, every answer signed; agents adapt their asks; buyers pick by price, on-chain record and a learned newcomer premium",
+  "network": "near-sandbox (local node)",
+  "platform_fee_bps": 50,
+  "platform_fees": 3.15,
+  "premiums": {
+    "lead-budget": 40,
+    "lead-price": 120,
+    "lead-quality": 129,
+    "res-contractor": 100
+  },
+  "rounds": [
+    {
+      "intents": [
+        {
+          "client": "price",
+          "lead": "quality",
+          "lead_fee": 4.872974,
+          "lead_fee_paid": 4.872974,
+          "reserve": 4.0,
+          "root": "job-1.hub.sandbox"
+        },
+        {
+          "client": "quality",
+          "lead": "price",
+          "lead_fee": 5.136844,
+          "lead_fee_paid": 5.136844,
+          "reserve": 5.0,
+          "root": "job-2.hub.sandbox"
+        },
+        {
+          "client": "budget",
+          "lead": "budget",
+          "lead_fee": 6.277506,
+          "lead_fee_paid": 6.277506,
+          "reserve": 6.0,
+          "root": "job-3.hub.sandbox"
+        }
+      ],
+      "order": [
+        "quality",
+        "price",
+        "budget"
+      ],
+      "parts": [
+        {
+          "audit": null,
+          "backer": null,
+          "bids": [
+            {
+              "agent": "res-steady",
+              "price": 27.0
+            },
+            {
+              "agent": "res-lean",
+              "price": 18.6
+            },
+            {
+              "agent": "res-greedy",
+              "price": 29.1
+            },
+            {
+              "agent": "res-adaptive",
+              "price": 24.0
+            },
+            {
+              "agent": "res-junk",
+              "price": 13.5
+            },
+            {
+              "agent": "res-sloppy",
+              "price": 18.3
+            },
+            {
+              "agent": "res-undercut",
+              "price": 22.5
+            },
+            {
+              "agent": "res-model",
+              "price": 16.5,
+              "why": "Matching cost floor to ensure profitability while remaining competitive."
+            },
+            {
+              "agent": "res-contractor",
+              "price": 21.9
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
+            }
+          ],
+          "buyer": "lead-quality",
+          "fired": true,
+          "id": 0,
+          "job": "t1.job-1.hub.sandbox",
+          "lead": "quality",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 30.0,
+          "newcomer": true,
+          "newcomer_premium": 0,
+          "no_runner_up": null,
+          "paid": false,
+          "paid_now": false,
+          "parent": null,
+          "price": 13.5,
+          "rate": 45,
+          "replaces": null,
+          "root": "job-1.hub.sandbox",
+          "score": 2,
+          "sealed": true,
+          "skill": "research",
+          "spec": "85c631bc922a32029700f32a2600dd71e7f790fa3c8470f43b8bf15e92aeb6b0",
+          "strategy": "junk",
+          "vouched": false,
+          "winner": "res-junk"
+        },
+        {
+          "audit": null,
+          "backer": null,
+          "bids": [
+            {
+              "agent": "sum-steady",
+              "price": 8.7
+            },
+            {
+              "agent": "sum-lean",
+              "price": 6.6
+            },
+            {
+              "agent": "sum-adaptive",
+              "price": 7.7
+            },
+            {
+              "agent": "sum-junk",
+              "price": 4.2
+            },
+            {
+              "agent": "sum-undercut",
+              "price": 7.2
+            },
+            {
+              "agent": "sum-model",
+              "price": 5.5,
+              "why": "Matching cost floor to ensure profitability while remaining competitive."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
+            }
+          ],
+          "buyer": "lead-quality",
+          "fired": true,
+          "id": 1,
+          "job": "t2.job-1.hub.sandbox",
+          "lead": "quality",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 10.0,
+          "newcomer": true,
+          "newcomer_premium": 0,
+          "no_runner_up": null,
+          "paid": false,
+          "paid_now": false,
+          "parent": null,
+          "price": 4.2,
+          "rate": 42,
+          "replaces": null,
+          "root": "job-1.hub.sandbox",
+          "score": 2,
+          "sealed": true,
+          "skill": "summary",
+          "spec": "d83f8db0a65fdbf76d10d675502b316137e61cf22d08c9ee01ca8a2651c8bc90",
+          "strategy": "junk",
+          "vouched": false,
+          "winner": "sum-junk"
+        },
+        {
+          "audit": null,
+          "backer": null,
+          "bids": [
+            {
+              "agent": "tra-steady",
+              "price": 17.4
+            },
+            {
+              "agent": "tra-lean",
+              "price": 13.2
+            },
+            {
+              "agent": "tra-greedy",
+              "price": 20.0
+            },
+            {
+              "agent": "tra-adaptive",
+              "price": 15.4
+            },
+            {
+              "agent": "tra-junk",
+              "price": 8.4
+            },
+            {
+              "agent": "tra-undercut",
+              "price": 14.4
+            },
+            {
+              "agent": "tra-model",
+              "price": 11.0,
+              "why": "Matching cost floor to ensure profitability while remaining competitive."
+            },
+            {
+              "agent": "tra-contractor",
+              "price": 14.0
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
+            }
+          ],
+          "buyer": "lead-price",
+          "fired": true,
+          "id": 2,
+          "job": "t1.job-2.hub.sandbox",
+          "lead": "price",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 20.0,
+          "newcomer": true,
+          "newcomer_premium": 0,
+          "no_runner_up": null,
+          "paid": false,
+          "paid_now": false,
+          "parent": null,
+          "price": 8.4,
+          "rate": 42,
+          "replaces": null,
+          "root": "job-2.hub.sandbox",
+          "score": 2,
+          "sealed": false,
+          "skill": "translate",
+          "spec": "8cc6f79a9d21cc8377082c10cd4f6a72b4ed91fbef7e0bc05a95ac7800a4dfc0",
+          "strategy": "junk",
+          "vouched": false,
+          "winner": "tra-junk"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
+          "backer": null,
+          "bids": [
+            {
+              "agent": "sum-steady",
+              "price": 8.7
+            },
+            {
+              "agent": "sum-lean",
+              "price": 6.6
+            },
+            {
+              "agent": "sum-adaptive",
+              "price": 7.7
+            },
+            {
+              "agent": "sum-junk",
+              "price": 4.2
+            },
+            {
+              "agent": "sum-undercut",
+              "price": 7.2
+            },
+            {
+              "agent": "sum-model",
+              "price": 5.5,
+              "why": "Matching cost floor to ensure profitability while remaining competitive."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
+            }
+          ],
+          "buyer": "lead-price",
+          "fired": false,
+          "id": 3,
+          "job": "t2.job-2.hub.sandbox",
+          "lead": "price",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 10.0,
+          "newcomer": true,
+          "newcomer_premium": 0,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 5.5,
+          "rate": 55,
+          "replaces": null,
+          "root": "job-2.hub.sandbox",
+          "score": 8,
+          "sealed": false,
+          "skill": "summary",
+          "spec": "bcf75163e2837f1a29a2fafc6bfd10e3194ae40255b423060f32f70960f28996",
+          "strategy": "model",
+          "vouched": false,
+          "winner": "sum-model"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              9,
+              8,
+              8
+            ]
+          },
+          "backer": null,
+          "bids": [
+            {
+              "agent": "res-steady",
+              "price": 22.5
+            },
+            {
+              "agent": "res-lean",
+              "price": 18.6
+            },
+            {
+              "agent": "res-adaptive",
+              "price": 22.5
+            },
+            {
+              "agent": "res-junk",
+              "price": 13.5
+            },
+            {
+              "agent": "res-sloppy",
+              "price": 18.3
+            },
+            {
+              "agent": "res-undercut",
+              "price": 22.5
+            },
+            {
+              "agent": "res-model",
+              "price": 16.5,
+              "why": "Matching cost floor to ensure profitability while remaining competitive."
+            },
+            {
+              "agent": "res-contractor",
+              "price": 21.9
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
+            }
+          ],
+          "buyer": "lead-budget",
+          "fired": false,
+          "id": 4,
+          "job": "t1.job-3.hub.sandbox",
+          "lead": "budget",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 22.5,
+          "newcomer": true,
+          "newcomer_premium": 0,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 16.5,
+          "rate": 55,
+          "replaces": null,
+          "root": "job-3.hub.sandbox",
+          "score": 9,
+          "sealed": false,
+          "skill": "research",
+          "spec": "538342a1880e246c81eac0b3883a3bcc901173653ddaeaac302447337646a516",
+          "strategy": "model",
+          "vouched": false,
+          "winner": "res-model"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              6,
+              6,
+              6
+            ]
+          },
+          "backer": null,
+          "bids": [
+            {
+              "agent": "tra-steady",
+              "price": 15.0
+            },
+            {
+              "agent": "tra-lean",
+              "price": 13.2
+            },
+            {
+              "agent": "tra-adaptive",
+              "price": 15.0
+            },
+            {
+              "agent": "tra-junk",
+              "price": 8.4
+            },
+            {
+              "agent": "tra-undercut",
+              "price": 14.4
+            },
+            {
+              "agent": "tra-model",
+              "price": 11.0,
+              "why": "Matching cost floor to ensure profitability while remaining competitive."
+            },
+            {
+              "agent": "tra-contractor",
+              "price": 14.0
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
+            }
+          ],
+          "buyer": "lead-budget",
+          "fired": false,
+          "id": 5,
+          "job": "t2.job-3.hub.sandbox",
+          "lead": "budget",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 15.0,
+          "newcomer": true,
+          "newcomer_premium": 0,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 11.0,
+          "rate": 55,
+          "replaces": null,
+          "root": "job-3.hub.sandbox",
+          "score": 6,
+          "sealed": false,
+          "skill": "translate",
+          "spec": "d0d7f34d3d6bd1635abb1cf28aaa0efa69d420f5c6f2df56755954dc9b2abf09",
+          "strategy": "model",
+          "vouched": false,
+          "winner": "tra-model"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
+          "backer": null,
+          "bids": [
+            {
+              "agent": "sum-steady",
+              "price": 7.5
+            },
+            {
+              "agent": "sum-lean",
+              "price": 6.6
+            },
+            {
+              "agent": "sum-adaptive",
+              "price": 7.5
+            },
+            {
+              "agent": "sum-junk",
+              "price": 4.2
+            },
+            {
+              "agent": "sum-undercut",
+              "price": 7.2
+            },
+            {
+              "agent": "sum-model",
+              "price": 5.5,
+              "why": "Matching cost floor to ensure profitability while remaining competitive."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
+            }
+          ],
+          "buyer": "lead-budget",
+          "fired": false,
+          "id": 6,
+          "job": "t3.job-3.hub.sandbox",
+          "lead": "budget",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 7.5,
+          "newcomer": true,
+          "newcomer_premium": 0,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": false,
+          "parent": null,
+          "price": 5.5,
+          "rate": 55,
+          "replaces": null,
+          "root": "job-3.hub.sandbox",
+          "score": 8,
+          "sealed": false,
+          "skill": "summary",
+          "spec": "3193fa269a8eaab01a361d01d67dcde76761004a98fd8115a62991c51627c3fb",
+          "strategy": "polished",
+          "vouched": false,
+          "winner": "sum-polished"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              6,
+              8,
+              6
+            ]
+          },
+          "backer": null,
+          "bids": [],
+          "buyer": "lead-quality",
+          "fired": false,
+          "id": 7,
+          "job": "t3.job-1.hub.sandbox",
+          "lead": "quality",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 30.0,
+          "newcomer": true,
+          "newcomer_premium": 0,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": false,
+          "parent": null,
+          "price": 17.4,
+          "rate": 58,
+          "replaces": 0,
+          "root": "job-1.hub.sandbox",
+          "score": 6,
+          "sealed": true,
+          "skill": "research",
+          "spec": "85c631bc922a32029700f32a2600dd71e7f790fa3c8470f43b8bf15e92aeb6b0",
+          "strategy": "polished",
+          "vouched": false,
+          "winner": "res-polished"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              9,
+              9,
+              9
+            ]
+          },
+          "backer": null,
+          "bids": [],
+          "buyer": "lead-quality",
+          "fired": false,
+          "id": 8,
+          "job": "t4.job-1.hub.sandbox",
+          "lead": "quality",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 10.0,
+          "newcomer": true,
+          "newcomer_premium": 0,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 6.6,
+          "rate": 66,
+          "replaces": 1,
+          "root": "job-1.hub.sandbox",
+          "score": 9,
+          "sealed": true,
+          "skill": "summary",
+          "spec": "d83f8db0a65fdbf76d10d675502b316137e61cf22d08c9ee01ca8a2651c8bc90",
+          "strategy": "lean",
+          "vouched": false,
+          "winner": "sum-lean"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              6,
+              6,
+              6
+            ]
+          },
+          "backer": null,
+          "bids": [],
+          "buyer": "lead-price",
+          "fired": false,
+          "id": 9,
+          "job": "t3.job-2.hub.sandbox",
+          "lead": "price",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 20.0,
+          "newcomer": true,
+          "newcomer_premium": 0,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": false,
+          "parent": null,
+          "price": 11.0,
+          "rate": 55,
+          "replaces": 2,
+          "root": "job-2.hub.sandbox",
+          "score": 6,
+          "sealed": false,
+          "skill": "translate",
+          "spec": "8cc6f79a9d21cc8377082c10cd4f6a72b4ed91fbef7e0bc05a95ac7800a4dfc0",
+          "strategy": "polished",
+          "vouched": false,
+          "winner": "tra-polished"
+        }
+      ],
+      "plans": [
+        {
+          "brief": "An English market note on agent payments: research the facts and summarize them.",
+          "lead": "quality",
+          "parts": [
+            {
+              "max": 30.0,
+              "skill": "research"
+            },
+            {
+              "max": 10.0,
+              "skill": "summary"
+            }
+          ],
+          "why": "The brief requires research and summarization; translation is unnecessary as the output is in English."
+        },
+        {
+          "brief": "Localize our release notes into Spanish and add a short summary.",
+          "lead": "price",
+          "parts": [
+            {
+              "max": 20.0,
+              "skill": "translate"
+            },
+            {
+              "max": 10.0,
+              "skill": "summary"
+            }
+          ],
+          "why": "The brief requires translation and summarization; research is not needed."
+        },
+        {
+          "brief": "Explain NEAR intents for a Spanish-speaking board: research, a Spanish translation and a one-line summary.",
+          "lead": "budget",
+          "parts": [
+            {
+              "max": 22.5,
+              "skill": "research"
+            },
+            {
+              "max": 15.0,
+              "skill": "translate"
+            },
+            {
+              "max": 7.5,
+              "skill": "summary"
+            }
+          ],
+          "why": "All required skills are available in the catalog and fit within the budget."
+        }
+      ],
+      "round": 1
+    },
+    {
+      "intents": [
+        {
+          "client": "price",
+          "lead": "quality",
+          "lead_fee": 5.470713,
+          "lead_fee_paid": 5.470713,
+          "reserve": 4.5,
+          "root": "job-4.hub.sandbox"
+        },
+        {
+          "client": "quality",
+          "lead": "price",
+          "lead_fee": 5.491022,
+          "lead_fee_paid": 5.491022,
+          "reserve": 5.0,
+          "root": "job-5.hub.sandbox"
+        },
+        {
+          "client": "budget",
+          "lead": "budget",
+          "lead_fee": 5.511224,
+          "lead_fee_paid": 5.511224,
+          "reserve": 5.5,
+          "root": "job-6.hub.sandbox"
+        }
+      ],
+      "order": [
+        "quality",
+        "price",
+        "budget"
+      ],
+      "parts": [
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              9,
+              9,
+              9
+            ]
+          },
+          "backer": null,
+          "bids": [
+            {
+              "agent": "tra-steady",
+              "price": 17.4
+            },
+            {
+              "agent": "tra-lean",
+              "price": 13.2
+            },
+            {
+              "agent": "tra-greedy",
+              "price": 20.0
+            },
+            {
+              "agent": "tra-adaptive",
+              "price": 13.4
+            },
+            {
+              "agent": "tra-junk",
+              "price": 8.4
+            },
+            {
+              "agent": "tra-undercut",
+              "price": 11.0
+            },
+            {
+              "agent": "tra-model",
+              "price": 11.0,
+              "why": "Maintaining consistency with my last successful bid to build trust and reliability."
+            },
+            {
+              "agent": "tra-contractor",
+              "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
+            }
+          ],
+          "buyer": "lead-quality",
+          "fired": false,
+          "id": 0,
+          "job": "t1.job-4.hub.sandbox",
+          "lead": "quality",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 20.0,
+          "newcomer": false,
+          "newcomer_premium": 37,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 11.0,
+          "rate": 55,
+          "replaces": null,
+          "root": "job-4.hub.sandbox",
+          "score": 9,
+          "sealed": true,
+          "skill": "translate",
+          "spec": "187b7a06f0fd27254f97b5e0e0e91f5c9d1b128a1349be26e9fdd71ff16cd5f5",
+          "strategy": "model",
+          "vouched": false,
+          "winner": "tra-model"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              9,
+              9,
+              9
+            ]
+          },
+          "backer": null,
+          "bids": [
+            {
+              "agent": "sum-steady",
+              "price": 8.7
+            },
+            {
+              "agent": "sum-lean",
+              "price": 6.6
+            },
+            {
+              "agent": "sum-adaptive",
+              "price": 6.7
+            },
+            {
+              "agent": "sum-junk",
+              "price": 4.2
+            },
+            {
+              "agent": "sum-undercut",
+              "price": 5.5
+            },
+            {
+              "agent": "sum-model",
+              "price": 5.5,
+              "why": "Maintaining consistency with recent winning rates to ensure competitiveness while staying above cost floor."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
+            }
+          ],
+          "buyer": "lead-quality",
+          "fired": false,
+          "id": 1,
+          "job": "t2.job-4.hub.sandbox",
+          "lead": "quality",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 10.0,
+          "newcomer": false,
+          "newcomer_premium": 37,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 5.5,
+          "rate": 55,
+          "replaces": null,
+          "root": "job-4.hub.sandbox",
+          "score": 9,
+          "sealed": true,
+          "skill": "summary",
+          "spec": "07303885f58c5da6105e138d9f4ef1e151c9ac884f99df6956065f8e1f5883ef",
+          "strategy": "model",
+          "vouched": false,
+          "winner": "sum-model"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
+          "backer": null,
+          "bids": [
+            {
+              "agent": "res-steady",
+              "price": 27.0
+            },
+            {
+              "agent": "res-lean",
+              "price": 18.6
+            },
+            {
+              "agent": "res-greedy",
+              "price": 29.1
+            },
+            {
+              "agent": "res-adaptive",
+              "price": 21.0
+            },
+            {
+              "agent": "res-junk",
+              "price": 13.5
+            },
+            {
+              "agent": "res-sloppy",
+              "price": 18.3
+            },
+            {
+              "agent": "res-undercut",
+              "price": 16.5
+            },
+            {
+              "agent": "res-model",
+              "price": 16.5,
+              "why": "Maintaining consistency with recent winning rate to build trust and secure future jobs."
+            },
+            {
+              "agent": "res-contractor",
+              "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
+            }
+          ],
+          "buyer": "lead-price",
+          "fired": false,
+          "id": 2,
+          "job": "t1.job-5.hub.sandbox",
+          "lead": "price",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 30.0,
+          "newcomer": false,
+          "newcomer_premium": 25,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 16.5,
+          "rate": 55,
+          "replaces": null,
+          "root": "job-5.hub.sandbox",
+          "score": 8,
+          "sealed": false,
+          "skill": "research",
+          "spec": "42877da69e3e84981ba4b495c0cd725d94cb128287e15cd8019c3c69d87b84c3",
+          "strategy": "model",
+          "vouched": false,
+          "winner": "res-model"
+        },
+        {
+          "audit": null,
+          "backer": null,
+          "bids": [
+            {
+              "agent": "tra-steady",
+              "price": 17.4
+            },
+            {
+              "agent": "tra-lean",
+              "price": 13.2
+            },
+            {
+              "agent": "tra-greedy",
+              "price": 20.0
+            },
+            {
+              "agent": "tra-adaptive",
+              "price": 13.4
+            },
+            {
+              "agent": "tra-junk",
+              "price": 8.4
+            },
+            {
+              "agent": "tra-undercut",
+              "price": 11.0
+            },
+            {
+              "agent": "tra-model",
+              "price": 11.0,
+              "why": "Maintaining consistency with my last successful bid to build trust and reliability."
+            },
+            {
+              "agent": "tra-contractor",
+              "price": 10.4
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
+            }
+          ],
+          "buyer": "lead-price",
+          "fired": true,
+          "id": 3,
+          "job": "t2.job-5.hub.sandbox",
+          "lead": "price",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 20.0,
+          "newcomer": true,
+          "newcomer_premium": 25,
+          "no_runner_up": null,
+          "paid": false,
+          "paid_now": false,
+          "parent": null,
+          "price": 8.4,
+          "rate": 42,
+          "replaces": null,
+          "root": "job-5.hub.sandbox",
+          "score": 2,
+          "sealed": false,
+          "skill": "translate",
+          "spec": "a87a0cff1928b610d0e78e78c72fd3aff37b6c1f0abf12ddc21fc414c0f3dec4",
+          "strategy": "junk",
+          "vouched": false,
+          "winner": "tra-junk"
+        },
+        {
+          "audit": null,
+          "backer": null,
+          "bids": [
+            {
+              "agent": "sum-steady",
+              "price": 8.7
+            },
+            {
+              "agent": "sum-lean",
+              "price": 6.6
+            },
+            {
+              "agent": "sum-adaptive",
+              "price": 6.7
+            },
+            {
+              "agent": "sum-junk",
+              "price": 4.2
+            },
+            {
+              "agent": "sum-undercut",
+              "price": 5.5
+            },
+            {
+              "agent": "sum-model",
+              "price": 5.5,
+              "why": "Maintaining consistency with recent winning rates to ensure competitiveness while staying above cost floor."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
+            }
+          ],
+          "buyer": "lead-price",
+          "fired": true,
+          "id": 4,
+          "job": "t3.job-5.hub.sandbox",
+          "lead": "price",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 10.0,
+          "newcomer": true,
+          "newcomer_premium": 25,
+          "no_runner_up": null,
+          "paid": false,
+          "paid_now": false,
+          "parent": null,
+          "price": 4.2,
+          "rate": 42,
+          "replaces": null,
+          "root": "job-5.hub.sandbox",
+          "score": 2,
+          "sealed": false,
+          "skill": "summary",
+          "spec": "4be44957150be5faab1e31d74eb7d14ea55d632c816cd252b310ab440d4edb6b",
+          "strategy": "junk",
+          "vouched": false,
+          "winner": "sum-junk"
+        },
+        {
+          "audit": null,
+          "backer": null,
+          "bids": [
+            {
+              "agent": "res-steady",
+              "price": 22.5
+            },
+            {
+              "agent": "res-lean",
+              "price": 18.6
+            },
+            {
+              "agent": "res-adaptive",
+              "price": 21.0
+            },
+            {
+              "agent": "res-junk",
+              "price": 13.5
+            },
+            {
+              "agent": "res-sloppy",
+              "price": 18.3
+            },
+            {
+              "agent": "res-undercut",
+              "price": 16.5
+            },
+            {
+              "agent": "res-model",
+              "price": 16.5,
+              "why": "Maintaining consistency with recent winning rate to build trust and secure future jobs."
+            },
+            {
+              "agent": "res-contractor",
+              "price": 15.6
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
+            }
+          ],
+          "buyer": "lead-budget",
+          "fired": true,
+          "id": 5,
+          "job": "t1.job-6.hub.sandbox",
+          "lead": "budget",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 22.5,
+          "newcomer": true,
+          "newcomer_premium": 0,
+          "no_runner_up": null,
+          "paid": false,
+          "paid_now": false,
+          "parent": null,
+          "price": 13.5,
+          "rate": 45,
+          "replaces": null,
+          "root": "job-6.hub.sandbox",
+          "score": 2,
+          "sealed": false,
+          "skill": "research",
+          "spec": "c4276769fac244fcfeee48697682b93a6f22b67dc90289bf381df6649f332e59",
+          "strategy": "junk",
+          "vouched": false,
+          "winner": "res-junk"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
+          "backer": null,
+          "bids": [
+            {
+              "agent": "sum-steady",
+              "price": 7.5
+            },
+            {
+              "agent": "sum-lean",
+              "price": 6.6
+            },
+            {
+              "agent": "sum-adaptive",
+              "price": 6.7
+            },
+            {
+              "agent": "sum-junk",
+              "price": 4.2
+            },
+            {
+              "agent": "sum-undercut",
+              "price": 5.5
+            },
+            {
+              "agent": "sum-model",
+              "price": 5.5,
+              "why": "Maintaining consistency with recent winning rates to ensure competitiveness while staying above cost floor."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
+            }
+          ],
+          "buyer": "lead-budget",
+          "fired": false,
+          "id": 6,
+          "job": "t2.job-6.hub.sandbox",
+          "lead": "budget",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 7.5,
+          "newcomer": false,
+          "newcomer_premium": 0,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": false,
+          "parent": null,
+          "price": 5.5,
+          "rate": 55,
+          "replaces": null,
+          "root": "job-6.hub.sandbox",
+          "score": 8,
+          "sealed": false,
+          "skill": "summary",
+          "spec": "0c42f19814f14958337728fb64e9cfa1324bfde7c8e222e74c46071966b9ad6b",
+          "strategy": "polished",
+          "vouched": false,
+          "winner": "sum-polished"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              6,
+              6,
+              6
+            ]
+          },
+          "backer": null,
+          "bids": [],
+          "buyer": "lead-price",
+          "fired": false,
+          "id": 7,
+          "job": "t4.job-5.hub.sandbox",
+          "lead": "price",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 20.0,
+          "newcomer": false,
+          "newcomer_premium": 25,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": false,
+          "parent": null,
+          "price": 11.0,
+          "rate": 55,
+          "replaces": 3,
+          "root": "job-5.hub.sandbox",
+          "score": 6,
+          "sealed": false,
+          "skill": "translate",
+          "spec": "a87a0cff1928b610d0e78e78c72fd3aff37b6c1f0abf12ddc21fc414c0f3dec4",
+          "strategy": "polished",
+          "vouched": false,
+          "winner": "tra-polished"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              9,
+              9,
+              9
+            ]
+          },
+          "backer": null,
+          "bids": [],
+          "buyer": "lead-price",
+          "fired": false,
+          "id": 8,
+          "job": "t5.job-5.hub.sandbox",
+          "lead": "price",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 10.0,
+          "newcomer": false,
+          "newcomer_premium": 25,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 6.6,
+          "rate": 66,
+          "replaces": 4,
+          "root": "job-5.hub.sandbox",
+          "score": 9,
+          "sealed": false,
+          "skill": "summary",
+          "spec": "4be44957150be5faab1e31d74eb7d14ea55d632c816cd252b310ab440d4edb6b",
+          "strategy": "lean",
+          "vouched": false,
+          "winner": "sum-lean"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
+          "backer": null,
+          "bids": [],
+          "buyer": "lead-budget",
+          "fired": false,
+          "id": 9,
+          "job": "t3.job-6.hub.sandbox",
+          "lead": "budget",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 22.5,
+          "newcomer": true,
+          "newcomer_premium": 0,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 15.6,
+          "rate": 52,
+          "replaces": 5,
+          "root": "job-6.hub.sandbox",
+          "score": 8,
+          "sealed": false,
+          "skill": "research",
+          "spec": "c4276769fac244fcfeee48697682b93a6f22b67dc90289bf381df6649f332e59",
+          "strategy": "contractor",
+          "vouched": false,
+          "winner": "res-contractor"
+        }
+      ],
+      "plans": [
+        {
+          "brief": "Localize our release notes into Spanish and add a short summary.",
+          "lead": "quality",
+          "parts": [
+            {
+              "max": 20.0,
+              "skill": "translate"
+            },
+            {
+              "max": 10.0,
+              "skill": "summary"
+            }
+          ],
+          "why": "The brief requires translation and summarization; research is not needed."
+        },
+        {
+          "brief": "Explain NEAR intents for a Spanish-speaking board: research, a Spanish translation and a one-line summary.",
+          "lead": "price",
+          "parts": [
+            {
+              "max": 30.0,
+              "skill": "research"
+            },
+            {
+              "max": 20.0,
+              "skill": "translate"
+            },
+            {
+              "max": 10.0,
+              "skill": "summary"
+            }
+          ],
+          "why": "All required skills are available in the catalog and fit within the budget."
+        },
+        {
+          "brief": "An English market note on agent payments: research the facts and summarize them.",
+          "lead": "budget",
+          "parts": [
+            {
+              "max": 22.5,
+              "skill": "research"
+            },
+            {
+              "max": 7.5,
+              "skill": "summary"
+            }
+          ],
+          "why": "The brief requires research and summarization; translation is unnecessary as the output is in English."
+        }
+      ],
+      "round": 2
+    },
+    {
+      "intents": [
+        {
+          "client": "price",
+          "lead": "price",
+          "lead_fee": 6.056348,
+          "lead_fee_paid": 6.056348,
+          "reserve": 5.0,
+          "root": "job-7.hub.sandbox"
+        },
+        {
+          "client": "quality",
+          "lead": "quality",
+          "lead_fee": 6.07673,
+          "lead_fee_paid": 6.07673,
+          "reserve": 5.0,
+          "root": "job-8.hub.sandbox"
+        },
+        {
+          "client": "budget",
+          "lead": "budget",
+          "lead_fee": 6.096994,
+          "lead_fee_paid": 6.096994,
+          "reserve": 5.0,
+          "root": "job-9.hub.sandbox"
+        }
+      ],
+      "order": [
+        "price",
+        "quality",
+        "budget"
+      ],
+      "parts": [
+        {
+          "audit": null,
+          "backer": null,
+          "bids": [
+            {
+              "agent": "res-steady",
+              "price": 27.0
+            },
+            {
+              "agent": "res-lean",
+              "price": 18.6
+            },
+            {
+              "agent": "res-greedy",
+              "price": 29.1
+            },
+            {
+              "agent": "res-adaptive",
+              "price": 18.0
+            },
+            {
+              "agent": "res-junk",
+              "price": 13.5
+            },
+            {
+              "agent": "res-sloppy",
+              "price": 18.3
+            },
+            {
+              "agent": "res-undercut",
+              "price": 16.5
+            },
+            {
+              "agent": "res-model",
+              "price": 13.5,
+              "why": "To win the first job and start a positive record."
+            },
+            {
+              "agent": "res-contractor",
+              "price": 13.5
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
+            }
+          ],
+          "buyer": "lead-price",
+          "fired": false,
+          "id": 0,
+          "job": "t1.job-7.hub.sandbox",
+          "lead": "price",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 30.0,
+          "newcomer": false,
+          "newcomer_premium": 150,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 13.5,
+          "rate": 45,
+          "replaces": null,
+          "root": "job-7.hub.sandbox",
+          "score": 9,
+          "sealed": false,
+          "skill": "research",
+          "spec": "b1ad9e2858e472458c5b763a1da112b42fa0fdb62144151b5a4ffb00feaab56a",
+          "strategy": "model",
+          "vouched": false,
+          "winner": "res-model"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              6,
+              6,
+              6
+            ]
+          },
+          "backer": null,
+          "bids": [
+            {
+              "agent": "tra-steady",
+              "price": 17.4
+            },
+            {
+              "agent": "tra-lean",
+              "price": 13.2
+            },
+            {
+              "agent": "tra-greedy",
+              "price": 20.0
+            },
+            {
+              "agent": "tra-adaptive",
+              "price": 11.4
+            },
+            {
+              "agent": "tra-junk",
+              "price": 8.4
+            },
+            {
+              "agent": "tra-undercut",
+              "price": 11.0
+            },
+            {
+              "agent": "tra-model",
+              "price": 8.4,
+              "why": "To win the first job and start a record with a competitive rate."
+            },
+            {
+              "agent": "tra-contractor",
+              "price": 9.0
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
+            }
+          ],
+          "buyer": "lead-price",
+          "fired": false,
+          "id": 1,
+          "job": "t2.job-7.hub.sandbox",
+          "lead": "price",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 20.0,
+          "newcomer": false,
+          "newcomer_premium": 150,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 8.4,
+          "rate": 42,
+          "replaces": null,
+          "root": "job-7.hub.sandbox",
+          "score": 6,
+          "sealed": false,
+          "skill": "translate",
+          "spec": "d5729c1ccaf03de7ad97945424fd15f5443910c8fed86b313fb92a6bfda62029",
+          "strategy": "model",
+          "vouched": false,
+          "winner": "tra-model"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              9,
+              9
+            ]
+          },
+          "backer": null,
+          "bids": [
+            {
+              "agent": "sum-steady",
+              "price": 8.7
+            },
+            {
+              "agent": "sum-lean",
+              "price": 6.6
+            },
+            {
+              "agent": "sum-adaptive",
+              "price": 5.7
+            },
+            {
+              "agent": "sum-junk",
+              "price": 4.2
+            },
+            {
+              "agent": "sum-undercut",
+              "price": 5.5
+            },
+            {
+              "agent": "sum-model",
+              "price": 4.2,
+              "why": "To win the first job and start a positive record."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
+            }
+          ],
+          "buyer": "lead-price",
+          "fired": false,
+          "id": 2,
+          "job": "t3.job-7.hub.sandbox",
+          "lead": "price",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 10.0,
+          "newcomer": false,
+          "newcomer_premium": 150,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 4.2,
+          "rate": 42,
+          "replaces": null,
+          "root": "job-7.hub.sandbox",
+          "score": 8,
+          "sealed": false,
+          "skill": "summary",
+          "spec": "64320ca4600fed3166e3267edf350f65696c138871720b074f12cdd8608b437e",
+          "strategy": "model",
+          "vouched": false,
+          "winner": "sum-model"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              9,
+              9,
+              9
+            ]
+          },
+          "backer": null,
+          "bids": [
+            {
+              "agent": "res-steady",
+              "price": 27.0
+            },
+            {
+              "agent": "res-lean",
+              "price": 18.6
+            },
+            {
+              "agent": "res-greedy",
+              "price": 29.1
+            },
+            {
+              "agent": "res-adaptive",
+              "price": 18.0
+            },
+            {
+              "agent": "res-junk",
+              "price": 13.5
+            },
+            {
+              "agent": "res-sloppy",
+              "price": 18.3
+            },
+            {
+              "agent": "res-undercut",
+              "price": 16.5
+            },
+            {
+              "agent": "res-model",
+              "price": 13.5,
+              "why": "To win the first job and start a positive record."
+            },
+            {
+              "agent": "res-contractor",
+              "price": 13.5
+            },
+            {
+              "agent": "res-polished",
+              "price": 17.4
+            }
+          ],
+          "buyer": "lead-quality",
+          "fired": false,
+          "id": 3,
+          "job": "t1.job-8.hub.sandbox",
+          "lead": "quality",
+          "level": 1,
+          "make_or_buy": {
+            "buy": true,
+            "share": 45,
+            "why": "Expected cost of buying is lower than my own cost"
+          },
+          "max": 30.0,
+          "newcomer": false,
+          "newcomer_premium": 29,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 13.5,
+          "rate": 45,
+          "replaces": null,
+          "root": "job-8.hub.sandbox",
+          "score": 9,
+          "sealed": true,
+          "skill": "research",
+          "spec": "a9679c330bd005943d6407adf1a89d1bf1f29baba55fb3d8bb8d7e45ecb234b8",
+          "strategy": "contractor",
+          "vouched": false,
+          "winner": "res-contractor"
+        },
+        {
+          "audit": null,
+          "backer": null,
+          "bids": [
+            {
+              "agent": "sum-steady",
+              "price": 8.7
+            },
+            {
+              "agent": "sum-lean",
+              "price": 6.6
+            },
+            {
+              "agent": "sum-adaptive",
+              "price": 5.7
+            },
+            {
+              "agent": "sum-junk",
+              "price": 4.2
+            },
+            {
+              "agent": "sum-undercut",
+              "price": 5.5
+            },
+            {
+              "agent": "sum-model",
+              "price": 4.2,
+              "why": "To win the first job and start a positive record."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
+            }
+          ],
+          "buyer": "lead-quality",
+          "fired": true,
+          "id": 4,
+          "job": "t2.job-8.hub.sandbox",
+          "lead": "quality",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 10.0,
+          "newcomer": true,
+          "newcomer_premium": 29,
+          "no_runner_up": null,
+          "paid": false,
+          "paid_now": false,
+          "parent": null,
+          "price": 4.2,
+          "rate": 42,
+          "replaces": null,
+          "root": "job-8.hub.sandbox",
+          "score": 2,
+          "sealed": true,
+          "skill": "summary",
+          "spec": "278e3fddabef5febab018861118c5fe15aa30fbc4d8bad7bb175a3b10e60c075",
+          "strategy": "junk",
+          "vouched": false,
+          "winner": "sum-junk"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              6,
+              8,
+              8
+            ]
+          },
+          "backer": null,
+          "bids": [
+            {
+              "agent": "tra-steady",
+              "price": 15.0
+            },
+            {
+              "agent": "tra-lean",
+              "price": 13.2
+            },
+            {
+              "agent": "tra-adaptive",
+              "price": 11.4
+            },
+            {
+              "agent": "tra-junk",
+              "price": 8.4
+            },
+            {
+              "agent": "tra-undercut",
+              "price": 11.0
+            },
+            {
+              "agent": "tra-model",
+              "price": 8.4,
+              "why": "To win the first job and start a record with a competitive rate."
+            },
+            {
+              "agent": "tra-contractor",
+              "price": 9.0
+            },
+            {
+              "agent": "tra-polished",
+              "price": 11.0
+            }
+          ],
+          "buyer": "lead-budget",
+          "fired": false,
+          "id": 5,
+          "job": "t1.job-9.hub.sandbox",
+          "lead": "budget",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 15.0,
+          "newcomer": false,
+          "newcomer_premium": 50,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": false,
+          "parent": null,
+          "price": 11.0,
+          "rate": 55,
+          "replaces": null,
+          "root": "job-9.hub.sandbox",
+          "score": 6,
+          "sealed": false,
+          "skill": "translate",
+          "spec": "ddf875fd7d2a4d41d28f325c8e6113c2e97a83df6c163cc65c9d7c70b1974db1",
+          "strategy": "polished",
+          "vouched": false,
+          "winner": "tra-polished"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              8,
+              8,
+              8
+            ]
+          },
+          "backer": null,
+          "bids": [
+            {
+              "agent": "sum-steady",
+              "price": 7.5
+            },
+            {
+              "agent": "sum-lean",
+              "price": 6.6
+            },
+            {
+              "agent": "sum-adaptive",
+              "price": 5.7
+            },
+            {
+              "agent": "sum-junk",
+              "price": 4.2
+            },
+            {
+              "agent": "sum-undercut",
+              "price": 5.5
+            },
+            {
+              "agent": "sum-model",
+              "price": 4.2,
+              "why": "To win the first job and start a positive record."
+            },
+            {
+              "agent": "sum-polished",
+              "price": 5.5
+            }
+          ],
+          "buyer": "lead-budget",
+          "fired": false,
+          "id": 6,
+          "job": "t2.job-9.hub.sandbox",
+          "lead": "budget",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 7.5,
+          "newcomer": false,
+          "newcomer_premium": 50,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": false,
+          "parent": null,
+          "price": 5.5,
+          "rate": 55,
+          "replaces": null,
+          "root": "job-9.hub.sandbox",
+          "score": 8,
+          "sealed": false,
+          "skill": "summary",
+          "spec": "550e2fa3f84703ef183fa4c1c0111c110521aa31d62ec06b1f1c0764b9686994",
+          "strategy": "polished",
+          "vouched": false,
+          "winner": "sum-polished"
+        },
+        {
+          "audit": null,
+          "backer": null,
+          "bids": [
+            {
+              "agent": "sou-junk",
+              "price": 5.28
+            }
+          ],
+          "buyer": "res-contractor",
+          "fired": true,
+          "id": 7,
+          "job": "t1.t1.job-8.hub.sandbox",
+          "lead": "quality",
+          "level": 2,
+          "make_or_buy": null,
+          "max": 6.075,
+          "newcomer": true,
+          "newcomer_premium": 0,
+          "no_runner_up": "no other bidder free this round",
+          "paid": false,
+          "paid_now": false,
+          "parent": 3,
+          "price": 5.28,
+          "rate": 44,
+          "replaces": null,
+          "root": "job-8.hub.sandbox",
+          "score": 2,
+          "sealed": false,
+          "skill": "sources",
+          "spec": "027570b60bd2845ab28a79b16970b66ee91a9af5230c83a15da875468f6d4e7a",
+          "strategy": "junk",
+          "vouched": false,
+          "winner": "sou-junk"
+        },
+        {
+          "audit": {
+            "caught": false,
+            "votes": [
+              9,
+              9,
+              9
+            ]
+          },
+          "backer": null,
+          "bids": [],
+          "buyer": "lead-quality",
+          "fired": false,
+          "id": 8,
+          "job": "t3.job-8.hub.sandbox",
+          "lead": "quality",
+          "level": 1,
+          "make_or_buy": null,
+          "max": 10.0,
+          "newcomer": false,
+          "newcomer_premium": 29,
+          "no_runner_up": null,
+          "paid": true,
+          "paid_now": true,
+          "parent": null,
+          "price": 6.6,
+          "rate": 66,
+          "replaces": 4,
+          "root": "job-8.hub.sandbox",
+          "score": 9,
+          "sealed": true,
+          "skill": "summary",
+          "spec": "278e3fddabef5febab018861118c5fe15aa30fbc4d8bad7bb175a3b10e60c075",
+          "strategy": "lean",
+          "vouched": false,
+          "winner": "sum-lean"
+        }
+      ],
+      "plans": [
+        {
+          "brief": "Explain NEAR intents for a Spanish-speaking board: research, a Spanish translation and a one-line summary.",
+          "lead": "price",
+          "parts": [
+            {
+              "max": 30.0,
+              "skill": "research"
+            },
+            {
+              "max": 20.0,
+              "skill": "translate"
+            },
+            {
+              "max": 10.0,
+              "skill": "summary"
+            }
+          ],
+          "why": "All required skills are available in the catalog and fit within the budget."
+        },
+        {
+          "brief": "An English market note on agent payments: research the facts and summarize them.",
+          "lead": "quality",
+          "parts": [
+            {
+              "max": 30.0,
+              "skill": "research"
+            },
+            {
+              "max": 10.0,
+              "skill": "summary"
+            }
+          ],
+          "why": "The brief requires research and summarization; translation is unnecessary as the output is in English."
+        },
+        {
+          "brief": "Localize our release notes into Spanish and add a short summary.",
+          "lead": "budget",
+          "parts": [
+            {
+              "max": 15.0,
+              "skill": "translate"
+            },
+            {
+              "max": 7.5,
+              "skill": "summary"
+            }
+          ],
+          "why": "The brief requires translation and summarization; research is not needed."
+        }
+      ],
+      "round": 3
+    }
+  ],
+  "schema": "hiretree-swarm-2",
+  "sealed_lead": "quality",
+  "seed": 0,
+  "storm": null,
+  "wash": null
+}
