@@ -28,6 +28,9 @@ pub struct Ledger {
     pub ft_balance: u128,
     /// The payee was paid (by a settle attempt whose transfer succeeded).
     pub payee_paid: bool,
+    /// Paid to the payee so far by routed transfers whose receiver kept only
+    /// part (`payee_result`): those tokens left, so settle owes only the rest.
+    pub payee_got: u128,
 }
 
 /// How one settle attempt splits the internal balance.
@@ -174,19 +177,26 @@ impl Ledger {
     /// sold now: the delivery passed the check (`Checked`), the receipt was
     /// verified, the note was not sold, and no settle attempt has already
     /// paid the payee (a bought note must still be worth its face value).
+    /// A payee already paid in part is not sellable either.
     pub fn sellable_quote(&self, status: Status, verified: bool, note_sold: bool) -> Option<u128> {
-        if status != Status::Checked || !verified || note_sold || self.payee_paid {
+        if status != Status::Checked
+            || !verified
+            || note_sold
+            || self.payee_paid
+            || self.payee_got > 0
+        {
             return None;
         }
         note_quote(self.amount).ok()
     }
 
     /// The split for a settle attempt. The payee gets `amount` only if the
-    /// work was delivered (`pay_payee`) and it was not already paid. The rest
-    /// of the balance goes to the parent (root: to the manager).
+    /// work was delivered (`pay_payee`) and it was not already paid, less
+    /// what a partly kept routed transfer already gave it (`payee_got`). The
+    /// rest of the balance goes to the parent (root: to the manager).
     pub fn settle_split(&self, pay_payee: bool) -> Result<Split, MoneyError> {
         let to_payee = if pay_payee && !self.payee_paid {
-            self.amount
+            self.amount.saturating_sub(self.payee_got)
         } else {
             0
         };
@@ -218,13 +228,13 @@ impl Ledger {
     /// its bond back; everything else, the unearned fee included, goes back
     /// to the client. So a lead whose parts were all fired or refunded, or
     /// that hired nothing, gets only its bond. A root that was never funded
-    /// can still settle and close.
+    /// can still settle and close. Less `payee_got`, as in `settle_split`.
     pub fn settle_split_root(&self, paid: u128, hired: u128) -> Result<Split, MoneyError> {
         let fee = self.fee_earned(paid, hired)?;
         let to_payee = if self.payee_paid {
             0
         } else {
-            add(fee, self.bond)?
+            add(fee, self.bond)?.saturating_sub(self.payee_got)
         };
         if to_payee > self.ft_balance {
             return Err(MoneyError::NotEnoughBalance {
@@ -242,6 +252,28 @@ impl Ledger {
     pub fn begin_payout(&mut self, s: Split) -> Result<(), MoneyError> {
         let total = add(s.to_payee, s.to_rest)?;
         self.ft_balance = sub(self.ft_balance, total)?;
+        Ok(())
+    }
+
+    /// The payee leg's outcome as the amount that really left: `used` of
+    /// `to_payee` (a plain transfer uses all or nothing; a routed
+    /// `ft_transfer_call` returns what its receiver kept, and the token sent
+    /// the rest back). A `used` above `to_payee` counts as all of it. The
+    /// part that came back is balance again; the part that left is booked as
+    /// paid (`payee_got`), so the next settle owes the payee only the rest
+    /// and the ledger never expects tokens the account does not hold.
+    pub fn payee_result(&mut self, to_payee: u128, used: u128) -> Result<(), MoneyError> {
+        let used = used.min(to_payee);
+        let back = to_payee - used;
+        let bal = add(self.ft_balance, back)?;
+        if back == 0 {
+            if to_payee > 0 {
+                self.payee_paid = true;
+            }
+        } else {
+            self.payee_got = add(self.payee_got, used)?;
+        }
+        self.ft_balance = bal;
         Ok(())
     }
 
@@ -419,6 +451,85 @@ mod tests {
                 to_rest: 70
             }
         );
+    }
+
+    #[test]
+    fn a_partly_used_payee_transfer_books_what_left_and_owes_the_rest() {
+        // A routed payee leg of 30: the receiver kept 12, the token sent 18 back.
+        let mut l = funded(30, 100);
+        let s = Split {
+            to_payee: 30,
+            to_rest: 0,
+        };
+        l.begin_payout(s).unwrap();
+        l.payee_result(30, 12).unwrap();
+        assert_eq!(l.ft_balance, 88, "the 12 left, the 18 are back");
+        assert!(!l.payee_paid);
+        assert_eq!(l.payee_got, 12);
+        // The next settle owes the payee only the 18.
+        let s2 = l.settle_split(true).unwrap();
+        assert_eq!(
+            s2,
+            Split {
+                to_payee: 18,
+                to_rest: 70
+            }
+        );
+        l.begin_payout(s2).unwrap();
+        l.payee_result(18, 18).unwrap();
+        l.payout_result(Split { to_payee: 0, ..s2 }, true, true)
+            .unwrap();
+        assert!(l.payee_paid);
+        assert_eq!(l.ft_balance, 0);
+        assert_eq!(l.settle_split(true).unwrap().to_payee, 0);
+    }
+
+    #[test]
+    fn a_used_value_above_the_transfer_counts_as_all_of_it() {
+        let mut l = funded(30, 100);
+        let s = Split {
+            to_payee: 30,
+            to_rest: 0,
+        };
+        l.begin_payout(s).unwrap();
+        l.payee_result(30, u128::MAX).unwrap();
+        assert!(l.payee_paid);
+        assert_eq!(l.ft_balance, 70);
+        // Used 0 is a plain failure: everything is back, nothing owed less.
+        let mut l = funded(30, 100);
+        l.begin_payout(s).unwrap();
+        l.payee_result(30, 0).unwrap();
+        assert_eq!((l.ft_balance, l.payee_got, l.payee_paid), (100, 0, false));
+    }
+
+    #[test]
+    fn a_partly_paid_lead_is_owed_only_the_rest_of_its_fee_and_bond() {
+        let mut l = Ledger::new(10);
+        l.fund(100).unwrap();
+        l.add_bond(5).unwrap();
+        let s = l.settle_split_root(1, 1).unwrap();
+        assert_eq!(s.to_payee, 15);
+        l.begin_payout(Split { to_rest: 0, ..s }).unwrap();
+        l.payee_result(15, 4).unwrap();
+        assert_eq!(
+            l.settle_split_root(1, 1).unwrap(),
+            Split {
+                to_payee: 11,
+                to_rest: 90
+            }
+        );
+    }
+
+    #[test]
+    fn a_partly_paid_payee_makes_the_note_unsellable() {
+        let mut l = funded(1_000_000, 1_000_000);
+        l.begin_payout(Split {
+            to_payee: 1_000_000,
+            to_rest: 0,
+        })
+        .unwrap();
+        l.payee_result(1_000_000, 1).unwrap();
+        assert_eq!(l.sellable_quote(Status::Checked, true, false), None);
     }
 
     #[test]

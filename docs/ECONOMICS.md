@@ -12,20 +12,20 @@ the table gives the NEAR price at which the result flips.
 
 | Step | Tgas | NEAR |
 |---|---|---|
-| Post a job (factory creates the job account) | 30.3 | 0.00303 |
+| Post a job (factory creates the job account) | 30.4 | 0.00304 |
 | Open a bid slot | 2.6 | 0.00026 |
 | One bid | 2.8 | 0.00028 |
 | `award_best`, 4 bidders (reads 4 records) | 42.0 | 0.00420 |
-| `award_best`, 16 bidders, 16-payer list | 75.6 | 0.00756 |
+| `award_best`, 16 bidders, 16-payer list | 75.7 | 0.00757 |
 | Deliver (signature check) | 2.7 | 0.00027 |
 | Submit the signed judge answer | 3.2 | 0.00032 |
 | Close the check round | 2.5 | 0.00025 |
 | Approve | 2.5 | 0.00025 |
-| Settle, pay, delete the sub-job | 24.6 | 0.00246 |
+| Settle, pay, delete the sub-job | 24.7 | 0.00247 |
 
 **One whole part** (post, hire, deliver, signed check, approve, settle, both
-accounts deleted; 9 transactions): **111.9 Tgas = 0.0112 NEAR**.
-Paid out through the NEAR Intents Verifier instead (10 transactions): 120.6 Tgas
+accounts deleted; 9 transactions): **112.2 Tgas = 0.0112 NEAR**.
+Paid out through the NEAR Intents Verifier instead (10 transactions): 120.9 Tgas
 = 0.0121 NEAR, so the Intents leg adds 8.7 Tgas.
 
 Storage comes back: each job account holds about 0.035 NEAR while it

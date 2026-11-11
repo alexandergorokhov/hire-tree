@@ -15,7 +15,7 @@
 //! Cases: `PROP_CASES` (default 10,000).
 
 use ht_core::money::{earned_fee, mul_div_floor, note_quote};
-use ht_core::{transition, Event, Ledger, Status};
+use ht_core::{transition, Event, Ledger, Split, Status};
 use proptest::prelude::*;
 
 #[derive(Debug, Clone)]
@@ -33,6 +33,9 @@ enum Op {
         node: usize,
         payee_ok: bool,
         rest_ok: bool,
+        /// A routed payee leg whose receiver kept only this share (per
+        /// mille) of the pay; the token sent the rest back.
+        part: Option<u16>,
     },
 }
 
@@ -43,8 +46,13 @@ fn op() -> impl Strategy<Value = Op> {
         2 => any::<usize>().prop_map(Op::Deliver),
         2 => (any::<usize>(), prop::bool::weighted(0.8)).prop_map(|(n, p)| Op::Check(n, p)),
         1 => any::<usize>().prop_map(Op::Buy),
-        2 => (any::<usize>(), prop::bool::weighted(0.85), prop::bool::weighted(0.85))
-            .prop_map(|(node, payee_ok, rest_ok)| Op::Settle { node, payee_ok, rest_ok }),
+        2 => (
+            any::<usize>(),
+            prop::bool::weighted(0.85),
+            prop::bool::weighted(0.85),
+            prop::option::weighted(0.2, 0u16..=1000),
+        )
+            .prop_map(|(node, payee_ok, rest_ok, part)| Op::Settle { node, payee_ok, rest_ok, part }),
     ]
 }
 
@@ -215,11 +223,12 @@ impl World {
                 node,
                 payee_ok,
                 rest_ok,
-            } => self.settle(self.pick(node), payee_ok, rest_ok),
+                part,
+            } => self.settle(self.pick(node), payee_ok, rest_ok, part),
         }
     }
 
-    fn settle(&mut self, n: usize, payee_ok: bool, rest_ok: bool) {
+    fn settle(&mut self, n: usize, payee_ok: bool, rest_ok: bool, part: Option<u16>) {
         if !self.live(n) || self.nodes[n].children_open != 0 {
             return;
         }
@@ -242,15 +251,22 @@ impl World {
 
         let payee_ok = payee_ok || split.to_payee == 0;
         let rest_ok = rest_ok || split.to_rest == 0;
-        if payee_ok && split.to_payee > 0 {
-            self.nodes[n].real -= split.to_payee;
-            self.paid_out += split.to_payee;
+        // What really left for the payee: all, nothing, or (a routed leg
+        // whose receiver kept only part) a share of it.
+        let used = match (payee_ok, part) {
+            (false, _) => 0,
+            (true, None) => split.to_payee,
+            (true, Some(p)) => mul_div_floor(split.to_payee, p as u128, 1000).unwrap(),
+        };
+        if used > 0 {
+            self.nodes[n].real -= used;
+            self.paid_out += used;
             if self.nodes[n].parent.is_none() {
-                self.lead_got += split.to_payee;
+                self.lead_got += used;
             } else if self.nodes[n].note_sold {
-                self.treasury_got += split.to_payee;
+                self.treasury_got += used;
             } else {
-                self.worker_got += split.to_payee;
+                self.worker_got += used;
             }
         }
         if rest_ok && split.to_rest > 0 {
@@ -265,7 +281,18 @@ impl World {
         }
         self.nodes[n]
             .ledger
-            .payout_result(split, payee_ok, rest_ok)
+            .payee_result(split.to_payee, used)
+            .unwrap();
+        self.nodes[n]
+            .ledger
+            .payout_result(
+                Split {
+                    to_payee: 0,
+                    to_rest: split.to_rest,
+                },
+                true,
+                rest_ok,
+            )
             .unwrap();
 
         if self.nodes[n].ledger.ft_balance == 0 {
@@ -327,7 +354,7 @@ impl World {
     fn drain(&mut self) {
         for _ in 0..self.nodes.len() + 1 {
             for i in (0..self.nodes.len()).rev() {
-                self.settle(i, true, true);
+                self.settle(i, true, true, None);
             }
         }
     }

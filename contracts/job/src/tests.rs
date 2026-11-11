@@ -2463,7 +2463,7 @@ mod check_note_dispute {
 
     fn note_paid(j: &mut Job, r: PromiseResult) -> U128 {
         Ctx::new(T1, T1).results(vec![r]).set();
-        j.on_note_paid(acc(WORKER), U128(QUOTE))
+        U128(value(j.on_note_paid(acc(WORKER), U128(QUOTE))))
     }
 
     // ------------------------------------------------ quality check
@@ -2727,6 +2727,125 @@ mod check_note_dispute {
         assert!(!v.note_sold);
         assert_eq!(v.payee, Some(acc(WORKER)));
         assert_eq!(v.payout_via, None);
+    }
+
+    /// What reached the worker through its route in the partial-sale tests.
+    const USED: u128 = 10 * USD;
+
+    /// A routed sale whose payment answered `r` (the token's
+    /// `ft_transfer_call` result: what the route kept).
+    fn routed_sale(r: PromiseResult) -> (Job, PromiseOrValue<U128>) {
+        let mut j = checked();
+        Ctx::new(T1, WORKER).set();
+        j.set_payout_via(Some(acc("intents.test")));
+        buy(&mut j, TREASURY, QUOTE);
+        Ctx::new(T1, T1).results(vec![r]).set();
+        let out = j.on_note_paid(acc(WORKER), U128(QUOTE));
+        (j, out)
+    }
+
+    fn rest_paid(j: &mut Job, r: PromiseResult) -> U128 {
+        Ctx::new(T1, T1).results(vec![r]).set();
+        j.on_note_rest_paid(acc(WORKER), U128(QUOTE), U128(USED))
+    }
+
+    #[test]
+    fn a_route_that_keeps_part_of_the_note_price_gets_the_rest_plainly() {
+        let (mut j, out) = routed_sale(ok(&u128_json(USED)));
+        // The sale stands: what the route sent back goes to the worker by
+        // a plain transfer, in the same chain.
+        assert!(matches!(out, PromiseOrValue::Promise(_)));
+        drop(out);
+        assert_eq!(call_args("storage_deposit")["account_id"], WORKER);
+        assert_eq!(
+            transfers(),
+            vec![(WORKER.into(), (QUOTE - USED).to_string())]
+        );
+        assert!(calls().contains(&(T1.into(), "on_note_rest_paid".into())));
+        let v = j.get_job();
+        assert!(v.note_pending, "settle and dispute still wait");
+        assert_eq!(v.payout_via, None, "a route that kept part is dropped");
+        assert_eq!(rest_paid(&mut j, ok(b"")), U128(0));
+        let v = j.get_job();
+        assert!(v.note_sold && !v.note_pending);
+        assert_eq!(v.payee, Some(acc(TREASURY)));
+        assert_eq!(v.ft_balance.0, PAY, "tokens in == tokens out");
+        assert_eq!(v.amount.0, PAY, "the treasury holds the whole face");
+        assert_eq!(events("note_sold").len(), 1);
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+        assert_eq!(transfers(), vec![(TREASURY.into(), PAY.to_string())]);
+    }
+
+    #[test]
+    fn a_failed_plain_rest_of_the_note_price_undoes_the_sale() {
+        let (mut j, _) = routed_sale(ok(&u128_json(USED)));
+        // The treasury gets its whole price back; what reached the worker
+        // through its route counts as pay it already has (as resume_note).
+        assert_eq!(rest_paid(&mut j, PromiseResult::Failed), U128(QUOTE));
+        let v = j.get_job();
+        assert!(!v.note_sold && !v.note_pending);
+        assert_eq!(v.payee, Some(acc(WORKER)));
+        assert_eq!(v.amount.0, PAY - USED);
+        assert_eq!(v.ft_balance.0, PAY - USED);
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+        assert_eq!(transfers(), vec![(WORKER.into(), (PAY - USED).to_string())]);
+    }
+
+    #[test]
+    fn a_note_route_reporting_more_than_the_price_or_junk_counts_as_paid() {
+        for r in [ok(&u128_json(QUOTE + 1)), ok(b"junk")] {
+            let (j, out) = routed_sale(r);
+            assert_eq!(value(out), 0);
+            let v = j.get_job();
+            assert!(v.note_sold && !v.note_pending);
+            assert!(transfers().is_empty());
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "no note sale in flight")]
+    fn a_late_note_rest_callback_cannot_act_twice() {
+        let (mut j, _) = routed_sale(ok(&u128_json(USED)));
+        rest_paid(&mut j, ok(b""));
+        rest_paid(&mut j, PromiseResult::Failed);
+    }
+
+    #[test]
+    fn a_routed_note_sale_reserves_gas_for_the_plain_rest() {
+        let mut j = checked();
+        Ctx::new(T1, WORKER).set();
+        j.set_payout_via(Some(acc("intents.test")));
+        buy(&mut j, TREASURY, QUOTE);
+        // The callback's own static gas covers the plain rest it may send.
+        let stat = get_created_receipts()
+            .into_iter()
+            .flat_map(|r| r.actions)
+            .find_map(|a| match a {
+                MockAction::FunctionCallWeight {
+                    method_name,
+                    prepaid_gas,
+                    ..
+                } if method_name == b"on_note_paid" => Some(prepaid_gas),
+                _ => None,
+            })
+            .unwrap();
+        Ctx::new(T1, T1)
+            .gas(stat)
+            .results(vec![ok(&u128_json(USED))])
+            .set();
+        drop(j.on_note_paid(acc(WORKER), U128(QUOTE)));
+        let left = stat.as_gas() - env::used_gas().as_gas();
+        assert!(left >= Gas::from_tgas(5).as_gas(), "{left} gas left");
+        // A routed buy with too little gas for that is refunded up front.
+        let mut j = checked();
+        Ctx::new(T1, WORKER).set();
+        j.set_payout_via(Some(acc("intents.test")));
+        Ctx::new(T1, TOKEN).gas(Gas::from_tgas(150)).set();
+        let out = j.ft_on_transfer(acc(TREASURY), U128(QUOTE), "buy_note".into());
+        assert_eq!(value(out), QUOTE);
+        assert!(!j.get_job().note_pending);
     }
 
     #[test]
@@ -3138,6 +3257,30 @@ mod check_note_dispute {
     }
 
     #[test]
+    fn stuck_sale_worker_partly_paid_through_its_route_counts_as_prepaid() {
+        // A routed sale whose callback died: the token refunded the
+        // treasury in full, and the route had kept 10 of the price (the
+        // rest came back). The worker is owed 10 less; the books match.
+        let mut j = checked();
+        Ctx::new(T1, WORKER).set();
+        j.set_payout_via(Some(acc("intents.test")));
+        buy(&mut j, TREASURY, QUOTE);
+        resume_note_with(&mut j, PAY - 10 * USD);
+        let v = j.get_job();
+        assert!(!v.note_pending && !v.note_sold);
+        assert_eq!(v.payee, Some(acc(WORKER)));
+        assert_eq!(v.payout_via, None);
+        assert_eq!(v.amount.0, PAY - 10 * USD);
+        assert_eq!(v.ft_balance.0, PAY - 10 * USD);
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+        assert_eq!(
+            transfers(),
+            vec![(WORKER.into(), (PAY - 10 * USD).to_string())]
+        );
+    }
+
+    #[test]
     #[should_panic(expected = "note sale is not stuck yet")]
     fn resume_note_too_early() {
         let mut j = stuck_sale();
@@ -3150,7 +3293,7 @@ mod check_note_dispute {
         let mut j = checked();
         buy(&mut j, TREASURY, QUOTE);
         Ctx::new(T1, T1).results(vec![ok(&[b'x'; 500])]).set();
-        assert_eq!(j.on_note_paid(acc(WORKER), U128(QUOTE)), U128(0));
+        assert_eq!(value(j.on_note_paid(acc(WORKER), U128(QUOTE))), 0);
         assert!(j.get_job().note_sold);
     }
 }
@@ -5653,6 +5796,130 @@ mod intents_payout {
         j.on_payee_paid(a);
         assert!(!j.get_job().payee_paid);
         assert_eq!(j.get_job().payout_via, None);
+    }
+
+    /// Settle a routed sub-job (pay 30 of 35) and answer the payee leg
+    /// with `r` (the token's `ft_transfer_call` result).
+    fn routed_leg(r: PromiseResult) -> Job {
+        let mut j = with_route();
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+        let a = attempt(&j);
+        Ctx::new(T1, T1).at(AFTER).results(vec![r]).set();
+        j.on_payee_paid(a);
+        j
+    }
+
+    #[test]
+    fn a_route_that_keeps_part_cannot_freeze_the_tree() {
+        // The route kept 12 of 30; the token sent 18 back to the job.
+        let mut j = routed_leg(ok(&u128_json(12 * USD)));
+        let v = j.get_job();
+        assert!(!v.payee_paid, "the payee is owed 18 more");
+        assert_eq!(v.payout_via, None, "a route that kept part is dropped");
+        assert_eq!(v.ft_balance.0, 18 * USD, "the 12 left; the 18 are back");
+        assert_eq!(events("payout_via_dropped").len(), 1);
+        // The rest leg still runs: the parent is never held up.
+        assert_eq!(transfers(), vec![(ROOT.into(), (5 * USD).to_string())]);
+        rest_cb(&mut j, T1, true);
+        assert_eq!(j.get_job().status, "Delivered");
+        // The next settle pays the 18 plainly; the books match the real
+        // balance, so the job closes and deletes.
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+        assert_eq!(transfers(), vec![(WORKER.into(), (18 * USD).to_string())]);
+        assert!(!calls().iter().any(|c| c.1 == "ft_transfer_call"));
+        payee_cb(&mut j, T1, true);
+        let v = j.get_job();
+        assert!(v.payee_paid);
+        assert_eq!(v.ft_balance.0, 0);
+        balance_cb(&mut j, T1, ok(&u128_json(0)));
+        assert_eq!(j.get_job().status, "Settled");
+        assert_eq!(call_args("child_closed")["paid"], true);
+    }
+
+    #[test]
+    #[should_panic(expected = "too late: settle has started")]
+    fn a_dropped_route_cannot_be_set_again() {
+        // Otherwise the payee could set a route that keeps a crumb before
+        // every settle and hold the tree up one settle at a time.
+        let mut j = routed_leg(ok(&u128_json(12 * USD)));
+        rest_cb(&mut j, T1, true);
+        assert_eq!(j.get_job().status, "Delivered");
+        Ctx::new(T1, WORKER).at(AFTER).set();
+        j.set_payout_via(Some(acc(VERIFIER)));
+    }
+
+    #[test]
+    fn a_route_reporting_more_than_it_was_sent_counts_as_paid_in_full() {
+        let j = routed_leg(ok(&u128_json(31 * USD)));
+        let v = j.get_job();
+        assert!(v.payee_paid);
+        assert_eq!(v.ft_balance.0, 0, "the rest leg took the 5");
+    }
+
+    #[test]
+    fn an_unreadable_route_result_counts_as_paid_in_full() {
+        // A correct token always answers a number. If it does not, the
+        // job assumes the tokens left: the books can then only be below the
+        // real balance (the balance leg sweeps the excess up the tree),
+        // never above it (a tree that could never settle).
+        for junk in [&b"\"not a number\""[..], &[b'7'; 500][..]] {
+            let j = routed_leg(ok(junk));
+            assert!(j.get_job().payee_paid);
+        }
+    }
+
+    #[test]
+    fn a_lead_route_that_keeps_part_is_owed_only_the_rest() {
+        let mut j = root_funded_with_fee(10 * USD, 100 * USD);
+        Ctx::new(ROOT, TOKEN).set();
+        j.ft_on_transfer(acc(LEAD), U128(5 * USD), "bond".into());
+        hired(&mut j, WORKER, 30 * USD);
+        root_child_closed(&mut j, 1, 0, true);
+        Ctx::new(ROOT, LEAD).set();
+        j.set_payout_via(Some(acc(VERIFIER)));
+        settle_root(&mut j);
+        assert_eq!(
+            call_args("ft_transfer_call")["amount"],
+            (15 * USD).to_string()
+        );
+        let a = attempt(&j);
+        Ctx::new(ROOT, ROOT)
+            .results(vec![ok(&u128_json(4 * USD))])
+            .set();
+        j.on_payee_paid(a);
+        // The client's 60 go back now.
+        assert_eq!(transfers(), vec![(CLIENT.into(), (60 * USD).to_string())]);
+        rest_cb(&mut j, ROOT, true);
+        assert_eq!(j.get_job().ft_balance.0, 11 * USD);
+        Ctx::new(ROOT, EVE).set();
+        j.settle();
+        assert_eq!(transfers(), vec![(LEAD.into(), (11 * USD).to_string())]);
+        payee_cb(&mut j, ROOT, true);
+        assert_eq!(j.get_job().ft_balance.0, 0);
+    }
+
+    #[test]
+    fn resume_of_a_routed_leg_that_kept_part_owes_the_payee_only_the_rest() {
+        let mut j = with_route();
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+        // The payee callback was lost. Real 23 = the 5 rest + 18 the route
+        // sent back: 12 of the 30 left.
+        assert!(matches!(
+            resume(&mut j, T1, ok(&u128_json(23 * USD))),
+            PromiseOrValue::Promise(_)
+        ));
+        let v = j.get_job();
+        assert!(!v.payee_paid);
+        assert_eq!(v.payout_via, None);
+        assert_eq!(v.ft_balance.0, 18 * USD);
+        assert_eq!(v.payout.unwrap().leg, Leg::Rest);
+        rest_cb(&mut j, T1, true);
+        Ctx::new(T1, EVE).at(STUCK).set();
+        j.settle();
+        assert_eq!(transfers(), vec![(WORKER.into(), (18 * USD).to_string())]);
     }
 
     #[test]

@@ -11,9 +11,10 @@ itself; there is no outside buyer, so there is no victim for self-dealing.
 ### Requirement: Only a checked, verified, unsold, unpaid note is sellable
 `quote_note()` SHALL be `amount - 1%` (fee rounds down) only when the job is
 Checked, the receipt was verified, a checker is pinned, no check on this
-job ever failed, the note is unsold, the payee was not paid, and no sale is
-in flight; otherwise null.
-- unit: `no_checker_no_note`, `a_failed_check_makes_the_note_unsellable`
+job ever failed, the note is unsold, the payee was not paid (not even in
+part, by a route that kept part of a settle payment), and no sale is in
+flight; otherwise null.
+- unit: `no_checker_no_note`, `a_failed_check_makes_the_note_unsellable`; core: `a_partly_paid_payee_makes_the_note_unsellable`
 - unit: `quote_after_verified_and_checked`, `quote_none_when_unchecked_or_unverified`; core: ledger tests
 
 ### Requirement: Sale to the pinned treasury, exact price, atomic
@@ -46,5 +47,9 @@ paying the worker fails, the sale is undone and the treasury is refunded.
 
 #### Scenario: Sale callback lost
 - WHEN `on_note_paid` never ran
-- THEN anyone may `resume_note` after `RESUME_AFTER_SECS`; the sale is undone (the token refunded the treasury) and, if the worker was already paid from the job's tokens, that amount is booked as prepaid pay
-- unit: `stuck_sale_worker_unpaid_is_undone`, `stuck_sale_worker_paid_from_job_counts_as_prepaid`, `resume_note_too_early`
+- THEN anyone may `resume_note` after `RESUME_AFTER_SECS`; the sale is undone (the token refunded the treasury) and whatever already reached the worker from the job's tokens (all of the price, or the part a route kept) is booked as prepaid pay
+- unit: `stuck_sale_worker_unpaid_is_undone`, `stuck_sale_worker_paid_from_job_counts_as_prepaid`, `stuck_sale_worker_partly_paid_through_its_route_counts_as_prepaid`, `resume_note_too_early`
+
+#### Scenario: The worker's route keeps part of the price
+- THEN the sale stands and the rest goes to the worker plainly; see the settle spec, "The route keeps part of a note price"
+- unit: `a_route_that_keeps_part_of_the_note_price_gets_the_rest_plainly`, `a_failed_plain_rest_of_the_note_price_undoes_the_sale`

@@ -116,9 +116,12 @@ to call `resume_settle` after `RESUME_AFTER_SECS` (600 s), and anyone after
 (so the late original callback is refused), reads the real balance and
 decides from it alone whether the leg's transfer happened. Because only one
 transfer is ever in flight, the answer is unambiguous; tokens above the
-ledger are never booked here. Known limit: a refused `ft_transfer_call` in
-flight at the moment of the read can make a paid leg look unpaid; that is why
-the payee cannot choose the moment during the first day.
+ledger are never booked here. A routed payee leg may have half happened
+(its route kept part): a balance between the expected one and that plus the
+leg books the difference as paid. Known limit: a refused `ft_transfer_call` in
+flight at the moment of the read can make a paid leg look unpaid (a routed
+one, partly unpaid); that is why the payee cannot choose the moment during
+the first day.
 
 #### Scenario: Too early
 - unit: `resume_before_timeout_refused`, `resume_outside_settle_refused`, `stranger_cannot_resume_in_the_first_day`, `anyone_can_resume_after_a_day`
@@ -136,6 +139,11 @@ the payee cannot choose the moment during the first day.
 - THEN it panics "stale settle callback" and changes nothing
 - unit: `late_original_callback_cannot_act_after_resume`, `wrong_leg_callback_refused`
 
+#### Scenario: A routed leg half happened
+- WHEN the payee leg was routed and its callback was lost, and the real balance is between the expected balance and that plus the leg (the route kept part, the token sent the rest back)
+- THEN the payee counts as paid the difference, is owed the rest, the route is dropped, and the next settle pays the rest plainly
+- unit: `resume_of_a_routed_leg_that_kept_part_owes_the_payee_only_the_rest`
+
 #### Scenario: Token does not answer
 - THEN the job stays Settling and resume can be retried
 - unit: `resume_with_no_token_answer_stays_stuck_and_can_retry`
@@ -146,9 +154,14 @@ the payee cannot choose the moment during the first day.
 ### Requirement: The payee can take its pay through NEAR Intents
 The payee may route its pay to the NEAR Intents Verifier before settle
 (`set_payout_via`). The payee leg is then `ft_transfer_call(verifier, pay,
-msg = payee)`, so the pay lands as the payee's balance in the Verifier. It
-counts as paid only if the Verifier kept all of it; otherwise the route is
-dropped and the next settle pays plainly.
+msg = payee)`, so the pay lands as the payee's balance in the Verifier.
+`ft_transfer_call` returns the amount the receiver kept and the token sends
+the rest back, so the job SHALL book exactly that: what the receiver kept is
+paid (it left the account), what came back is still owed to the payee. Unless
+the receiver kept all of it, the route is dropped, cannot be set again, and
+the next settle pays the rest plainly. No receiver behaviour can leave the
+ledger above the real balance, so none can stop the job (and the tree above
+it) from settling.
 
 #### Scenario: Routed pay
 - WHEN the payee set a route and the job settles
@@ -158,14 +171,34 @@ dropped and the next settle pays plainly.
 #### Scenario: Only the payee, only before settle
 - unit: `only_the_payee_picks_the_route`, `the_route_is_fixed_once_settle_starts`
 
+#### Scenario: The route keeps part
+- WHEN the receiver keeps only part of the pay (0 < used < pay)
+- THEN that part is booked as paid, the rest is back in the ledger and still owed to the payee, the rest leg still runs, and the next settle pays the rest plainly and closes the job; on the root the lead is owed only the rest of its fee and bond
+- unit: `a_route_that_keeps_part_cannot_freeze_the_tree`, `a_lead_route_that_keeps_part_is_owed_only_the_rest`; core: `a_partly_used_payee_transfer_books_what_left_and_owes_the_rest`, `a_partly_paid_lead_is_owed_only_the_rest_of_its_fee_and_bond`, `money_is_conserved_in_any_tree`
+
+#### Scenario: A dropped route stays dropped
+- WHEN a settle dropped the route (refused or kept part) and the payee tries to set one again
+- THEN it is refused: one settle per crumb cannot hold the tree up
+- unit: `a_dropped_route_cannot_be_set_again`
+
+#### Scenario: The token answers more than it sent, or junk
+- WHEN the `ft_transfer_call` result is above the pay or is not a number (no correct token answers so)
+- THEN it counts as the whole pay: the books can then only be below the real balance, and the balance leg sweeps any excess up the tree
+- unit: `a_route_reporting_more_than_it_was_sent_counts_as_paid_in_full`, `an_unreadable_route_result_counts_as_paid_in_full`; core: `a_used_value_above_the_transfer_counts_as_all_of_it`
+
 #### Scenario: Refused or failed deposit
 - THEN the leg is not paid, the route is dropped, and resettle pays by plain transfer
 - unit: `a_refused_deposit_falls_back_to_a_plain_transfer_on_resettle`, `a_failed_call_is_not_paid`
 
 #### Scenario: An early pay sale (Job Note) follows the route too
 - WHEN a checked worker with a route sells its payout early to the lead's treasury
-- THEN the price goes `ft_transfer_call(verifier, price, msg = worker)` and the sale stands only if the Verifier kept it all; a refused payment undoes the sale and drops the route; the route cannot change while the sale is in flight
+- THEN the price goes `ft_transfer_call(verifier, price, msg = worker)` and the route is dropped after the sale; kept in full, the sale stands; refused, the sale is undone; the route cannot change while the sale is in flight
 - unit: `a_routed_worker_is_paid_now_into_the_intents_verifier`, `a_refused_routed_note_payment_undoes_the_sale_and_drops_the_route`, `no_route_change_while_a_note_sale_is_in_flight`
+
+#### Scenario: The route keeps part of a note price
+- WHEN the route keeps only part of the price (the token sent the rest back to the job)
+- THEN the sale stands: the rest goes to the worker by a plain transfer in the same chain, the sale stays in flight until it lands, the treasury holds the whole face, and the job's books equal its real balance. If that plain transfer fails, the sale is undone: the treasury gets its whole price back and the part that reached the worker counts as pay it already has. A routed buy must carry the gas for that rest (200 Tgas)
+- unit: `a_route_that_keeps_part_of_the_note_price_gets_the_rest_plainly`, `a_failed_plain_rest_of_the_note_price_undoes_the_sale`, `a_note_route_reporting_more_than_the_price_or_junk_counts_as_paid`, `a_late_note_rest_callback_cannot_act_twice`, `a_routed_note_sale_reserves_gas_for_the_plain_rest`, `stuck_sale_worker_partly_paid_through_its_route_counts_as_prepaid`
 
 #### Scenario: A guest agent cashes out over MCP
 - WHEN a judge's agent routes its pay with the `payout_via` tool, wins a round, and calls `cash_out`

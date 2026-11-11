@@ -134,6 +134,12 @@ const GAS_CHECK: Gas = Gas::from_tgas(30);
 const GAS_ON_CHECK: Gas = Gas::from_tgas(15);
 const GAS_ON_DISPUTE: Gas = Gas::from_tgas(25);
 const GAS_ON_NOTE_PAID: Gas = Gas::from_tgas(20);
+const GAS_ON_NOTE_REST_PAID: Gas = Gas::from_tgas(15);
+/// A routed note payment whose route kept only part: `on_note_paid` sends
+/// the rest to the worker plainly. Register (10), transfer (10) and the
+/// callback (15), plus about 34 Tgas of receipt fees for the three calls and
+/// their two data dependencies (`a_routed_note_sale_reserves_gas_for_the_plain_rest`).
+const GAS_NOTE_REST: Gas = Gas::from_tgas(60);
 /// Least prepaid gas for `deliver` when a check will be scheduled.
 pub const GAS_DELIVER_MIN: Gas = Gas::from_tgas(90);
 pub const GAS_DISPUTE_MIN: Gas = Gas::from_tgas(130);
@@ -378,6 +384,9 @@ pub struct JobView {
     pub unallocated: U128,
     pub ft_balance: U128,
     pub payee_paid: bool,
+    /// Paid to the payee so far by a route that kept only part of its pay;
+    /// the next settle pays only the rest, plainly.
+    pub payee_got: U128,
     pub returned_to_parent: U128,
     pub spec_hash: String,
     pub window_end_ns: U64,
@@ -526,6 +535,21 @@ struct RecordView {
     unpaid_value: U128,
     #[serde(default)]
     payers: u32,
+}
+
+/// What a routed `ft_transfer_call` of `amount` really sent: its result is
+/// the amount the receiver kept (NEP-141), and the token sent the rest
+/// back. Failed: nothing left. A number above `amount` counts as `amount`,
+/// and so does an unreadable answer (no correct token gives either):
+/// assuming the tokens left can only put the books below the real balance,
+/// which the balance leg sweeps up the tree, never above it, which would
+/// leave a job that can never pay out and a tree that can never settle.
+fn routed_used(amount: u128) -> u128 {
+    match env::promise_result_checked(0, MAX_RESULT_LEN) {
+        Err(near_sdk::PromiseError::Failed) => 0,
+        Ok(b) => serde_json::from_slice::<U128>(&b).map_or(amount, |u| u.0.min(amount)),
+        Err(_) => amount,
+    }
 }
 
 /// Did promise `idx` succeed? A success with a long result is still a
@@ -717,6 +741,8 @@ impl Job {
     /// The lead's treasury buys the worker's payout right at the quote. The
     /// worker is registered and paid in the same call chain; if that fails,
     /// `on_note_paid` undoes the sale and the token refunds the treasury.
+    /// A routed payment the route kept only part of still sells: the rest
+    /// goes to the worker plainly (`on_note_paid`).
     fn receive_buy_note(&mut self, sender: AccountId, amount: U128) -> PromiseOrValue<U128> {
         if self.treasury.as_ref() != Some(&sender) {
             return self.refund(amount, "buy_note: only the lead's treasury may buy");
@@ -727,14 +753,24 @@ impl Job {
         if amount != quote {
             return self.refund(amount, "buy_note: amount must equal quote_note");
         }
-        // A routed payment is an ft_transfer_call: it needs more gas.
-        let need = if self.payout_via.is_some() {
-            GAS_BUY_MIN.saturating_add(GAS_FT_TRANSFER_CALL)
+        // A routed payment is an ft_transfer_call, and its callback may
+        // have to send a plain rest: it needs more gas.
+        let routed = self.payout_via.is_some();
+        let (need, cb_gas) = if routed {
+            (
+                GAS_BUY_MIN
+                    .saturating_add(GAS_FT_TRANSFER_CALL)
+                    .saturating_add(GAS_NOTE_REST),
+                GAS_ON_NOTE_PAID.saturating_add(GAS_NOTE_REST),
+            )
         } else {
-            GAS_BUY_MIN
+            (GAS_BUY_MIN, GAS_ON_NOTE_PAID)
         };
         if env::prepaid_gas().saturating_sub(env::used_gas()) < need {
-            return self.refund(amount, "buy_note: not enough gas (attach 100 Tgas)");
+            return self.refund(
+                amount,
+                "buy_note: not enough gas (attach 100 Tgas, 200 with a route)",
+            );
         }
         let worker = self
             .worker
@@ -764,35 +800,62 @@ impl Job {
         };
         let pay = pay.then(
             Self::ext(env::current_account_id())
-                .with_static_gas(GAS_ON_NOTE_PAID)
+                .with_static_gas(cb_gas)
                 .on_note_paid(worker, amount),
         );
         PromiseOrValue::Promise(pay)
     }
 
-    /// After paying the worker its note price. Returns the unused amount to
-    /// the token: 0 on success, the whole price (refund) on failure.
+    /// After paying the worker its note price. Returns (or ends in) the
+    /// unused amount for the token: 0 when the sale stands, the whole price
+    /// (refund) when it is undone.
+    ///
+    /// A routed payment returns what the route kept. All of it: sold. None:
+    /// undone, as a failed plain payment. Part of it: the token sent the
+    /// rest back here, so the sale stands and the rest goes to the worker
+    /// by a plain transfer in the same chain (`on_note_rest_paid`). The
+    /// worker gets the whole price, the treasury the whole face, and the
+    /// books never expect tokens the job does not hold.
     #[private]
-    pub fn on_note_paid(&mut self, worker: AccountId, price: U128) -> U128 {
+    pub fn on_note_paid(&mut self, worker: AccountId, price: U128) -> PromiseOrValue<U128> {
         assert_self();
         require!(self.note_pending, "no note sale in flight");
-        self.note_pending = false;
-        // A routed payment counts only if the receiver kept all of it. The
-        // route was the seller's: after the sale (or its failure) it is gone.
-        let ok = if self.payout_via.take().is_some() {
-            env::promise_result_checked(0, MAX_RESULT_LEN)
-                .ok()
-                .and_then(|b| serde_json::from_slice::<U128>(&b).ok())
-                == Some(price)
-        } else {
-            result_ok(0)
+        // The route was the seller's: after the sale (or its failure) it is gone.
+        let used = match self.payout_via.take() {
+            Some(via) => {
+                let used = routed_used(price.0);
+                if used < price.0 {
+                    emit("payout_via_dropped", json!({ "via": via }));
+                }
+                if used > 0 && used < price.0 {
+                    // Still in flight: settle, dispute and a route change wait.
+                    let rest = price.0 - used;
+                    emit(
+                        "note_route_kept_part",
+                        json!({ "worker": worker, "routed": U128(used), "plain": U128(rest) }),
+                    );
+                    return PromiseOrValue::Promise(
+                        self.register(worker.clone())
+                            .then(self.ft_transfer(worker.clone(), rest))
+                            .then(
+                                Self::ext(env::current_account_id())
+                                    .with_static_gas(GAS_ON_NOTE_REST_PAID)
+                                    .on_note_rest_paid(worker, price, U128(used)),
+                            ),
+                    );
+                }
+                used
+            }
+            None if result_ok(0) => price.0,
+            None => 0,
         };
-        if ok {
+        self.note_pending = false;
+        if used == price.0 {
             emit(
                 "note_sold",
                 json!({ "buyer": self.payee, "worker": worker, "price": price }),
             );
-            U128(0)
+            PromiseOrValue::Value(U128(0))
         } else {
             self.note_sold = false;
             self.payee = Some(worker.clone());
@@ -800,14 +863,45 @@ impl Job {
                 "note_sale_failed",
                 json!({ "worker": worker, "refund": price }),
             );
-            price
+            PromiseOrValue::Value(price)
         }
+    }
+
+    /// After the plain rest of a note price whose route kept `used`. Sent:
+    /// the sale stands (0 back to the token). Not sent (the rest is still
+    /// here): the sale is undone, the token refunds the treasury its whole
+    /// price out of the job, and the `used` that reached the worker through
+    /// its route is booked as pay it already has (`Ledger::prepay`, as
+    /// `resume_note` does).
+    #[private]
+    pub fn on_note_rest_paid(&mut self, worker: AccountId, price: U128, used: U128) -> U128 {
+        assert_self();
+        require!(self.note_pending, "no note sale in flight");
+        self.note_pending = false;
+        if result_ok(0) {
+            emit(
+                "note_sold",
+                json!({ "buyer": self.payee, "worker": worker, "price": price, "routed": used }),
+            );
+            return U128(0);
+        }
+        if let Err(e) = self.ledger.prepay(used.0) {
+            fail(e);
+        }
+        self.note_sold = false;
+        self.payee = Some(worker.clone());
+        emit(
+            "note_sale_failed",
+            json!({ "worker": worker, "refund": price, "worker_already_got": used }),
+        );
+        price
     }
 
     /// Anyone, if a note sale's callback never ran (`RESUME_AFTER_SECS`).
     /// The token then refunded the treasury in full (the receiver's promise
-    /// failed). The real balance tells whether the worker was paid anyway,
-    /// out of the job's own tokens.
+    /// failed). The real balance tells how much reached the worker anyway,
+    /// out of the job's own tokens: all of the price, none, or (a route
+    /// that kept part) some of it.
     pub fn resume_note(&mut self) -> Promise {
         require!(self.note_pending, "no note sale in flight");
         require!(
@@ -850,21 +944,26 @@ impl Job {
             .worker
             .clone()
             .unwrap_or_else(|| env::panic_str("no worker"));
-        // Worker paid from our tokens: real == base - price (strays aside).
-        let paid_from_job = real < base && base - real >= price;
-        if paid_from_job {
-            if let Err(e) = self.ledger.prepay(price) {
+        // What the worker got from our tokens: base - real, at most the
+        // price (strays only lower it, so the books never exceed the real
+        // balance).
+        let got = base.saturating_sub(real).min(price);
+        if got > 0 {
+            if let Err(e) = self.ledger.prepay(got) {
                 fail(e);
             }
+        }
+        if let Some(via) = self.payout_via.take() {
+            emit("payout_via_dropped", json!({ "via": via }));
         }
         self.note_pending = false;
         self.note_sold = false;
         self.payee = Some(worker.clone());
         emit(
             "note_sale_resumed",
-            json!({ "worker": worker, "worker_already_got": U128(if paid_from_job { price } else { 0 }) }),
+            json!({ "worker": worker, "worker_already_got": U128(got) }),
         );
-        paid_from_job
+        got > 0
     }
 
     fn receive_bond(&mut self, sender: AccountId, amount: U128) -> PromiseOrValue<U128> {
@@ -2719,14 +2818,16 @@ impl Job {
     /// twice.
     /// The payee picks where its pay goes: `Some(verifier)` sends it with
     /// `ft_transfer_call` so it lands as the payee's balance in the NEAR
-    /// Intents Verifier; `None` is a plain transfer. Only before settle.
+    /// Intents Verifier; `None` is a plain transfer. Only before the first
+    /// settle: a route dropped by a settle (it refused or kept only part)
+    /// cannot be set again, so every later settle pays plainly.
     pub fn set_payout_via(&mut self, via: Option<AccountId>) {
         require!(
             self.payee.as_ref() == Some(&env::predecessor_account_id()),
             "only the payee picks where its pay goes"
         );
         require!(
-            !matches!(self.status, Status::Settling | Status::Settled),
+            !matches!(self.status, Status::Settling | Status::Settled) && self.settle_attempt == 0,
             "too late: settle has started"
         );
         require!(!self.note_pending, "note sale in flight");
@@ -2972,14 +3073,16 @@ impl Job {
         p
     }
 
-    fn resolve_payee(&mut self, p: &Payout, ok: bool) {
-        let s = Split {
-            to_payee: p.to_payee.0,
-            to_rest: 0,
-        };
-        if let Err(e) = self.ledger.payout_result(s, ok, true) {
+    /// The payee leg's outcome: `used` of `to_payee` really left (all or
+    /// nothing for a plain transfer; a route may keep part). What left is
+    /// paid, what came back is owed and paid plainly by the next settle:
+    /// a route that did not keep everything is dropped.
+    fn resolve_payee(&mut self, p: &Payout, used: u128) {
+        let used = used.min(p.to_payee.0);
+        if let Err(e) = self.ledger.payee_result(p.to_payee.0, used) {
             fail(e);
         }
+        let ok = used == p.to_payee.0;
         if !ok {
             if let Some(via) = self.payout_via.take() {
                 emit("payout_via_dropped", json!({ "via": via }));
@@ -2987,7 +3090,7 @@ impl Job {
         }
         emit(
             "paid",
-            json!({ "leg": "payee", "ok": ok, "to": self.payee, "amount": p.to_payee }),
+            json!({ "leg": "payee", "ok": ok, "to": self.payee, "amount": p.to_payee, "used": U128(used) }),
         );
     }
 
@@ -3024,17 +3127,15 @@ impl Job {
     pub fn on_payee_paid(&mut self, attempt: u32) -> PromiseOrValue<bool> {
         assert_self();
         let p = self.current_payout(Leg::Payee, attempt);
-        // A routed payment counts only if the receiver kept all of it
-        // (`ft_transfer_call` returns the amount used; the rest came back).
-        let ok = if self.payout_via.is_some() {
-            env::promise_result_checked(0, MAX_RESULT_LEN)
-                .ok()
-                .and_then(|b| serde_json::from_slice::<U128>(&b).ok())
-                == Some(p.to_payee)
+        // A routed payment returns what the receiver kept; the rest came back.
+        let used = if self.payout_via.is_some() {
+            routed_used(p.to_payee.0)
+        } else if result_ok(0) {
+            p.to_payee.0
         } else {
-            result_ok(0)
+            0
         };
-        self.resolve_payee(&p, ok);
+        self.resolve_payee(&p, used);
         self.start_rest_leg(Self::split_of(&p))
     }
 
@@ -3173,7 +3274,10 @@ impl Job {
 
     /// The real balance after a stuck leg. `base` is what the ledger expects
     /// if the leg's transfer happened. Only one transfer is ever in flight:
-    /// at least `base + leg amount` means it did not happen. Tokens above the
+    /// at least `base + leg amount` means it did not happen. A routed payee
+    /// leg may also have half happened (its route kept part, the token sent
+    /// the rest back): a balance between the two means the payee got the
+    /// difference to `base + leg` and is owed the rest. Tokens above the
     /// ledger are never booked here; the balance leg sweeps them if real.
     #[private]
     pub fn on_resume_balance(&mut self, attempt: u32) -> PromiseOrValue<bool> {
@@ -3211,7 +3315,11 @@ impl Job {
         // sweeps it later, and only if it really is there.
         let happened = !(real >= failed_at && leg_amount > 0);
         match p.leg {
-            Leg::Payee => self.resolve_payee(&p, happened),
+            Leg::Payee if self.payout_via.is_some() => {
+                let back = real.saturating_sub(base).min(leg_amount);
+                self.resolve_payee(&p, leg_amount - back)
+            }
+            Leg::Payee => self.resolve_payee(&p, if happened { leg_amount } else { 0 }),
             Leg::Rest => self.resolve_rest(&p, happened),
             Leg::Balance => return self.apply_real_balance(Some(U128(real.saturating_sub(base)))),
             Leg::Sweep => unreachable!(),
@@ -3498,6 +3606,7 @@ impl Job {
             unallocated: U128(self.ledger.unallocated()),
             ft_balance: U128(self.ledger.ft_balance),
             payee_paid: self.ledger.payee_paid,
+            payee_got: U128(self.ledger.payee_got),
             returned_to_parent: U128(self.returned_to_parent),
             spec_hash: hex_of(&self.spec_hash),
             window_end_ns: U64(self.window_end_ns),
