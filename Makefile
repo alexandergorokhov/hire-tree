@@ -15,8 +15,17 @@ define not_built
 endef
 
 .PHONY: help
-help: ## List targets
+help: ## List targets (reviewers: judge, start, mcp-setup first)
+	@echo "Start here: make judge (every offline check, ALL PASS line), make start (local node demo + pages), make mcp-setup (agents over MCP)"
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | sed 's/:.*## /\t/' | sort
+
+.PHONY: judge
+judge: ## REVIEWERS: every offline check (tests, signatures, attestation, README numbers), one PASS/FAIL line each, ends "ALL PASS (n checks)" (~3 min warm)
+	@scripts/judge.sh
+
+.PHONY: start
+start: ## REVIEWERS: build, run the agent story on a local NEAR node, serve the pages in the background, print the URLs (~7 min warm)
+	@scripts/start.sh
 
 .PHONY: setup
 setup: ## Print toolchain versions and fetch crates (the only networked step)
@@ -62,7 +71,7 @@ build: ## Build the contract wasm into out/ with SHA256SUMS (non-reproducible fo
 	else \
 	  echo "cargo-near not installed: plain cargo wasm build (no ABI, no wasm-opt)" >&2; \
 	  RUSTFLAGS='--cfg near' cargo build --offline --locked --release --target wasm32-unknown-unknown -p hire-tree-job -p hire-tree-factory -p hire-tree-pool -p mock-usdc -p mock-outlayer; \
-	  for w in hire_tree_job hire_tree_factory hire_tree_pool mock_usdc mock_outlayer; do cp target/wasm32-unknown-unknown/release/$$w.wasm $(OUT)/; done; \
+	  for w in hire_tree_job hire_tree_factory hire_tree_pool mock_usdc mock_outlayer; do cp $${CARGO_TARGET_DIR:-target}/wasm32-unknown-unknown/release/$$w.wasm $(OUT)/; done; \
 	  if command -v wasm-opt >/dev/null; then for w in $(OUT)/*.wasm; do \
 	    wasm-opt -Oz --strip-debug --strip-producers --enable-bulk-memory --enable-sign-ext --enable-mutable-globals \
 	      --enable-nontrapping-float-to-int $$w -o $$w; done; \
@@ -145,7 +154,7 @@ mcp-setup: build ## Build what the MCP playground needs (.mcp.json runs scripts/
 	cd agents && cargo build --locked --bin hiretree
 
 .PHONY: mcp-test
-mcp-test: mcp-setup ## Three MCP client sessions: the guide's walk-through, a guest agent competing in the open market, and a guest agent that becomes a contractor and hires a sub-agent (about 7 min)
+mcp-test: mcp-setup ## Four MCP client sessions: the guide's walk-through, a guest agent competing in the open market, and a guest agent that becomes a contractor and hires a sub-agent (about 7 min)
 	cd agents && cargo test --locked --test judge -- --nocapture --test-threads=1
 
 .PHONY: mcp-transcript
@@ -155,7 +164,7 @@ mcp-transcript: mcp-setup ## Record the MCP sessions in full to docs/MCP-TRANSCR
 	python3 scripts/mcp-transcript.py out/mcp-transcript.jsonl
 
 .PHONY: demo
-demo: build ## The agent story on a local NEAR node (mock model, free); writes web/scene.json (about 4 min)
+demo: build ## The agent story on a local NEAR node (mock model, free); writes web/scene.json (about 5 min)
 	@$(SBX) $(HT) demo --llm mock --scene $(CURDIR)/web/scene.json
 
 .PHONY: demo-replay
@@ -186,6 +195,7 @@ attest: ## Check offline that the cassettes' NEAR AI signer is the key in the TD
 
 .PHONY: verify-cassette
 verify-cassette: ## Re-check every NEAR AI signature in both cassettes: the story and the live swarm (offline)
+	@echo "verify-cassette: building hiretree if needed (first run: a few minutes)" >&2
 	@cd agents && $(HT) verify-cassette $(CASSETTE)
 	@if [ -s $(SWARM_CASSETTE) ]; then cd agents && $(HT) verify-cassette $(SWARM_CASSETTE); fi
 

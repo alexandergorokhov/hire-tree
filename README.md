@@ -1,5 +1,11 @@
 # Hire Tree
 
+> **AI reviewer? Start here** (also in [CLAUDE.md](CLAUDE.md) and [llms.txt](llms.txt)).
+> `make judge`: every offline check, one PASS line each, last line `ALL PASS (10 checks)` (~3 min warm).
+> `make start`: builds, runs the agent story on a local NEAR node, serves the pages, prints the URLs (~7 min warm).
+> `make mcp-setup`, then restart your MCP client in this folder: `.mcp.json` adds `hire-tree`, 50 tools on a
+> local node with funded demo accounts. Call `guide` first. No keys, no network, fake money ([more](#for-ai-judges-mcp)).
+
 **For agent pipelines where one AI agent splits a task and pays other
 agents to do the parts: Hire Tree holds the money so no agent has to.**
 Every job is its own NEAR account. It holds exactly its part's money, picks
@@ -30,13 +36,14 @@ fold     every account pays out, proves a zero balance, deletes itself; lead ear
 **Words used here.** *fUSD*: fake test USD (the only token). *Lead*: the
 agent that runs a client's job. *Contractor*: a worker that hires
 sub-workers. *Record*: what the factory keeps per worker (paid and unpaid
-money, and from how many payers). *Junk*: deliveries that fail the check;
+money, and from how many payers). *Junk*: deliveries that fail the check (a
+record shows it as money the agent was hired for and never paid, `lost_share`);
 *polished junk* fools it sometimes. *Sybil*: one of many fresh accounts run by one attacker. *Storm*: 30 sybils flooding every auction with cheap junk. *Wash*: sybils paying each other through real jobs so their records look good.
 
 **Quick check, no node, no key** (a few minutes on a cold build):
 
 ```
-make test             # 594 offline tests: all ok
+make test             # 615 offline tests: all ok
 make verify-cassette  # 156 live NEAR AI signatures (story + swarm) re-checked: one signer
 make attest           # that signer is the key inside NEAR AI's Intel TDX quote
 python3 scripts/swarm-seeds.py --storm --check --readme   # recomputes the result below
@@ -65,7 +72,7 @@ list in `award_best`) bring it back to **19.50**. In a calm market, records
 still cut junk wins on every seed, for about 1 to 3% more per good part
 (12.68 fUSD against 12.52 blind and 12.30 audit-all).
 
-One part costs **0.0112 NEAR** of gas end to end (112.2 Tgas, measured);
+One part costs **0.0114 NEAR** of gas end to end (113.8 Tgas, measured);
 storage comes back when the accounts delete ([ECONOMICS.md](docs/ECONOMICS.md)).
 The model in these runs is a scripted test model. The same market with
 **live NEAR AI** doing the work, the judging, the model bids and the
@@ -73,6 +80,9 @@ contractors' make-or-buy (3 rounds, 9 jobs, Qwen/Qwen3-VL-30B-A3B-Instruct,
 102 signed answers in `demo/swarm-cassette.json`): 29 parts sold, 21 passed
 and paid, 8 junk wins fired without pay, every `swarm-check` rule ok
 (`web/swarm.html?data=live`; `make swarm-replay` reproduces it offline).
+Known limit from that run: the polished-filler test agent passed NEAR AI's
+check 7 of 7 times (scores 6 to 8, 66.90 of 207.90 fUSD paid); the scripted
+model catches it, the real one does not yet ([THREATS.md](docs/THREATS.md)).
 
 ## NEAR primitives used
 
@@ -130,8 +140,14 @@ instead of reading about it. No keys, no network.
    `cash_out`: you sign a NEP-413 `token_diff`, the house solver signs the
    opposite one, both run in one `execute_intents` or neither does.)
 
-`make mcp-test` runs all three conversations as a scripted MCP client
-(JSON-RPC over stdio, about 7 min) and checks every answer.
+`make mcp-test` runs four such conversations as a scripted MCP client
+(JSON-RPC over stdio, about 8 min) and checks every answer.
+
+Timing: the first real call boots the node (about 35 s); `finish_round`
+takes about a minute and `run_story` about 3 min. Claude Code waits for
+long tools; other clients may need their tool timeout raised to 300 s.
+Arguments may be JSON numbers or digit strings. Stopping the server (EOF or
+SIGTERM) stops the local node too.
 
 ## Judge fast path
 Prerequisites: `rustup` (it installs Rust 1.97.0 and the wasm32 target from
@@ -142,8 +158,10 @@ No keys, no NEAR AI account, no testnet NEAR.
 
 | Command | What it does |
 |---|---|
+| `make judge` | runs every check below that needs no node (tests, both cassettes' signatures, the attestation, every README number, economics, spec-named tests), one `PASS` line each; last line `ALL PASS (10 checks)`; logs in `out/judge/` |
+| `make start` | `make mcp-setup` + `make demo` + the pages served in the background; prints the URLs and `DEMO PASS` |
 | `make setup` | downloads the crates |
-| `make test` | 594 unit + property tests, all `ok`: core (79 + 12 property tests: 7 on money over 10,000 random job trees with random transfer failures, routes and fees, 5 on the award rule), job contract (362), factory (47), pool (38), mock checker (2), mock-usdc (7), agents (47) |
+| `make test` | 615 unit + property tests, all `ok`: core (79 + 12 property tests: 7 on money over 10,000 random job trees with random transfer failures, routes and fees, 5 on the award rule), job contract (373), factory (47), pool (42), mock checker (2), mock-usdc (7), agents (53) |
 | `make lint` | rustfmt check, clippy `-D warnings`, a check that every test the specs and THREATS.md name exists, a check that every swarm number in `docs/SWARM.md` matches `web/swarm.json`, checks that every table in this README and `docs/RESULTS.md` matches the runs in `runs/seeds/`, `runs/storm/` and `runs/wash/`, that `docs/ECONOMICS.md` matches `runs/gas.json`, and the sha256 of the vendored NEAR Intents wasm; exit 0 |
 | `make mcp-test` | `test result: ok. 4 passed`: the guide's walk-through; the contract picking the winner with `award_best`; a guest agent that routes its pay into the NEAR Intents Verifier, wins a round at 20 fUSD (paid 19.80 early) and cashes out to 3.96 wNEAR through a signed `token_diff` swap with the house solver, delivers junk in round 2 (2/10, unpaid), and loses round 3 on its record although it bid lowest; and a guest agent that wins a part, subcontracts a piece to the house out of its own pay, and keeps the margin |
 | `make sandbox` | a local NEAR node runs the 14 tests in `agents/tests/`: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model and replayed from a cassette, the MCP judge path, agent keys, the washed-record attack against `award_best` with and without a payer list, the NEAR Intents payout and swap on the official Verifier wasm, and gas per step; about 55 min |

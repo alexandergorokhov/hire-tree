@@ -38,7 +38,7 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
     let s = |props: Value, req: &[&str]| json!({ "type": "object", "properties": props, "required": req });
     let str_ = json!({ "type": "string" });
     vec![
-        ("post_job", "Client: post and fund a root job through the factory (needs 0.06 NEAR prepaid with prepay_post).",
+        ("post_job", "Client: post and fund a root job through the factory (needs 0.06 NEAR prepaid on the factory, its `prepay_post` method; the MCP playground prepays for you).",
          s(json!({ "budget": str_, "manager": str_, "task": str_, "window_secs": { "type": "integer" }, "lead_fee": str_, "treasury": str_ }), &["budget", "manager", "task", "window_secs"])),
         ("deposit", "Client: keep `amount` fUSD at the factory for signed job intents (an ft_transfer_call with msg \"deposit\").",
          s(json!({ "amount": str_ }), &["amount"])),
@@ -56,7 +56,7 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
          s(json!({ "job": str_, "slot": { "type": "integer" }, "price": str_, "salt": str_, "stake": str_ }), &["job", "slot", "price", "salt"])),
         ("seek_backer", "Worker, after bidding: ask an underwriter to back your bid with more bond. You offer `premium` (yoctoNEAR, at most half your own bond), paid out of your bond only if you win and your work is paid. A newcomer with no record uses it to borrow a trusted agent's vouch.",
          s(json!({ "job": str_, "slot": { "type": "integer" }, "premium": str_ }), &["job", "slot", "premium"])),
-        ("back", "Underwriter: back another agent's bid that seeks a backer, attaching `amount` yoctoNEAR (at most 5 NEAR). Buyers see the bid's bond plus your backing. Paid work: you get it back plus the premium. Junk: the buyer keeps it. A losing bid: refunded at the award.",
+        ("back", "Underwriter: back another agent's bid that seeks a backer, attaching `amount` yoctoNEAR: at least the bidder's own bond and twice the premium, at most 5 NEAR. Buyers see the bid's bond plus your backing. Paid work: you get it back plus the premium. Junk: the buyer keeps it. A losing bid: refunded at the award.",
          s(json!({ "job": str_, "slot": { "type": "integer" }, "bidder": str_, "amount": str_ }), &["job", "slot", "bidder", "amount"])),
         ("reveal", "Worker, sealed slot, after bidding closes: reveal the committed price with its salt. An unrevealed bid cannot win and loses its bond.",
          s(json!({ "job": str_, "slot": { "type": "integer" }, "price": str_, "salt": str_ }), &["job", "slot", "price", "salt"])),
@@ -85,7 +85,7 @@ pub fn list() -> Vec<(&'static str, &'static str, Value)> {
         ("settle", "Anyone: settle a job (pay, return the rest, delete at zero).", s(json!({ "job": str_ }), &["job"])),
         ("get_job", "Anyone: a job's state.", s(json!({ "job": str_ }), &["job"])),
         ("get_record", "Anyone: a worker's track record kept by the factory. With `payers` (up to 16 manager accounts), its paid money and payer count count only what those managers paid.", s(json!({ "account": str_, "payers": { "type": "array", "items": str_ } }), &["account"])),
-        ("find_agents", "Anyone, before hiring: rank candidate agents by their on-chain records (up to 32 `agents`; with `payers`, only money those managers paid counts). Best first: least junk, then most fUSD paid, then most different payers. Then hire one with `hire` or `open_bids` + `award_best`, or name it `manager` in post_job.",
+        ("find_agents", "Anyone, before hiring: rank candidate agents by their on-chain records (up to 32 `agents`; with `payers`, only money those managers paid counts). Best first: least share of pay lost to junk (no record counts as half), then most fUSD paid, then most different payers. `has_record: false` means the factory has nothing on that account (new, or not an agent). Then hire one with `hire` or `open_bids` + `award_best`, or name it `manager` in post_job.",
          s(json!({ "agents": { "type": "array", "items": str_ }, "payers": { "type": "array", "items": str_ } }), &["agents"])),
         ("join_pool", "Client: put `amount` into a collective-purchase pool; the pool keeps at most what its target still needs.",
          s(json!({ "pool": str_, "amount": str_ }), &["pool", "amount"])),
@@ -172,10 +172,16 @@ impl Tools<'_> {
             }
             "sign_intent" => {
                 let me = who.id.to_string();
+                intent_seed_ok(c.sbx.is_some(), std::env::var("HT_INTENT_SEED").is_ok())?;
                 let key = crate::intent::public_key(&me);
                 let have = c.view(&c.hub, "get_intent_key", json!({ "account_id": me })).await?;
-                if have.as_str() != Some(key.as_str()) {
-                    c.call(who, &c.hub, "set_intent_key", json!({ "public_key": key }), zero).await?;
+                match have.as_str() {
+                    Some(k) if k == key => {}
+                    // Never replace a key the account registered itself.
+                    Some(_) => return Err("this account already registered its own intent key: sign intents with that key, not this tool".into()),
+                    None => {
+                        c.call(who, &c.hub, "set_intent_key", json!({ "public_key": key }), zero).await?;
+                    }
                 }
                 let now = c.block_time_ns().await;
                 let secs = a["secs"].as_u64().ok_or("missing secs")?.clamp(10, 86_400);
@@ -392,7 +398,20 @@ impl Tools<'_> {
                 c.call(who, &id(a, "job")?, "set_payout_via", json!({ "via": via }), zero)
                     .await
             }
-            "finalize_check" | "finalize_dispute" | "approve" | "fire" | "settle" => {
+            "settle" => {
+                let job = id(a, "job")?;
+                // Many open bid bonds: refund them in batches first.
+                for _ in 0..16 {
+                    match c.call(who, &job, "settle", json!({}), zero).await {
+                        Err(e) if e.contains("call refund_bids first") => {
+                            c.call(who, &job, "refund_bids", json!({}), zero).await?;
+                        }
+                        r => return r,
+                    }
+                }
+                Err("settle: open bid bonds remain after 16 refund batches".into())
+            }
+            "finalize_check" | "finalize_dispute" | "approve" | "fire" => {
                 c.call(who, &id(a, "job")?, name, json!({}), zero).await
             }
             "quote_note" => c.view(&id(a, "job")?, "quote_note", json!({})).await,
@@ -433,11 +452,20 @@ impl Tools<'_> {
                     };
                     rows.push((acct.to_string(), r));
                 }
-                Ok(json!(rank_agents(rows)))
+                Ok(json!(rank_agents(rows, a["payers"].is_array())))
             }
             other => Err(format!("unknown tool {other}")),
         }
     }
+}
+
+/// Demo intent keys come from the account id and `HT_INTENT_SEED`. With the
+/// default seed anyone can compute them, which is fine on a local node only.
+fn intent_seed_ok(local_node: bool, seed_set: bool) -> Result<(), String> {
+    if !local_node && !seed_set {
+        return Err("sign_intent off a local node needs a private HT_INTENT_SEED in the environment (the default seed is public)".into());
+    }
+    Ok(())
 }
 
 /// The most candidates one `find_agents` call reads.
@@ -450,13 +478,26 @@ fn num(r: &Value, k: &str) -> u128 {
     }
 }
 
+/// Basis points of an agent's recorded pay that it lost (junk, fired). An
+/// agent with no money on record counts as half-trusted (5000), so a clean
+/// record ranks above a newcomer and a newcomer above a mostly-junk one.
+fn lost_bps(r: &Value) -> u128 {
+    let (paid, lost) = (num(r, "paid_value"), num(r, "unpaid_value"));
+    match paid.checked_add(lost) {
+        Some(0) | None => 5000,
+        Some(all) => lost.saturating_mul(10_000) / all,
+    }
+}
+
 /// A catalog of hireable agents from their on-chain records, best first:
-/// least junk, then most fUSD paid, then most different payers, then name.
-pub fn rank_agents(rows: Vec<(String, Value)>) -> Vec<Value> {
+/// least share of pay lost to junk, then most fUSD paid, then most different
+/// payers, then name. With `filtered` (a `payers` list was given), the
+/// per-delivery fields cover the whole record, so they are left out.
+pub fn rank_agents(rows: Vec<(String, Value)>, filtered: bool) -> Vec<Value> {
     let mut v: Vec<(String, Value)> = rows;
     v.sort_by(|(a, x), (b, y)| {
-        num(x, "junk")
-            .cmp(&num(y, "junk"))
+        lost_bps(x)
+            .cmp(&lost_bps(y))
             .then(num(y, "paid_value").cmp(&num(x, "paid_value")))
             .then(num(y, "payers").cmp(&num(x, "payers")))
             .then(a.cmp(b))
@@ -464,16 +505,19 @@ pub fn rank_agents(rows: Vec<(String, Value)>) -> Vec<Value> {
     v.into_iter()
         .map(|(acct, r)| {
             let (delivered, paid, scored) = (num(&r, "delivered"), num(&r, "paid"), num(&r, "scored"));
+            let whole = |x: Value| if filtered { Value::Null } else { x };
             json!({
                 "account": acct,
+                "has_record": num(&r, "jobs") > 0,
                 "jobs": num(&r, "jobs"),
-                "paid": paid,
+                "paid": whole(json!(paid)),
                 "junk": num(&r, "junk"),
-                "pass_rate": if delivered == 0 { Value::Null } else { json!(paid as f64 / delivered as f64) },
-                "avg_score": if scored == 0 { Value::Null } else { json!(num(&r, "score_sum") as f64 / scored as f64) },
+                "pass_rate": whole(if delivered == 0 { Value::Null } else { json!(paid as f64 / delivered as f64) }),
+                "avg_score": whole(if scored == 0 { Value::Null } else { json!(num(&r, "score_sum") as f64 / scored as f64) }),
                 "paid_value": num(&r, "paid_value").to_string(),
                 "unpaid_value": num(&r, "unpaid_value").to_string(),
                 "payers": num(&r, "payers"),
+                "lost_share": lost_bps(&r) as f64 / 10_000.0,
             })
         })
         .collect()
@@ -490,22 +534,71 @@ mod tests {
 
     #[test]
     fn find_agents_ranks_clean_paid_records_first() {
-        let out = rank_agents(vec![
-            ("junk.near".into(), rec(2, "90000000", 3, 5, 3)),
-            ("new.near".into(), rec(0, "0", 0, 0, 0)),
-            ("solid.near".into(), rec(0, "50000000", 2, 4, 4)),
-            ("wide.near".into(), rec(0, "50000000", 5, 4, 4)),
-        ]);
+        let mut junk = rec(2, "90000000", 3, 5, 3);
+        junk["unpaid_value"] = json!("60000000");
+        let out = rank_agents(
+            vec![
+                ("junk.near".into(), junk),
+                ("new.near".into(), rec(0, "0", 0, 0, 0)),
+                ("solid.near".into(), rec(0, "50000000", 2, 4, 4)),
+                ("wide.near".into(), rec(0, "50000000", 5, 4, 4)),
+            ],
+            false,
+        );
         let order: Vec<&str> = out.iter().map(|r| r["account"].as_str().unwrap()).collect();
-        assert_eq!(order, ["wide.near", "solid.near", "new.near", "junk.near"]);
+        // More money paid does not buy back 40% of pay lost to junk.
+        assert_eq!(order, ["wide.near", "solid.near", "junk.near", "new.near"]);
         assert_eq!(out[0]["pass_rate"], json!(1.0));
         assert_eq!(out[0]["avg_score"], json!(8.0));
         assert_eq!(
-            out[2]["pass_rate"],
+            out[3]["pass_rate"],
             Value::Null,
             "no deliveries yet: no rate, not 0%"
         );
-        assert_eq!(out[3]["paid_value"], json!("90000000"));
+        assert_eq!(out[3]["has_record"], json!(false));
+        assert_eq!(out[2]["lost_share"], json!(0.4));
+    }
+
+    #[test]
+    fn find_agents_puts_newcomers_between_clean_and_mostly_junk_records() {
+        let mut veteran = rec(1, "400000000", 6, 40, 39);
+        veteran["unpaid_value"] = json!("10000000");
+        let mut junky = rec(3, "5000000", 1, 4, 1);
+        junky["unpaid_value"] = json!("30000000");
+        let out = rank_agents(
+            vec![
+                ("junky.near".into(), junky),
+                ("nobody.near".into(), rec(0, "0", 0, 0, 0)),
+                ("veteran.near".into(), veteran),
+            ],
+            false,
+        );
+        let order: Vec<&str> = out.iter().map(|r| r["account"].as_str().unwrap()).collect();
+        assert_eq!(
+            order,
+            ["veteran.near", "nobody.near", "junky.near"],
+            "one junk in 40 jobs beats an unknown account"
+        );
+        assert_eq!(out[1]["has_record"], json!(false));
+    }
+
+    #[test]
+    fn find_agents_with_payers_hides_whole_record_rates() {
+        let out = rank_agents(vec![("sybil.near".into(), rec(0, "0", 0, 5, 5))], true);
+        assert_eq!(
+            out[0]["pass_rate"],
+            Value::Null,
+            "a washed record must not show pass_rate 1.0"
+        );
+        assert_eq!(out[0]["avg_score"], Value::Null);
+        assert_eq!(out[0]["paid"], Value::Null);
+    }
+
+    #[test]
+    fn demo_intent_keys_need_a_private_seed_off_the_local_node() {
+        assert!(intent_seed_ok(true, false).is_ok());
+        assert!(intent_seed_ok(false, false).is_err());
+        assert!(intent_seed_ok(false, true).is_ok());
     }
 
     #[test]

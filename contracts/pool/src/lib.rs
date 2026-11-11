@@ -152,6 +152,11 @@ pub struct Pool {
     attempt: u32,
     /// State to return to if `finish` cannot complete.
     before_finish: State,
+    /// What the bound job says it sent back to the pool (its `job_refund`
+    /// notice, sent only after the transfer settled). Members share exactly
+    /// this, never a balance read: a refused `ft_transfer_call` can make a
+    /// read show tokens the token takes back a block later.
+    refund: Option<U128>,
 }
 
 fn emit(event: &str, data: serde_json::Value) {
@@ -227,6 +232,7 @@ impl Pool {
             pending: None,
             attempt: 0,
             before_finish: State::Open,
+            refund: None,
         }
     }
 
@@ -457,8 +463,15 @@ impl Pool {
     /// Anyone. Joining closed short of the target, or the launch failed:
     /// share the balance. Posted and bound: only once the job account is
     /// gone (deleted after settle, so its refund has arrived).
-    pub fn finish(&mut self) -> Promise {
+    pub fn finish(&mut self) -> PromiseOrValue<U128> {
         let prev = self.state;
+        if let (State::Posted, Some(r), true) = (prev, self.refund, self.job.is_some()) {
+            // The job reported what it sent back: no read needed.
+            self.payout = r.0;
+            self.state = State::Done;
+            emit("finished", json!({ "payout": r, "reported": true }));
+            return PromiseOrValue::Value(r);
+        }
         match prev {
             State::Open => require!(
                 env::block_timestamp() >= self.closes_ns && self.raised < self.target,
@@ -474,7 +487,7 @@ impl Pool {
         self.before_finish = prev;
         self.state = State::Finishing;
         let attempt = self.start(Step::Finish, 0, 0);
-        match (&self.job, prev) {
+        PromiseOrValue::Promise(match (&self.job, prev) {
             (Some(job), State::Posted) => Promise::new(job.clone())
                 .function_call(
                     "get_job",
@@ -488,7 +501,25 @@ impl Pool {
                         .on_job_checked(attempt),
                 ),
             _ => self.read_balance(attempt),
-        }
+        })
+    }
+
+    /// The bound job, once its refund transfer to the pool has settled:
+    /// what it sent back. Only the job can report, once.
+    pub fn job_refund(&mut self, returned: U128) {
+        require!(
+            self.job.as_ref() == Some(&env::predecessor_account_id()),
+            "only the bound job reports its refund"
+        );
+        require!(self.refund.is_none(), "refund already reported");
+        self.refund = Some(returned);
+        emit("refund_reported", json!({ "returned": returned }));
+    }
+
+    /// The most members can ever share: the job's reported refund, or
+    /// what they put in.
+    fn cap(&self) -> u128 {
+        self.refund.map(|r| r.0).unwrap_or(self.raised)
     }
 
     fn balance_of_self(&self) -> Promise {
@@ -518,7 +549,18 @@ impl Pool {
     pub fn on_job_checked(&mut self, attempt: u32) -> Option<Promise> {
         self.current(Step::Finish, attempt);
         require!(self.state == State::Finishing, "not finishing");
-        if env::promise_result_checked(0, 16_384).is_ok() {
+        // A root that reached Settled has sent its refund; NEAR may still
+        // refuse to delete it, so Settled counts as gone.
+        let live = env::promise_result_checked(0, 16_384)
+            .ok()
+            .map(|b| {
+                serde_json::from_slice::<serde_json::Value>(&b)
+                    .ok()
+                    .and_then(|v| v["status"].as_str().map(|x| x != "Settled"))
+                    .unwrap_or(true)
+            })
+            .unwrap_or(false);
+        if live {
             self.state = self.before_finish;
             self.pending = None;
             emit(
@@ -541,8 +583,9 @@ impl Pool {
             return U128(0);
         };
         // Everything the pool ever had to share: what it paid out plus what
-        // it holds now.
-        self.payout = self.paid_out + bal.0;
+        // it holds now, but never more than the job reported or members put
+        // in (a read can include tokens a refused transfer takes back).
+        self.payout = (self.paid_out + bal.0).min(self.cap());
         self.state = State::Done;
         emit("finished", json!({ "payout": U128(self.payout) }));
         U128(self.payout)
@@ -740,6 +783,7 @@ impl Pool {
             "state": self.state, "job_n": self.job_n, "job": self.job,
             "approve_sent": self.approve_sent, "payout": U128(self.payout),
             "paid_out": U128(self.paid_out), "pending": self.pending,
+            "refund": self.refund,
         })
     }
 }

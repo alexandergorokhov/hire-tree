@@ -24,7 +24,10 @@ import json
 import struct
 import sys
 
-from cryptography import x509
+try:
+    from cryptography import x509
+except ModuleNotFoundError:
+    sys.exit("FAIL this check needs the Python 'cryptography' package: pip install cryptography")
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
@@ -110,13 +113,18 @@ pub = bytes.fromhex(m["signing_public_key"])
 check(keccak256(pub)[-20:].hex() == addr, "keccak-256 of the signing public key is the signing address")
 
 # 2. cassettes signed by it
+checked = 0
 for c in ("demo/cassette.json", "demo/swarm-cassette.json"):
     try:
         cas = json.load(open(c))
     except FileNotFoundError:
+        print(f"skip {c}: not in this checkout")
         continue
+    checked += 1
     check(cas.get("signer", "").lower().removeprefix("0x") == addr and cas.get("model") == m["model_name"],
           f"{c} was recorded with this model and this signer ({len(cas.get('entries', []))} signed calls; `make verify-cassette` re-checks each signature)")
+
+check(checked > 0, "at least one cassette was checked against this signer")
 
 # 3. quote binds address + nonce
 q = bytes.fromhex(m["intel_quote"])
@@ -124,7 +132,7 @@ version, att_type, tee_type = struct.unpack_from("<HHI", q, 0)
 check(version == 4 and tee_type == 0x81, f"Intel quote is a TDX v4 quote ({len(q)} bytes)")
 rd = q[568:632]
 check(rd[:20].hex() == addr and rd[20:32] == b"\0" * 12, "the quote's report_data starts with the signing address")
-check(rd[32:].hex() == nonce, "the quote's report_data ends with our nonce (fresh for this request)")
+check(rd[32:].hex() == nonce, "the quote's report_data ends with the nonce we sent with the attestation request")
 
 # 4. signature chain
 (sig_len,) = struct.unpack_from("<I", q, 632)

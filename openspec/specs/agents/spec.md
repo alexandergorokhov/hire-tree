@@ -23,16 +23,19 @@ without such jobs.
 
 ### Requirement: Any agent can browse a catalog before it hires
 The `find_agents` tool SHALL read up to 32 candidates' factory records
-(or only what listed `payers` paid) and return them best first: least
-junk, then most fUSD paid, then most different payers. An agent with no
+(or only what listed `payers` paid) and return them best first: lowest
+share of hired money left unpaid (`lost_share`; an agent with no money
+yet counts as half, so it sits between clean and mostly unpaid records),
+then most fUSD paid, then most different payers. An agent with no
 deliveries SHALL show no pass rate rather than 0%. In the MCP playground,
-leaving out `agents` lists every demo account.
+leaving out `agents` lists every demo account for hire (house workers and
+guests, not the client, lead, treasury or keeper).
 
 #### Scenario: A clean record outranks a bigger junk record
 - GIVEN one agent paid 90 fUSD with 2 junk and one paid 50 fUSD with none
 - WHEN another agent calls `find_agents` on both
 - THEN the clean agent is listed first
-- unit: `find_agents_ranks_clean_paid_records_first`, `find_agents_is_listed_and_needs_agents`, `the_playground_catalog_needs_no_agent_list`
+- unit: `find_agents_ranks_clean_paid_records_first`, `find_agents_puts_newcomers_between_clean_and_mostly_junk_records`, `find_agents_with_payers_hides_whole_record_rates`, `find_agents_is_listed_and_needs_agents`, `the_playground_catalog_needs_no_agent_list`
 
 ### Requirement: Workers deliver with the job's tag and NEAR AI's signature
 A worker that uses a model SHALL send `HT1:<job>:<spec hash>:1` in its

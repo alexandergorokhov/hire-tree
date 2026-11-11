@@ -128,12 +128,19 @@ without a model); the lead's picker compares bids with on-chain records.
 
 ### Requirement: Worker bonds
 A slot MAY ask each bidder to stake NEAR (at most 5 NEAR) with its bid.
-Losers SHALL get their bond back at the award; the winner SHALL get it
-back when its work is paid, and the buyer SHALL keep it when the work is
-not paid. A failed hire returns it. Bonds on a slot never awarded SHALL be
+Losers SHALL get their bond back at the award (the first 4 refunds; the
+rest by `refund_bids`, which anyone may call, 16 per call, so a full slot
+of implicit-account bidders cannot push the award past 300 Tgas); the
+winner SHALL get it back when its work is paid or unscored, and the buyer
+SHALL keep it when nothing was delivered, the check failed or a dispute
+was upheld. Settle SHALL refund at most 4 open bonds itself and otherwise
+ask for `refund_bids` first, and SHALL drop bids, check rounds and delivery
+hashes before the delete (NEAR refuses to delete an account above 10 KB).
+Only the role that opened a slot (the job's manager, or its worker as a
+contractor) SHALL award it. A failed hire returns it. Bonds on a slot never awarded SHALL be
 reclaimable after the window and SHALL be returned at settle. NEAR
 attached to a changed bid SHALL join the bond, not be kept by the job.
-- unit: `a_deposit_on_a_rebid_is_added_to_the_bond`, `a_bid_without_the_bond_is_refused`, `a_slot_cannot_ask_for_a_huge_bond`, `a_paid_worker_gets_its_bond_back`, `junk_loses_its_bond_to_the_buyer`, `a_failed_hire_returns_the_bond`, `bonds_on_a_slot_never_awarded_come_back`, `a_bond_cannot_be_reclaimed_while_the_job_runs`, `settle_returns_bonds_nobody_reclaimed`
+- unit: `a_deposit_on_a_rebid_is_added_to_the_bond`, `a_bid_without_the_bond_is_refused`, `a_slot_cannot_ask_for_a_huge_bond`, `a_paid_worker_gets_its_bond_back`, `junk_loses_its_bond_to_the_buyer`, `a_failed_hire_returns_the_bond`, `bonds_on_a_slot_never_awarded_come_back`, `a_bond_cannot_be_reclaimed_while_the_job_runs`, `settle_returns_bonds_nobody_reclaimed`, `unpaid_but_not_junk_work_keeps_its_bond`, `work_the_child_calls_junk_loses_its_bond`, `a_failed_check_forfeits_the_bond`, `an_award_with_a_full_slot_of_implicit_bidders_fits_in_300_tgas`, `bids_cannot_keep_a_root_over_the_delete_size_limit`, `the_worker_cannot_award_the_managers_slot`
 
 ### Requirement: Sealed bids
 A slot MAY be sealed: while bidding is open a bidder SHALL commit only
@@ -176,7 +183,8 @@ first-timer can outbid a cheaper fresh junk account.
 A bidder SHALL be able to ask for a backer with `seek_backer(slot,
 premium)` before bidding closes, offering a premium of at most half its
 own bond. Any account but the bidder and the buyer MAY then `back` the bid
-once with up to 5 NEAR. The bid's vouch is its bond plus the backing. If
+once with at least the bidder's own bond and twice the premium, and up
+to 5 NEAR. The bid's vouch is its bond plus the backing. If
 the bid loses the auction, both are refunded at the award. If the work is
 paid, the backer gets its NEAR back plus the premium, taken out of the
 worker's bond. If the work is junk, the buyer keeps the bond and the
@@ -191,4 +199,4 @@ skill's recent median win, and 5 points stricter after each backed junk.
 
 #### Scenario: Misuse
 - THEN refused
-- contract: `nobody_backs_a_bid_that_did_not_ask`, `a_premium_above_half_the_bond_is_refused`, `a_bidder_cannot_back_itself`
+- contract: `nobody_backs_a_bid_that_did_not_ask`, `a_premium_above_half_the_bond_is_refused`, `a_bidder_cannot_back_itself`, `a_dust_backing_is_refused`

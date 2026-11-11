@@ -327,7 +327,7 @@ fn root_funded_with_fee(fee: u128, budget: u128) -> Job {
 fn root_child_closed(j: &mut Job, n: u32, returned: u128, paid: bool) {
     let child = format!("t{n}.{ROOT}");
     Ctx::new(ROOT, &child).set();
-    j.child_closed(U128(returned), Some(paid), None, None);
+    j.child_closed(U128(returned), Some(paid), None, None, None);
 }
 
 /// The spec hash of task number `n` (parts with the same `n` are one task).
@@ -369,6 +369,7 @@ fn part_closed(j: &mut Job, cur: &str, n: u32, returned: u128, passed: bool, sub
             paid: U128(sub.0),
             hired: U128(sub.1),
         }),
+        None,
     );
 }
 
@@ -703,6 +704,7 @@ fn a_paid_part_that_did_not_pass_does_not_earn_the_fee() {
             paid: U128(0),
             hired: U128(0),
         }),
+        None,
     );
     assert_eq!(j.get_job().children[0].paid, Some(true));
     assert_eq!(j.get_job().lead_fee_earned, Some(U128(0)));
@@ -2120,6 +2122,31 @@ fn root_delete_goes_to_factory_without_child_closed() {
     assert_eq!(del, Some(acc(FACTORY)));
 }
 
+#[test]
+fn a_settled_root_tells_its_client_what_came_back() {
+    let mut j = funded_root(10 * USD);
+    Ctx::new(ROOT, CLIENT).set();
+    j.approve();
+    Ctx::new(ROOT, EVE).set();
+    j.settle();
+    rest_cb(&mut j, ROOT, true);
+    balance_cb(&mut j, ROOT, ok(&u128_json(0)));
+    let notice = get_created_receipts()
+        .into_iter()
+        .filter(|r| r.receiver_id.as_str() == CLIENT)
+        .flat_map(|r| r.actions)
+        .find_map(|a| match a {
+            MockAction::FunctionCallWeight {
+                method_name, args, ..
+            } if method_name == b"job_refund" => {
+                Some(serde_json::from_slice::<serde_json::Value>(&args).unwrap())
+            }
+            _ => None,
+        })
+        .expect("job_refund sent to the client");
+    assert_eq!(notice["returned"], json!(U128(10 * USD)));
+}
+
 fn sweep_cb(j: &mut Job, ok_: bool) -> PromiseOrValue<bool> {
     let a = attempt(j);
     Ctx::new(T1, T1)
@@ -2351,7 +2378,7 @@ fn known_child_closes_and_returns_funds() {
     let mut j = funded_root(100 * USD);
     hired(&mut j, WORKER, 30 * USD);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(5 * USD), None, None, None);
+    j.child_closed(U128(5 * USD), None, None, None, None);
     let v = j.get_job();
     assert_eq!(v.children_open, 0);
     assert_eq!(v.children[0].state, ChildState::Closed);
@@ -2366,7 +2393,7 @@ fn a_fired_childs_returned_pay_can_hire_the_runner_up() {
     hired(&mut j, WORKER, 100 * USD);
     assert_eq!(j.get_job().unallocated.0, 0);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(100 * USD), Some(false), None, None);
+    j.child_closed(U128(100 * USD), Some(false), None, None, None);
     assert_eq!(j.get_job().unallocated.0, 100 * USD);
     hired(&mut j, WORKER2, 90 * USD);
     // A child that paid its worker keeps that much allocated.
@@ -2380,7 +2407,7 @@ fn unknown_caller_cannot_close_a_child() {
     let mut j = funded_root(100 * USD);
     hired(&mut j, WORKER, 30 * USD);
     Ctx::new(ROOT, EVE).set();
-    j.child_closed(U128(1_000 * USD), None, None, None);
+    j.child_closed(U128(1_000 * USD), None, None, None, None);
 }
 
 #[test]
@@ -2390,11 +2417,11 @@ fn a_repeated_child_closed_credits_nothing() {
     let mut j = funded_root(100 * USD);
     hired(&mut j, WORKER, 30 * USD);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(5 * USD), Some(true), None, None);
+    j.child_closed(U128(5 * USD), Some(true), None, None, None);
     let once = j.get_job();
     assert_eq!(once.ft_balance.0, 75 * USD);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(5 * USD), Some(true), None, None);
+    j.child_closed(U128(5 * USD), Some(true), None, None, None);
     let twice = j.get_job();
     assert_eq!(twice.ft_balance.0, 75 * USD, "not credited twice");
     assert_eq!(twice.children_open, 0);
@@ -2414,7 +2441,7 @@ fn failed_child_cannot_close() {
         .set();
     j.on_child_created(idx);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(30 * USD), None, None, None);
+    j.child_closed(U128(30 * USD), None, None, None, None);
 }
 
 // ================================================================ two-level fold
@@ -2473,7 +2500,7 @@ fn two_level_tree_folds_bottom_up() {
     balance_cb(&mut gc, GC, ok(&u128_json(0)));
     assert_eq!(gc.get_job().status, "Settled");
     Ctx::new(T1, GC).at(AFTER).set();
-    t1.child_closed(U128(0), None, None, None);
+    t1.child_closed(U128(0), None, None, None, None);
 
     // t1's worker delivers inside the window; settle pays 30 and returns 2.
     Ctx::new(T1, WORKER).set();
@@ -2486,7 +2513,7 @@ fn two_level_tree_folds_bottom_up() {
     balance_cb(&mut t1, T1, ok(&u128_json(0)));
     assert_eq!(t1.get_job().status, "Settled");
     Ctx::new(ROOT, T1).at(AFTER).set();
-    root.child_closed(U128(2 * USD), None, None, None);
+    root.child_closed(U128(2 * USD), None, None, None, None);
 
     // Root (no fee): 60 unspent + 2 returned = 62 back to the client.
     assert_eq!(root.get_job().ft_balance.0, 62 * USD);
@@ -3652,6 +3679,39 @@ mod signed_check {
         assert_eq!(j.get_job().quality, Some(7));
     }
 
+    /// REVIEW (adversarial): the worker knows the exact judge request before
+    /// it delivers (job, seq, panel, task, bytes are all fixed), so it can
+    /// sample NEAR AI offline, keep 8 distinct answers that pass, and send
+    /// them right after (or in the same transaction as) `deliver`. The round
+    /// is then full and the buyer's honest low answer is refused: junk is
+    /// paid.
+    #[test]
+    fn a_full_round_still_counts_a_new_low_answer() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        for i in 0..MAX_ANSWERS {
+            let a = answer(1, &j, 0, DELIVERED, "6", &format!("w{i}"));
+            submit(&mut j, WORKER, 0, DELIVERED, a);
+        }
+        // The worker filled the round with picked passing answers; the
+        // buyer's honest low answer is still counted.
+        let low = answer(1, &j, 0, DELIVERED, "2", "buyer");
+        assert_eq!(submit(&mut j, LEAD, 0, DELIVERED, low), 2);
+        // Another answer at an already-counted score adds nothing.
+        let same = answer(1, &j, 0, DELIVERED, "6", "w-extra");
+        let refused = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            submit(&mut j, WORKER, 0, DELIVERED, same)
+        }));
+        assert!(
+            refused.is_err(),
+            "a full round refuses a score it already has"
+        );
+        assert!(!finalize(&mut j));
+        let v = j.get_job();
+        assert_eq!(v.status, "Delivered", "6 and 2 split: unscored, not paid");
+        assert_eq!(v.quality, None);
+    }
+
     #[test]
     fn split_answers_are_unclear_not_junk() {
         let mut j = judged_sub();
@@ -3750,6 +3810,43 @@ mod signed_check {
             None,
             Some(Base64VecU8(DELIVERED.to_vec())),
         );
+    }
+
+    /// REVIEW (adversarial): good work (8) plus one genuine low sample from
+    /// the buyer (5) is "unclear", not failed. The worker cannot redeliver
+    /// (still Delivered), the buyer does not approve, and settle sends the
+    /// whole pay back up; the notice says `paid: false`, so the parent hands
+    /// the worker's bond and its backer's NEAR to the buyer, who already
+    /// has the deliverable (it is on-chain).
+    #[test]
+    fn an_unclear_check_leaves_good_work_unpaid_but_keeps_its_bond() {
+        let mut j = judged_sub();
+        deliver(&mut j, DELIVERED);
+        let a = answer(1, &j, 0, DELIVERED, "8", "w");
+        submit(&mut j, WORKER, 0, DELIVERED, a);
+        let b = answer(1, &j, 0, DELIVERED, "5", "buyer");
+        submit(&mut j, LEAD, 0, DELIVERED, b);
+        assert!(!finalize(&mut j));
+        assert_eq!(j.get_job().failed_checks, 0, "not a failed check");
+        Ctx::new(T1, EVE).at(T0 + (WINDOW + 10) * NS_PER_SEC).set();
+        j.settle();
+        assert_eq!(transfers(), vec![(ROOT.into(), PAY.to_string())]);
+        assert!(!j.worker_paid(), "unclear work is not paid");
+        assert!(
+            !j.bond_forfeit,
+            "the notice says junk: false, so the bond goes back to the worker"
+        );
+    }
+
+    #[test]
+    fn a_failed_check_forfeits_the_bond() {
+        let mut j = judged_sub();
+        failed(&mut j);
+        Ctx::new(T1, LEAD).at(CHECK_DONE).set();
+        j.fire();
+        Ctx::new(T1, EVE).at(CHECK_DONE).set();
+        j.settle();
+        assert!(j.bond_forfeit);
     }
 
     #[test]
@@ -4283,7 +4380,7 @@ mod contractor {
         // The sub-job paid its worker and sent nothing back; the contractor
         // delivers and keeps its margin.
         Ctx::new(T1, GC).at(CLOSED).set();
-        t1.child_closed(U128(0), None, None, None);
+        t1.child_closed(U128(0), None, None, None, None);
         Ctx::new(T1, WORKER).at(CLOSED).set();
         t1.deliver("02".repeat(32), None, None, None, None);
         Ctx::new(T1, EVE).at(AFTER).set();
@@ -4298,7 +4395,7 @@ mod contractor {
         let mut t1 = contracted();
         // The sub-agent failed: its 9 come back as the contractor's pay.
         Ctx::new(T1, GC).at(CLOSED).set();
-        t1.child_closed(U128(9 * USD), None, None, None);
+        t1.child_closed(U128(9 * USD), None, None, None, None);
         assert_eq!(t1.ledger.amount, 20 * USD);
         assert_eq!(t1.get_job().ft_balance.0, 20 * USD);
     }
@@ -4308,7 +4405,7 @@ mod contractor {
         let mut t1 = contracted();
         assert!(t1.has_open_worker_hires());
         Ctx::new(T1, GC).at(CLOSED).set();
-        t1.child_closed(U128(0), None, None, None);
+        t1.child_closed(U128(0), None, None, None, None);
         assert!(!t1.has_open_worker_hires());
     }
 
@@ -4357,7 +4454,7 @@ mod contractor {
         // runner-up for the same 9.
         let mut t1 = contracted();
         Ctx::new(T1, GC).at(CLOSED).set();
-        t1.child_closed(U128(9 * USD), None, None, None);
+        t1.child_closed(U128(9 * USD), None, None, None, None);
         assert_eq!(t1.ledger.amount, 20 * USD);
         assert_eq!(t1.ledger.allocated, 0);
         Ctx::new(T1, WORKER).at(CLOSED).deposit(HIRE_MIN_NEAR).set();
@@ -4409,6 +4506,41 @@ mod bonds {
             .deposit(BID_NEAR.saturating_add(BOND))
             .set();
         j.bid(s, U128(price));
+    }
+
+    #[test]
+    fn an_award_with_a_full_slot_of_implicit_bidders_fits_in_300_tgas() {
+        // Each loser's refund to an implicit account pays NEAR's
+        // account-creation fee (~8.3 Tgas); 15 losers must still fit.
+        let small = NearToken::from_millinear(10);
+        let mut j = funded_root(100 * USD);
+        Ctx::new(ROOT, LEAD).set();
+        let s = j.open_bids(
+            spec(),
+            U128(30 * USD),
+            60,
+            Some(U128(small.as_yoctonear())),
+            None,
+        );
+        for b in 0..MAX_BIDS {
+            let who = format!("{:064x}", b + 1);
+            Ctx::new(ROOT, &who)
+                .deposit(BID_NEAR.saturating_add(small))
+                .set();
+            j.bid(s, U128((10 + b as u128) * USD));
+        }
+        Ctx::new(ROOT, LEAD)
+            .at(CLOSED)
+            .deposit(NearToken::from_millinear(50))
+            .set();
+        j.award(s, acc(&format!("{:064x}", 1)), None);
+        let used = env::used_gas();
+        eprintln!("award with {} implicit losers: {used}", MAX_BIDS - 1);
+        assert!(used < Gas::from_tgas(200), "award used {used}");
+        // The other 11 losers are refunded by anyone, in one batch.
+        Ctx::new(ROOT, EVE).at(CLOSED).set();
+        assert_eq!(j.refund_bids(), 0);
+        assert_eq!(transfers().len(), MAX_BIDS - 1 - AWARD_INLINE_REFUNDS);
     }
 
     /// Two bonded bids; WORKER wins at 20. Returns the job (child 0 open).
@@ -4481,7 +4613,7 @@ mod bonds {
     fn a_paid_worker_gets_its_bond_back() {
         let mut j = awarded();
         Ctx::new(ROOT, T1).at(CLOSED).set();
-        j.child_closed(U128(0), Some(true), None, None);
+        j.child_closed(U128(0), Some(true), None, None, None);
         assert!(transfers().contains(&(WORKER.into(), BOND.as_yoctonear())));
         assert_eq!(events("bond_returned").len(), 1);
     }
@@ -4490,10 +4622,28 @@ mod bonds {
     fn junk_loses_its_bond_to_the_buyer() {
         let mut j = awarded();
         Ctx::new(ROOT, T1).at(CLOSED).set();
-        j.child_closed(U128(20 * USD), Some(false), None, None);
+        j.child_closed(U128(20 * USD), Some(false), None, None, None);
         assert!(transfers().contains(&(LEAD.into(), BOND.as_yoctonear())));
         assert_eq!(events("bond_kept").len(), 1);
         assert_eq!(j.children[0].bond, U128(0));
+    }
+
+    #[test]
+    fn unpaid_but_not_junk_work_keeps_its_bond() {
+        // An unclear or unscored delivery: unpaid, but the bond goes back.
+        let mut j = awarded();
+        Ctx::new(ROOT, T1).at(CLOSED).set();
+        j.child_closed(U128(20 * USD), Some(false), None, None, Some(false));
+        assert!(transfers().contains(&(WORKER.into(), BOND.as_yoctonear())));
+        assert_eq!(events("bond_returned").len(), 1);
+    }
+
+    #[test]
+    fn work_the_child_calls_junk_loses_its_bond() {
+        let mut j = awarded();
+        Ctx::new(ROOT, T1).at(CLOSED).set();
+        j.child_closed(U128(20 * USD), Some(false), None, None, Some(true));
+        assert!(transfers().contains(&(LEAD.into(), BOND.as_yoctonear())));
     }
 
     // ------------------------------------------------------ underwriters
@@ -4534,18 +4684,37 @@ mod bonds {
     fn a_backer_of_paid_work_gets_its_near_back_plus_the_premium() {
         let mut j = backed_award();
         Ctx::new(ROOT, T1).at(CLOSED).set();
-        j.child_closed(U128(0), Some(true), None, None);
+        j.child_closed(U128(0), Some(true), None, None, None);
         let t = transfers();
         assert!(t.contains(&(EVE.into(), BACKING.as_yoctonear() + PREMIUM)));
         assert!(t.contains(&(WORKER.into(), BOND.as_yoctonear() - PREMIUM)));
         assert_eq!(events("backer_paid").len(), 1);
     }
 
+    /// REVIEW (adversarial): `back` takes any amount from 1 yocto, and the
+    /// first backer locks the bid ("already backed"). A sniper backs every
+    /// bid that seeks a backer with 1 yocto: the real underwriter is shut
+    /// out, the bid gains no vouch, and if the work is paid the sniper still
+    /// collects the whole premium (here 0.2 NEAR) out of the worker's bond.
+    #[test]
+    #[should_panic(expected = "back with at least the bidder's own bond")]
+    fn a_dust_backing_is_refused() {
+        let mut j = funded_root(100 * USD);
+        let s = with_bond(&mut j);
+        bid_bonded(&mut j, WORKER, s, 20 * USD);
+        Ctx::new(ROOT, WORKER).set();
+        j.seek_backer(s, U128(PREMIUM));
+        Ctx::new(ROOT, EVE)
+            .deposit(NearToken::from_yoctonear(1))
+            .set();
+        j.back(s, acc(WORKER));
+    }
+
     #[test]
     fn a_backer_of_junk_loses_its_near_to_the_buyer() {
         let mut j = backed_award();
         Ctx::new(ROOT, T1).at(CLOSED).set();
-        j.child_closed(U128(20 * USD), Some(false), None, None);
+        j.child_closed(U128(20 * USD), Some(false), None, None, None);
         assert!(transfers().contains(&(LEAD.into(), BOND.as_yoctonear() + BACKING.as_yoctonear())));
         assert!(!transfers().iter().any(|(to, _)| to == EVE));
     }
@@ -6350,13 +6519,14 @@ mod close_notice {
                 awarded: Some(long("bidder", s)),
                 bond: U128(NearToken::from_near(1).as_yoctonear()),
                 reveal_ns: U64(AFTER),
+                by_worker: false,
             });
         }
         Ctx::new(ROOT, ROOT).set();
         env::state_write(&j);
         Ctx::new(ROOT, T1).gas(GAS_CHILD_CLOSED).set();
         let mut p: Job = env::state_read().expect("state");
-        p.child_closed(U128(0), Some(true), Some(U128(30 * USD)), None);
+        p.child_closed(U128(0), Some(true), Some(U128(30 * USD)), None, None);
         env::state_write(&p);
         let used = env::used_gas().as_gas();
         assert!(
@@ -6402,7 +6572,7 @@ mod close_notice {
     fn a_funded_child_whose_fund_callback_was_lost_closes_on_its_notice() {
         let (mut j, idx) = hire_unclear();
         Ctx::new(ROOT, T1).set();
-        j.child_closed(U128(0), Some(true), Some(U128(30 * USD)), None);
+        j.child_closed(U128(0), Some(true), Some(U128(30 * USD)), None, None);
         books_after_t1_paid_its_worker(&j);
         assert_eq!(events("child_closed").len(), 1);
         // The parent can settle now.
@@ -6422,7 +6592,7 @@ mod close_notice {
         Ctx::new(ROOT, EVE).at(at).set();
         j.resume_hire(idx);
         Ctx::new(ROOT, T1).at(at).set();
-        j.child_closed(U128(0), Some(true), Some(U128(30 * USD)), None);
+        j.child_closed(U128(0), Some(true), Some(U128(30 * USD)), None, None);
         books_after_t1_paid_its_worker(&j);
         Ctx::new(ROOT, ROOT)
             .at(at)
@@ -6444,7 +6614,7 @@ mod close_notice {
         assert_eq!(v.children_open, 1);
         assert!(!calls().iter().any(|c| c.1 == "close_unfunded"));
         Ctx::new(ROOT, T1).set();
-        j.child_closed(U128(0), Some(true), None, None);
+        j.child_closed(U128(0), Some(true), None, None, None);
         books_after_t1_paid_its_worker(&j);
     }
 
@@ -6465,7 +6635,7 @@ mod close_notice {
     fn an_unfunded_child_closing_while_its_hire_is_in_flight_rolls_it_back() {
         let (mut j, _) = hire_unclear();
         Ctx::new(ROOT, T1).set();
-        j.child_closed(U128(0), Some(false), Some(U128(0)), None);
+        j.child_closed(U128(0), Some(false), Some(U128(0)), None, None);
         let v = j.get_job();
         assert_eq!(v.children[0].state, ChildState::Failed);
         assert_eq!(v.children_pending, 0);
@@ -6480,7 +6650,7 @@ mod close_notice {
     fn a_notice_without_funding_from_a_hire_in_flight_is_refused() {
         let (mut j, _) = hire_unclear();
         Ctx::new(ROOT, T1).set();
-        j.child_closed(U128(0), Some(true), None, None);
+        j.child_closed(U128(0), Some(true), None, None, None);
     }
 
     #[test]
@@ -6553,11 +6723,11 @@ mod close_notice_repeat {
         Ctx::new(ROOT, ROOT).results(vec![ok(b"")]).set();
         j.on_child_created(idx);
         Ctx::new(ROOT, T1).set();
-        j.child_closed(U128(0), Some(false), Some(U128(0)), None);
+        j.child_closed(U128(0), Some(false), Some(U128(0)), None, None);
         let before = j.get_job();
         assert_eq!(before.children[0].state, ChildState::Failed);
         Ctx::new(ROOT, T1).set();
-        j.child_closed(U128(0), Some(false), Some(U128(0)), None);
+        j.child_closed(U128(0), Some(false), Some(U128(0)), None, None);
         let after = j.get_job();
         assert_eq!(after.ft_balance, before.ft_balance);
         assert_eq!(after.allocated, before.allocated);
@@ -6576,8 +6746,173 @@ mod close_notice_repeat {
         Ctx::new(ROOT, ROOT).results(vec![ok(b"")]).set();
         j.on_child_created(idx);
         Ctx::new(ROOT, T1).set();
-        j.child_closed(U128(0), Some(false), Some(U128(0)), None);
+        j.child_closed(U128(0), Some(false), Some(U128(0)), None, None);
         Ctx::new(ROOT, T1).set();
-        j.child_closed(U128(0), Some(true), Some(U128(30 * USD)), None);
+        j.child_closed(U128(0), Some(true), Some(U128(30 * USD)), None, None);
+    }
+}
+
+// ================================================================ review (adversarial)
+
+mod review_state_size {
+    use super::*;
+
+    /// REVIEW: NEAR refuses `DeleteAccount` for an account whose storage
+    /// usage is over 10,000 bytes (`DeleteAccountWithLargeState`). The job
+    /// keeps all of its state in one value, and outsiders grow it: any
+    /// account may place a bid (16 per slot) for 0.001-0.002 NEAR, and gets
+    /// its bond back at the award. With 64-char implicit account ids, four
+    /// sealed slots full of bids put the root over the limit, so
+    /// `finalize`'s `delete_account` (and a sub-job's `on_parent_ack`
+    /// delete) can never succeed. Money still leaves first, but the account
+    /// never goes, and a pool client waits for it to be gone before `finish`.
+    #[test]
+    fn bids_cannot_keep_a_root_over_the_delete_size_limit() {
+        let mut j = funded_root(100 * USD);
+        let base = near_sdk::borsh::to_vec(&j).unwrap().len();
+        for s in 0..4u32 {
+            Ctx::new(ROOT, LEAD).set();
+            let slot = j.open_bids(spec(), U128(USD), 600, Some(U128(1)), Some(true));
+            assert_eq!(slot, s);
+            for b in 0..MAX_BIDS {
+                // 64-hex implicit accounts: free to make, longest ids.
+                let who = format!("{:064x}", (s as u128) * 100 + b as u128 + 1);
+                Ctx::new(ROOT, &who)
+                    .deposit(NearToken::from_yoctonear(
+                        SEALED_BID_NEAR.as_yoctonear() + 1,
+                    ))
+                    .set();
+                j.bid_sealed(slot, "cd".repeat(32));
+            }
+        }
+        let size = near_sdk::borsh::to_vec(&j).unwrap().len();
+        assert!(base < 1_000, "an empty root is small ({base} bytes)");
+        eprintln!("review: root state {base} -> {size} bytes");
+        assert!(size > 10_000, "bidding grew the root to {size} bytes");
+        // Settle refunds the open bonds and drops the bids before the
+        // delete, so NEAR's 10 KB delete limit is never in the way.
+        Ctx::new(ROOT, CLIENT).set();
+        j.approve();
+        // 64 open bonds: settle asks for batches first. Refunds to
+        // implicit accounts pay NEAR's account-creation fee (~8.3 Tgas).
+        Ctx::new(ROOT, EVE).set();
+        let early = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| j.settle()));
+        assert!(early.is_err(), "settle refuses 64 open bonds");
+        let mut left = u32::MAX;
+        while left > 0 {
+            Ctx::new(ROOT, EVE).set();
+            left = j.refund_bids();
+            assert!(
+                env::used_gas() < Gas::from_tgas(300),
+                "a refund batch fits in 300 Tgas"
+            );
+        }
+        Ctx::new(ROOT, EVE).set();
+        j.settle();
+        rest_cb(&mut j, ROOT, true);
+        balance_cb(&mut j, ROOT, ok(&u128_json(0)));
+        assert_eq!(j.get_job().status, "Settled");
+        let after = near_sdk::borsh::to_vec(&j).unwrap().len();
+        assert!(after < 2_000, "the root is back to {after} bytes at delete");
+    }
+}
+
+mod review_slot_owner {
+    use super::*;
+
+    const CLOSED: u64 = T0 + 61 * NS_PER_SEC;
+
+    /// REVIEW: a bid slot does not remember who opened it. In a sub-job with
+    /// a sub-budget the manager (the lead) opens a slot; the sub-job's own
+    /// worker awards it first, as a contractor, to a bidder it picks (its own
+    /// second account). The lead's slot is gone ("slot already awarded"),
+    /// the hire is the worker's, and a junk winner's bond (and any unrevealed
+    /// sealed bond) goes to the worker instead of the lead.
+    #[test]
+    fn the_worker_cannot_award_the_managers_slot() {
+        // t1: worker pay 20, sub-budget 30 the lead may hire with.
+        let mut t1 = funded_sub(20 * USD, 50 * USD);
+        Ctx::new(T1, LEAD).set();
+        let s = t1.open_bids(spec(), U128(12 * USD), 60, Some(U128(1_000)), None);
+        Ctx::new(T1, EVE)
+            .deposit(NearToken::from_yoctonear(BID_NEAR.as_yoctonear() + 1_000))
+            .set();
+        t1.bid(s, U128(9 * USD));
+        Ctx::new(T1, WORKER2)
+            .deposit(NearToken::from_yoctonear(BID_NEAR.as_yoctonear() + 1_000))
+            .set();
+        t1.bid(s, U128(5 * USD));
+        // The worker tries to get there first: refused.
+        Ctx::new(T1, WORKER)
+            .at(CLOSED)
+            .deposit(NearToken::from_millinear(50))
+            .set();
+        let r =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| t1.award(s, acc(EVE), None)));
+        assert!(
+            r.is_err(),
+            "only the role that opened this slot can award it"
+        );
+        // The lead awards its own slot.
+        Ctx::new(T1, LEAD)
+            .at(CLOSED)
+            .deposit(NearToken::from_millinear(50))
+            .set();
+        t1.award(s, acc(WORKER2), None);
+        assert_eq!(call_args("new")["manager"], LEAD);
+        assert!(!t1.get_job().children[0].by_worker);
+    }
+}
+
+mod review_contractor_treasury {
+    use super::*;
+
+    const CLOSED: u64 = T0 + 61 * NS_PER_SEC;
+    const TREASURY: &str = "treasury.lead.test";
+
+    /// REVIEW: a contractor's sub-job inherits the lead's treasury while its
+    /// manager (the only account that may dispute it) is the contractor.
+    /// So the "self-dealing only hurts the lead" argument fails one level
+    /// down: the contractor's own second account delivers work that just
+    /// passes, the lead's treasury buys the note, then the contractor
+    /// disputes; if upheld the pay comes back to the contractor (`restore`)
+    /// while its partner keeps the treasury's money.
+    #[test]
+    fn a_contractors_sub_job_names_no_treasury() {
+        Ctx::new(T1, ROOT).set();
+        let mut t1 = Job::new(
+            None,
+            acc(LEAD),
+            Some(acc(WORKER)),
+            acc(TOKEN),
+            U128(20 * USD),
+            spec(),
+            WINDOW,
+            signer(),
+            code_hash(),
+            None,
+            Some(acc(TREASURY)),
+            Some("judge-model".into()),
+            None,
+            None,
+        );
+        Ctx::new(T1, TOKEN).set();
+        t1.ft_on_transfer(acc(ROOT), U128(20 * USD), "fund".into());
+        Ctx::new(T1, WORKER).set();
+        let s = t1.open_bids(spec(), U128(12 * USD), 60, None, None);
+        Ctx::new(T1, WORKER2).deposit(BID_NEAR).set();
+        t1.bid(s, U128(9 * USD));
+        Ctx::new(T1, WORKER)
+            .at(CLOSED)
+            .deposit(NearToken::from_millinear(50))
+            .set();
+        t1.award(s, acc(WORKER2), None);
+        let args = call_args("new");
+        assert_eq!(args["manager"], WORKER, "the contractor may dispute it");
+        assert_eq!(
+            args["treasury"],
+            serde_json::Value::Null,
+            "so the lead's treasury cannot be made to buy its note"
+        );
     }
 }

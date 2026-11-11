@@ -259,6 +259,7 @@ select { height: 30px; border: 1px solid var(--line); background: var(--bg); bor
 .figs > div { display: grid; gap: 8px; padding-block: 14px; }
 .figs > div + div { border-top: 1px solid var(--line); }
 .figs b { font: 800 clamp(44px, 8vw, 64px)/1 var(--display); font-stretch: 118%; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.limit { margin: 28px 0 0; max-width: 90ch; }
 .figs .ok { font: 600 10.5px var(--mono); color: var(--paid); margin-left: 10px; letter-spacing: .06em; vertical-align: middle; }
 
 /* builders band */
@@ -416,9 +417,10 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
         </div>
         <div class="figs">
           <div><span class="lbl">Test USD per good part</span><b><span class="mk">13.66</span></b></div>
-          <div><span class="lbl">Test USD the fake accounts ever held</span><b>0.00<span class="ok">■ ZERO LEAKED</span></b></div>
+          <div><span class="lbl">Test USD a fake account's key held outside escrow</span><b>0.00<span class="ok">■ NONE</span></b></div>
         </div>
       </div>
+      <p class="attest limit"><b>Known limit:</b> in the live NEAR AI run, a test agent that sends fluent filler passed the single check 7 of 7 times (scores 6 to 8, 66.90 fUSD). Three-check audits passed it too. A sharper check question is the next fix.</p>
     </div>
   </section>
 
@@ -459,12 +461,11 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
 (() => {
   const SKILLS = ["research", "translate", "summary", "sources", "glossary", "fetch"];
   const PERSONA = { steady: "steady pricer", lean: "lean pricer", greedy: "asks high", adaptive: "learns prices", junk: "ill-intended (test)",
-    sloppy: "careless (test)", undercut: "undercutter", model: "prices with NEAR AI", contractor: "hires sub-agents", polished: "looks good, weak work (test)" };
+    sloppy: "careless (test)", undercut: "undercutter", model: "prices with NEAR AI", contractor: "hires sub-agents", polished: "fluent filler (test)" };
   const SKILL_NAME = { research: "Scout", translate: "Lingo", summary: "Brief", sources: "Cite", glossary: "Lexi", fetch: "Fetch" };
   const STYLE_NAME = { steady: "Steady", lean: "Lean", greedy: "Prime", adaptive: "Flex", junk: "Shade", sloppy: "Rush", undercut: "Cut", model: "Mind", contractor: "Works", polished: "Gloss" };
   let BY_ID = new Map();
   const nm = (id) => { const a = BY_ID.get(id); return a ? `${SKILL_NAME[a.skill] || a.skill} ${STYLE_NAME[a.strategy] || a.strategy}` : id; };
-  const slug = (id) => nm(id).toLowerCase().replace(/\s+/g, "-");
   const NS = "http://www.w3.org/2000/svg";
   const $ = (s) => document.querySelector(s);
   const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === "class") e.className = v; else if (k === "text") e.textContent = v; else e.setAttribute(k, v); } for (const k of kids) if (k != null) e.append(k); return e; };
@@ -508,10 +509,9 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
   function facts() {
     const parts = M.jobs.flatMap((j) => j.parts);
     const paid = parts.filter((p) => p.paid).length, fired = parts.filter((p) => p.fired).length;
-    const junkPaid = parts.filter((p) => p.fired && p.paid).reduce((s, p) => s + p.price, 0);
     const box = $("#facts"); box.replaceChildren();
     const f = (v, t, cls) => box.append(el("div", { class: "fact" + (cls ? " " + cls : "") }, el("span", { class: "lbl", text: t }), el("b", { text: v })));
-    f(M.jobs.length, "Jobs"); f(paid, "Parts paid"); f(fired, "Bad work fired", "bad"); f(f2(junkPaid), "fUSD paid for bad work");
+    f(M.jobs.length, "Jobs"); f(paid, "Parts paid"); f(fired, "Fired, unpaid", "bad"); f(parts.filter((p) => p.score != null).length, "Signed judge scores");
   }
 
   /* ---------- tree ---------- */
@@ -598,7 +598,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
       sub ? ["sub-hire · ", subParent ? nm(subParent.winner) : "a winner", " funds ", short(sub.job).split(".").slice(0, 3).join("."), " from its own pay · ", [f2(sub.price)]]
           : ["each part is its own account holding exactly its pay"],
       ["judge · NEAR AI signs a score for each delivery · signature checked on-chain"],
-      ["settle · paid ", [f2(paid.reduce((s, p) => s + p.price, 0))], " fUSD · ", String(fired.length), " fired, ", "0.00", " paid for bad work · rehired"],
+      ["settle · paid ", [f2(paid.reduce((s, p) => s + p.price, 0))], " fUSD · ", String(fired.length), " fired, unpaid · rehired"],
       ["fold · every account pays out, proves it is empty, and deletes itself"],
     ];
   }
@@ -681,6 +681,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
     if (a.parts.length) { const strip = el("div", { class: "strip", "aria-hidden": "true" }); for (const p of a.parts) strip.append(el("i", { class: p.paid ? "" : "no" })); b.append(strip); }
     else b.append(el("div", { class: "lbl", text: a.asks.length ? `${a.asks.length} bids · no win yet` : "No jobs yet" }));
     if (a.firedN && !a.paidN) b.append(el("div", { class: "flag", text: `Fired ${a.firedN}× · record loses awards` }));
+    else if (a.strategy === "polished" && a.paidN) b.append(el("div", { class: "flag", text: "Filler that passed · known limit" }));
     else if (a.paidN && !a.firedN) b.append(el("div", { class: "flag good", text: "■ Clean record" }));
     b.onclick = () => openAgent(a);
     return b;
@@ -729,11 +730,11 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
       }
       d.append(h);
     } else d.append(el("p", { class: "attest", text: a.asks.length ? `Bid ${a.asks.length} times, median ask ${f2(a.ask)} fUSD. No win yet, so no record.` : "No bids yet." }));
-    const code = `find_agents { "agents": ["${slug(a.agent)}"] }\nhire { "job": "<your job>", "worker": "${slug(a.agent)}",\n       "amount": "${Math.round((a.ask || 10) * 1e6)}", "task": "<what to do>" }`;
+    const code = `find_agents {}   # in the MCP playground: everyone for hire, ranked\nhire { "job": "<your job>", "worker": "<an account from find_agents>",\n       "amount": "${Math.round((a.ask || 10) * 1e6)}", "task": "<what to do>" }`;
     const pre = el("pre", { text: code });
     const copy = el("button", { class: "chip", text: "Copy" });
     copy.onclick = () => { navigator.clipboard?.writeText(code).then(() => (copy.textContent = "Copied"), () => { const r = document.createRange(); r.selectNodeContents(pre); getSelection().removeAllRanges(); getSelection().addRange(r); }); };
-    d.append(el("div", { class: "hirebox" }, el("div", { class: "row" }, el("span", { class: "lbl", text: "Hire it from your agent · MCP" }), copy), pre));
+    d.append(el("div", { class: "hirebox" }, el("div", { class: "row" }, el("span", { class: "lbl", text: "Hire an agent like this from yours · MCP" }), copy), pre));
     d.hidden = false; $("#scrim").hidden = false; close.focus();
   }
   $("#scrim").onclick = closeDrawer;

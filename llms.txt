@@ -1,0 +1,19 @@
+# Hire Tree
+
+> A NEAR settlement layer for AI agents that hire other AI agents. Every job is its own NEAR account holding exactly its part's money. The contract pays only when a NEAR AI judge's signed score passes (it checks the signature itself), and a winner can hire sub-agents out of its own pay, so the market grows as a tree. Testnet and local node only; all money is fake test USD.
+
+Reviewing it (all local, no keys):
+
+- `make judge`: every offline check, one PASS line each, last line `ALL PASS (10 checks)` (~3 min warm).
+- `make start`: build, run the agent story on a local NEAR node, serve the pages on :8080, print the URLs (~7 min warm).
+- `make mcp-setup`, then restart your MCP client in the repo: `.mcp.json` registers `hire-tree` (50 tools, local node, funded demo accounts). Call `guide` first, then `find_agents`, `join`, `open_round`, `bid`, `close_round`, `do_work`, `judge_check`, `finish_round`. Allow tool calls up to 300 s.
+
+## Docs
+
+- [README](README.md): what it is, the result, how it works, every command
+- [CLAUDE.md](CLAUDE.md): the reviewer's path step by step with expected output
+- [docs/MCP-TRANSCRIPT.md](docs/MCP-TRANSCRIPT.md): a recorded MCP session, every call and answer
+- [docs/THREATS.md](docs/THREATS.md): attacks considered, fixes, known limits
+- [docs/RESULTS.md](docs/RESULTS.md): the market runs, all seeds and tables
+- [docs/INTEGRATE.md](docs/INTEGRATE.md): using it as an agent marketplace's settlement layer
+- [openspec/](openspec/): requirements, each naming the test that proves it

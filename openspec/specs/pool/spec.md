@@ -34,14 +34,18 @@ resent by a later vote.
 - unit: `the_pool_approves_once_more_than_half_the_stake_votes`, `a_refused_approve_can_be_resent_by_a_later_vote`, `outsiders_cannot_vote`
 
 ### Requirement: Finish only after the job is gone; claims are pro rata
-`finish` SHALL share the pool's balance only when the job account no longer
-exists (it deletes itself after settle, after its refund arrived), or
-joining closed short of the target, or the launch failed. Each member
+When the bound job reports its refund (`job_refund`, sent by the root
+after its refund transfer settled), `finish` SHALL share exactly that, with
+no balance read. Otherwise `finish` SHALL share the pool's balance only
+when the job account no longer exists or reports Settled, or joining
+closed short of the target, or the launch failed, and never more than the
+reported refund or, without one, what members put in (a refused
+`ft_transfer_call` can show tokens for a block). Each member
 `claim`s `payout x stake / raised` less what it already claimed; a failed
 transfer can be retried. Anyone may `finish` again after `Done` (no claim in
 flight) to recount: `payout = paid out + balance now`, so tokens that
 arrive late are shared too.
-- unit: `finish_waits_until_the_job_account_is_gone`, `an_open_pool_cannot_finish_before_joining_closes`, `a_pool_that_missed_its_target_refunds_after_closing`, `an_unreadable_balance_goes_back_to_the_previous_state`, `members_claim_pro_rata_once`, `a_failed_claim_can_be_retried`, `outsiders_cannot_claim`, `tokens_arriving_after_finish_are_shared_by_a_recount`, `a_recount_waits_for_claims_in_flight`
+- unit: `a_reported_refund_is_shared_exactly_with_no_read`, `only_the_bound_job_reports_a_refund`, `a_read_never_counts_more_than_members_put_in`, `a_settled_job_counts_as_gone`, `a_settled_root_tells_its_client_what_came_back`, `finish_waits_until_the_job_account_is_gone`, `an_open_pool_cannot_finish_before_joining_closes`, `a_pool_that_missed_its_target_refunds_after_closing`, `an_unreadable_balance_goes_back_to_the_previous_state`, `members_claim_pro_rata_once`, `a_failed_claim_can_be_retried`, `outsiders_cannot_claim`, `tokens_arriving_after_finish_are_shared_by_a_recount`, `a_recount_waits_for_claims_in_flight`
 
 #### Scenario: Three clients buy one job
 - GIVEN three clients each join with 30 of a 90 fUSD target

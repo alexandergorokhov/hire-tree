@@ -27,7 +27,24 @@ signed-receipt path is the part of the contract a judge trusts most;
 changing it without a real receipt to test against adds risk for a small
 gain.
 
-## 2. A NEAR Intents payout leg (built)
+## 2. A sharper check question (found in the live run)
+
+**Today.** The contract writes one check question per delivery and the
+judge answers with a 0-10 score. In the 3-round live NEAR AI run the
+polished-filler test agent (fluent text that says nothing about the task)
+passed 7 of 7 checks with scores 6 to 8, three-panel audits included, and
+was paid 66.90 of 207.90 fUSD. The scripted test model catches it.
+
+**Design.** The question asks the judge to quote two task-specific facts
+from the delivery before scoring, and to score text that fits any task at
+most 2. The contract also rejects a delivery that matches a previous
+delivery's hash for a different spec.
+
+**Why not now.** It changes the contract's check text, so every live
+NEAR AI recording (story and swarm cassettes) and the testnet run would
+have to be redone, and the NEAR AI budget left is a few cents.
+
+## 3. A NEAR Intents payout leg (built)
 
 Built on the local node with the Verifier's own release wasm (defuse 0.2.10
 from github.com/near/intents, vendored in `vendor/near-intents/`). The

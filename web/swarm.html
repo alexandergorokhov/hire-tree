@@ -203,7 +203,7 @@ function priceChart(d) {
     el('path', { d: path, fill: 'none', stroke: lcol(l), 'stroke-width': 2 }, svg);
     pts.forEach((p, i) => { if (!p) return;
       const c = el('circle', { cx: x(i), cy: y(p.v), r: 4, fill: lcol(l), stroke: 'var(--card)', 'stroke-width': 2 }, svg);
-      c.addEventListener('mousemove', e => showTip(e, `<b>Round ${p.r}, ${l} lead</b><br>mean ${p.v.toFixed(0)}% of max<br>` +
+      c.addEventListener('mousemove', e => showTip(e, `<b>Round ${esc(p.r)}, ${esc(l)} lead</b><br>mean ${p.v.toFixed(0)}% of max<br>` +
         p.ps.map(q => `${esc(q.skill)}: ${esc(q.winner)} ${q.price.toFixed(2)}${q.paid ? '' : ' (failed)'}`).join('<br>')));
       c.addEventListener('mouseleave', hideTip); });
   }
@@ -220,7 +220,7 @@ function earnChart(d) {
     el('text', { x: L - 8, y: yy + bh / 2 + 4, 'text-anchor': 'end' }, svg).textContent = t.s;
     const r = el('rect', { x: L, y: yy, width: Math.max(w, 2), height: bh, rx: 4, fill: col(t.s) }, svg);
     el('text', { x: L + Math.max(w, 2) + 6, y: yy + bh / 2 + 4 }, svg).textContent = t.v.toFixed(2);
-    r.addEventListener('mousemove', e => showTip(e, `<b>${esc(t.s)}</b><br>${t.v.toFixed(2)} fUSD earned<br>${t.wins} parts won`));
+    r.addEventListener('mousemove', e => showTip(e, `<b>${esc(t.s)}</b><br>${t.v.toFixed(2)} fUSD earned<br>${esc(t.wins)} parts won`));
     r.addEventListener('mouseleave', hideTip);
   });
 }
@@ -228,7 +228,7 @@ function earnChart(d) {
 function roundTip(r) {
   const fills = (r.intents ?? []).map(f => `${esc(f.client)}'s intent filled by the ${esc(f.lead)} lead for a ${Number(f.lead_fee).toFixed(2)} fee${f.lead_fee_paid != null ? ` (earned ${Number(f.lead_fee_paid).toFixed(2)} on its parts that passed)` : ''}`);
   const plans = (r.plans ?? []).map(p => `${esc(p.lead)} lead planned ${p.parts.map(x => esc(x.skill)).join(', ')}: <i>${esc(p.why)}</i>`);
-  return fills.length || plans.length ? ` data-tip="${esc(`<b>Round ${r.round}</b><br>` + fills.concat(plans).join('<br>'))}"` : '';
+  return fills.length || plans.length ? ` data-tip="${esc(`<b>Round ${esc(r.round)}</b><br>` + fills.concat(plans).join('<br>'))}"` : '';
 }
 
 function control(c) {
@@ -267,7 +267,7 @@ function stormCard(c, id = 'storm') {
     el('path', { d: pts.map((p, i) => (i ? 'L' : 'M') + x(i) + ' ' + y(p.junk_share)).join(''), fill: 'none', stroke: acol(a), 'stroke-width': 2 }, svg);
     pts.forEach((p, i) => {
       const dot = el('circle', { cx: x(i), cy: y(p.junk_share), r: 4, fill: acol(a), stroke: 'var(--card)', 'stroke-width': 2 }, svg);
-      dot.addEventListener('mousemove', e => showTip(e, `<b>Round ${p.round}, ${esc(ARMS[a] || a)}</b><br>${(p.junk_share * 100).toFixed(0)}% of wins to junk<br>${p.junk_paid_fusd.toFixed(2)} fUSD paid to junk<br>storm accounts hold ${p.storm_earned_fusd.toFixed(2)} fUSD in all<br>${p.key_held_fusd.toFixed(2)} fUSD held by a storm key beyond settled pay`));
+      dot.addEventListener('mousemove', e => showTip(e, `<b>Round ${esc(p.round)}, ${esc(ARMS[a] || a)}</b><br>${(p.junk_share * 100).toFixed(0)}% of wins to junk<br>${p.junk_paid_fusd.toFixed(2)} fUSD paid to junk<br>storm accounts hold ${p.storm_earned_fusd.toFixed(2)} fUSD in all<br>${p.key_held_fusd.toFixed(2)} fUSD held by a storm key beyond settled pay`));
       dot.addEventListener('mouseleave', hideTip); });
   }
   const rows = Object.keys(c.mean[arms[0]]).filter(k => k !== 'storm earned fUSD');
@@ -327,7 +327,7 @@ function render(d) {
   };
   const g = document.getElementById('trees');
   g.innerHTML = '<div class="h">round</div>' + LEADS.map(l => `<div class="h"><i class="sw" style="background:${lcol(l)}"></i>${l} lead</div>`).join('') +
-    d.rounds.map(r => `<div class="h"${roundTip(r)}>${r.round}</div>` + LEADS.map(l => {
+    d.rounds.map(r => `<div class="h"${roundTip(r)}>${esc(r.round)}</div>` + LEADS.map(l => {
       const tops = r.parts.filter(p => p.lead === l && p.level === 1);
       return '<div class="tree">' + tops.map(p => p.winner ? node(r, p, 0) : `<div class="node"><span class="sk">${esc(p.skill.slice(0, 3))}</span><span class="who">no seller</span></div>`).join('') + '</div>';
     }).join('')).join('');

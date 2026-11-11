@@ -71,6 +71,8 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | Judged delivery sent as a hash only, so no one can ask the judge | refused: with a judge pinned, `deliver` needs the bytes; unscored work is paid only on approval | `hash_only_delivery_refused_when_a_judge_is_pinned`, `unscored_judged_delivery_is_not_paid_without_approval` |
 | Checker down, or its answer is lost | fail closed: the job stays Delivered and unscored; it is paid only if the manager approves it; `resume_check` clears a lost answer after 10 min | `check_failure_leaves_delivered`, `unscored_delivery_is_not_paid_without_approval`, `lost_check_answer_can_be_cleared_after_timeout` |
 | Nonsense score | anything outside 0..=10 counts as no answer | `out_of_range_score_counts_as_no_answer` |
+| The worker (or the buyer) samples the judge offline and fills the round with 8 picked answers in one transaction, so the other side's answer is refused as "round full" | a full round still takes any answer that sets a new lowest or highest score, and only those two decide; storage stays at 8 stored answers | `a_full_round_still_counts_a_new_low_answer` |
+| The buyer splits the round on good work (one low answer makes it unclear) to keep the worker's bond and its backer's NEAR | unclear or unscored work is unpaid but keeps its bond; only no delivery, a failed check or an upheld dispute sends the bond to the buyer (the child tells the parent with `junk` in its close notice) | `an_unclear_check_leaves_good_work_unpaid_but_keeps_its_bond`, `unpaid_but_not_junk_work_keeps_its_bond`, `a_failed_check_forfeits_the_bond` |
 | Prompt injection in the deliverable aimed at the AI checker | the checker sees the deliverable as data inside a fixed rubric; the dispute adds two more panels with fresh seeds, 2 of 3 decide; a missing vote counts as junk, and a stuck dispute resumes as upheld (never in the worker's favour). Limit: the AI judge can still be fooled; the lead (who pays early) carries that risk, not the client | `dispute_*` |
 
 ## Job Note
@@ -78,6 +80,7 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 |---|---|---|
 | Sell the note, then dispute to get the pay back too (self-dealing) | only the lead's treasury may buy, and only the lead may dispute; an upheld dispute costs the treasury the face value and the pay goes up the tree (the lead at most breaks even; the worker already has its money) | `dispute_after_own_note_purchase_only_hurts_treasury` |
 | Echo attack: a worker gets a NEAR AI receipt for a copy of someone's answer, and sells the note | notes need a pinned checker and a passing score on the delivered bytes, not only a receipt | `no_checker_no_note` |
+| A contractor hires its own second account, the treasury buys that sub-job's note, then the contractor (that sub-job's disputer) disputes and gets the pay back | a contractor's sub-job names no treasury, so no note of it can be sold to the lead's treasury | `a_contractors_sub_job_names_no_treasury` |
 | Stranger or the lead itself buys | treasury only | `stranger_cannot_buy_note`, `lead_itself_cannot_buy_only_its_treasury` |
 | Buy cheaper | exact quote only | `wrong_price_refunded` |
 | Buy an unchecked or unverified note | refused | `unchecked_note_refused`, `unverified_note_refused` |
@@ -96,7 +99,11 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | Fake bidders fill the job's storage for free | a new bid attaches 0.001 NEAR for its own storage; at most 16 bids per slot, 16 slots | `a_new_bid_pays_for_its_storage` |
 | A backer is drained by a premium it never agreed to | the premium is fixed by the bidder before anyone backs, at most half the bidder's own bond, and paid only when the work is paid | `a_premium_above_half_the_bond_is_refused`, `a_backer_of_paid_work_gets_its_near_back_plus_the_premium` |
 | A junk bot backs itself to look vouched | the bidder and the buyer cannot back; a backing from a fresh account of the same operator is possible, but that account loses the NEAR on junk like a bigger bond would | `a_bidder_cannot_back_itself`, `a_backer_of_junk_loses_its_near_to_the_buyer` |
-| A backer's NEAR is stuck after the bid loses | refunded at the award with every losing bond | `a_backer_of_a_losing_bid_is_refunded_at_the_award` |
+| A backer's NEAR is stuck after the bid loses | refunded at the award with every losing bond (past the first 4 refunds, by `refund_bids`, which anyone may call) | `a_backer_of_a_losing_bid_is_refunded_at_the_award` |
+| A sniper backs a bid with 1 yocto: real underwriters are refused, and the sniper still takes the whole premium | a backing must be at least the bidder's own bond and twice the premium | `a_dust_backing_is_refused` |
+| Bidders from implicit (64-hex) accounts make the award or settle run out of gas: each bond refund to such an account pays NEAR's account-creation fee (about 8.3 Tgas), so 15 losers plus backers pass 300 Tgas | an award refunds at most 4 losers itself; settle refunds at most 4 open bonds itself and otherwise asks for `refund_bids` (anyone, 16 per call, about 135 Tgas); the agents' `settle` tool does that on its own | `an_award_with_a_full_slot_of_implicit_bidders_fits_in_300_tgas`, `bids_cannot_keep_a_root_over_the_delete_size_limit` |
+| Bids push a job's state past NEAR's 10 KB limit for deleting an account, so it never deletes (and a pool client never finishes) | settle drops the bids, check rounds and delivery hashes before the delete; a pool also treats a Settled job as gone | `bids_cannot_keep_a_root_over_the_delete_size_limit`, `a_settled_job_counts_as_gone` |
+| In a sub-job, its worker awards the slot the lead opened (to its own second account) | a slot records whether the manager or the worker opened it; only that role can award it | `the_worker_cannot_award_the_managers_slot` |
 | A flood of fresh accounts (a junk storm) takes every auction with half-price polished junk | each bid stakes the slot's bond and a junk winner loses it; no record means the newcomer premium; passes from untrusted workers are audited; at most 16 bids per slot, so a storm cannot grow a slot. `make swarm-seeds STORM=R` replays it in the records, blind and audit-all arms and charts the damage | `the_storm_floods_every_skill_without_passing_the_bid_cap`, `the_series_row_counts_junk_share_and_pay` |
 | The buyer picks a winner by a secret or biased rule | `award_best` runs the rule in the contract: the buyer names only the weights and a skip list, and the event lists the rule, every bidder's inputs and score. A buyer that wants a friend can still use `award` by hand (as with `hire`) | `a_bad_record_costs_more_than_a_low_bid_saves`, `skipped_bidders_are_not_read_or_awarded` |
 | A record read fails or returns junk during `award_best` | fails closed: nobody is awarded, the 0.035 NEAR deposit is refunded, the slot stays open for a retry or a hand `award` | `a_failed_record_read_awards_nobody_and_refunds`, `a_garbled_record_fails_closed` |
@@ -138,11 +145,12 @@ gate; see `receipt::tests::recorded_text_matches_near_ai_cloud`).
 | The operator who deployed the pool takes the money | The deploy key is deleted right after `new`; only the pool's methods move tokens |
 | A member is diluted or overpays | Joins keep at most what the target still needs; the excess is refunded in the same transfer |
 | Someone binds the pool to another job | `bind` asks the factory: the job's client must be this pool, with its budget, Posted |
-| Finish counts the refund too early | `finish` reads the balance only after the job account is gone; the job deletes itself only after its refund transfer succeeded |
+| Finish counts the refund too early | the job reports what it sent back (`job_refund`) only after the transfer succeeded; without a report `finish` reads the balance only once the job is gone or Settled |
+| A member times a refused `ft_transfer_call` to the pool (the token credits it, then takes it back a block later) so the count reads more than is there, then claims the others' share | members share exactly the job's reported refund, with no balance read (`a_reported_refund_is_shared_exactly_with_no_read`); a read, used only when no report came, never counts more than members put in (`a_read_never_counts_more_than_members_put_in`). Limit: if the report itself is lost, a read can still be inflated up to what was raised |
 | A minority approves bad work early | Approval needs voters holding more than half the stake |
 | The launch fails half way | Any refusal or missing answer is `LaunchFailed`; members claim back what the pool holds |
 | A claim transfer fails | The member's claimed amount is restored; claim again (`a_failed_claim_can_be_retried`) |
-| Tokens arrive after the count (late refund, gift) | Anyone may `finish` again to recount; members claim the difference (`tokens_arriving_after_finish_are_shared_by_a_recount`) |
+| Tokens arrive after the count (late refund, gift) | Anyone may `finish` again to recount, up to the reported refund (or what was raised); members claim the difference (`tokens_arriving_after_finish_are_shared_by_a_recount`) |
 
 ## Agents (off-chain)
 | Threat | Answer | Test |
@@ -198,9 +206,18 @@ for the bid calls.
 - A buyer and a bidder that work together can take an underwriter's NEAR
   (the bidder seeks a backer, wins, delivers junk; the buyer keeps bond and
   backing). The underwriter prices that risk; the contract does not.
-- The demo's intent keys are derived from the account id and a public seed
-  (`HT_INTENT_SEED`, default "local"): anyone can sign for a demo client.
-  A real client registers its own key.
+- The demo's intent keys are derived from the account id and a seed
+  (`HT_INTENT_SEED`, default "local" on the local node only): anyone can
+  sign for a demo client there. Off the local node the agents refuse to
+  sign without a private `HT_INTENT_SEED`, and never replace a key an
+  account registered itself. A real client registers its own key.
+- A sub-job's worker and its manager share the job's 16 bid slots and 16
+  children: a contractor that opens dust slots can crowd out the lead's
+  own hiring with the sub-budget until the window ends.
+- `resume_note` (only after a lost callback) reads the token balance like
+  the pool's fallback read, so a refused transfer timed into that read can
+  make a paid note look unpaid. It needs a lost callback first, which the
+  gas floors make unlikely.
 - In signed mode anyone may submit an answer and the lowest counts; a
   client or rival who samples NEAR AI until it gets a low score can only
   pull it within 2 points of the others (3 apart is unclear, not failed),
@@ -277,7 +294,13 @@ for the bid calls.
   from thin records (2 more panels, 2 of 3 decide), which catches most of
   it; the rest is paid, and the README states how often. A worker with 3
   or more paid jobs is not audited, so a patient fooler that builds a
-  record first is the open risk.
+  record first is the open risk. With live NEAR AI it is worse: in the
+  3-round live run (`web/swarm-live.json`) the polished-filler agent passed
+  7 of 7 checks (scores 6 to 8, 66.90 of 207.90 fUSD paid), audits
+  included. The scripted test model catches the filler; the real model
+  does not. The fix is a sharper contract-written check question (ask for
+  task-specific evidence and score generic text low); it needs a contract
+  change and new live recordings, so it is listed in docs/NEXT.md.
 - Firing ends the worker's chance to redeliver after one failed check. A
   borderline worker (score 5) loses the job; the signed check decides, not
   the buyer. A rich junk operator can still stake 10x and win once per

@@ -65,7 +65,11 @@ fn transient(e: &str) -> bool {
         || e.contains("functioncallerror")
         || e.contains("execution error")
         || e.contains("wasm execution failed")
-        || e.contains("smart contract panicked"))
+        || e.contains("smart contract panicked")
+        || e.contains("panicked")
+        || e.contains("guestpanic")
+        || e.contains("failed to deserialize")
+        || e.contains("wasmexecutionfailed"))
 }
 
 pub fn num(v: &Value) -> u128 {
@@ -670,6 +674,31 @@ impl Chain {
         }
         while self.block_time_ns().await <= end_ns {
             tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::transient;
+
+    #[test]
+    fn a_view_the_contract_refuses_is_not_retried() {
+        // These used to be retried for 31.5 s each.
+        for e in [
+            "GuestPanic { panic_msg: \"list at most 16 payers\" }",
+            "Failed to deserialize input from JSON. Error: `invalid value`",
+            "WasmExecutionFailed",
+            "Smart contract panicked: only jobs of this factory",
+        ] {
+            assert!(!transient(e), "{e}");
+        }
+        for e in [
+            "429 Too Many Requests",
+            "connection reset by peer",
+            "timed out",
+        ] {
+            assert!(transient(e), "{e}");
         }
     }
 }

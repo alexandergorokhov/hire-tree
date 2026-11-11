@@ -87,6 +87,8 @@ const GAS_ON_CHILD_CREATED: Gas = Gas::from_tgas(100);
 const GAS_ON_BALANCE_CHECKED: Gas = Gas::from_tgas(40);
 /// The track-record report to the registry (factory) at delete.
 pub const GAS_RECORD: Gas = Gas::from_tgas(10);
+/// The root's refund notice to its client (a pool books it; tiny).
+pub const GAS_CLIENT_REFUND: Gas = Gas::from_tgas(5);
 const GAS_ON_REST_PAID: Gas = Gas::from_tgas(50);
 const GAS_ON_PAYEE_PAID: Gas = Gas::from_tgas(80);
 const GAS_ON_RESUME: Gas = Gas::from_tgas(80);
@@ -157,6 +159,15 @@ pub const BID_NEAR: NearToken = NearToken::from_millinear(1);
 /// A sealed bid also stores its 32-byte commit (as hex), so it pays more.
 pub const SEALED_BID_NEAR: NearToken = NearToken::from_millinear(2);
 pub const MAX_BIDS: usize = 16;
+/// Refunding a bond to an implicit (64-hex) account pays NEAR's
+/// account-creation fee, about 8.3 Tgas. Settle refunds at most this many
+/// open bonds itself; more need `refund_bids` first (16 per call).
+pub const SETTLE_INLINE_REFUNDS: usize = 4;
+/// An award refunds at most this many losers' bonds and backings itself;
+/// the rest wait for `refund_bids`, so a slot full of bidders cannot push
+/// the award past 300 Tgas.
+pub const AWARD_INLINE_REFUNDS: usize = 4;
+pub const REFUND_BATCH: usize = 16;
 /// A bid slot stays open between 10 seconds and 1 hour.
 pub const MIN_BID_SECS: u64 = 10;
 pub const MAX_BID_SECS: u64 = 3600;
@@ -205,6 +216,10 @@ pub struct BidSlot {
     /// `reveal_ns`; 0 = an open slot.
     #[serde(default)]
     pub reveal_ns: U64,
+    /// Opened by the job's worker (a contractor hiring out of its own pay),
+    /// not its manager. Only the same role may award it.
+    #[serde(default)]
+    pub by_worker: bool,
 }
 
 /// The largest bond a slot may ask for: 5 NEAR.
@@ -500,6 +515,14 @@ pub struct Job {
     /// Set at settle: the work passed (settled from Checked, or delivered
     /// with no check pinned). Reported up for the lead's fee.
     work_passed: bool,
+    /// Set at settle: the worker's bond goes to the buyer (no delivery, a
+    /// failed check, or an upheld dispute). An unscored or unclear delivery
+    /// is unpaid but keeps its bond, so a buyer gains nothing by splitting
+    /// the judge round on good work.
+    bond_forfeit: bool,
+    /// Root: tokens sent back to the client so far; reported to the client
+    /// (`job_refund`) after the settle, so a pool shares exactly this.
+    returned_to_client: u128,
 }
 
 fn emit(event: &str, data: serde_json::Value) {
@@ -514,6 +537,22 @@ fn emit(event: &str, data: serde_json::Value) {
 
 fn fail<T: std::fmt::Display>(e: T) -> ! {
     env::panic_str(&e.to_string())
+}
+
+/// Send one bid's bond back to its bidder and its backing to its backer.
+fn refund_bid(b: &mut Bid) {
+    let x = std::mem::replace(&mut b.bond, U128(0)).0;
+    if x > 0 {
+        Promise::new(b.worker.clone())
+            .transfer(NearToken::from_yoctonear(x))
+            .detach();
+    }
+    let k = std::mem::replace(&mut b.backed, U128(0)).0;
+    if let (Some(to), true) = (b.backer.clone(), k > 0) {
+        Promise::new(to)
+            .transfer(NearToken::from_yoctonear(k))
+            .detach();
+    }
 }
 
 /// Callbacks are `#[private]`; this repeats the check inside the body so the
@@ -679,6 +718,8 @@ impl Job {
             payout_via: None,
             close_pending: None,
             work_passed: false,
+            bond_forfeit: false,
+            returned_to_client: 0,
         };
         emit(
             "job_created",
@@ -1111,6 +1152,7 @@ impl Job {
             awarded: None,
             bond: bond.unwrap_or(U128(0)),
             reveal_ns: U64(reveal_ns),
+            by_worker,
         });
         let slot = (self.bid_slots.len() - 1) as u32;
         emit(
@@ -1316,6 +1358,13 @@ impl Job {
             .unwrap_or_else(|| env::panic_str("that account did not bid on this slot"));
         require!(b.offer.0 > 0, "that bid does not seek a backer");
         require!(b.backer.is_none(), "this bid is already backed");
+        // A real underwriter puts at least the bidder's own bond at risk
+        // (and twice the premium): a dust backing would only lock the bid
+        // against real backers and still take the whole premium.
+        require!(
+            x >= b.bond.0.max(b.offer.0.saturating_mul(2)),
+            "back with at least the bidder's own bond and twice the premium"
+        );
         b.backer = Some(me.clone());
         b.backed = U128(x);
         emit(
@@ -1332,6 +1381,10 @@ impl Job {
         let by_worker = self.hiring_role("award");
         self.require_hire_resources(env::prepaid_gas());
         let s = self.awardable_slot(slot);
+        require!(
+            s.by_worker == by_worker,
+            "only the role that opened this slot can award it"
+        );
         let chosen = s
             .bids
             .iter()
@@ -1419,6 +1472,10 @@ impl Job {
             "list at most 16 payers"
         );
         let s = self.awardable_slot(slot);
+        require!(
+            s.by_worker == by_worker,
+            "only the role that opened this slot can award it"
+        );
         let skip = skip.unwrap_or_default();
         let workers: Vec<AccountId> = s
             .bids
@@ -1646,32 +1703,34 @@ impl Job {
             json!({ "slot": slot, "worker": worker, "price": price }),
         );
         // Losers get their bond back; a sealed bid never revealed loses it
-        // to the buyer (no free option to hide and walk away).
+        // to the buyer (no free option to hide and walk away), in one
+        // transfer. Past AWARD_INLINE_REFUNDS transfers the losers' refunds
+        // wait for `refund_bids` (anyone, any time).
         let mut winner_bond = 0;
         let mut winner_backing = (None, 0u128, 0u128);
+        let mut kept = 0u128;
+        let mut sends = 0usize;
         for b in self.bid_slots[slot as usize].bids.iter_mut() {
-            let x = std::mem::replace(&mut b.bond, U128(0)).0;
-            let backed = std::mem::replace(&mut b.backed, U128(0)).0;
             if b.worker == worker {
-                winner_bond = x;
-                winner_backing = (b.backer.clone(), backed, b.offer.0.min(x));
+                winner_bond = std::mem::replace(&mut b.bond, U128(0)).0;
+                let backed = std::mem::replace(&mut b.backed, U128(0)).0;
+                winner_backing = (b.backer.clone(), backed, b.offer.0.min(winner_bond));
                 continue;
             }
-            if let (Some(k), true) = (b.backer.clone(), backed > 0) {
-                Promise::new(k)
-                    .transfer(NearToken::from_yoctonear(backed))
-                    .detach();
+            if b.commit.is_some() {
+                kept += std::mem::replace(&mut b.bond, U128(0)).0;
             }
-            if x > 0 {
-                let to = if b.commit.is_some() {
-                    buyer.clone()
-                } else {
-                    b.worker.clone()
-                };
-                Promise::new(to)
-                    .transfer(NearToken::from_yoctonear(x))
-                    .detach();
+            let n = usize::from(b.bond.0 > 0) + usize::from(b.backed.0 > 0);
+            if n == 0 || sends + n > AWARD_INLINE_REFUNDS {
+                continue;
             }
+            sends += n;
+            refund_bid(b);
+        }
+        if kept > 0 {
+            Promise::new(buyer.clone())
+                .transfer(NearToken::from_yoctonear(kept))
+                .detach();
         }
         let p = self.hire_inner(worker, price, s.spec_hash, sub, by_worker, deposit, true);
         let last = self.children.len() - 1;
@@ -1760,7 +1819,9 @@ impl Job {
             "signer": hex_of(&self.signer),
             "code_hash": Base58CryptoHash::from(self.code_hash),
             "checker": self.checker,
-            "treasury": self.treasury,
+            // A contractor's sub-job has the contractor as its disputer, so
+            // it must not name the lead's treasury as the note buyer.
+            "treasury": if by_worker { None } else { self.treasury.clone() },
             "judge": self.judge,
             "registry": self.registry,
             "bid": bid,
@@ -2045,6 +2106,10 @@ impl Job {
         );
         let settling = transition(self.status, Event::StartSettle).unwrap_or_else(|e| fail(e));
         self.status = transition(settling, Event::SettleOk).unwrap_or_else(|e| fail(e));
+        // Bids placed on it meanwhile get their bonds back before the delete.
+        for s in self.bid_slots.iter_mut() {
+            s.bids.iter_mut().for_each(refund_bid);
+        }
         emit(
             "closed_unfunded",
             json!({ "account": env::current_account_id() }),
@@ -2417,10 +2482,6 @@ impl Job {
             .position(|r| r.panel == panel && r.seq == self.seq)
             .unwrap_or_else(|| env::panic_str("no open check round for this panel"));
         require!(!self.rounds[i].closed(), "check round is closed");
-        require!(
-            (self.rounds[i].count as usize) < MAX_ANSWERS as usize,
-            "check round is full"
-        );
         require!(answer.0.len() <= 4 * 1024, "answer is larger than 4 KB");
         let req = self.build_check_request(panel, &task, &deliverable.0);
         let ans_hash = env::sha256_array(&answer.0);
@@ -2442,12 +2503,23 @@ impl Job {
         let score = judgecheck::parse_score(&content)
             .unwrap_or_else(|| env::panic_str("answer is not {\"score\": 0-10}"));
         let r = &mut self.rounds[i];
+        // Storage stays bounded at MAX_ANSWERS stored answers, but a full
+        // round still takes any answer that sets a new lowest or highest
+        // score. Only min and max decide the outcome, so filling the round
+        // with picked answers cannot lock out a different score.
+        let full = r.count as usize >= MAX_ANSWERS as usize;
+        require!(
+            !full || score < r.min || score > r.max,
+            "check round is full and this score is already counted"
+        );
         let mut t = r.tally();
         t.add(score);
         r.min = t.min;
         r.max = t.max;
         r.count = t.count;
-        r.seen.push(key);
+        if !full {
+            r.seen.push(key);
+        }
         emit(
             "check_answer",
             json!({ "panel": panel, "seq": self.seq, "score": score, "by": env::predecessor_account_id() }),
@@ -2636,8 +2708,12 @@ impl Job {
             s.awarded.is_none(),
             "slot was awarded: losers were refunded then"
         );
-        // A backer takes back what it backed the same way.
-        if let Some(b) = s.bids.iter_mut().find(|b| b.backer.as_ref() == Some(&me)) {
+        // A backer takes back what it backed the same way (one bid per call).
+        if let Some(b) = s
+            .bids
+            .iter_mut()
+            .find(|b| b.backer.as_ref() == Some(&me) && b.backed.0 > 0)
+        {
             let x = std::mem::replace(&mut b.backed, U128(0)).0;
             if x > 0 {
                 Promise::new(me)
@@ -2659,21 +2735,45 @@ impl Job {
     }
 
     /// Bonds still held for slots that were never awarded.
-    fn refund_open_bonds(&mut self) {
-        for s in self.bid_slots.iter_mut().filter(|s| s.awarded.is_none()) {
+    /// Bids that still hold a bond or a backing: losers of awarded slots
+    /// the award did not refund, and (once the window is over) every bid of
+    /// a slot never awarded.
+    fn open_bonds(&self) -> usize {
+        let done = self.approved || env::block_timestamp() >= self.window_end_ns;
+        self.bid_slots
+            .iter()
+            .filter(|s| done || s.awarded.is_some())
+            .flat_map(|s| s.bids.iter())
+            .filter(|b| b.bond.0 > 0 || b.backed.0 > 0)
+            .count()
+    }
+
+    /// Anyone: refund up to 16 bids still holding a bond (losers of awarded
+    /// slots; after the window or approval, also slots never awarded).
+    /// Returns how many remain.
+    pub fn refund_bids(&mut self) -> u32 {
+        self.refund_open_bonds(REFUND_BATCH);
+        self.open_bonds() as u32
+    }
+
+    /// Refund the bonds (and backings) of up to `limit` such bids.
+    fn refund_open_bonds(&mut self, limit: usize) {
+        let mut left = limit;
+        let done = self.approved || env::block_timestamp() >= self.window_end_ns;
+        for s in self
+            .bid_slots
+            .iter_mut()
+            .filter(|s| done || s.awarded.is_some())
+        {
             for b in s.bids.iter_mut() {
-                let x = std::mem::replace(&mut b.bond, U128(0)).0;
-                if x > 0 {
-                    Promise::new(b.worker.clone())
-                        .transfer(NearToken::from_yoctonear(x))
-                        .detach();
+                if b.bond.0 == 0 && b.backed.0 == 0 {
+                    continue;
                 }
-                let k = std::mem::replace(&mut b.backed, U128(0)).0;
-                if let (Some(to), true) = (b.backer.clone(), k > 0) {
-                    Promise::new(to)
-                        .transfer(NearToken::from_yoctonear(k))
-                        .detach();
+                if left == 0 {
+                    return;
                 }
+                left -= 1;
+                refund_bid(b);
             }
         }
     }
@@ -2865,7 +2965,14 @@ impl Job {
             "check pending: wait for its answer or resume_check"
         );
         // Bonds of slots never awarded go back before the account can go.
-        self.refund_open_bonds();
+        // Many bidders could push settle past 300 Tgas, so a long tail is
+        // refunded first in batches by `refund_bids` (anyone may call it).
+        let open = self.open_bonds();
+        require!(
+            open <= SETTLE_INLINE_REFUNDS,
+            format!("{open} open bid bonds: call refund_bids first (16 per call)")
+        );
+        self.refund_open_bonds(usize::MAX);
         // Paid: checked work; or, without a checker, any delivery; or an
         // unscored delivery the manager approved. Unscored work is never
         // paid by default (fail closed).
@@ -2884,6 +2991,7 @@ impl Job {
             Status::Delivered => self.checker.is_none() && self.judge.is_none(),
             _ => false,
         };
+        self.bond_forfeit = !matches!(prev, Status::Checked | Status::Delivered);
         // Root: the fee the lead earned (pro rata to its paid parts, over
         // at least half the work budget) + its bond to the manager, the
         // rest back to the client.
@@ -3113,9 +3221,13 @@ impl Job {
         if let Err(e) = self.ledger.payout_result(s, true, ok) {
             fail(e);
         }
-        if ok && !self.root {
-            self.returned_to_parent = self
-                .returned_to_parent
+        if ok {
+            let sent = if self.root {
+                &mut self.returned_to_client
+            } else {
+                &mut self.returned_to_parent
+            };
+            *sent = sent
                 .checked_add(p.to_rest.0)
                 .unwrap_or_else(|| env::panic_str("overflow"));
         }
@@ -3346,13 +3458,34 @@ impl Job {
         self.status = transition(self.status, Event::SettleOk).unwrap_or_else(|e| fail(e));
         self.status_before_settle = None;
         self.payout = None;
+        // NEAR refuses to delete an account holding more than 10 KB of
+        // state. Bids, judge rounds and delivery hashes are done with (their
+        // bonds went back at settle start), so drop them before the delete.
+        self.refund_open_bonds(usize::MAX);
+        self.bid_slots.clear();
+        self.rounds.clear();
+        self.delivered.clear();
         let me = env::current_account_id();
         emit(
             "settled",
             json!({ "account": me, "beneficiary": self.parent, "returned_to_parent": U128(self.returned_to_parent) }),
         );
         if self.root {
-            // A root tells nobody: its parent is the factory.
+            // Its parent is the factory, which needs no notice. The client
+            // hears what came back (a pool shares exactly that; a plain
+            // account has no code and the call fails harmlessly).
+            if let Some(client) = self.client.clone() {
+                Promise::new(client)
+                    .function_call(
+                        "job_refund",
+                        json!({ "returned": U128(self.returned_to_client) })
+                            .to_string()
+                            .into_bytes(),
+                        NO_DEPOSIT,
+                        GAS_CLIENT_REFUND,
+                    )
+                    .detach();
+            }
             return Promise::new(me).delete_account(self.parent.clone());
         }
         if let Some(worker) = self.worker.clone() {
@@ -3424,6 +3557,7 @@ impl Job {
                 json!({
                     "returned": U128(self.returned_to_parent),
                     "paid": self.worker_paid(),
+                    "junk": self.bond_forfeit,
                     "funded": U128(self.ledger.funded),
                     "fee": self.fee_report(),
                 })
@@ -3523,6 +3657,7 @@ impl Job {
         paid: Option<bool>,
         funded: Option<U128>,
         fee: Option<FeeReport>,
+        junk: Option<bool>,
     ) {
         let caller = env::predecessor_account_id();
         // A repeat: already closed, or already undone as never funded (an
@@ -3583,8 +3718,10 @@ impl Job {
         if let Err(e) = r {
             fail(e);
         }
-        // No outcome reported (older code): the bond goes back.
-        self.release_bond(i, paid.unwrap_or(true));
+        // No outcome reported (older code): the bond goes back. Unpaid
+        // work keeps its bond unless the child says it was junk (no
+        // delivery, a failed check, an upheld dispute).
+        self.release_bond(i, paid.unwrap_or(true) || junk == Some(false));
         emit(
             "child_closed",
             json!({ "child": caller, "returned": returned, "paid": paid }),

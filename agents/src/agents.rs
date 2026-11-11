@@ -753,8 +753,16 @@ pub fn mock_script(req: &Value) -> String {
                 c["record"]["paid"].as_i64().unwrap_or(0),
             );
             // Lowest bid, unless the bidder's record shows unpaid jobs.
-            let bid = c["bid"].as_i64().unwrap_or(i64::MAX / 4);
-            let score = if jobs > paid { -1_000_000 - bid } else { -bid };
+            // Bids may be whole fUSD or decimals (11.4): compare in micro-units.
+            let bid = c["bid"]
+                .as_f64()
+                .map(|f| (f * 1_000_000.0).round() as i64)
+                .unwrap_or(i64::MAX / 4);
+            let score = if jobs > paid {
+                -1_000_000_000_000_000 - bid
+            } else {
+                -bid
+            };
             if jobs > paid {
                 avoided.push(format!(
                     "{} ({jobs} jobs, {paid} paid)",
@@ -961,6 +969,11 @@ mod tests {
         let p = ask(PICKER, cands(2));
         assert_eq!(p["worker"], "good");
         assert!(p["reason"].as_str().unwrap().contains("avoided bot"));
+        // Decimal bids (the playground shows 28.5, 11.4) compare too.
+        let dec = json!({ "subtask": { "name": "summary" }, "candidates": [
+            { "account": "a", "skills": ["summary"], "bid": 28.5, "record": { "jobs": 0, "paid": 0 } },
+            { "account": "b", "skills": ["summary"], "bid": 20.0, "record": { "jobs": 0, "paid": 0 } } ] });
+        assert_eq!(ask(PICKER, dec)["worker"], "b");
     }
 
     #[test]

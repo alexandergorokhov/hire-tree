@@ -12,5 +12,6 @@ rm -rf out/pages && mkdir -p out/pages
 cp web/*.json out/pages/
 sed 's#href="index.html"#href="story.html"#' web/swarm.html > out/pages/index.html
 cp web/index.html out/pages/story.html
+cp web/market.html out/pages/market.html
 touch out/pages/.nojekyll
 ls out/pages

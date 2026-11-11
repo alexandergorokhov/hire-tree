@@ -89,7 +89,16 @@ a NEAR AI Cloud answer: the task text must hash to the spec hash, the
 delivered bytes to the delivered hash, the signature must recover to the
 pinned signer over `model:sha256(request):sha256(answer)`, and the answer's
 `choices[0].message.content` must be `{"score": 0-10}`. Each distinct answer
-counts once (at most 8). After the window anyone calls `finalize_check`.
+counts once. At most 8 are stored; a full round SHALL still take an
+answer that sets a new lowest or highest score (only those decide), so
+nobody can lock the other side out by filling the round first. After the
+window anyone calls `finalize_check`.
+
+#### Scenario: One side fills the round
+- GIVEN the worker submitted 8 answers of 6
+- WHEN the buyer submits an answer of 2
+- THEN it is counted and the check is unclear, not passed
+- unit: `a_full_round_still_counts_a_new_low_answer`
 
 #### Scenario: Answers agree
 - THEN the lowest score counts (fail closed: a worker gains nothing by asking many times)
@@ -97,7 +106,7 @@ counts once (at most 8). After the window anyone calls `finalize_check`.
 
 #### Scenario: Answers split (max - min >= 3) or none
 - THEN the delivery stays Delivered and unscored, and it is not a failed check (a lead or stranger shopping for a low score can only hold borderline work up, not fail it)
-- unit: `split_answers_are_unclear_not_junk`, `no_answer_leaves_the_delivery_unscored`
+- unit: `split_answers_are_unclear_not_junk`, `no_answer_leaves_the_delivery_unscored`, `an_unclear_check_leaves_good_work_unpaid_but_keeps_its_bond` (unpaid, but the worker's bond and its backer's NEAR go back: only no delivery, a failed check or an upheld dispute forfeits them)
 
 #### Scenario: Wrong signer, other question, other bytes, other task, repeat, garbage, late
 - THEN refused

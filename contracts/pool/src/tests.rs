@@ -715,3 +715,57 @@ fn a_late_claim_answer_after_resume_changes_nothing() {
         "not reverted"
     );
 }
+
+/// A phantom (a refused `ft_transfer_call` the token takes back a block
+/// later) cannot inflate the payout: once the job reports its refund, the
+/// pool shares exactly that, with no balance read at all.
+#[test]
+fn a_reported_refund_is_shared_exactly_with_no_read() {
+    let mut p = bound();
+    ctx("job-3.hub.op.test", 190);
+    p.job_refund(U128(30 * USD));
+    ctx("anyone.test", 200);
+    p.finish();
+    assert!(calls().is_empty(), "no get_job, no balance read");
+    assert_eq!(p.get_pool()["state"], json!("Done"));
+    assert_eq!(p.get_pool()["payout"], json!(U128(30 * USD)));
+    ctx("a.test", 400);
+    p.claim();
+    let a: serde_json::Value = serde_json::from_slice(&calls()[0].2).unwrap();
+    assert_eq!(a["amount"], json!(U128(10 * USD)), "a gets its fair 10");
+    // A recount with a phantom in the read cannot raise the payout.
+    claimed(&mut p, ok(json!(null)));
+    ctx("anyone.test", 500);
+    p.finish();
+    assert_eq!(balance(&mut p, ok(json!(U128(80 * USD)))), U128(30 * USD));
+}
+
+#[test]
+#[should_panic(expected = "only the bound job reports its refund")]
+fn only_the_bound_job_reports_a_refund() {
+    let mut p = bound();
+    ctx("a.test", 190);
+    p.job_refund(U128(90 * USD));
+}
+
+#[test]
+fn a_read_never_counts_more_than_members_put_in() {
+    // No report (the notice was lost): the read is capped at what was raised.
+    let mut p = done(500 * USD);
+    assert_eq!(p.get_pool()["payout"], json!(U128(90 * USD)));
+    ctx("a.test", 400);
+    p.claim();
+    let a: serde_json::Value = serde_json::from_slice(&calls()[0].2).unwrap();
+    assert_eq!(a["amount"], json!(U128(30 * USD)));
+}
+
+#[test]
+fn a_settled_job_counts_as_gone() {
+    // NEAR may refuse to delete a large account; Settled means the refund
+    // already left, so finish goes on to read.
+    let mut p = bound();
+    ctx("anyone.test", 200);
+    p.finish();
+    assert!(job_checked(&mut p, ok(json!({ "status": "Settled" }))));
+    assert_eq!(calls()[0].1, "ft_balance_of");
+}

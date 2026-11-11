@@ -74,6 +74,7 @@ pub const GUIDE: &str = "Hire Tree playground on a local NEAR node (fake money, 
 Every job is its own NEAR account holding exactly its budget. Pass `as` on any tool to act as one of: client, client2, client3, lead, treasury, keeper, researcher, translator, cheapbot (default client). Amounts are fUSD with 6 decimals, as strings (\"30000000\" = 30 fUSD).
 
 Try this (about 15 calls):
+0. find_agents: every agent for hire, ranked by its on-chain record (on a fresh node all are new; after a round, unpaid work sinks an agent).
 1. post_job as client: budget \"50000000\", manager = the lead's account (see `accounts`), task \"Explain NEAR sub-accounts\", window_secs 3600, lead_fee \"5000000\", treasury = the treasury's account (it can pay workers early). The root job is job-<n>.<factory> (get_job shows it).
 2. open_bids as lead on that job: task \"Explain NEAR sub-accounts in 3 sentences\", max \"30000000\", secs 60. It returns the slot.
 3. bid as researcher (price \"25000000\") and as cheapbot (\"10000000\"); try a bid above max and see it refused.
@@ -283,7 +284,7 @@ impl Playground {
                 let rec = tools
                     .call(&t.lead, "get_record", &json!({ "account": who }))
                     .await?;
-                cands.push(json!({ "account": who, "skills": self.skills_of(&who), "bid": num(&bid["price"]) / USD, "record": rec }));
+                cands.push(json!({ "account": who, "skills": self.skills_of(&who), "bid": num(&bid["price"]) as f64 / USD as f64, "record": rec }));
             }
             if cands.is_empty() {
                 out.push(json!({ "skill": name, "award": null, "reason": "no bids" }));
@@ -312,6 +313,12 @@ impl Playground {
                 )
                 .await?;
             let sub = format!("t{}.{root}", hired.len() + 1);
+            // Track the hire now: if a later step fails, finish_round can
+            // still fold every sub-job awarded so far.
+            hired.push((sub.clone(), ptask.clone()));
+            if let Some(r) = self.rounds.lock().unwrap().get_mut(&root) {
+                r.hired = hired.clone();
+            }
             let price = cands
                 .iter()
                 .find(|x| x["account"] == who.as_str())
@@ -341,10 +348,6 @@ impl Playground {
                     out.push(json!({ "skill": name, "award": who, "price_fusd": price, "sub_job": sub, "reason": pick["reason"], "worked": "delivered and judged" }));
                 }
             }
-            hired.push((sub, ptask.clone()));
-        }
-        if let Some(r) = self.rounds.lock().unwrap().get_mut(&root) {
-            r.hired = hired;
         }
         Ok(json!({ "job": root, "awards": out }))
     }
@@ -517,7 +520,10 @@ impl Playground {
                 )
             }
             "wait" => {
-                let secs = a["secs"].as_u64().ok_or("missing secs")?.min(7200);
+                let secs = a["secs"]
+                    .as_u64()
+                    .ok_or("secs must be a whole number of seconds, 0 to 7200")?
+                    .min(7200);
                 c.fast_forward(secs).await;
                 Ok(json!(format!("{secs} s of chain time passed")))
             }
@@ -532,9 +538,12 @@ impl Playground {
             "judge_check" => self.judge_check(a).await,
             // The playground's catalog: with no `agents`, every demo account.
             "find_agents" if !a["agents"].is_array() => {
+                // Workers and guests only: clients, the lead, the treasury
+                // and the keeper are not for hire.
                 let all: Vec<String> = self
                     .named()
                     .into_iter()
+                    .skip(6)
                     .map(|(_, acc)| acc.id.to_string())
                     .collect();
                 let mut args = a.clone();
@@ -860,7 +869,7 @@ impl Playground {
             )
             .await?;
         Ok(json!({ "score": score, "judge_answer": r.content(),
-            "note": format!("the round closes {CHECK_WINDOW_SECS} s after the delivery: wait, then finalize_check") }))
+            "note": format!("the round closes {CHECK_WINDOW_SECS} s after the delivery: wait, then finalize_check (in the open market, finish_round does it)") }))
     }
 }
 
@@ -892,7 +901,7 @@ pub fn tool_list() -> Vec<Value> {
             if name == "find_agents" {
                 // Here the catalog defaults to every demo account.
                 schema["required"] = json!([]);
-                let d = format!("{description} Leave out `agents` for every demo account.");
+                let d = format!("{description} Leave out `agents` for every demo account for hire (house workers and guests who joined).");
                 return json!({ "name": name, "description": d, "inputSchema": schema });
             }
             json!({ "name": name, "description": description, "inputSchema": schema })
@@ -923,7 +932,62 @@ pub fn tool_list() -> Vec<Value> {
     ] {
         v.push(json!({ "name": name, "description": desc, "inputSchema": schema }));
     }
+    // The tools a reviewer starts with come first in the list.
+    const FIRST: [&str; 8] = [
+        "guide",
+        "accounts",
+        "find_agents",
+        "join",
+        "open_round",
+        "close_round",
+        "do_work",
+        "finish_round",
+    ];
+    let rank = |t: &Value| {
+        let n = t["name"].as_str().unwrap_or_default();
+        FIRST.iter().position(|f| *f == n).unwrap_or(FIRST.len())
+    };
+    v.sort_by_key(rank);
     v
+}
+
+/// LLM clients often send `"slot": "0"` or `"price": 25000000`. Coerce each
+/// argument to the type its tool's schema names: integers given as digit
+/// strings become numbers, whole numbers given for string fields (fUSD
+/// amounts, yoctoNEAR) become digit strings.
+pub fn coerce_args(name: &str, mut args: Value) -> Value {
+    let tools = tool_list();
+    let Some(props) = tools
+        .iter()
+        .find(|t| t["name"] == name)
+        .map(|t| t["inputSchema"]["properties"].clone())
+    else {
+        return args;
+    };
+    let Some(obj) = args.as_object_mut() else {
+        return args;
+    };
+    for (k, v) in obj.iter_mut() {
+        match (props[k.as_str()]["type"].as_str(), &*v) {
+            (Some("integer"), Value::String(x)) => {
+                if let Ok(n) = x.trim().parse::<u64>() {
+                    *v = json!(n);
+                }
+            }
+            (Some("string"), Value::Number(n)) => {
+                if let Some(u) = n.as_u64() {
+                    *v = json!(u.to_string());
+                } else if let Some(f) = n
+                    .as_f64()
+                    .filter(|f| f.fract() == 0.0 && *f >= 0.0 && *f < 9.0e15)
+                {
+                    *v = json!(format!("{}", f as u64));
+                }
+            }
+            _ => {}
+        }
+    }
+    args
 }
 
 /// Serve on stdin/stdout. The node boots on the first tool call, so the
@@ -946,6 +1010,9 @@ pub async fn serve() {
             None => Box::new(tokio::io::stdout()),
         };
     let mut pg: Option<Playground> = None;
+    // The node starts booting at `initialize`, so the first real call
+    // waits less; a boot that panics becomes an error, not a dead server.
+    let mut booting: Option<tokio::task::JoinHandle<Playground>> = None;
     while let Ok(Some(line)) = lines.next_line().await {
         let msg: Value = match serde_json::from_str(&line) {
             Ok(m) => m,
@@ -955,10 +1022,20 @@ pub async fn serve() {
                 continue;
             }
         };
+        if !msg.is_object() {
+            let r = json!({ "jsonrpc": "2.0", "id": null, "error": { "code": -32600, "message": "send one JSON-RPC request object per line (batches are not supported)" } });
+            let _ = out.write_all(format!("{r}\n").as_bytes()).await;
+            let _ = out.flush().await;
+            continue;
+        }
         let Some(id) = msg.get("id").cloned() else {
             continue;
         };
         let method = msg["method"].as_str().unwrap_or_default();
+        if method == "initialize" && pg.is_none() && booting.is_none() {
+            eprintln!("hiretree: starting the local NEAR node and deploying (about a minute)");
+            booting = Some(tokio::spawn(Playground::boot()));
+        }
         let result = match method {
             "initialize" => json!({
                 "protocolVersion": PROTOCOL,
@@ -973,15 +1050,32 @@ pub async fn serve() {
                     .as_str()
                     .unwrap_or_default()
                     .to_string();
-                let args = msg["params"].get("arguments").cloned().unwrap_or(json!({}));
-                if pg.is_none() && name != "guide" {
-                    eprintln!(
-                        "hiretree: starting the local NEAR node and deploying (about a minute)"
-                    );
-                    pg = Some(Playground::boot().await);
+                let args = coerce_args(
+                    &name,
+                    msg["params"].get("arguments").cloned().unwrap_or(json!({})),
+                );
+                let mut boot_err = None;
+                if pg.is_none() && name != "guide" && args.is_object() {
+                    let h = booting.take().unwrap_or_else(|| {
+                        eprintln!(
+                            "hiretree: starting the local NEAR node and deploying (about a minute)"
+                        );
+                        tokio::spawn(Playground::boot())
+                    });
+                    match h.await {
+                        Ok(p) => pg = Some(p),
+                        Err(e) => {
+                            eprintln!("hiretree: the local node failed to start: {e}");
+                            boot_err = Some("The local NEAR node failed to start. Run `make mcp-setup` in the repo, make sure no other near-sandbox is running, then restart this MCP server. Its log is on stderr.".to_string());
+                        }
+                    }
                 }
                 let r = match (&pg, name.as_str()) {
+                    (_, _) if !args.is_object() => {
+                        Err("arguments must be a JSON object".to_string())
+                    }
                     (_, "guide") => Ok(json!(GUIDE)),
+                    (None, _) if boot_err.is_some() => Err(boot_err.take().unwrap_or_default()),
                     // A panic in one call (a hostile argument) is an error
                     // for that call, not the end of the server.
                     (Some(p), _) => {
@@ -995,6 +1089,10 @@ pub async fn serve() {
                 };
                 let (text, err) = match r {
                     Ok(Value::String(s)) => (s, false),
+                    Ok(Value::Null) => (
+                        "ok: done (the contract returned nothing)".to_string(),
+                        false,
+                    ),
                     Ok(v) => (v.to_string(), false),
                     Err(e) => (tidy(&e), true),
                 };
@@ -1056,6 +1154,30 @@ async fn house_solver(c: &Chain) -> (Verifier, Acc) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn numbers_and_digit_strings_are_coerced_to_the_schema_type() {
+        let a = coerce_args("bid", json!({ "job": "j", "slot": "0", "price": 29000000 }));
+        assert_eq!(a["slot"], json!(0));
+        assert_eq!(a["price"], json!("29000000"));
+        let w = coerce_args("wait", json!({ "secs": "61" }));
+        assert_eq!(w["secs"], json!(61));
+        // Unknown tools and non-numeric strings pass through unchanged.
+        assert_eq!(coerce_args("nope", json!({ "x": 1 })), json!({ "x": 1 }));
+        assert_eq!(
+            coerce_args("wait", json!({ "secs": "soon" }))["secs"],
+            json!("soon")
+        );
+    }
+
+    #[test]
+    fn the_starting_tools_come_first() {
+        let names: Vec<String> = tool_list()
+            .iter()
+            .map(|t| t["name"].as_str().unwrap().to_string())
+            .collect();
+        assert_eq!(&names[..3], &["guide", "accounts", "find_agents"]);
+    }
 
     #[test]
     fn the_playground_catalog_needs_no_agent_list() {

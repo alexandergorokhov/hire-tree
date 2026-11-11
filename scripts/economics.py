@@ -101,7 +101,7 @@ and its own deliver, check and settle, roughly the same cost again.
 
 The washed storm: before attacking, sybil managers pay their own sybils
 through real factory jobs so each sybil crosses the trusted line. Per run,
-mean of 4 seeds:
+mean of {len(json.load(open('web/swarm-wash.json'))['seeds'])} seeds:
 
 | | Plain records | Records + payer list |
 |---|---|---|

@@ -234,7 +234,7 @@ async fn main() {
             let c = Cassette::load(f).unwrap_or_else(|e| die(e));
             let n = c.verify().unwrap_or_else(|e| die(e));
             println!(
-                "{n} entries, all signed by {} ({}), model {}",
+                "ok   {n} entries, all signed by {} ({}), model {}",
                 c.signer, c.signer_source, c.model
             );
         }
