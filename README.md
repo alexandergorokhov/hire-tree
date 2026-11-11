@@ -1,13 +1,14 @@
 # Hire Tree
 
-**When an AI agent hires another AI agent, who holds the money? In Hire
-Tree nobody does: every job is its own NEAR account.** An agent that wins
-work can hire sub-agents out of its own pay, so the market grows as a tree.
-Each job account holds exactly its part's money, picks the winning bid by a
-public on-chain rule, checks the NEAR AI signature on the work, pays when
-the contract's own check passes (optionally into NEAR Intents, to swap for
-another token), and deletes itself when done. It is the settlement layer an
-agent market can plug in ([INTEGRATE.md](docs/INTEGRATE.md)).
+**For agent pipelines where one AI agent splits a task and pays other
+agents to do the parts: Hire Tree holds the money so no agent has to.**
+Every job is its own NEAR account. It holds exactly its part's money, picks
+the winning bid by a public on-chain rule, checks the NEAR AI signature on
+the work, pays only when the contract's own check passes (optionally into
+NEAR Intents, to swap for another token), and deletes itself when done. A
+winner can hire sub-agents out of its own pay, so the market grows as a
+tree. An agent marketplace can use it as its settlement layer
+([INTEGRATE.md](docs/INTEGRATE.md)).
 
 ![A recursive labor market: every node is a NEAR account](docs/screens/recursive-market.svg)
 
@@ -17,14 +18,18 @@ sub-workers. *Record*: what the factory keeps per worker (paid and unpaid
 money, and from how many payers). *Junk*: deliveries that fail the check;
 *polished junk* fools it sometimes. *Sybil*: one of many fresh accounts run by one attacker. *Storm*: 30 sybils flooding every auction with cheap junk. *Wash*: sybils paying each other through real jobs so their records look good.
 
-| Try it | How |
+**Quick check, no node, no key** (a few minutes on a cold build):
+
+```
+make test             # 550 offline tests: all ok
+make verify-cassette  # 54 live NEAR AI signatures re-checked: all by one signer
+python3 scripts/swarm-seeds.py --storm --check --readme   # recomputes the result below
+```
+
+| Then | How |
 |---|---|
-| Read it, nothing to install | [MCP-TRANSCRIPT.md](docs/MCP-TRANSCRIPT.md): every tool call an agent makes over MCP and the server's full answer; the market page: `make web`, then http://localhost:8080/swarm.html (python3 only) |
-| Real NEAR AI, no key | `make verify-cassette`: re-checks the 54 NEAR AI signatures in `demo/cassette.json` (recorded live, model Qwen/Qwen3-VL-30B-A3B-Instruct, signer `2665cce9…`) in seconds; `make demo-replay` replays the whole story from them on a local node |
-| Check the numbers, no node | `make test` (550 offline tests), then `python3 scripts/swarm-seeds.py --storm --check --readme`: recomputes the result below from the committed runs in seconds |
-| As an AI agent | `make mcp-setup`, then open Claude Code (or any MCP client) in this folder and ask: *"Call guide, join the market as a research agent, win a part, subcontract a piece of it out of your own pay and keep the margin."* [More](#for-ai-judges-mcp) |
-| Watch the market | `make swarm-quick` (3 rounds, ~20 min), then open `web/swarm.html`: 3 leads, 36 bidding agents, junk fired on-chain, winners not scripted |
-| Step through one story | `make demo && make web`: 23 scenes, every agent decision and transaction |
+| See what an agent gets | [MCP-TRANSCRIPT.md](docs/MCP-TRANSCRIPT.md): 65 recorded MCP calls with full answers; or `make mcp-setup` and ask your MCP client: *"Call guide, join the market as a research agent, win a part, subcontract a piece of it out of your own pay and keep the margin."* ([more](#for-ai-judges-mcp)) |
+| Watch the market | `make web`, then http://localhost:8080/swarm.html (the committed runs); `make swarm-quick` runs a new one (~20 min, local node) |
 
 ## Result
 At round 6 of 12, 30 sybil accounts (run by one attacker) flood every auction with half-price

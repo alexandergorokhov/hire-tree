@@ -30,7 +30,7 @@ for line in log.splitlines():
         sys.exit("FAIL tests did not pass")
 total = sum(counts.values())
 want = {
-    r"`make test` \((\d+) offline tests\)": total,
+    r"make test +# (\d+) offline tests": total,
     r"\| `make test` \| (\d+) unit \+ property tests": total,
     r"core \((\d+) \+": counts.get("core", 0),
     r"\+ (\d+) property tests": counts.get("property", 0),
