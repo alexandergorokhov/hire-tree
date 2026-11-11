@@ -44,6 +44,7 @@ lint: ## rustfmt check + clippy -D warnings + every test the specs name exists +
 	@if [ -f web/swarm-blind.json ]; then python3 scripts/swarm-compare.py web/swarm.json web/swarm-blind.json --readme; fi
 	@if [ -d runs/storm ]; then python3 scripts/swarm-seeds.py --storm --check --readme; fi
 	@if [ -d runs/wash ]; then python3 scripts/swarm-seeds.py --wash --check --readme; fi
+	cd vendor/near-intents && sed -n 's/^| `\([^`]*\.wasm\)` | [^|]* | `\([0-9a-f]*\)` |$$/\2  \1/p' README.md | sha256sum -c --quiet
 
 # Plain cargo needs --cfg near (what cargo-near sets). Without it near-sdk's
 # panic_str aborts and every on-chain error reads only "unreachable".

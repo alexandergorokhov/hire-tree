@@ -179,7 +179,7 @@ impl Chain {
         }
     }
 
-    async fn has_code(&self, id: &AccountId) -> bool {
+    pub async fn has_code(&self, id: &AccountId) -> bool {
         match Account(id.clone()).view().fetch_from(&self.net).await {
             Ok(v) => !matches!(
                 v.data.contract_state,

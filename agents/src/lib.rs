@@ -10,6 +10,7 @@
 //! - [`scene`]: writes `out/scene.json` for the web page.
 //! - [`mcp`]: a stdio MCP server exposing [`tools`].
 //! - [`swarm`]: `hiretree swarm`, many strategy agents over many jobs.
+//! - [`verifier`]: NEAR Intents: the official Verifier wasm, pay landing there, swaps.
 //! - [`judge`]: `hiretree mcp --local`, a playground on a local node for any MCP client.
 
 pub mod agents;
@@ -21,3 +22,4 @@ pub mod mcp;
 pub mod scene;
 pub mod swarm;
 pub mod tools;
+pub mod verifier;

@@ -336,6 +336,7 @@ pub struct JobView {
     pub rounds: Vec<CheckRound>,
     pub registry: AccountId,
     pub by_bid: bool,
+    pub payout_via: Option<AccountId>,
 }
 
 #[near(contract_state)]
@@ -407,6 +408,12 @@ pub struct Job {
     /// The worker won this job with its own bid (an award), so it took the
     /// job on. A plain `hire` asks nobody.
     by_bid: bool,
+    /// Where the payee wants its pay: `None` is a plain transfer; an account
+    /// (the NEAR Intents Verifier, `intents.near` on mainnet) gets it by
+    /// `ft_transfer_call` with the payee as receiver, so the pay lands as the
+    /// payee's balance there. Set by the payee before settle; dropped if the
+    /// receiver refuses any of it, so the next settle pays plainly.
+    payout_via: Option<AccountId>,
 }
 
 fn emit(event: &str, data: serde_json::Value) {
@@ -565,6 +572,7 @@ impl Job {
             // Root: its creator (the factory). Sub-jobs inherit it.
             registry: registry.unwrap_or_else(env::predecessor_account_id),
             by_bid: bid == Some(true),
+            payout_via: None,
         };
         emit(
             "job_created",
@@ -652,6 +660,8 @@ impl Job {
         self.note_price = amount.0;
         self.note_sold = true;
         self.payee = Some(sender.clone());
+        // The seller's route was for its own pay; the buyer picks its own.
+        self.payout_via = None;
         emit(
             "note_sale_started",
             json!({ "buyer": sender, "worker": worker, "price": amount, "face": U128(self.ledger.amount) }),
@@ -2533,6 +2543,22 @@ impl Job {
     /// A failed transfer keeps its tokens here, the job goes back to its
     /// status before settle, and settle can run again without paying anyone
     /// twice.
+    /// The payee picks where its pay goes: `Some(verifier)` sends it with
+    /// `ft_transfer_call` so it lands as the payee's balance in the NEAR
+    /// Intents Verifier; `None` is a plain transfer. Only before settle.
+    pub fn set_payout_via(&mut self, via: Option<AccountId>) {
+        require!(
+            self.payee.as_ref() == Some(&env::predecessor_account_id()),
+            "only the payee picks where its pay goes"
+        );
+        require!(
+            !matches!(self.status, Status::Settling | Status::Settled),
+            "too late: settle has started"
+        );
+        emit("payout_via", json!({ "payee": self.payee, "via": via }));
+        self.payout_via = via;
+    }
+
     pub fn settle(&mut self) -> PromiseOrValue<bool> {
         require!(
             env::prepaid_gas() >= GAS_SETTLE_MIN,
@@ -2614,13 +2640,23 @@ impl Job {
         let attempt = self.next_attempt(Leg::Payee, split);
         // An unregistered payee would block the transfer forever, so the job
         // registers it (NEP-145 refunds the deposit if already registered).
-        self.register(payee.clone())
-            .then(self.ft_transfer(payee, split.to_payee))
-            .then(
-                Self::ext(env::current_account_id())
-                    .with_static_gas(GAS_ON_PAYEE_PAID)
-                    .on_payee_paid(attempt),
-            )
+        // With a route, the receiver is registered and the payee is named in
+        // the message (the NEAR Intents deposit message is the receiver).
+        let pay = match self.payout_via.clone() {
+            Some(via) => self.register(via.clone()).then(self.ft_transfer_call(
+                via,
+                split.to_payee,
+                payee.to_string(),
+            )),
+            None => self
+                .register(payee.clone())
+                .then(self.ft_transfer(payee, split.to_payee)),
+        };
+        pay.then(
+            Self::ext(env::current_account_id())
+                .with_static_gas(GAS_ON_PAYEE_PAID)
+                .on_payee_paid(attempt),
+        )
     }
 
     fn start_rest_leg(&mut self, split: Split) -> PromiseOrValue<bool> {
@@ -2671,6 +2707,17 @@ impl Job {
                 .into_bytes(),
             TOKEN_STORAGE_NEAR,
             GAS_STORAGE_DEPOSIT,
+        )
+    }
+
+    fn ft_transfer_call(&self, to: AccountId, amount: u128, msg: String) -> Promise {
+        Promise::new(self.token.clone()).function_call(
+            "ft_transfer_call",
+            json!({ "receiver_id": to, "amount": U128(amount), "memo": "hiretree settle", "msg": msg })
+                .to_string()
+                .into_bytes(),
+            ONE_YOCTO,
+            GAS_FT_TRANSFER_CALL,
         )
     }
 
@@ -2739,6 +2786,11 @@ impl Job {
         if let Err(e) = self.ledger.payout_result(s, ok, true) {
             fail(e);
         }
+        if !ok {
+            if let Some(via) = self.payout_via.take() {
+                emit("payout_via_dropped", json!({ "via": via }));
+            }
+        }
         emit(
             "paid",
             json!({ "leg": "payee", "ok": ok, "to": self.payee, "amount": p.to_payee }),
@@ -2778,7 +2830,17 @@ impl Job {
     pub fn on_payee_paid(&mut self, attempt: u32) -> PromiseOrValue<bool> {
         assert_self();
         let p = self.current_payout(Leg::Payee, attempt);
-        self.resolve_payee(&p, result_ok(0));
+        // A routed payment counts only if the receiver kept all of it
+        // (`ft_transfer_call` returns the amount used; the rest came back).
+        let ok = if self.payout_via.is_some() {
+            env::promise_result_checked(0, MAX_RESULT_LEN)
+                .ok()
+                .and_then(|b| serde_json::from_slice::<U128>(&b).ok())
+                == Some(p.to_payee)
+        } else {
+            result_ok(0)
+        };
+        self.resolve_payee(&p, ok);
         self.start_rest_leg(Self::split_of(&p))
     }
 
@@ -3105,6 +3167,7 @@ impl Job {
             rounds: self.rounds.clone(),
             registry: self.registry.clone(),
             by_bid: self.by_bid,
+            payout_via: self.payout_via.clone(),
         }
     }
 }

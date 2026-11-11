@@ -5040,3 +5040,111 @@ mod award_best {
         assert_eq!(events("award_best_failed").len(), 1);
     }
 }
+
+/// NEAR Intents payout: the worker can have its pay land as its balance in
+/// the NEAR Intents Verifier (`ft_transfer_call` with the worker as
+/// receiver), where it can swap it or withdraw any token.
+mod intents_payout {
+    use super::*;
+
+    const VERIFIER: &str = "intents.test";
+
+    fn with_route() -> Job {
+        let mut j = delivered_sub(30 * USD, 35 * USD);
+        Ctx::new(T1, WORKER).set();
+        j.set_payout_via(Some(acc(VERIFIER)));
+        assert_eq!(events("payout_via").len(), 1);
+        j
+    }
+
+    #[test]
+    fn the_payee_can_route_its_pay_to_the_intents_verifier() {
+        let mut j = with_route();
+        assert_eq!(j.get_job().payout_via, Some(acc(VERIFIER)));
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+        // No plain transfer: the pay goes into the Verifier for the worker.
+        assert!(transfers().is_empty());
+        let reg = call_args("storage_deposit");
+        assert_eq!(reg["account_id"], VERIFIER);
+        let c = call_args("ft_transfer_call");
+        assert_eq!(c["receiver_id"], VERIFIER);
+        assert_eq!(c["amount"], (30 * USD).to_string());
+        assert_eq!(c["msg"], WORKER);
+    }
+
+    #[test]
+    #[should_panic(expected = "only the payee picks where its pay goes")]
+    fn only_the_payee_picks_the_route() {
+        let mut j = delivered_sub(30 * USD, 35 * USD);
+        Ctx::new(T1, EVE).set();
+        j.set_payout_via(Some(acc(VERIFIER)));
+    }
+
+    #[test]
+    #[should_panic(expected = "too late: settle has started")]
+    fn the_route_is_fixed_once_settle_starts() {
+        let mut j = with_route();
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+        Ctx::new(T1, WORKER).at(AFTER).set();
+        j.set_payout_via(None);
+    }
+
+    #[test]
+    fn paid_only_when_the_verifier_kept_the_whole_amount() {
+        let mut j = with_route();
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+        let a = attempt(&j);
+        Ctx::new(T1, T1)
+            .at(AFTER)
+            .results(vec![ok(&u128_json(30 * USD))])
+            .set();
+        j.on_payee_paid(a);
+        assert!(j.get_job().payee_paid);
+    }
+
+    #[test]
+    fn a_refused_deposit_falls_back_to_a_plain_transfer_on_resettle() {
+        let mut j = with_route();
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+        // The Verifier refunded everything: used = 0.
+        let a = attempt(&j);
+        Ctx::new(T1, T1)
+            .at(AFTER)
+            .results(vec![ok(&u128_json(0))])
+            .set();
+        j.on_payee_paid(a);
+        let v = j.get_job();
+        assert!(!v.payee_paid);
+        assert_eq!(v.payout_via, None, "a failed route is dropped");
+        assert_eq!(events("payout_via_dropped").len(), 1);
+    }
+
+    #[test]
+    fn a_failed_call_is_not_paid() {
+        let mut j = with_route();
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+        let a = attempt(&j);
+        Ctx::new(T1, T1)
+            .at(AFTER)
+            .results(vec![PromiseResult::Failed])
+            .set();
+        j.on_payee_paid(a);
+        assert!(!j.get_job().payee_paid);
+        assert_eq!(j.get_job().payout_via, None);
+    }
+
+    #[test]
+    fn the_payee_can_clear_the_route() {
+        let mut j = with_route();
+        Ctx::new(T1, WORKER).set();
+        j.set_payout_via(None);
+        Ctx::new(T1, EVE).at(AFTER).set();
+        j.settle();
+        assert_eq!(transfers(), vec![(WORKER.into(), (30 * USD).to_string())]);
+    }
+}

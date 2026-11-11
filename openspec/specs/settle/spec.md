@@ -100,3 +100,27 @@ the payee cannot choose the moment during the first day.
 
 ### Requirement: The tree folds and money is conserved
 - unit: `two_level_tree_folds_bottom_up`; core property: `money_prop`; sandbox: `two_level_tree_folds_bottom_up_and_money_rule_holds`
+
+### Requirement: The payee can take its pay through NEAR Intents
+The payee may route its pay to the NEAR Intents Verifier before settle
+(`set_payout_via`). The payee leg is then `ft_transfer_call(verifier, pay,
+msg = payee)`, so the pay lands as the payee's balance in the Verifier. It
+counts as paid only if the Verifier kept all of it; otherwise the route is
+dropped and the next settle pays plainly.
+
+#### Scenario: Routed pay
+- WHEN the payee set a route and the job settles
+- THEN the Verifier is registered on the token and receives the pay for the payee; no plain transfer
+- unit: `the_payee_can_route_its_pay_to_the_intents_verifier`, `paid_only_when_the_verifier_kept_the_whole_amount`, `the_payee_can_clear_the_route`
+
+#### Scenario: Only the payee, only before settle
+- unit: `only_the_payee_picks_the_route`, `the_route_is_fixed_once_settle_starts`
+
+#### Scenario: Refused or failed deposit
+- THEN the leg is not paid, the route is dropped, and resettle pays by plain transfer
+- unit: `a_refused_deposit_falls_back_to_a_plain_transfer_on_resettle`, `a_failed_call_is_not_paid`
+
+#### Scenario: Swap and cash out on the real Verifier
+- WHEN a job pays a worker through the official Verifier wasm on a local node
+- THEN the worker and a solver swap with signed NEP-413 `token_diff` intents (one side alone is refused, a replay fails on the spent nonce) and the worker withdraws the token it swapped into
+- sandbox: `pay_lands_in_the_intents_verifier_and_the_worker_swaps_it_atomically`

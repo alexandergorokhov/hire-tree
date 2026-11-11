@@ -553,6 +553,27 @@ pub async fn pay_through_job(
     budget: u128,
     task: &str,
 ) -> Result<String, String> {
+    pay_through_job_via(
+        c, llm, tools, keeper, client, manager, workers, budget, task, None,
+    )
+    .await
+}
+
+/// [`pay_through_job`], with each worker's pay routed to `via` (the NEAR
+/// Intents Verifier) when given.
+#[allow(clippy::too_many_arguments)]
+pub async fn pay_through_job_via(
+    c: &Chain,
+    llm: &Llm,
+    tools: &Tools<'_>,
+    keeper: &Acc,
+    client: &Acc,
+    manager: &Acc,
+    workers: &[Acc],
+    budget: u128,
+    task: &str,
+    via: Option<&str>,
+) -> Result<String, String> {
     let next = c.view(&c.hub, "get_settings", json!({})).await?["next"]
         .as_u64()
         .ok_or("next")?;
@@ -575,6 +596,11 @@ pub async fn pay_through_job(
                 &json!({ "job": root, "worker": w.id, "amount": WASH_HIRE.to_string(), "task": task }),
             )
             .await?;
+        if let Some(v) = via {
+            tools
+                .call(w, "payout_via", &json!({ "job": child, "via": v }))
+                .await?;
+        }
         tools
             .call(w, "deliver", &json!({ "job": child, "resp": delivered }))
             .await?;
