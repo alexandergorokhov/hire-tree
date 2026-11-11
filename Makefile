@@ -164,7 +164,7 @@ demo-replay: build ## The agent story replayed from the recorded NEAR AI cassett
 	@$(SBX) $(HT) demo --llm replay:$(CASSETTE) --scene $(CURDIR)/web/scene.json
 
 .PHONY: web
-web: ## Serve the tree page on http://localhost:8080 (reads web/scene.json)
+web: ## Serve the pages on http://localhost:8080 (market.html: agents, jobs, judge scores; swarm.html: charts)
 	@test -s web/scene.json || { echo "web/scene.json missing: run make demo first" >&2; exit 1; }
 	cd web && python3 -m http.server 8080
 

@@ -36,7 +36,7 @@ money, and from how many payers). *Junk*: deliveries that fail the check;
 **Quick check, no node, no key** (a few minutes on a cold build):
 
 ```
-make test             # 591 offline tests: all ok
+make test             # 594 offline tests: all ok
 make verify-cassette  # 156 live NEAR AI signatures (story + swarm) re-checked: one signer
 make attest           # that signer is the key inside NEAR AI's Intel TDX quote
 python3 scripts/swarm-seeds.py --storm --check --readme   # recomputes the result below
@@ -45,7 +45,7 @@ python3 scripts/swarm-seeds.py --storm --check --readme   # recomputes the resul
 | Then | How |
 |---|---|
 | See what an agent gets | [MCP-TRANSCRIPT.md](docs/MCP-TRANSCRIPT.md): 65 recorded MCP calls with full answers; or `make mcp-setup` and ask your MCP client: *"Call guide, join the market as a research agent, win a part, subcontract a piece of it out of your own pay and keep the margin."* ([more](#for-ai-judges-mcp)) |
-| Watch the market | `make web`, then http://localhost:8080/swarm.html (the committed runs); `make swarm-quick` runs a new one (~20 min, local node) |
+| See it as a person | `make web`, then http://localhost:8080/market.html: the agents ranked by record, every job's tree and judge scores (live NEAR AI run); `swarm.html` has the full market charts; `make swarm-quick` runs a new market (~20 min, local node) |
 
 ## Result
 At round 6 of 12, 30 sybil accounts (run by one attacker) flood every auction with half-price
@@ -143,7 +143,7 @@ No keys, no NEAR AI account, no testnet NEAR.
 | Command | What it does |
 |---|---|
 | `make setup` | downloads the crates |
-| `make test` | 591 unit + property tests, all `ok`: core (79 + 12 property tests: 7 on money over 10,000 random job trees with random transfer failures, routes and fees, 5 on the award rule), job contract (362), factory (47), pool (38), mock checker (2), mock-usdc (7), agents (44) |
+| `make test` | 594 unit + property tests, all `ok`: core (79 + 12 property tests: 7 on money over 10,000 random job trees with random transfer failures, routes and fees, 5 on the award rule), job contract (362), factory (47), pool (38), mock checker (2), mock-usdc (7), agents (47) |
 | `make lint` | rustfmt check, clippy `-D warnings`, a check that every test the specs and THREATS.md name exists, a check that every swarm number in `docs/SWARM.md` matches `web/swarm.json`, checks that every table in this README and `docs/RESULTS.md` matches the runs in `runs/seeds/`, `runs/storm/` and `runs/wash/`, that `docs/ECONOMICS.md` matches `runs/gas.json`, and the sha256 of the vendored NEAR Intents wasm; exit 0 |
 | `make mcp-test` | `test result: ok. 4 passed`: the guide's walk-through; the contract picking the winner with `award_best`; a guest agent that routes its pay into the NEAR Intents Verifier, wins a round at 20 fUSD (paid 19.80 early) and cashes out to 3.96 wNEAR through a signed `token_diff` swap with the house solver, delivers junk in round 2 (2/10, unpaid), and loses round 3 on its record although it bid lowest; and a guest agent that wins a part, subcontracts a piece to the house out of its own pay, and keeps the margin |
 | `make sandbox` | a local NEAR node runs the 14 tests in `agents/tests/`: G4 global contract + sub-accounts, G1 delete only at a confirmed zero balance, a 2-level tree fold, the scripted scene, the agent story with the test model and replayed from a cassette, the MCP judge path, agent keys, the washed-record attack against `award_best` with and without a payer list, the NEAR Intents payout and swap on the official Verifier wasm, and gas per step; about 55 min |
