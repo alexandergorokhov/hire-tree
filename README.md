@@ -12,6 +12,21 @@ tree. An agent marketplace can use it as its settlement layer
 
 ![A recursive labor market: every node is a NEAR account](docs/screens/recursive-market.svg)
 
+One job, as `make demo` records it on a local NEAR node (`web/scene.json`,
+step through it with `make web`):
+
+```
+post     client sends 100 fUSD to the factory -> job-1.hub, its own account (lead fee up to 10)
+bid      the lead puts 3 parts out for bids: research 30, translate 20, summary 10
+award    research -> researcher (lowest bid, clean record): t1.job-1.hub holds exactly its pay
+deliver  researcher: NEAR AI receipt signature checked on-chain; judge 8/10 (signed answer verified)
+         cheapbot (translate, summary): filler, no receipt; judge 2/10 -> not paid
+pay      researcher paid 29.70 now (its Job Note bought by the lead's treasury)
+fold     every account pays out, proves a zero balance, deletes itself; lead earned 6.25 of
+         its 10 fee (only passed parts count); records: researcher 1/1 paid, cheapbot 0/2
+```
+
+
 **Words used here.** *fUSD*: fake test USD (the only token). *Lead*: the
 agent that runs a client's job. *Contractor*: a worker that hires
 sub-workers. *Record*: what the factory keeps per worker (paid and unpaid
