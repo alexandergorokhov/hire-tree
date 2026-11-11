@@ -327,7 +327,49 @@ fn root_funded_with_fee(fee: u128, budget: u128) -> Job {
 fn root_child_closed(j: &mut Job, n: u32, returned: u128, paid: bool) {
     let child = format!("t{n}.{ROOT}");
     Ctx::new(ROOT, &child).set();
-    j.child_closed(U128(returned), Some(paid), None);
+    j.child_closed(U128(returned), Some(paid), None, None);
+}
+
+/// The spec hash of task number `n` (parts with the same `n` are one task).
+fn task(n: u8) -> String {
+    format!("{n:02x}").repeat(32)
+}
+
+/// In job `cur`, the lead hires `worker` for `task` at `amount` (plus a
+/// sub-budget), and both callbacks succeed.
+fn hired_in(j: &mut Job, cur: &str, worker: &str, amount: u128, sub: u128, task: String) -> u32 {
+    let idx = j.children.len() as u32;
+    Ctx::new(cur, LEAD).deposit(HIRE_MIN_NEAR).set();
+    j.hire(
+        acc(worker),
+        U128(amount),
+        task,
+        (sub > 0).then_some(U128(sub)),
+    );
+    Ctx::new(cur, cur).results(vec![ok(b"")]).set();
+    j.on_child_created(idx);
+    Ctx::new(cur, cur)
+        .results(vec![ok(&u128_json(amount + sub))])
+        .set();
+    assert!(j.on_child_funded(idx));
+    idx
+}
+
+/// Child `n` of job `cur` closes with this fee report (`passed`, and the
+/// paid / hired sums of the parts under it).
+fn part_closed(j: &mut Job, cur: &str, n: u32, returned: u128, passed: bool, sub: (u128, u128)) {
+    let child = format!("t{n}.{cur}");
+    Ctx::new(cur, &child).set();
+    j.child_closed(
+        U128(returned),
+        Some(passed),
+        None,
+        Some(FeeReport {
+            passed,
+            paid: U128(sub.0),
+            hired: U128(sub.1),
+        }),
+    );
 }
 
 /// The client approves the root and anyone settles it.
@@ -357,8 +399,8 @@ fn root_fee_and_bond_go_to_the_manager_the_rest_back_to_the_client() {
 #[test]
 fn the_lead_fee_is_earned_pro_rata_to_the_paid_parts() {
     let mut j = root_funded_with_fee(10 * USD, 100 * USD);
-    hired(&mut j, WORKER, 30 * USD);
-    hired(&mut j, WORKER2, 10 * USD);
+    hired_in(&mut j, ROOT, WORKER, 30 * USD, 0, task(1));
+    hired_in(&mut j, ROOT, WORKER2, 10 * USD, 0, task(2));
     root_child_closed(&mut j, 1, 0, true);
     root_child_closed(&mut j, 2, 10 * USD, false);
     settle_root(&mut j);
@@ -377,7 +419,7 @@ fn the_lead_fee_is_earned_pro_rata_to_the_paid_parts() {
 fn the_earned_fee_rounds_down_in_the_clients_favour() {
     let mut j = root_funded_with_fee(10 * USD, 100 * USD);
     for (n, w) in [WORKER, WORKER2, EVE].iter().enumerate() {
-        hired(&mut j, w, 10 * USD);
+        hired_in(&mut j, ROOT, w, 10 * USD, 0, task(n as u8));
         root_child_closed(
             &mut j,
             n as u32 + 1,
@@ -446,12 +488,117 @@ fn the_view_shows_the_lead_fee_earned_so_far() {
     let v = j.get_job();
     assert_eq!(v.lead_fee_earned, Some(U128(10 * USD)));
     assert_eq!(v.children[0].paid, Some(true));
-    hired(&mut j, WORKER2, 10 * USD);
+    hired_in(&mut j, ROOT, WORKER2, 10 * USD, 0, task(2));
     root_child_closed(&mut j, 2, 10 * USD, false);
     let v = j.get_job();
     assert_eq!(v.lead_fee_earned, Some(U128(7_500_000)));
     assert_eq!(v.children[1].paid, Some(false));
     assert_eq!(funded_sub(USD, USD).get_job().lead_fee_earned, None);
+}
+
+#[test]
+fn the_fee_weighs_each_part_by_its_price_not_its_sub_budget() {
+    // t1: price 1 plus an unused sub-budget of 89, passed. t2: price 10,
+    // failed. By price the lead earns 10 x 1 / 11; weighed by what each
+    // child was sent (90 of 100) it would have earned 9.
+    let mut j = root_funded_with_fee(10 * USD, 100 * USD);
+    hired_in(&mut j, ROOT, WORKER, USD, 89 * USD, task(1));
+    assert_eq!(j.get_job().children[0].price, U128(USD));
+    assert_eq!(j.get_job().children[0].total, U128(90 * USD));
+    part_closed(&mut j, ROOT, 1, 89 * USD, true, (0, 0));
+    hired_in(&mut j, ROOT, WORKER2, 10 * USD, 0, task(2));
+    part_closed(&mut j, ROOT, 2, 10 * USD, false, (0, 0));
+    settle_root(&mut j);
+    let e = &events("lead_fee")[0];
+    assert_eq!(e["paid"], USD.to_string());
+    assert_eq!(e["hired"], (11 * USD).to_string());
+    assert_eq!(transfers(), vec![(LEAD.into(), 909_090.to_string())]);
+}
+
+#[test]
+fn a_sub_budget_cannot_hide_failed_parts_from_the_lead_fee() {
+    // The lead hires t1 (price 1, sub-budget 89) for a trivial task and
+    // hires the real parts inside t1: three of 29, all failed and fired,
+    // not replaced. t1's own work passed. t1 reports them up, so the
+    // root counts 1 paid of 88 hired, not 90 of 90.
+    let mut j = root_funded_with_fee(10 * USD, 100 * USD);
+    hired_in(&mut j, ROOT, WORKER, USD, 89 * USD, task(1));
+    part_closed(&mut j, ROOT, 1, 89 * USD, true, (0, 87 * USD));
+    assert_eq!(j.get_job().lead_fee_earned, Some(U128(113_636)));
+    settle_root(&mut j);
+    assert_eq!(transfers(), vec![(LEAD.into(), 113_636.to_string())]);
+    // The other way round: t1's own small part failed but the parts under
+    // it passed; the honest lead earns on them.
+    let mut j = root_funded_with_fee(10 * USD, 100 * USD);
+    hired_in(&mut j, ROOT, WORKER, USD, 89 * USD, task(1));
+    part_closed(&mut j, ROOT, 1, USD, false, (87 * USD, 87 * USD));
+    assert_eq!(j.get_job().lead_fee_earned, Some(U128(9_886_363)));
+}
+
+#[test]
+fn a_sub_job_reports_the_parts_its_manager_hired_under_it() {
+    // The sub-job t1 (pay 1, sub-budget 89): the lead hires three parts
+    // of 29 in it; all fail. t1's worker delivers (no check pinned: the
+    // delivery passes). Its notice reports passed, 0 paid of 87 hired.
+    let mut t1 = funded_sub(USD, 90 * USD);
+    for n in 1..=3u8 {
+        hired_in(&mut t1, T1, WORKER2, 29 * USD, 0, task(n));
+    }
+    for n in 1..=3u32 {
+        part_closed(&mut t1, T1, n, 29 * USD, false, (0, 0));
+    }
+    Ctx::new(T1, WORKER).set();
+    t1.deliver("02".repeat(32), None, None, None, None);
+    Ctx::new(T1, EVE).at(AFTER).set();
+    t1.settle();
+    payee_cb(&mut t1, T1, true);
+    rest_cb(&mut t1, T1, true);
+    balance_cb(&mut t1, T1, ok(&u128_json(0)));
+    let fee = &call_args("child_closed")["fee"];
+    assert_eq!(fee["passed"], true);
+    assert_eq!(fee["paid"], "0");
+    assert_eq!(fee["hired"], (87 * USD).to_string());
+}
+
+#[test]
+fn a_failed_part_whose_task_passed_again_does_not_count() {
+    // Task 1: the first worker failed and was fired; the runner-up, hired
+    // for the same task, passed. The client got the work: the failed hire
+    // costs the lead nothing. Task 2 failed and was never redone: it counts.
+    let mut j = root_funded_with_fee(10 * USD, 100 * USD);
+    hired_in(&mut j, ROOT, WORKER, 30 * USD, 0, task(1));
+    hired_in(&mut j, ROOT, WORKER2, 30 * USD, 0, task(1));
+    part_closed(&mut j, ROOT, 1, 30 * USD, false, (0, 0));
+    part_closed(&mut j, ROOT, 2, 0, true, (0, 0));
+    assert_eq!(j.get_job().lead_fee_earned, Some(U128(10 * USD)));
+    hired_in(&mut j, ROOT, EVE, 10 * USD, 0, task(2));
+    part_closed(&mut j, ROOT, 3, 10 * USD, false, (0, 0));
+    settle_root(&mut j);
+    let e = &events("lead_fee")[0];
+    assert_eq!(e["paid"], (30 * USD).to_string());
+    assert_eq!(e["hired"], (40 * USD).to_string());
+    assert_eq!(transfers(), vec![(LEAD.into(), 7_500_000.to_string())]);
+}
+
+#[test]
+fn a_paid_part_that_did_not_pass_does_not_earn_the_fee() {
+    // The worker was paid (the manager approved an unscored delivery) but
+    // its work did not pass a check: the lead earns nothing on it.
+    let mut j = root_funded_with_fee(10 * USD, 100 * USD);
+    hired_in(&mut j, ROOT, WORKER, 30 * USD, 0, task(1));
+    Ctx::new(ROOT, T1).set();
+    j.child_closed(
+        U128(0),
+        Some(true),
+        None,
+        Some(FeeReport {
+            passed: false,
+            paid: U128(0),
+            hired: U128(0),
+        }),
+    );
+    assert_eq!(j.get_job().children[0].paid, Some(true));
+    assert_eq!(j.get_job().lead_fee_earned, Some(U128(0)));
 }
 
 #[test]
@@ -2097,7 +2244,7 @@ fn known_child_closes_and_returns_funds() {
     let mut j = funded_root(100 * USD);
     hired(&mut j, WORKER, 30 * USD);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(5 * USD), None, None);
+    j.child_closed(U128(5 * USD), None, None, None);
     let v = j.get_job();
     assert_eq!(v.children_open, 0);
     assert_eq!(v.children[0].state, ChildState::Closed);
@@ -2112,7 +2259,7 @@ fn a_fired_childs_returned_pay_can_hire_the_runner_up() {
     hired(&mut j, WORKER, 100 * USD);
     assert_eq!(j.get_job().unallocated.0, 0);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(100 * USD), Some(false), None);
+    j.child_closed(U128(100 * USD), Some(false), None, None);
     assert_eq!(j.get_job().unallocated.0, 100 * USD);
     hired(&mut j, WORKER2, 90 * USD);
     // A child that paid its worker keeps that much allocated.
@@ -2126,7 +2273,7 @@ fn unknown_caller_cannot_close_a_child() {
     let mut j = funded_root(100 * USD);
     hired(&mut j, WORKER, 30 * USD);
     Ctx::new(ROOT, EVE).set();
-    j.child_closed(U128(1_000 * USD), None, None);
+    j.child_closed(U128(1_000 * USD), None, None, None);
 }
 
 #[test]
@@ -2136,11 +2283,11 @@ fn a_repeated_child_closed_credits_nothing() {
     let mut j = funded_root(100 * USD);
     hired(&mut j, WORKER, 30 * USD);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(5 * USD), Some(true), None);
+    j.child_closed(U128(5 * USD), Some(true), None, None);
     let once = j.get_job();
     assert_eq!(once.ft_balance.0, 75 * USD);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(5 * USD), Some(true), None);
+    j.child_closed(U128(5 * USD), Some(true), None, None);
     let twice = j.get_job();
     assert_eq!(twice.ft_balance.0, 75 * USD, "not credited twice");
     assert_eq!(twice.children_open, 0);
@@ -2160,7 +2307,7 @@ fn failed_child_cannot_close() {
         .set();
     j.on_child_created(idx);
     Ctx::new(ROOT, T1).set();
-    j.child_closed(U128(30 * USD), None, None);
+    j.child_closed(U128(30 * USD), None, None, None);
 }
 
 // ================================================================ two-level fold
@@ -2219,7 +2366,7 @@ fn two_level_tree_folds_bottom_up() {
     balance_cb(&mut gc, GC, ok(&u128_json(0)));
     assert_eq!(gc.get_job().status, "Settled");
     Ctx::new(T1, GC).at(AFTER).set();
-    t1.child_closed(U128(0), None, None);
+    t1.child_closed(U128(0), None, None, None);
 
     // t1's worker delivers inside the window; settle pays 30 and returns 2.
     Ctx::new(T1, WORKER).set();
@@ -2232,7 +2379,7 @@ fn two_level_tree_folds_bottom_up() {
     balance_cb(&mut t1, T1, ok(&u128_json(0)));
     assert_eq!(t1.get_job().status, "Settled");
     Ctx::new(ROOT, T1).at(AFTER).set();
-    root.child_closed(U128(2 * USD), None, None);
+    root.child_closed(U128(2 * USD), None, None, None);
 
     // Root (no fee): 60 unspent + 2 returned = 62 back to the client.
     assert_eq!(root.get_job().ft_balance.0, 62 * USD);
@@ -2494,6 +2641,7 @@ mod check_note_dispute {
         payee_cb(&mut j, T1, true);
         balance_cb(&mut j, T1, ok(&u128_json(0)));
         assert_eq!(call_args("child_closed")["paid"], true);
+        assert_eq!(call_args("child_closed")["fee"]["passed"], true);
     }
 
     #[test]
@@ -2875,6 +3023,12 @@ mod check_note_dispute {
         Ctx::new(T1, EVE).set();
         j.settle();
         assert_eq!(transfers(), vec![(WORKER.into(), PAY.to_string())]);
+        // Paid, but not passed: it does not earn the lead's fee.
+        payee_cb(&mut j, T1, true);
+        balance_cb(&mut j, T1, ok(&u128_json(0)));
+        let args = call_args("child_closed");
+        assert_eq!(args["paid"], true);
+        assert_eq!(args["fee"]["passed"], false);
     }
 
     #[test]
@@ -3879,7 +4033,7 @@ mod contractor {
         // The sub-job paid its worker and sent nothing back; the contractor
         // delivers and keeps its margin.
         Ctx::new(T1, GC).at(CLOSED).set();
-        t1.child_closed(U128(0), None, None);
+        t1.child_closed(U128(0), None, None, None);
         Ctx::new(T1, WORKER).at(CLOSED).set();
         t1.deliver("02".repeat(32), None, None, None, None);
         Ctx::new(T1, EVE).at(AFTER).set();
@@ -3894,7 +4048,7 @@ mod contractor {
         let mut t1 = contracted();
         // The sub-agent failed: its 9 come back as the contractor's pay.
         Ctx::new(T1, GC).at(CLOSED).set();
-        t1.child_closed(U128(9 * USD), None, None);
+        t1.child_closed(U128(9 * USD), None, None, None);
         assert_eq!(t1.ledger.amount, 20 * USD);
         assert_eq!(t1.get_job().ft_balance.0, 20 * USD);
     }
@@ -3904,7 +4058,7 @@ mod contractor {
         let mut t1 = contracted();
         assert!(t1.has_open_worker_hires());
         Ctx::new(T1, GC).at(CLOSED).set();
-        t1.child_closed(U128(0), None, None);
+        t1.child_closed(U128(0), None, None, None);
         assert!(!t1.has_open_worker_hires());
     }
 
@@ -3953,7 +4107,7 @@ mod contractor {
         // runner-up for the same 9.
         let mut t1 = contracted();
         Ctx::new(T1, GC).at(CLOSED).set();
-        t1.child_closed(U128(9 * USD), None, None);
+        t1.child_closed(U128(9 * USD), None, None, None);
         assert_eq!(t1.ledger.amount, 20 * USD);
         assert_eq!(t1.ledger.allocated, 0);
         Ctx::new(T1, WORKER).at(CLOSED).deposit(HIRE_MIN_NEAR).set();
@@ -4077,7 +4231,7 @@ mod bonds {
     fn a_paid_worker_gets_its_bond_back() {
         let mut j = awarded();
         Ctx::new(ROOT, T1).at(CLOSED).set();
-        j.child_closed(U128(0), Some(true), None);
+        j.child_closed(U128(0), Some(true), None, None);
         assert!(transfers().contains(&(WORKER.into(), BOND.as_yoctonear())));
         assert_eq!(events("bond_returned").len(), 1);
     }
@@ -4086,7 +4240,7 @@ mod bonds {
     fn junk_loses_its_bond_to_the_buyer() {
         let mut j = awarded();
         Ctx::new(ROOT, T1).at(CLOSED).set();
-        j.child_closed(U128(20 * USD), Some(false), None);
+        j.child_closed(U128(20 * USD), Some(false), None, None);
         assert!(transfers().contains(&(LEAD.into(), BOND.as_yoctonear())));
         assert_eq!(events("bond_kept").len(), 1);
         assert_eq!(j.children[0].bond, U128(0));
@@ -4130,7 +4284,7 @@ mod bonds {
     fn a_backer_of_paid_work_gets_its_near_back_plus_the_premium() {
         let mut j = backed_award();
         Ctx::new(ROOT, T1).at(CLOSED).set();
-        j.child_closed(U128(0), Some(true), None);
+        j.child_closed(U128(0), Some(true), None, None);
         let t = transfers();
         assert!(t.contains(&(EVE.into(), BACKING.as_yoctonear() + PREMIUM)));
         assert!(t.contains(&(WORKER.into(), BOND.as_yoctonear() - PREMIUM)));
@@ -4141,7 +4295,7 @@ mod bonds {
     fn a_backer_of_junk_loses_its_near_to_the_buyer() {
         let mut j = backed_award();
         Ctx::new(ROOT, T1).at(CLOSED).set();
-        j.child_closed(U128(20 * USD), Some(false), None);
+        j.child_closed(U128(20 * USD), Some(false), None, None);
         assert!(transfers().contains(&(LEAD.into(), BOND.as_yoctonear() + BACKING.as_yoctonear())));
         assert!(!transfers().iter().any(|(to, _)| to == EVE));
     }
@@ -5828,7 +5982,7 @@ mod close_notice {
         env::state_write(&j);
         Ctx::new(ROOT, T1).gas(GAS_CHILD_CLOSED).set();
         let mut p: Job = env::state_read().expect("state");
-        p.child_closed(U128(0), Some(true), Some(U128(30 * USD)));
+        p.child_closed(U128(0), Some(true), Some(U128(30 * USD)), None);
         env::state_write(&p);
         let used = env::used_gas().as_gas();
         assert!(
@@ -5874,7 +6028,7 @@ mod close_notice {
     fn a_funded_child_whose_fund_callback_was_lost_closes_on_its_notice() {
         let (mut j, idx) = hire_unclear();
         Ctx::new(ROOT, T1).set();
-        j.child_closed(U128(0), Some(true), Some(U128(30 * USD)));
+        j.child_closed(U128(0), Some(true), Some(U128(30 * USD)), None);
         books_after_t1_paid_its_worker(&j);
         assert_eq!(events("child_closed").len(), 1);
         // The parent can settle now.
@@ -5894,7 +6048,7 @@ mod close_notice {
         Ctx::new(ROOT, EVE).at(at).set();
         j.resume_hire(idx);
         Ctx::new(ROOT, T1).at(at).set();
-        j.child_closed(U128(0), Some(true), Some(U128(30 * USD)));
+        j.child_closed(U128(0), Some(true), Some(U128(30 * USD)), None);
         books_after_t1_paid_its_worker(&j);
         Ctx::new(ROOT, ROOT)
             .at(at)
@@ -5916,7 +6070,7 @@ mod close_notice {
         assert_eq!(v.children_open, 1);
         assert!(!calls().iter().any(|c| c.1 == "close_unfunded"));
         Ctx::new(ROOT, T1).set();
-        j.child_closed(U128(0), Some(true), None);
+        j.child_closed(U128(0), Some(true), None, None);
         books_after_t1_paid_its_worker(&j);
     }
 
@@ -5937,7 +6091,7 @@ mod close_notice {
     fn an_unfunded_child_closing_while_its_hire_is_in_flight_rolls_it_back() {
         let (mut j, _) = hire_unclear();
         Ctx::new(ROOT, T1).set();
-        j.child_closed(U128(0), Some(false), Some(U128(0)));
+        j.child_closed(U128(0), Some(false), Some(U128(0)), None);
         let v = j.get_job();
         assert_eq!(v.children[0].state, ChildState::Failed);
         assert_eq!(v.children_pending, 0);
@@ -5952,7 +6106,7 @@ mod close_notice {
     fn a_notice_without_funding_from_a_hire_in_flight_is_refused() {
         let (mut j, _) = hire_unclear();
         Ctx::new(ROOT, T1).set();
-        j.child_closed(U128(0), Some(true), None);
+        j.child_closed(U128(0), Some(true), None, None);
     }
 
     #[test]
@@ -6025,11 +6179,11 @@ mod close_notice_repeat {
         Ctx::new(ROOT, ROOT).results(vec![ok(b"")]).set();
         j.on_child_created(idx);
         Ctx::new(ROOT, T1).set();
-        j.child_closed(U128(0), Some(false), Some(U128(0)));
+        j.child_closed(U128(0), Some(false), Some(U128(0)), None);
         let before = j.get_job();
         assert_eq!(before.children[0].state, ChildState::Failed);
         Ctx::new(ROOT, T1).set();
-        j.child_closed(U128(0), Some(false), Some(U128(0)));
+        j.child_closed(U128(0), Some(false), Some(U128(0)), None);
         let after = j.get_job();
         assert_eq!(after.ft_balance, before.ft_balance);
         assert_eq!(after.allocated, before.allocated);
@@ -6048,8 +6202,8 @@ mod close_notice_repeat {
         Ctx::new(ROOT, ROOT).results(vec![ok(b"")]).set();
         j.on_child_created(idx);
         Ctx::new(ROOT, T1).set();
-        j.child_closed(U128(0), Some(false), Some(U128(0)));
+        j.child_closed(U128(0), Some(false), Some(U128(0)), None);
         Ctx::new(ROOT, T1).set();
-        j.child_closed(U128(0), Some(true), Some(U128(30 * USD)));
+        j.child_closed(U128(0), Some(true), Some(U128(30 * USD)), None);
     }
 }

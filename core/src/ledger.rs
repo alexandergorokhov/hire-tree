@@ -203,9 +203,9 @@ impl Ledger {
     }
 
     /// The part of the lead's fee (`amount` on a root) that the lead has
-    /// earned: pro rata to the parts that were paid (`paid` of `hired`, the
-    /// summed prices of the root's own parts that reached an outcome). A
-    /// root that was never funded owes no fee (nothing was posted).
+    /// earned: pro rata to the parts that passed (`paid` of `hired`, summed
+    /// prices; see `money::earned_fee`). A root that was never funded owes
+    /// no fee (nothing was posted).
     pub fn fee_earned(&self, paid: u128, hired: u128) -> Result<u128, MoneyError> {
         if self.funded == 0 {
             return Ok(0);

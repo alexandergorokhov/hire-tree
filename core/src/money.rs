@@ -106,9 +106,11 @@ pub fn mul_div_floor(a: u128, b: u128, c: u128) -> Result<u128, MoneyError> {
 
 /// The part of a root's lead fee the lead has earned: `fee * paid / hired`,
 /// rounded down (the client keeps the remainder unit). `hired` is the sum
-/// of the prices of the root's parts that reached an outcome, `paid` the
-/// sum of those that were paid; no part hired earns nothing, and `paid` is
-/// capped at `hired`, so the fee is never exceeded.
+/// of the prices (pay, not sub-budget) of the parts the lead hired that
+/// closed, at any depth, leaving out a failed part whose task another part
+/// passed; `paid` the sum of those whose work passed (the job contract's
+/// `fee_parts`). No part hired earns nothing, and `paid` is capped at
+/// `hired`, so the fee is never exceeded.
 pub fn earned_fee(fee: u128, paid: u128, hired: u128) -> Result<u128, MoneyError> {
     if hired == 0 || paid == 0 || fee == 0 {
         return Ok(0);

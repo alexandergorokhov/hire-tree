@@ -2139,7 +2139,8 @@ pub async fn run(
         for (k, root) in fill_roots.iter().enumerate() {
             let root = root.clone();
             // Every part is closed: the fee the root pays its lead is final
-            // (the lead fee is a cap, earned pro rata to the paid parts).
+            // (the lead fee is a cap, earned pro rata to the parts that
+            // passed; a failed part whose task a runner-up passed is left out).
             let job = tools
                 .call(&keeper, "get_job", &json!({ "job": root }))
                 .await?;
@@ -2280,6 +2281,7 @@ pub async fn run(
                     "price": q.price as f64 / 1e6, "rate": if q.price > 0 { q.price * 100 / (nominal_max(q.skill) * USD) } else { 0 },
                     "newcomer": q.newcomer, "newcomer_premium": q.premium_seen, "score": q.score,
                     "paid": q.passed, "paid_now": q.paid_now, "make_or_buy": q.decision, "fired": q.fired, "replaces": q.replaces, "vouched": q.vouched, "audit": q.audit, "no_runner_up": q.no_runner_up, "backer": q.backer.map(|j| agents[j].name.clone()), "job": q.child, "sealed": q.sealed,
+                    "spec": ht_core::receipt::sha256_hex(q.task.as_bytes()),
                     "bids": q.bids.iter().map(|(i, p)| { let a = &agents[*i];
                         let mut b = json!({ "agent": a.name, "price": *p as f64 / 1e6 });
                         if a.strategy == Strategy::Model { b["why"] = json!(a.why); }

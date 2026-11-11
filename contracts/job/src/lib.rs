@@ -293,10 +293,38 @@ pub struct Child {
     pub premium: U128,
     /// The outcome its `child_closed` reported: was its worker paid (at
     /// settle, or early through a Job Note)? None while it is not closed,
-    /// or when the notice carried no outcome. On a root it decides how
-    /// much of the lead's fee is earned.
+    /// or when the notice carried no outcome. Decides where its bond goes.
     #[serde(default)]
     pub paid: Option<bool>,
+    /// Its price: the worker's pay at the hire, without the sub-budget.
+    /// Its weight for the lead's fee.
+    #[serde(default)]
+    pub price: U128,
+    /// The task it was hired for (hex sha256). A part that failed counts
+    /// for nothing when another part with the same task passed.
+    #[serde(default)]
+    pub spec_hash: String,
+    /// What its `child_closed` reported for the lead's fee. None while it
+    /// is not closed, or from older code.
+    #[serde(default)]
+    pub fee: Option<FeeReport>,
+}
+
+/// A settled sub-job's report, in its `child_closed`, for the lead fee of
+/// the root above it.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+pub struct FeeReport {
+    /// Its own work passed: it settled after a passed check, or delivered
+    /// with no check pinned (receipt-only mode). An unscored delivery its
+    /// manager approved is paid but does not pass; nor does a part whose
+    /// note was bought and whose dispute was then upheld.
+    pub passed: bool,
+    /// Over the parts its own manager hired under it (not its worker's
+    /// contractors), by the same rule as the root: the summed prices that
+    /// passed, and the summed prices that count at all.
+    pub paid: U128,
+    pub hired: U128,
 }
 
 /// The one settle transfer (or balance check) in flight.
@@ -377,8 +405,8 @@ pub struct JobView {
     /// Settled sub-job still waiting for its parent to take the notice.
     pub close_pending: Option<CloseNotice>,
     /// Root: the part of the lead's fee earned so far, pro rata to the
-    /// closed parts that were paid (what settle pays once every part is
-    /// closed). None on a sub-job.
+    /// closed parts whose work passed (`fee_parts`; what settle pays once
+    /// every part is closed). None on a sub-job.
     pub lead_fee_earned: Option<U128>,
 }
 
@@ -459,6 +487,9 @@ pub struct Job {
     payout_via: Option<AccountId>,
     /// Settled sub-job: the `child_closed` notice not yet answered.
     close_pending: Option<CloseNotice>,
+    /// Set at settle: the work passed (settled from Checked, or delivered
+    /// with no check pinned). Reported up for the lead's fee.
+    work_passed: bool,
 }
 
 fn emit(event: &str, data: serde_json::Value) {
@@ -621,6 +652,7 @@ impl Job {
             by_bid: bid == Some(true),
             payout_via: None,
             close_pending: None,
+            work_passed: false,
         };
         emit(
             "job_created",
@@ -1602,6 +1634,9 @@ impl Job {
             backed: U128(0),
             premium: U128(0),
             paid: None,
+            price: amount,
+            spec_hash: hex_of(&spec),
+            fee: None,
         });
         self.children_pending += 1;
 
@@ -2535,25 +2570,44 @@ impl Job {
         }
     }
 
-    /// The root's parts for the lead's fee: (summed totals of its closed
-    /// children whose notice reported the worker paid, summed totals of all
-    /// its closed children). Hires that were rolled back never count; only
-    /// direct children count (a sub-tree reports through its child).
-    fn root_fee_parts(&self) -> (u128, u128) {
-        let mut paid = 0u128;
-        let mut hired = 0u128;
-        for c in self
-            .children
-            .iter()
-            .filter(|c| c.state == ChildState::Closed && !c.by_worker)
-        {
-            hired = hired
-                .checked_add(c.total.0)
-                .unwrap_or_else(|| env::panic_str("amount overflow"));
-            if c.paid == Some(true) {
-                paid = paid
-                    .checked_add(c.total.0)
-                    .unwrap_or_else(|| env::panic_str("amount overflow"));
+    /// The parts this job's manager hired, for the lead's fee: (paid,
+    /// hired). Over its closed children that its manager hired (a worker's
+    /// contractors are inside that worker's price), each weighted by its
+    /// price (its pay, not its sub-budget):
+    /// - its own work passed: counts as paid and hired;
+    /// - it did not pass, but another such child with the same task did
+    ///   (the runner-up after a fire, or a rehire after an upheld dispute):
+    ///   counts for nothing;
+    /// - otherwise: counts as hired, not paid;
+    ///
+    /// plus what each child reported for the parts the manager hired under
+    /// it, so a sub-budget cannot hide failed parts one level down.
+    /// Hires that were rolled back never count. Sums saturate: a notice
+    /// must never fail on its numbers.
+    fn fee_parts(&self) -> (u128, u128) {
+        let mine = || {
+            self.children
+                .iter()
+                .filter(|c| c.state == ChildState::Closed && !c.by_worker)
+        };
+        // Older code sent no report: its worker's pay stands for a pass.
+        let passed = |c: &Child| match &c.fee {
+            Some(f) => f.passed,
+            None => c.paid == Some(true),
+        };
+        let (mut paid, mut hired) = (0u128, 0u128);
+        for c in mine() {
+            if let Some(f) = &c.fee {
+                let sub_hired = f.hired.0;
+                paid = paid.saturating_add(f.paid.0.min(sub_hired));
+                hired = hired.saturating_add(sub_hired);
+            }
+            let price = c.price.0;
+            if passed(c) {
+                paid = paid.saturating_add(price);
+                hired = hired.saturating_add(price);
+            } else if !mine().any(|d| d.spec_hash == c.spec_hash && passed(d)) {
+                hired = hired.saturating_add(price);
             }
         }
         (paid, hired)
@@ -2712,10 +2766,18 @@ impl Job {
             }
             _ => false,
         };
+        // For the lead's fee only checked work counts (or any delivery
+        // when no check is pinned): a manager's approval pays an unscored
+        // delivery but does not earn the fee on it.
+        self.work_passed = match prev {
+            Status::Checked => true,
+            Status::Delivered => self.checker.is_none() && self.judge.is_none(),
+            _ => false,
+        };
         // Root: the fee the lead earned (pro rata to its paid parts) + its
         // bond to the manager, the rest back to the client.
         let split = if self.root {
-            let (paid, hired) = self.root_fee_parts();
+            let (paid, hired) = self.fee_parts();
             let earned = self
                 .ledger
                 .fee_earned(paid, hired)
@@ -3217,6 +3279,16 @@ impl Job {
         self.send_close_notice(1)
     }
 
+    /// This job's report for the lead fee above it (see `FeeReport`).
+    fn fee_report(&self) -> FeeReport {
+        let (paid, hired) = self.fee_parts();
+        FeeReport {
+            passed: self.work_passed,
+            paid: U128(paid),
+            hired: U128(hired),
+        }
+    }
+
     /// `child_closed` to the parent, then `on_parent_ack`. Records the send.
     fn send_close_notice(&mut self, attempt: u32) -> Promise {
         self.close_pending = Some(CloseNotice {
@@ -3234,6 +3306,7 @@ impl Job {
                     "returned": U128(self.returned_to_parent),
                     "paid": self.worker_paid(),
                     "funded": U128(self.ledger.funded),
+                    "fee": self.fee_report(),
                 })
                 .to_string()
                 .into_bytes(),
@@ -3323,8 +3396,15 @@ impl Job {
     /// (the fund callback was lost or unclear, or `resume_hire` is reading)
     /// is decided by `funded`: funded -> opened, then closed as any other;
     /// never funded -> the hire is undone. Without `funded` (older code)
-    /// such a notice is refused as before.
-    pub fn child_closed(&mut self, returned: U128, paid: Option<bool>, funded: Option<U128>) {
+    /// such a notice is refused as before. `fee` is its report for the
+    /// lead's fee (`fee_parts`).
+    pub fn child_closed(
+        &mut self,
+        returned: U128,
+        paid: Option<bool>,
+        funded: Option<U128>,
+        fee: Option<FeeReport>,
+    ) {
         let caller = env::predecessor_account_id();
         // A repeat: already closed, or already undone as never funded (an
         // unfunded child that never saw our first answer). Nothing moves.
@@ -3370,6 +3450,7 @@ impl Job {
         }
         self.children[i].state = ChildState::Closed;
         self.children[i].paid = paid;
+        self.children[i].fee = fee;
         self.children_open = self
             .children_open
             .checked_sub(1)
@@ -3443,7 +3524,7 @@ impl Job {
             payout_via: self.payout_via.clone(),
             close_pending: self.close_pending.clone(),
             lead_fee_earned: self.root.then(|| {
-                let (paid, hired) = self.root_fee_parts();
+                let (paid, hired) = self.fee_parts();
                 U128(self.ledger.fee_earned(paid, hired).unwrap_or(0))
             }),
         }

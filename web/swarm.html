@@ -226,7 +226,7 @@ function earnChart(d) {
 }
 
 function roundTip(r) {
-  const fills = (r.intents ?? []).map(f => `${esc(f.client)}'s intent filled by the ${esc(f.lead)} lead for a ${Number(f.lead_fee).toFixed(2)} fee${f.lead_fee_paid != null ? ` (earned ${Number(f.lead_fee_paid).toFixed(2)} on its paid parts)` : ''}`);
+  const fills = (r.intents ?? []).map(f => `${esc(f.client)}'s intent filled by the ${esc(f.lead)} lead for a ${Number(f.lead_fee).toFixed(2)} fee${f.lead_fee_paid != null ? ` (earned ${Number(f.lead_fee_paid).toFixed(2)} on its parts that passed)` : ''}`);
   const plans = (r.plans ?? []).map(p => `${esc(p.lead)} lead planned ${p.parts.map(x => esc(x.skill)).join(', ')}: <i>${esc(p.why)}</i>`);
   return fills.length || plans.length ? ` data-tip="${esc(`<b>Round ${r.round}</b><br>` + fills.concat(plans).join('<br>'))}"` : '';
 }

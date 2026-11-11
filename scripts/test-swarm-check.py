@@ -42,23 +42,34 @@ def case_audit_against_votes(d):
     p["audit"]["caught"] = not p["audit"]["caught"]
 
 
-def with_earned_fees(d, old_rule=False):
-    # Fill in lead_fee_paid as the contract pays it (or, broken, the whole
-    # fee whatever the outcome: the old rule).
+def with_earned_fees(d, rule="contract"):
+    # Fill in lead_fee_paid as the contract pays it, or by a broken rule:
+    # "whole" pays the whole fee whatever the outcome (the old rule);
+    # "count_replaced" also counts a failed part its runner-up redid.
     for r in d["rounds"]:
         for f in r["intents"]:
             mine = [p for p in r["parts"] if p.get("winner") and p["level"] == 1 and p.get("lead") == f["lead"]]
-            hired = sum(round(p["price"] * 1e6) for p in mine)
+            def first(p):  # the first hire for this part's task
+                while p.get("replaces") is not None:
+                    p = r["parts"][p["replaces"]]
+                return p["id"]
+            redone = {first(p) for p in mine if p["paid"]}
+            counted = [p for p in mine if p["paid"] or rule == "count_replaced" or first(p) not in redone]
+            hired = sum(round(p["price"] * 1e6) for p in counted)
             paid = sum(round(p["price"] * 1e6) for p in mine if p["paid"])
             fee = round(f["lead_fee"] * 1e6)
-            f["lead_fee_paid"] = (fee if old_rule else (fee * paid // hired if hired else 0)) / 1e6
+            f["lead_fee_paid"] = (fee if rule == "whole" else (fee * paid // hired if hired else 0)) / 1e6
 
 
 def case_lead_fee_paid_whatever_the_outcome(d):
-    with_earned_fees(d, old_rule=True)
+    with_earned_fees(d, rule="whole")
 
 
-CASES = [case_paid_flag_without_money, case_fired_a_good_worker, case_fees_off, case_overpaid, case_audit_against_votes, case_lead_fee_paid_whatever_the_outcome]
+def case_lead_fee_counts_a_part_its_runner_up_redid(d):
+    with_earned_fees(d, rule="count_replaced")
+
+
+CASES = [case_paid_flag_without_money, case_fired_a_good_worker, case_fees_off, case_overpaid, case_audit_against_votes, case_lead_fee_paid_whatever_the_outcome, case_lead_fee_counts_a_part_its_runner_up_redid]
 
 
 def run(d, readme=None):

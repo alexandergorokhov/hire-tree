@@ -308,6 +308,22 @@ impl World {
         sub: u128,
         near: NearToken,
     ) -> Result<Value, String> {
+        self.hire_task(lead, job, worker, amount, sub, near, SPEC)
+            .await
+    }
+
+    /// `hire` for the task with this spec hash.
+    #[allow(clippy::too_many_arguments)]
+    async fn hire_task(
+        &self,
+        lead: &Acc,
+        job: &AccountId,
+        worker: &AccountId,
+        amount: u128,
+        sub: u128,
+        near: NearToken,
+        spec: &str,
+    ) -> Result<Value, String> {
         // The manager pays the child account's storage and its token
         // registration (0.035 NEAR minimum).
         let near = near.saturating_add(NearToken::from_millinear(35));
@@ -315,7 +331,7 @@ impl World {
             lead,
             job,
             "hire",
-            json!({ "worker": worker, "amount": amount.to_string(), "spec_hash": SPEC,
+            json!({ "worker": worker, "amount": amount.to_string(), "spec_hash": spec,
                     "sub": sub.to_string() }),
             near,
         )
@@ -794,15 +810,21 @@ async fn scene_full_tree_on_local_node() {
         "One ft_transfer_call to the factory creates job-1 from the global contract and funds it with 100 fUSD. Nobody holds the money: the job account does.",
         &[("job-1", &root)], &people).await;
 
-    // 2. The lead hires three workers.
-    for (wk, pay) in [(&researcher, 30), (&translator, 20), (&junk, 10)] {
-        w.hire(
+    // 2. The lead hires three workers, each for its own task (a failed
+    // part whose task another part passed would not count for the fee).
+    for (wk, pay, spec) in [
+        (&researcher, 30, SPEC.to_string()),
+        (&translator, 20, "cd".repeat(32)),
+        (&junk, 10, "ef".repeat(32)),
+    ] {
+        w.hire_task(
             &lead,
             &root,
             &wk.id,
             pay * USD,
             0,
             NearToken::from_yoctonear(0),
+            &spec,
         )
         .await
         .unwrap();

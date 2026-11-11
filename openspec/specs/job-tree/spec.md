@@ -17,14 +17,25 @@ sub-account of its creator.
 A root's `amount` SHALL be the lead's fee cap, set by the client at post (by
 the factory from a signed job offer's Dutch auction, or by a pool from its
 terms). It is never hireable. The lead SHALL earn it pro rata to the parts
-that were paid: at settle the manager gets
-`fee * paid / hired` (rounded down) plus its bond, where `hired` is the sum
-of the totals of the root's own children that closed (a hire rolled back
-never counts) and `paid` the sum of those whose `child_closed` reported the
-worker paid (at settle, or early through a Job Note). A notice without an
-outcome (older code) counts as not paid. Only the root's direct children
-count: a sub-tree's own outcomes reach the root only through its child's
-outcome. Settle already requires every child closed, so the ratio is final.
+whose work passed: at settle the manager gets
+`fee * paid / hired` (rounded down) plus its bond. Each job sums over its
+closed children that its manager hired (a worker's contractors are inside
+that worker's price; a hire rolled back never counts), each weighed by its
+price (the hire's `amount`, not its sub-budget):
+- a child whose own work passed (it settled after a passed check, or
+  delivered with no check pinned) counts in `paid` and `hired`; an unscored
+  delivery the manager approved, or a note whose dispute was upheld, is
+  paid to the worker but does not pass;
+- a child that did not pass counts in `hired` only, unless another such
+  child with the same spec hash passed (the runner-up, or a rehire after a
+  dispute): then it counts for nothing;
+- plus the `paid` and `hired` the child reported in its `child_closed`
+  (`fee`: `passed`, `paid`, `hired`) for the parts its manager hired under
+  it, so the root counts every part the lead hired at any depth.
+
+A notice without `fee` (older code) counts the child's own price, as passed
+when it reported its worker paid. Settle already requires every child
+closed, so the ratio is final.
 Everything else, the unearned part of the fee included, goes back to the
 client (or the pool that posted it). A root with no children, or none paid,
 pays no fee. The bond rule is unchanged: the bond always goes back to the
@@ -41,7 +52,7 @@ manager.
 - unit: `a_lead_whose_every_part_failed_earns_no_fee`; core: `a_root_with_no_paid_part_pays_no_fee`
 
 #### Scenario: Some parts paid
-- WHEN parts worth 30 were paid and parts worth 10 were not (fee 10)
+- WHEN parts worth 30 passed and parts worth 10 did not (fee 10)
 - THEN the lead earns 10 * 30 / 40 = 7.5 and the client gets the other 2.5 back; with thirds the fee rounds down and the client gets the unit
 - unit: `the_lead_fee_is_earned_pro_rata_to_the_paid_parts`, `the_earned_fee_rounds_down_in_the_clients_favour`; core: `root_fee_is_pro_rata_and_rounds_down`, `earned_fee_never_overflows`
 - sandbox: `scene_full_tree_on_local_node` (fee 10; parts 30 and 20 paid, 10 refunded by a dispute: the lead gets 8.333333, the client 41.666667)
@@ -52,9 +63,29 @@ manager.
 - unit: `a_root_without_children_pays_no_lead_fee`, `a_rolled_back_hire_does_not_count_for_the_fee`
 
 #### Scenario: A part paid early through a Job Note
-- WHEN the lead's treasury bought a part's note (the worker was paid at once)
-- THEN the child reports it paid and it counts as paid for the fee
+- WHEN the lead's treasury bought a part's note after a passed check (the worker was paid at once)
+- THEN the child reports it paid and passed, and it counts as paid for the fee
 - unit: `a_note_bought_part_counts_as_paid_for_the_lead_fee`
+
+#### Scenario: Paid but not passed
+- WHEN the manager approved an unscored delivery, so its worker was paid
+- THEN the child reports it paid but not passed, and it earns no fee
+- unit: `unscored_delivery_is_paid_when_the_manager_approves`, `a_paid_part_that_did_not_pass_does_not_earn_the_fee`
+
+#### Scenario: A sub-budget cannot hide failed parts
+- WHEN the lead hires a part of price 1 with a sub-budget of 89, and inside it three parts of 29 that all fail (fee 10)
+- THEN the sub-job reports 0 paid of 87 hired, and the lead earns 10 x 1 / 88; when the small part failed and the parts under it passed, it earns 10 x 87 / 88
+- unit: `a_sub_budget_cannot_hide_failed_parts_from_the_lead_fee`, `a_sub_job_reports_the_parts_its_manager_hired_under_it`
+
+#### Scenario: Weighed by price, not by sub-budget
+- WHEN a part of price 1 with an unused sub-budget of 89 passed and a part of 10 failed (fee 10)
+- THEN the lead earns 10 x 1 / 11, not 10 x 90 / 100
+- unit: `the_fee_weighs_each_part_by_its_price_not_its_sub_budget`
+
+#### Scenario: A failed part redone
+- WHEN a part failed and was fired, and the runner-up hired for the same task passed
+- THEN the failed part counts for nothing; a failed task that was never redone still counts
+- unit: `a_failed_part_whose_task_passed_again_does_not_count`
 
 #### Scenario: The fee earned so far is public
 - WHEN anyone reads the root's `get_job`

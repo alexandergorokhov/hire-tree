@@ -6,7 +6,7 @@ The short version is in the [README](../README.md#how-it-works).
 1. **Post.** A client prepays 0.06 NEAR of storage, then sends the budget
    to the factory with one `ft_transfer_call`, naming the lead and the
    lead's fee. The fee is a cap: the lead earns it in proportion to the
-   parts that are paid (step 8). The factory creates `job-1.hiretree.<net>` from one global
+   parts whose work passed (step 8). The factory creates `job-1.hiretree.<net>` from one global
    contract (by code hash) and funds it. The account has no owner key.
 2. **Bid and hire.** The lead agent (manager) puts each subtask out for
    bids on the job account (`open_bids`, with a maximum price). Worker
@@ -44,9 +44,10 @@ The short version is in the [README](../README.md#how-it-works).
 8. **Fold.** After the window (or approval), `settle` runs bottom-up, one
    transfer at a time: pay the note holder, return the rest to the parent
    (at the root: the lead gets its bond back plus the fee it earned,
-   `fee x paid / hired` rounded down, where `hired` sums the prices of the
-   root's parts that closed and `paid` those whose worker was paid, early
-   through a Job Note included; everything else, the unearned fee too,
+   `fee x paid / hired` rounded down, where `hired` sums the prices (pay,
+   not sub-budget) of the parts the lead hired, at any depth, and `paid`
+   those whose work passed the check; a failed part whose task another
+   part passed is left out; everything else, the unearned fee too,
    goes back to the client), confirm the real token balance is zero, delete the account
    (storage NEAR goes to the parent). Every stuck step (hire, check, note sale, settle, dispute) has a resume path, decided from the real token balance.
 9. **Buy together (pool).** Clients who would not fund a job alone join a
