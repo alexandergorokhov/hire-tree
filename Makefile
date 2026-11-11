@@ -44,6 +44,7 @@ lint: ## rustfmt check + clippy -D warnings + every test the specs name exists +
 	@if [ -f web/swarm-blind.json ]; then python3 scripts/swarm-compare.py web/swarm.json web/swarm-blind.json --readme; fi
 	@if [ -d runs/storm ]; then python3 scripts/swarm-seeds.py --storm --check --readme; fi
 	@if [ -d runs/wash ]; then python3 scripts/swarm-seeds.py --wash --check --readme; fi
+	python3 scripts/economics.py --check
 	cd vendor/near-intents && sed -n 's/^| `\([^`]*\.wasm\)` | [^|]* | `\([0-9a-f]*\)` |$$/\2  \1/p' README.md | sha256sum -c --quiet
 
 # Plain cargo needs --cfg near (what cargo-near sets). Without it near-sdk's
@@ -70,6 +71,11 @@ build: ## Build the contract wasm into out/ with SHA256SUMS (non-reproducible fo
 # neard raises its open-file limit to 65535 at start and exits if it cannot.
 # Where the hard limit is lower and cannot be raised (some containers), a
 # tiny LD_PRELOAD shim clamps that one request to the hard limit.
+.PHONY: gas
+gas: build ## measure gas per step of a part on a local node into runs/gas.json, then rewrite docs/ECONOMICS.md (about 3 min)
+	$(SBX) HT_GAS_OUT=$(CURDIR)/runs/gas.json cargo test --locked --test gas -- --nocapture
+	python3 scripts/economics.py
+
 .PHONY: sandbox
 sandbox: build ## near-sandbox tests: G1, G4, tree fold, the agent story with a mock model and from a cassette, MCP judge path, agent keys, washed records (about 50 min)
 	@cd agents && \

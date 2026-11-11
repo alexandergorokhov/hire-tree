@@ -1,0 +1,26 @@
+{
+  "attached_near": {
+    "bid_storage": "0.001",
+    "hire_or_award": "0.035",
+    "post_prepay": "0.06"
+  },
+  "network": "near-sandbox (local node)",
+  "note": "gas = total gas burnt by each transaction and all its receipts; bid and open_bids are per call (last value)",
+  "schema": "hiretree-gas-1",
+  "steps": {
+    "approve": 2439295891187,
+    "award_best_16_bidders_16_payers": 75337762370218,
+    "award_best_4_bidders": 41750602676648,
+    "bid": 2742346029723,
+    "deliver": 2630654542576,
+    "finalize_check": 2442697660928,
+    "open_bids": 2556145161768,
+    "post_job": 30278999401735,
+    "settle_and_delete_sub_job": 21783919625133,
+    "submit_check": 3162228898879,
+    "whole_part_plain": 108411077407253,
+    "whole_part_plain_txs": 9,
+    "whole_part_via_intents": 117077363055924,
+    "whole_part_via_intents_txs": 10
+  }
+}

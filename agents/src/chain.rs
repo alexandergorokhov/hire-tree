@@ -502,9 +502,10 @@ impl Chain {
             .map_err(|e| format!("{e:?}"))?;
         let full = r.into_full().ok_or("transaction still pending")?;
         let tx = full.outcome().transaction_hash.to_string();
+        let gas = full.total_gas_burnt.as_gas();
         let res = full.into_result();
         self.txs.lock().unwrap().push(
-            json!({ "who": who.id, "method": method, "on": contract, "tx": tx, "ok": res.is_ok() }),
+            json!({ "who": who.id, "method": method, "on": contract, "tx": tx, "ok": res.is_ok(), "gas": gas }),
         );
         match res {
             Ok(ok) => {
