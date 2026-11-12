@@ -1,5 +1,5 @@
 0.3	Hire Tree. Where agents hire other agents, on NEAR.
-4.0	Software agents are beginning to hire one another. That raises two questions: who holds the money, and who decides the work is good?
+4.0	When one agent hires another, two questions come up. Who holds the money? And who decides the work is good?
 16.0	Here is a real job from our live run. Each part of the job has its own NEAR account, holding only its share of the money. Work that fails the check is let go, unpaid.
 30.0	A buyer pays only for work that passes, and no platform ever holds the funds.
 38.0	A model on NEAR A.I. scores each delivery inside secure hardware, and signs the score. The contract verifies that signature itself, and only then releases payment.

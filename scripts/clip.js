@@ -65,23 +65,23 @@ async function caption(page, text) {
   await page.goto(`${base}/market.html`);
   mark('hero');
   await wait(1.2);
-  await say('AI agents now hire other AI agents. Who holds the money? Who decides the work was good?');
+  await say('When one agent hires another: who holds the money, and who decides the work is good?');
   await wait(7.4);
-  await say('Each part of this real job is its own NEAR account, holding exactly its money. Bad work is fired.');
+  await say('Each part of this real job has its own NEAR account, holding only its share of the money. Work that fails the check is let go, unpaid.');
   await wait(7);
-  await say(`Live NEAR AI run: ${parts.length} parts, ${parts.filter(p => p.paid).length} paid, ${parts.filter(p => p.fired).length} junk deliveries fired unpaid. Fluent filler from 3 test agents was still paid 7 times: that hole is fixed below.`);
+  await say(`Live NEAR AI run: ${parts.length} parts, ${parts.filter(p => p.paid).length} paid, ${parts.filter(p => p.fired).length} fake deliveries let go unpaid. Fluent filler from 3 test agents was still paid 7 times: that hole is fixed below.`);
   await wait(4);
 
   // 2. The idea, how it is new, where it goes.
   await say('');
   await to('#idea');
-  await say('Use case: an AI editor hires other agents. Bad work is fired unpaid; only checked work is paid.');
+  await say('Use case: an editing agent hires other agents for a brief. Only work that passes the check is paid.');
   await wait(8);
   await page.$eval('.loop', e => e.scrollIntoView({ behavior: 'smooth', block: 'center' }));
-  await say('The job contract holds the money. NEAR AI scores the work and signs it. The contract pays only if the score passes.');
+  await say('The job contract holds the money. A NEAR AI model scores the work and signs the score. The contract pays only if the score passes.');
   await wait(8);
   await page.$eval('.new', e => e.scrollIntoView({ behavior: 'smooth', block: 'center' }));
-  await say('What is new: one escrow per job, pay decided by a verified AI score, agents hiring agents.');
+  await say('What is new: one escrow per job, payment decided by a verified score, and agents hiring their own helpers.');
   await wait(6);
 
   // 3. The catalog.
@@ -100,7 +100,7 @@ async function caption(page, text) {
   await wait(2);
   const junk = await page.$('.agent:last-child');
   if (junk) await junk.evaluate(e => e.scrollIntoView({ behavior: 'smooth', block: 'center' }));
-  await say('Ill-intended agents bid low, get fired unpaid, and their record loses the next award.');
+  await say('Agents that underbid with fake work are let go unpaid, and their record loses them the next contract.');
   await wait(5);
   await page.click('#skills .chip:nth-child(1)');
   await say('');
@@ -113,18 +113,18 @@ async function caption(page, text) {
   await jobs[pick].click();
   await wait(0.6);
   await to(`.job:nth-child(${pick + 2})`, 'center');
-  await say('A contractor hired its own sub-agent from its own pay. Junk was fired and replaced.');
+  await say('A contractor hired a helper from its own pay. Failed work was replaced automatically.');
   await wait(7);
   await say('');
 
   // 5. Proof under attack.
   mark('proof');
   await to('#proof');
-  await say('30 fake accounts flood the market with cheap bad work. Buyers reading records lose 10.75 parts to them; blind buyers lose 71.50.');
+  await say('Simulation: 30 fake accounts flood the market with cheap fake work. Buyers who check records lose 10.75 parts to them; blind buyers lose 71.50.');
   await wait(7.5);
   await say('');
   await to('.fixed', 'center');
-  await say('Found and fixed: fluent filler passed the AI judge 7 of 7. Now the contract checks quoted proof: 0 of 7.');
+  await say('Found and fixed: polished filler passed the judge 7 of 7. Now the contract checks quoted proof: 0 of 7.');
   await wait(5);
   await to('#testnet', 'center');
   await say('Same contracts on NEAR testnet: 110 transactions, 0 failed.');
