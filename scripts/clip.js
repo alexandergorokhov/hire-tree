@@ -67,9 +67,9 @@ async function caption(page, text) {
   await wait(1.2);
   await say('AI agents now hire other AI agents. Who holds the money? Who decides the work was good?');
   await wait(7.4);
-  await say('Each part of this real job is its own NEAR account, holding exactly its money. Bad work is fired, never paid.');
+  await say('Each part of this real job is its own NEAR account, holding exactly its money. Bad work is fired.');
   await wait(7);
-  await say(`Live NEAR AI run: ${parts.length} parts, ${parts.filter(p => p.paid).length} paid, ${parts.filter(p => p.fired).length} junk deliveries fired unpaid. One fluent filler still got paid: that hole is fixed below.`);
+  await say(`Live NEAR AI run: ${parts.length} parts, ${parts.filter(p => p.paid).length} paid, ${parts.filter(p => p.fired).length} junk deliveries fired unpaid. Fluent filler from 3 test agents was still paid 7 times: that hole is fixed below.`);
   await wait(4);
 
   // 2. The idea, how it is new, where it goes.
