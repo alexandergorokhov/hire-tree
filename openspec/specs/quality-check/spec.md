@@ -129,5 +129,13 @@ window anyone calls `finalize_check`.
 - unit: `rubric_2_asks_for_quotes_and_pays_work_the_quotes_are_in`, `rubric_2_counts_a_score_without_quotes_from_the_work_as_at_most_2`, `rubric_2_counts_an_answer_with_no_quotes_as_at_most_2`, `a_sub_job_pins_its_parents_rubric`, `an_unknown_rubric_is_refused_and_no_rubric_reads_as_1`, `the_owner_can_pin_an_older_judge_rubric_but_not_an_unknown_one`
 - agents: `deliveries_are_read_from_the_rubric_1_requests_with_their_scores`, `a_v2_answer_counts_as_the_contract_counts_it`, `the_report_compares_both_rubrics_with_the_scripted_judge`; `make rubric-check` replays the live regrade of the run's 29 deliveries (`runs/rubric2.json`)
 
+#### Scenario: Rubric 2 quotes from a delivered receipt (JSON-escaped text)
+- GIVEN the deliverable is the signed NEAR AI response, so the answer text sits in a JSON string (line breaks are `\n`, accents may be `\u00f3`), as on testnet job `t3.job-5`
+- WHEN the judge quotes a passage that starts or ends at a line break, or holds an escaped character
+- THEN the quote is found (the check reads the delivery both as sent and with JSON escapes read; a quote cannot span the two readings), so real work is not capped at 2
+- core: `quotes_match_a_delivered_receipt_whose_text_is_json_escaped`
+- unit: `rubric_2_finds_quotes_in_a_delivered_receipt_whose_text_is_json_escaped`
+- agents: `every_signed_testnet_answer_counts_as_the_fixed_contract_counts_it` (the 8 signed testnet answers); `a_probe_set_is_reported_by_kind` (`make rubric-check` replays the live on-topic filler probe: real 6 of 6, filler 0 of 6)
+
 #### Scenario: Note after a signed check
 - unit: `a_signed_check_makes_a_verified_note_sellable`

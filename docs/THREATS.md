@@ -312,11 +312,22 @@ for the bid calls.
   generic answers to placeholder tasks. The new question did that: the
   model scored the filler 0 with no quotes, and the contract's quote check
   changed none of the 29 scores; it is the on-chain backstop for a judge
-  that is still fooled. Left open: a filler written for
-  one task (on-topic sentences with no real content) can still quote
-  itself; the dispute panels and the payer-weighted record are the next
-  line (`rubric_2_counts_a_score_without_quotes_from_the_work_as_at_most_2`,
+  that is still fooled. A filler written for one task (on-topic
+  sentences with no real content) could quote itself, so that was measured
+  live as well (`runs/filler-probe.json`, 6 tasks, `demo/probe-cassette.json`):
+  real answers passed 6 of 6, on-topic filler 0 of 6, and the backstop
+  bit once (the model gave a filler 6 but quoted the task, not the work:
+  counted 2). Not proven for every filler; the dispute panels and the
+  payer-weighted record are the next line
+  (`rubric_2_counts_a_score_without_quotes_from_the_work_as_at_most_2`,
   `a_score_without_two_quotes_counts_at_most_two`).
+- The quote check could also miss real work. Found on testnet: the
+  delivery is the signed NEAR AI response, whose answer text is
+  JSON-escaped, so a quote right after a line break (`\nContratos`) was
+  not found and job `t3.job-5`'s real 10 counted 2. Fixed: the check
+  reads the escapes too (`quotes_match_a_delivered_receipt_whose_text_is_json_escaped`;
+  all 8 testnet answers now count as given). The deployed testnet code
+  predates the fix; a redeploy picks it up.
 - Firing ends the worker's chance to redeliver after one failed check. A
   borderline worker (score 5) loses the job; the signed check decides, not
   the buyer. A rich junk operator can still stake 10x and win once per

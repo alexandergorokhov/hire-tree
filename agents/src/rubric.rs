@@ -283,6 +283,40 @@ mod tests {
         assert_eq!(read_v2("9", d), None, "not JSON: the contract refuses it");
     }
 
+    #[test]
+    fn every_signed_testnet_answer_counts_as_the_fixed_contract_counts_it() {
+        // demo/testnet-judge-cassette.json: the 8 answers the testnet jobs
+        // got (rubric 2). The worker delivers the signed NEAR AI response
+        // body, so the answer text is JSON-escaped in the deliverable. On
+        // testnet t3.job-5's second quote followed a `\n` and was missed:
+        // the model's 10 counted 2. Each answer must now count as given.
+        let f = format!(
+            "{}/../demo/testnet-judge-cassette.json",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let c: Cassette = serde_json::from_str(&std::fs::read_to_string(f).unwrap()).unwrap();
+        assert_eq!(c.entries.len(), 8);
+        for e in &c.entries {
+            let req: Value = serde_json::from_str(&e.req).unwrap();
+            let u: Value =
+                serde_json::from_str(req["messages"][1]["content"].as_str().unwrap()).unwrap();
+            let content = serde_json::from_str::<Value>(&e.resp).unwrap()["choices"][0]["message"]
+                ["content"]
+                .as_str()
+                .unwrap()
+                .to_string();
+            let given = serde_json::from_str::<Value>(&content).unwrap()["score"]
+                .as_u64()
+                .unwrap() as u8;
+            assert_eq!(
+                read_v2(&content, u["deliverable"].as_str().unwrap()),
+                Some(given),
+                "{}",
+                u["job"]
+            );
+        }
+    }
+
     #[tokio::test]
     async fn a_probe_set_is_reported_by_kind() {
         let f = format!("{}/../runs/filler-probe.json", env!("CARGO_MANIFEST_DIR"));

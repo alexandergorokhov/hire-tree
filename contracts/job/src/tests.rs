@@ -3748,6 +3748,24 @@ mod signed_check {
     }
 
     #[test]
+    fn rubric_2_finds_quotes_in_a_delivered_receipt_whose_text_is_json_escaped() {
+        // Found on testnet (t3.job-5): the delivered bytes are the signed
+        // NEAR AI response, so the answer's line break is the two characters
+        // `\n`. The model quoted the line after it, and the contract missed
+        // it ("\nContratos" read as "ncontratos"): a real 10 counted 2.
+        let receipt: &[u8] = br#"{"id":"x","choices":[{"message":{"content":"Global contracts share one code.  \nContratos globales comparten un c\u00f3digo."}}]}"#;
+        let mut j = judged_sub_v2();
+        deliver(&mut j, receipt);
+        let a = answer_v2(
+            &j,
+            receipt,
+            r#"{"quotes": ["Global contracts share one code.", "Contratos globales comparten un código."], "score": 10}"#,
+            "a",
+        );
+        assert_eq!(submit(&mut j, EVE, 0, receipt, a), 10);
+    }
+
+    #[test]
     fn rubric_2_counts_an_answer_with_no_quotes_as_at_most_2() {
         let mut j = judged_sub_v2();
         deliver(&mut j, DELIVERED);

@@ -152,11 +152,77 @@ pub fn normalize(s: &str) -> String {
     out
 }
 
+/// `s` with JSON string escapes read: `\n`, `\t`, `\r`, `\b`, `\f` become a
+/// space, `\"`, `\\`, `\/` the character, `\uXXXX` (with surrogate pairs) the
+/// character or U+FFFD if malformed. Any other backslash is kept as is.
+pub fn unescape_json_text(s: &str) -> String {
+    // Four hex digits, consumed only if all four are there.
+    fn hex4(c: &mut std::iter::Peekable<std::str::Chars>) -> Option<u32> {
+        let mut look = c.clone();
+        let mut v = 0;
+        for _ in 0..4 {
+            v = v * 16 + look.next()?.to_digit(16)?;
+        }
+        *c = look;
+        Some(v)
+    }
+    let mut out = String::with_capacity(s.len());
+    let mut c = s.chars().peekable();
+    while let Some(ch) = c.next() {
+        if ch != '\\' {
+            out.push(ch);
+            continue;
+        }
+        match c.peek().copied() {
+            Some('n' | 't' | 'r' | 'b' | 'f') => {
+                c.next();
+                out.push(' ');
+            }
+            Some(e @ ('"' | '\\' | '/')) => {
+                c.next();
+                out.push(e);
+            }
+            Some('u') => {
+                c.next();
+                let ch = match hex4(&mut c) {
+                    Some(hi @ 0xD800..=0xDBFF) => {
+                        let mut look = c.clone();
+                        let lo = (look.next() == Some('\\') && look.next() == Some('u'))
+                            .then(|| hex4(&mut look))
+                            .flatten()
+                            .filter(|lo| (0xDC00..=0xDFFF).contains(lo));
+                        match lo {
+                            Some(lo) => {
+                                c = look;
+                                char::from_u32(0x10000 + ((hi - 0xD800) << 10) + (lo - 0xDC00))
+                            }
+                            None => None,
+                        }
+                    }
+                    Some(v) => char::from_u32(v),
+                    None => None,
+                };
+                out.push(ch.unwrap_or('\u{fffd}'));
+            }
+            _ => out.push('\\'),
+        }
+    }
+    out
+}
+
 /// How many of `quotes` are evidence: long enough, found word for word
 /// (after [`normalize`]) in the deliverable, and not a repeat or a part of
 /// another counted quote.
 pub fn evidence(quotes: &[&str], deliverable: &str) -> usize {
-    let body = format!(" {} ", normalize(deliverable));
+    // Two views of the same bytes: as delivered, and with JSON string
+    // escapes read (a delivered NEAR AI receipt holds the answer as a JSON
+    // string, so a line break is `\n`). The `|` keeps a quote from spanning
+    // the two views.
+    let body = format!(
+        " {} | {} ",
+        normalize(deliverable),
+        normalize(&unescape_json_text(deliverable))
+    );
     let mut found: Vec<String> = Vec::new();
     for q in quotes.iter().take(4) {
         let n = normalize(q);
@@ -313,6 +379,31 @@ mod tests {
                 d
             ),
             2
+        );
+    }
+
+    #[test]
+    fn quotes_match_a_delivered_receipt_whose_text_is_json_escaped() {
+        // Found in the testnet run (t3.job-5): the worker delivers the signed
+        // NEAR AI response body, so a line break in the answer is the two
+        // characters `\n`. "...interoperability.\nContratos" read as the word
+        // "ncontratos", the second quote did not match, and a real answer
+        // was capped at 2.
+        let d = r#"{"choices":[{"message":{"content":"NEAR global contracts let apps share code.  \nContratos globales de NEAR permiten compartir c\u00f3digo.\tFin \"ok\""}}]}"#;
+        assert_eq!(
+            evidence(
+                &[
+                    "NEAR global contracts let apps share code.",
+                    "Contratos globales de NEAR permiten compartir código."
+                ],
+                d
+            ),
+            2
+        );
+        assert_eq!(evidence(&["share code. Fin ok", "Fin \"ok\""], d), 0);
+        assert_eq!(
+            unescape_json_text(r#"a\nb\\n \ud83d\ude00 \ud83d \u12 \x"#),
+            "a b\\n 😀 \u{fffd} \u{fffd}12 \\x"
         );
     }
 
