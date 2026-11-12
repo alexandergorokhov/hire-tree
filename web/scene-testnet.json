@@ -1,0 +1,3164 @@
+{
+  "network": "NEAR testnet",
+  "run": {
+    "answers": "NEAR AI Cloud, live",
+    "explorer": "https://testnet.nearblocks.io/txns/",
+    "factory": "hub.hiretree.testnet",
+    "model": "Qwen/Qwen3-VL-30B-A3B-Instruct",
+    "model_calls": 50,
+    "signer": "2665cce942fa427ef30d87f4b0bff67fb7645462",
+    "token": "usdc.hiretree.testnet",
+    "transactions": [
+      {
+        "gas": 2129901615530,
+        "method": "set_settings",
+        "ok": true,
+        "on": "hub.hiretree.testnet",
+        "tx": "ABppBRXAukQq7TdxYtFTbZSmatuuTAKrgsLVckcmZKUU",
+        "who": "hub.hiretree.testnet"
+      },
+      {
+        "gas": 2661719253939,
+        "method": "storage_deposit",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "376bSUnwkg5smqayDvY1ck3LJxo3LwtdKL3jqAZCikQs",
+        "who": "hub.hiretree.testnet"
+      },
+      {
+        "gas": 2663316038706,
+        "method": "storage_deposit",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "7h5dGgi9FpedhhizjwyH2MqyUjvBuhQSobpP2hXEAnaP",
+        "who": "client.hiretree.testnet"
+      },
+      {
+        "gas": 2662160463864,
+        "method": "storage_deposit",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "8iaErk8tdtumgqZuzAtH8TUXXFboC9TYgot4HmvLGZSU",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 2664152384220,
+        "method": "storage_deposit",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "Bmw4QAhbu55aWv3ge313bvQoNxiM3Cw92sdfibPh9CDb",
+        "who": "treasury.hiretree.testnet"
+      },
+      {
+        "gas": 2665305490794,
+        "method": "storage_deposit",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "81js9iBhqeSkimkZUAWNPfYLeVbR6pfnJiQqeqUXUJiw",
+        "who": "researcher.hiretree.testnet"
+      },
+      {
+        "gas": 2665305490794,
+        "method": "storage_deposit",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "BM8e8rRbtm2Bndh3te8BnngcFDqj4YthiPz1EZArTBbD",
+        "who": "translator.hiretree.testnet"
+      },
+      {
+        "gas": 2664152384220,
+        "method": "storage_deposit",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "9Pq9EXsqhQJjRCpv9DnmBG7rca9vcoNUwnK4Hs3iHGsX",
+        "who": "cheapbot.hiretree.testnet"
+      },
+      {
+        "gas": 2663757248631,
+        "method": "storage_deposit",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "Eyk4BCvDn7fJEQjBoLLZR7gpx8HAhQXf2zmH2mR3xZ2B",
+        "who": "client2.hiretree.testnet"
+      },
+      {
+        "gas": 2120836159925,
+        "method": "mint",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "2sLi2jmEBpF3uxeVknWR8CmA7DagdAZJYgKSWTrAvYDD",
+        "who": "usdc.hiretree.testnet"
+      },
+      {
+        "gas": 2663757248631,
+        "method": "storage_deposit",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "9rU7PBAgQqgh9kKSxMRg9sb3YwpFek1fpWm4daMmd3dx",
+        "who": "client3.hiretree.testnet"
+      },
+      {
+        "gas": 2120836159925,
+        "method": "mint",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "9YocHcBkpW64wZGtuBjTZfaFwq2Wjztts8CrL1Tb4NRt",
+        "who": "usdc.hiretree.testnet"
+      },
+      {
+        "gas": 2120800310717,
+        "method": "mint",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "FQ1rxpWLDKeAdjxmSrTj8mPKybiDmw7kN1qmkaXYszsM",
+        "who": "usdc.hiretree.testnet"
+      },
+      {
+        "gas": 2121672423723,
+        "method": "mint",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "4HHJkM6kjEe1iFQt368AttxoaqjAzHA83UHxJM8FNFuM",
+        "who": "usdc.hiretree.testnet"
+      },
+      {
+        "gas": 2266019532082,
+        "method": "prepay_post",
+        "ok": true,
+        "on": "hub.hiretree.testnet",
+        "tx": "4wa85TCYdBc1Cn8rDBEu8TPPwLkKw4dNrS3wbZV5A9Rb",
+        "who": "client.hiretree.testnet"
+      },
+      {
+        "gas": 28982032228311,
+        "method": "ft_transfer_call",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "GqASeC75iQpfgBQXq3Ys4h21B7e61zCLDcd6NhbyBvj6",
+        "who": "client.hiretree.testnet"
+      },
+      {
+        "gas": 2311792268881,
+        "method": "open_bids",
+        "ok": true,
+        "on": "job-4.hub.hiretree.testnet",
+        "tx": "3rk2peHU4LNDoPi7udcbwuhPYTgr4zmVkL6yx385UuyN",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 2327218538747,
+        "method": "open_bids",
+        "ok": true,
+        "on": "job-4.hub.hiretree.testnet",
+        "tx": "2twXdUHtjZyL3TrF3CAoBJWVXMhJdAL9g4XucpwBf3qR",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 2293786465071,
+        "method": "bid",
+        "ok": true,
+        "on": "job-4.hub.hiretree.testnet",
+        "tx": "2e7A73Lp6nAYAsc6zL7DUAoHTLhZSzVMpNUzFsxYwnyv",
+        "who": "researcher.hiretree.testnet"
+      },
+      {
+        "gas": 2307743942228,
+        "method": "bid",
+        "ok": true,
+        "on": "job-4.hub.hiretree.testnet",
+        "tx": "6GbZ5rGeS27qXx7FSmsBysjbUVLwgaCKkGD4gdsVXjHW",
+        "who": "translator.hiretree.testnet"
+      },
+      {
+        "gas": 26934870755840,
+        "method": "award",
+        "ok": true,
+        "on": "job-4.hub.hiretree.testnet",
+        "tx": "6yj5UFDnJQi3d9CYmwwmTgsdfG5BZUtQV9uDRvSktGAJ",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 27041564592812,
+        "method": "award",
+        "ok": true,
+        "on": "job-4.hub.hiretree.testnet",
+        "tx": "GZGNRD9Ybg4mKk8qTEPW8gYSEEwBKfGdRcvBfwCwUHJt",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 3111795419454,
+        "method": "deliver",
+        "ok": true,
+        "on": "t1.job-4.hub.hiretree.testnet",
+        "tx": "9vmqiqGDPF2BWf6dD5ttC2VTG949N8gvKVjvcnDCoAc3",
+        "who": "researcher.hiretree.testnet"
+      },
+      {
+        "gas": 4220743650015,
+        "method": "submit_check",
+        "ok": true,
+        "on": "t1.job-4.hub.hiretree.testnet",
+        "tx": "B57A2AxARbtYDT2DYzCbLKTN7yNs5d1NV4zFHscGm35U",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 3045177904734,
+        "method": "deliver",
+        "ok": true,
+        "on": "t2.job-4.hub.hiretree.testnet",
+        "tx": "GLq8owcYcbQZFGx2E3Qvqwm83rGQH7MV1ijpe6eDY2W5",
+        "who": "translator.hiretree.testnet"
+      },
+      {
+        "gas": 3898033753920,
+        "method": "submit_check",
+        "ok": true,
+        "on": "t2.job-4.hub.hiretree.testnet",
+        "tx": "2hPrz9gYPjQRYD3DkkvJFijeKyPNy3PXqVhNuHfyYC9T",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 2209758791437,
+        "method": "finalize_check",
+        "ok": true,
+        "on": "t1.job-4.hub.hiretree.testnet",
+        "tx": "BNMJK4JRRzjnVtWXG1X7s5BuQPdQzBeS5veP297Wg39N",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 2210113446376,
+        "method": "finalize_check",
+        "ok": true,
+        "on": "t2.job-4.hub.hiretree.testnet",
+        "tx": "GzB6YRvoJJRJGqpPkFcSjB35B6xTeF7vny1R458xkraS",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 14243140293209,
+        "method": "ft_transfer_call",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "CwT3qjaLahgQxvQyuL6XLQQVSdM2Yeeg5Gn44iFndzb8",
+        "who": "treasury.hiretree.testnet"
+      },
+      {
+        "gas": 14243140293209,
+        "method": "ft_transfer_call",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "xofw6s3U3Hb8KPvHwYurM9dCi53nQK3krnAbKGdppPu",
+        "who": "treasury.hiretree.testnet"
+      },
+      {
+        "gas": 2209565085630,
+        "method": "approve",
+        "ok": true,
+        "on": "t1.job-4.hub.hiretree.testnet",
+        "tx": "H7cSM1ujpRCcY1RKLH4cwVMNSENEKHTEhLcoAQwBc5Kx",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 2209565085630,
+        "method": "approve",
+        "ok": true,
+        "on": "t2.job-4.hub.hiretree.testnet",
+        "tx": "CxoQwZXMCPxLc2MLgt2a5pN3RnCCM2kVvtpc8EMpTdyj",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 22662012492177,
+        "method": "settle",
+        "ok": true,
+        "on": "t1.job-4.hub.hiretree.testnet",
+        "tx": "Cx3HgMS7uYDonPxAWbNi9oUKwAgLckc97T7q38K9ypDz",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 22668568964117,
+        "method": "settle",
+        "ok": true,
+        "on": "t2.job-4.hub.hiretree.testnet",
+        "tx": "E5tX8rDSkwCkWRq4SmaKD8p1wYjw6YJmKtkNBsc3LAzW",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 2346033346959,
+        "method": "approve",
+        "ok": true,
+        "on": "job-4.hub.hiretree.testnet",
+        "tx": "Eqk65kMWTzaVgTNbjkuu8cjeGq2BFaK4GS6FnapPLauh",
+        "who": "client.hiretree.testnet"
+      },
+      {
+        "gas": 24634864650625,
+        "method": "settle",
+        "ok": true,
+        "on": "job-4.hub.hiretree.testnet",
+        "tx": "E6xqyu7UAyjrc9Ejk6d1sJNnEh6EpGb2yYbDgYjxCc3t",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 28982032228311,
+        "method": "ft_transfer_call",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "q5CBLLHLwDkBhcaqCiYRMYjgeCKBU48B39oGKu9Q5SS",
+        "who": "client.hiretree.testnet"
+      },
+      {
+        "gas": 2311798028173,
+        "method": "open_bids",
+        "ok": true,
+        "on": "job-5.hub.hiretree.testnet",
+        "tx": "DGMZWtQuF43BZ9CwqQqJW1EseYT8DejDRLiLRYJ9z3dk",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 2327241575915,
+        "method": "open_bids",
+        "ok": true,
+        "on": "job-5.hub.hiretree.testnet",
+        "tx": "B9gfYetELyco8xCCMp7sxTgYGXNWKs41p4cFYd7YFCLV",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 2342195583837,
+        "method": "open_bids",
+        "ok": true,
+        "on": "job-5.hub.hiretree.testnet",
+        "tx": "3pvCPL9mLxxkzht4D2uCHCjjJnrLkRM2FB9bbVqe9n22",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 2308640096761,
+        "method": "bid",
+        "ok": true,
+        "on": "job-5.hub.hiretree.testnet",
+        "tx": "5u7aVSNHsUBCKPhY1veTAa39VGZwjv9hfAsuQiaEctFN",
+        "who": "researcher.hiretree.testnet"
+      },
+      {
+        "gas": 2324290805766,
+        "method": "bid",
+        "ok": true,
+        "on": "job-5.hub.hiretree.testnet",
+        "tx": "imTUf5C7A9XWuHTrXGYoLU6ZCBtGQgD3TGv8ng3QjvG",
+        "who": "translator.hiretree.testnet"
+      },
+      {
+        "gas": 2336742623351,
+        "method": "bid",
+        "ok": true,
+        "on": "job-5.hub.hiretree.testnet",
+        "tx": "8obpRroXdXDvLQJxkePL2Ak2NmdZAvS9uYJezJ2b4Hyg",
+        "who": "cheapbot.hiretree.testnet"
+      },
+      {
+        "gas": 2351394639384,
+        "method": "bid",
+        "ok": true,
+        "on": "job-5.hub.hiretree.testnet",
+        "tx": "FJJpJgBXbc1u4gGZs9gZFiNQM5N99ygNn3WSPo5mNkFz",
+        "who": "researcher.hiretree.testnet"
+      },
+      {
+        "gas": 2365038646505,
+        "method": "bid",
+        "ok": true,
+        "on": "job-5.hub.hiretree.testnet",
+        "tx": "rp9x6YiDzNADfurDsf3xXDcRshkkh3H2PbJsJk2pANM",
+        "who": "translator.hiretree.testnet"
+      },
+      {
+        "gas": 27100982810681,
+        "method": "award",
+        "ok": true,
+        "on": "job-5.hub.hiretree.testnet",
+        "tx": "3oPEJ4XN1p8HrYRYa6rbheLLgafr6TMk9t5jA2PCQT2w",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 27206929585205,
+        "method": "award",
+        "ok": true,
+        "on": "job-5.hub.hiretree.testnet",
+        "tx": "5t5nY7Pq8SYeP7XdzmcdBvESgNBir5k9TXz9djvVJNuS",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 27318532675600,
+        "method": "award",
+        "ok": true,
+        "on": "job-5.hub.hiretree.testnet",
+        "tx": "GYH1edzi5S6eJcz9o75v9NYJV1DMYxsUCTU1QvsNvqZ2",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 3085819731246,
+        "method": "deliver",
+        "ok": true,
+        "on": "t1.job-5.hub.hiretree.testnet",
+        "tx": "DLh6zyLvk7M54hmZsLn8GxbBATZCEiRw26K8xmbQuupm",
+        "who": "researcher.hiretree.testnet"
+      },
+      {
+        "gas": 4043768111676,
+        "method": "submit_check",
+        "ok": true,
+        "on": "t1.job-5.hub.hiretree.testnet",
+        "tx": "7KYbELyhWN5CdpKNyRHi49hxD3i3K9B25qrBUT6eW7Lr",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 3037338371478,
+        "method": "deliver",
+        "ok": true,
+        "on": "t2.job-5.hub.hiretree.testnet",
+        "tx": "GKrL3ufmz1RbUMKGwxMpjo4iDmFtKg6bocXJaYLFTvs4",
+        "who": "translator.hiretree.testnet"
+      },
+      {
+        "gas": 3665287879191,
+        "method": "submit_check",
+        "ok": true,
+        "on": "t2.job-5.hub.hiretree.testnet",
+        "tx": "4zq8fYtUEDgVBRUJUk2xa78BM1kQaENj3ZvattED71yn",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 3043991784702,
+        "method": "deliver",
+        "ok": true,
+        "on": "t3.job-5.hub.hiretree.testnet",
+        "tx": "5rzUydDvZQsRtVDdB8BsDC1np2UbGUrJoqhhDQMUWgMk",
+        "who": "translator.hiretree.testnet"
+      },
+      {
+        "gas": 3899941729542,
+        "method": "submit_check",
+        "ok": true,
+        "on": "t3.job-5.hub.hiretree.testnet",
+        "tx": "6xLCWNAkMhbFx7HdfUkfYQqg5ayuo87rHTH8oVKUG71f",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 2209758791437,
+        "method": "finalize_check",
+        "ok": true,
+        "on": "t1.job-5.hub.hiretree.testnet",
+        "tx": "E8KbYiL9CGEah7pqop2DFykWHguwghUwRCybR4DeFUG1",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 2211499666201,
+        "method": "finalize_check",
+        "ok": true,
+        "on": "t2.job-5.hub.hiretree.testnet",
+        "tx": "EUPZAoXgmccGqYo4CWxtSNRxoba6v2b5NBki5K9Jp54e",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 2211499666201,
+        "method": "finalize_check",
+        "ok": true,
+        "on": "t3.job-5.hub.hiretree.testnet",
+        "tx": "GqynC8rBb1zeY9Zj1GNxMwhMicjrpcZtXk6231aSYUgH",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 14243140293209,
+        "method": "ft_transfer_call",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "GAjtJhGCxucJbsyH9T856yGybcDn8Gv6kQzfSrcXJJ1Y",
+        "who": "treasury.hiretree.testnet"
+      },
+      {
+        "gas": 2209565085630,
+        "method": "approve",
+        "ok": true,
+        "on": "t1.job-5.hub.hiretree.testnet",
+        "tx": "DDYtVGjbGY4tjKszzRZFfrBkxVnV9Z3meomEWiP2K9Th",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 22755057884336,
+        "method": "settle",
+        "ok": true,
+        "on": "t1.job-5.hub.hiretree.testnet",
+        "tx": "3qraPtUEFo6g3KNFhYpFKTBJf2WYWUfL5KSEY4hZLyHB",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 19610889724586,
+        "method": "settle",
+        "ok": true,
+        "on": "t2.job-5.hub.hiretree.testnet",
+        "tx": "AcgDzyjcE8v9tGn5p1a6XW4WcifjZXF3FRMqS2oCjVwk",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 19612763685481,
+        "method": "settle",
+        "ok": true,
+        "on": "t3.job-5.hub.hiretree.testnet",
+        "tx": "RzbvhrpX8UWycif3wTWCF44KfUMcdcLobA81Jj8S6zh",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 2443435105744,
+        "method": "approve",
+        "ok": true,
+        "on": "job-5.hub.hiretree.testnet",
+        "tx": "8UzF6H4ukZG1s7hUmbqa2zqd9mv1LBT329pG2bGFa98n",
+        "who": "client.hiretree.testnet"
+      },
+      {
+        "gas": 25003729265894,
+        "method": "settle",
+        "ok": true,
+        "on": "job-5.hub.hiretree.testnet",
+        "tx": "8ZDQ39SZ5ozFHsZVFzJkG2fUWxuhQg2Xmbm9qt7DmfwP",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 2763788322987,
+        "method": "storage_deposit",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "FLe7r4bMzyqCe62NQKzYCQW7nT5iuxtvTVKzphVU34ki",
+        "who": "client.hiretree.testnet"
+      },
+      {
+        "gas": 6341919606299,
+        "method": "ft_transfer_call",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "6pSQRefLijeFZ6xC4LFVHzPYjoRjeUoBNGhY2vhMFFoq",
+        "who": "client.hiretree.testnet"
+      },
+      {
+        "gas": 6352073344792,
+        "method": "ft_transfer_call",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "EV4BLLR3565k5vrPuNUbAexmt9j4jfyusWYRx7wswkDz",
+        "who": "client2.hiretree.testnet"
+      },
+      {
+        "gas": 6361498634961,
+        "method": "ft_transfer_call",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "46ZVrbdecAeqwXB7RWKTTGDedHVr5HJRURZaRPgjMNYJ",
+        "who": "client3.hiretree.testnet"
+      },
+      {
+        "gas": 35510887575364,
+        "method": "launch",
+        "ok": true,
+        "on": "pool-6.hiretree.testnet",
+        "tx": "RKtBtD3aXLjxvNbXA8EBoxe3MuNmWz5Qs46Xmyavc4J",
+        "who": "client.hiretree.testnet"
+      },
+      {
+        "gas": 5963897995277,
+        "method": "bind",
+        "ok": true,
+        "on": "pool-6.hiretree.testnet",
+        "tx": "GtsKGd1QigfRfgqSvCN9LZ8ywwkCC3VBD5ieoYj5FNfc",
+        "who": "client.hiretree.testnet"
+      },
+      {
+        "gas": 2311752776593,
+        "method": "open_bids",
+        "ok": true,
+        "on": "job-6.hub.hiretree.testnet",
+        "tx": "2zc6f8eTan43rWEseQ8cYHfwenM9DDf7jHsGS4TJB79X",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 2327225120795,
+        "method": "open_bids",
+        "ok": true,
+        "on": "job-6.hub.hiretree.testnet",
+        "tx": "C99tsDANza6CZeZrNPiHA3Z2X6cx5ACtg2e1GKyBBUNh",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 2341858121175,
+        "method": "open_bids",
+        "ok": true,
+        "on": "job-6.hub.hiretree.testnet",
+        "tx": "HuWAi7peiVqXb9ZNtbpHYudDUCKE7uQJRLGMA1egFYuH",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 2308652438101,
+        "method": "bid",
+        "ok": true,
+        "on": "job-6.hub.hiretree.testnet",
+        "tx": "FhyGNWB914ZkmFL2nY6WP2r4tPNv9YfWMKqEWAJ5n1fV",
+        "who": "researcher.hiretree.testnet"
+      },
+      {
+        "gas": 2324303147106,
+        "method": "bid",
+        "ok": true,
+        "on": "job-6.hub.hiretree.testnet",
+        "tx": "2ZhSEfZkYP7D2kCNwQumi6ocMq1QayR4sV1uNrSNw3Ee",
+        "who": "translator.hiretree.testnet"
+      },
+      {
+        "gas": 2336754964691,
+        "method": "bid",
+        "ok": true,
+        "on": "job-6.hub.hiretree.testnet",
+        "tx": "Boqb7cSCaJ1KhC418U5xje3aT7oeLfZQ2cs6LaZh7Cwn",
+        "who": "cheapbot.hiretree.testnet"
+      },
+      {
+        "gas": 2351406980724,
+        "method": "bid",
+        "ok": true,
+        "on": "job-6.hub.hiretree.testnet",
+        "tx": "Cm4reqTU1ZPYH9DJL11chGDB6GeNtEW2DCgTcbL7HdBm",
+        "who": "researcher.hiretree.testnet"
+      },
+      {
+        "gas": 27061001895254,
+        "method": "award",
+        "ok": true,
+        "on": "job-6.hub.hiretree.testnet",
+        "tx": "CYt8oA3NXe3M4oGrp51PZJBUG77uVVyJyRGdFAqz8UoB",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 27167345238170,
+        "method": "award",
+        "ok": true,
+        "on": "job-6.hub.hiretree.testnet",
+        "tx": "42zNk38m88fCGbQbb7zkuCbShEgsU584xEYvda8PVjR5",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 27266817963433,
+        "method": "award",
+        "ok": true,
+        "on": "job-6.hub.hiretree.testnet",
+        "tx": "EGQWpTi9uD8mqkMSiJGPvy9Cii2br62y7GgnYh5Zmy3Q",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 3072687867822,
+        "method": "deliver",
+        "ok": true,
+        "on": "t1.job-6.hub.hiretree.testnet",
+        "tx": "C6m14LZjMH3p4HQqYFDLzMSQ3BZMK3VK3FmsWSZj8jbn",
+        "who": "researcher.hiretree.testnet"
+      },
+      {
+        "gas": 3947692526415,
+        "method": "submit_check",
+        "ok": true,
+        "on": "t1.job-6.hub.hiretree.testnet",
+        "tx": "HXJCgb9tk7oSytbBivYQYYjKDtacbNvWafjpDiJ2Y5Jj",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 3053604240354,
+        "method": "deliver",
+        "ok": true,
+        "on": "t2.job-6.hub.hiretree.testnet",
+        "tx": "8xiKdk4G9u2FNSaNQqBNeAdANC6xPH23PEJEEWR4vz3K",
+        "who": "translator.hiretree.testnet"
+      },
+      {
+        "gas": 3928438213056,
+        "method": "submit_check",
+        "ok": true,
+        "on": "t2.job-6.hub.hiretree.testnet",
+        "tx": "GXwMSLRHb2qGQCZ1QtnAWiGvbQnqfyxXw7Dzvx3VU8tW",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 2396158298437,
+        "method": "deliver",
+        "ok": true,
+        "on": "t3.job-6.hub.hiretree.testnet",
+        "tx": "42RQVm939jD9Zh1dPSxvc97Z3JJQKr8fQgtsFytPhei4",
+        "who": "cheapbot.hiretree.testnet"
+      },
+      {
+        "gas": 3174812767411,
+        "method": "submit_check",
+        "ok": true,
+        "on": "t3.job-6.hub.hiretree.testnet",
+        "tx": "8osAakEv5J7EkWPo9LMeAbCNpZxnJfy11ePfp6ZYYoFd",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 2209758791437,
+        "method": "finalize_check",
+        "ok": true,
+        "on": "t1.job-6.hub.hiretree.testnet",
+        "tx": "GvpHGNTQezPn5uakbdjb7UnQcpAri25R9HCamhnUjzWQ",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 2209758791437,
+        "method": "finalize_check",
+        "ok": true,
+        "on": "t2.job-6.hub.hiretree.testnet",
+        "tx": "5fB1VD8ugc53Kc2CKBANbpNh9v17AyqsDQGDWrkUP5Kx",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 2210651080853,
+        "method": "finalize_check",
+        "ok": true,
+        "on": "t3.job-6.hub.hiretree.testnet",
+        "tx": "7pfAamBuhC9YiKGiTs31BjfCNaBMEQ8kVyokr7uSY1HT",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 14243140293209,
+        "method": "ft_transfer_call",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "5LrAkVoKVxUoNtt5ushaUcZ7VA8zfSSSjaRgWejKn65S",
+        "who": "treasury.hiretree.testnet"
+      },
+      {
+        "gas": 14243140293209,
+        "method": "ft_transfer_call",
+        "ok": true,
+        "on": "usdc.hiretree.testnet",
+        "tx": "CPNUxyZwXrfcnF3fe11Chu2hPREtcwGPRCVi6mX2rGj3",
+        "who": "treasury.hiretree.testnet"
+      },
+      {
+        "gas": 2209565085630,
+        "method": "approve",
+        "ok": true,
+        "on": "t1.job-6.hub.hiretree.testnet",
+        "tx": "5GfJyK5UZf7f8SJTBeSdc3TKsqu9zWrYJVUsrA9CZWVe",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 2209565085630,
+        "method": "approve",
+        "ok": true,
+        "on": "t2.job-6.hub.hiretree.testnet",
+        "tx": "DknaU1Xx5mTRHyFWZmwybJe3omXbRdJ8ZnYruEHzreLP",
+        "who": "lead.hiretree.testnet"
+      },
+      {
+        "gas": 22741003820815,
+        "method": "settle",
+        "ok": true,
+        "on": "t1.job-6.hub.hiretree.testnet",
+        "tx": "4EgojLumSGRWqnZgWYxCTpAwRoPyKzWCg8g82zYjHegd",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 22747782710826,
+        "method": "settle",
+        "ok": true,
+        "on": "t2.job-6.hub.hiretree.testnet",
+        "tx": "35puz4zPVnASXyGyJ6Q4QKHTDqJXcrNDDREHsTMQNXhj",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 19568035217750,
+        "method": "settle",
+        "ok": true,
+        "on": "t3.job-6.hub.hiretree.testnet",
+        "tx": "3LHoxZukdCeTQkr45Kxtwf3wD1huG541t5zd5me66ATY",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 2001123429055,
+        "method": "vote_approve",
+        "ok": true,
+        "on": "pool-6.hiretree.testnet",
+        "tx": "AUtUbAsqeYou6Ye7ne9Ko3o72LAB64v4DgK6U8E4FjtN",
+        "who": "client.hiretree.testnet"
+      },
+      {
+        "gas": 6550275060636,
+        "method": "vote_approve",
+        "ok": true,
+        "on": "pool-6.hiretree.testnet",
+        "tx": "CbUy52rM2xVG7DAUkYZqVVu7RKfdfCuevcvRLPS3fWdn",
+        "who": "client2.hiretree.testnet"
+      },
+      {
+        "gas": 25517947641511,
+        "method": "settle",
+        "ok": true,
+        "on": "job-6.hub.hiretree.testnet",
+        "tx": "UQm3SpKXPtKD2h2hN6eBJytbBZDLVLWZdo6aVETyPYv",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 1970343059544,
+        "method": "finish",
+        "ok": true,
+        "on": "pool-6.hiretree.testnet",
+        "tx": "8vapqkumdscse23yHKGTuxiUo1MXu51JKm81tyWRnQgN",
+        "who": "keeper.hiretree.testnet"
+      },
+      {
+        "gas": 6426452467500,
+        "method": "claim",
+        "ok": true,
+        "on": "pool-6.hiretree.testnet",
+        "tx": "H2GMbaYPTUgcLLPq5a3yyvh6uF3pMzt2n5MummfMwu1j",
+        "who": "client.hiretree.testnet"
+      },
+      {
+        "gas": 6427336450926,
+        "method": "claim",
+        "ok": true,
+        "on": "pool-6.hiretree.testnet",
+        "tx": "DPZARcCC3g95zYbUY8amThdhrt6j284pQRPW1GvbGW8n",
+        "who": "client2.hiretree.testnet"
+      },
+      {
+        "gas": 6427519102758,
+        "method": "claim",
+        "ok": true,
+        "on": "pool-6.hiretree.testnet",
+        "tx": "8NdwV54pYAjbyMp8MfTfQv48tcVEZnHfKFx3pyUtZdQT",
+        "who": "client3.hiretree.testnet"
+      }
+    ]
+  },
+  "schema": "hiretree-scene.v1",
+  "steps": [
+    {
+      "decisions": [],
+      "jobs": [
+        {
+          "account": "job-4.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "100000000",
+          "label": "job-1",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        }
+      ],
+      "n": 1,
+      "say": "\"Write a short explainer of NEAR global contracts in English and Spanish, plus a one-line summary.\" One transfer of 100 fUSD to the factory creates job-4.hub.hiretree.testnet from the global contract; the lead's fee is up to 10, earned in proportion to the parts that are paid. The rest comes back to the client at the end.",
+      "title": "Job 1: the client posts",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "230588236",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "14411764",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "201050000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "64350000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "39600000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [
+        {
+          "reason": "Write a short explainer (100-150 words) about NEAR global contracts in English, explaining what they are, how they work, and their benefits. Include a one-line summary at the end.",
+          "what": "plan: englishexplainer for 45 fUSD",
+          "who": "lead"
+        },
+        {
+          "reason": "Translate the English explainer into Spanish, ensuring clarity and accuracy. Include the same one-line summary in Spanish.",
+          "what": "plan: spanishexplainer for 45 fUSD",
+          "who": "lead"
+        },
+        {
+          "reason": "its own price",
+          "what": "bid 35 fUSD on englishexplainer",
+          "who": "researcher"
+        },
+        {
+          "reason": "its own price",
+          "what": "bid 40 fUSD on spanishexplainer",
+          "who": "translator"
+        }
+      ],
+      "jobs": [
+        {
+          "account": "job-4.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "100000000",
+          "label": "job-1",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        }
+      ],
+      "n": 2,
+      "say": "The lead puts each subtask out for bids on the job account. Each worker agent decides whether to bid and at what price; the bids are on-chain, and nobody can be hired above its own bid.",
+      "title": "Workers bid",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "230588236",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "14411764",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "201050000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "64350000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "39600000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [
+        {
+          "reason": "The worker has a strong track record with 2 paid jobs, both passed quality checks, and a low bid of 35 fUSD, making it the most reliable and cost-effective choice.",
+          "what": "award englishexplainer to researcher",
+          "who": "lead"
+        },
+        {
+          "reason": "The worker has a strong track record with high-quality translations and a low bid, making them the most cost-effective and reliable choice for the task.",
+          "what": "award spanishexplainer to translator",
+          "who": "lead"
+        }
+      ],
+      "jobs": [
+        {
+          "account": "job-4.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "25000000",
+          "label": "job-1",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "t1.job-4.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "35000000",
+          "ft": "35000000",
+          "label": "t1 englishexplainer",
+          "note_sold": false,
+          "parent": "job-4.hub.hiretree.testnet",
+          "payee": "researcher.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": "researcher.hiretree.testnet"
+        },
+        {
+          "account": "t2.job-4.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "40000000",
+          "ft": "40000000",
+          "label": "t2 spanishexplainer",
+          "note_sold": false,
+          "parent": "job-4.hub.hiretree.testnet",
+          "payee": "translator.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": "translator.hiretree.testnet"
+        }
+      ],
+      "n": 3,
+      "say": "Bidding closed. The lead's model compares the bids with each bidder's on-chain track record and awards one per subtask; the award hires that bidder at its own price, as a new sub-account holding exactly that pay.",
+      "title": "The lead awards the bids",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "230588236",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "14411764",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "201050000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "64350000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "39600000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [
+        {
+          "reason": "NEAR global contracts are smart contracts deployed across multiple chains in the NEAR ecosystem, enabling cross-chain functionality. They op",
+          "what": "deliver with signed model receipt",
+          "who": "researcher"
+        },
+        {
+          "reason": "signed model answer, signature verified on-chain",
+          "what": "judge says 9/10 for englishexplainer (panel 0)",
+          "who": "keeper"
+        },
+        {
+          "reason": "Los árboles de empleo son una red descentralizada que conecta a empleadores y candidatos sin intermediarios. Cada nodo representa un perfil ",
+          "what": "deliver with signed model receipt",
+          "who": "translator"
+        },
+        {
+          "reason": "signed model answer, signature verified on-chain",
+          "what": "judge says 10/10 for spanishexplainer (panel 0)",
+          "who": "keeper"
+        }
+      ],
+      "jobs": [
+        {
+          "account": "job-4.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "25000000",
+          "label": "job-1",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "t1.job-4.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "35000000",
+          "ft": "35000000",
+          "label": "t1 englishexplainer",
+          "note_sold": false,
+          "parent": "job-4.hub.hiretree.testnet",
+          "payee": "researcher.hiretree.testnet",
+          "quality": null,
+          "status": "Delivered",
+          "verified": true,
+          "worker": "researcher.hiretree.testnet"
+        },
+        {
+          "account": "t2.job-4.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "40000000",
+          "ft": "40000000",
+          "label": "t2 spanishexplainer",
+          "note_sold": false,
+          "parent": "job-4.hub.hiretree.testnet",
+          "payee": "translator.hiretree.testnet",
+          "quality": null,
+          "status": "Delivered",
+          "verified": true,
+          "worker": "translator.hiretree.testnet"
+        }
+      ],
+      "n": 4,
+      "say": "Workers that used the model deliver the raw response with its signature: the contract checks that the request carries this job's HT1 tag and that the pinned model key signed it. Each delivery opens a 5-minute check round, and a keeper sends the contract's own question to the judge model and submits the signed answer.",
+      "title": "Workers deliver; the judge answers",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "230588236",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "14411764",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "201050000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "64350000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "39600000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [],
+      "jobs": [
+        {
+          "account": "job-4.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "25000000",
+          "label": "job-1",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "t1.job-4.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "35000000",
+          "ft": "35000000",
+          "label": "t1 englishexplainer",
+          "note_sold": false,
+          "parent": "job-4.hub.hiretree.testnet",
+          "payee": "researcher.hiretree.testnet",
+          "quality": 9,
+          "status": "Checked",
+          "verified": true,
+          "worker": "researcher.hiretree.testnet"
+        },
+        {
+          "account": "t2.job-4.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "40000000",
+          "ft": "40000000",
+          "label": "t2 spanishexplainer",
+          "note_sold": false,
+          "parent": "job-4.hub.hiretree.testnet",
+          "payee": "translator.hiretree.testnet",
+          "quality": 10,
+          "status": "Checked",
+          "verified": true,
+          "worker": "translator.hiretree.testnet"
+        }
+      ],
+      "n": 5,
+      "say": "The contract built each judge question itself, verified the model's signature on the answer and read the score. The lowest answer counts; a low score reopens the job.",
+      "title": "The check rounds close",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "230588236",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "14411764",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "201050000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "64350000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "39600000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [
+        {
+          "reason": "The deliverable is well-written, concise, and accurately explains NEAR global contracts with all required elements, including a summary, and the note_quote is valid.",
+          "what": "buy englishexplainer's note for 34.65",
+          "who": "lead"
+        },
+        {
+          "reason": "The deliverable accurately translates the English explainer into Spanish with clarity and includes the required one-line summary, meeting all quality standards.",
+          "what": "buy spanishexplainer's note for 39.60",
+          "who": "lead"
+        }
+      ],
+      "jobs": [
+        {
+          "account": "job-4.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "25000000",
+          "label": "job-1",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "t1.job-4.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "35000000",
+          "ft": "35000000",
+          "label": "t1 englishexplainer",
+          "note_sold": true,
+          "parent": "job-4.hub.hiretree.testnet",
+          "payee": "treasury.hiretree.testnet",
+          "quality": 9,
+          "status": "Checked",
+          "verified": true,
+          "worker": "researcher.hiretree.testnet"
+        },
+        {
+          "account": "t2.job-4.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "40000000",
+          "ft": "40000000",
+          "label": "t2 spanishexplainer",
+          "note_sold": true,
+          "parent": "job-4.hub.hiretree.testnet",
+          "payee": "treasury.hiretree.testnet",
+          "quality": 10,
+          "status": "Checked",
+          "verified": true,
+          "worker": "translator.hiretree.testnet"
+        }
+      ],
+      "n": 6,
+      "say": "The lead's model reads each delivery and its score. For good, verified work its treasury buys the Job Note: the worker is paid now, not when the job closes.",
+      "title": "The lead reviews: paid now, or disputed",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "230588236",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "14411764",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "126800000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "99000000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "79200000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [],
+      "jobs": [
+        {
+          "account": "job-4.hub.hiretree.testnet",
+          "alive": false,
+          "label": "job-1"
+        },
+        {
+          "account": "t1.job-4.hub.hiretree.testnet",
+          "alive": false,
+          "label": "t1 englishexplainer"
+        },
+        {
+          "account": "t2.job-4.hub.hiretree.testnet",
+          "alive": false,
+          "label": "t2 spanishexplainer"
+        }
+      ],
+      "n": 7,
+      "say": "Each account pays out, proves its balance is zero and deletes itself; the lead earned 10.00 of its 10.00 fee (in proportion to the parts paid) and the client gets the rest back. Each finished job reported its worker's outcome to the factory: cheapbot 0/0 paid, researcher 3/3 paid, translator 2/4 paid.",
+      "title": "The tree folds; track records update",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "245588236",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "24411764",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "201800000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "99000000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "79200000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [],
+      "jobs": [
+        {
+          "account": "job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "100000000",
+          "label": "job-2",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        }
+      ],
+      "n": 8,
+      "say": "\"Write a short explainer of NEAR global contracts in English and Spanish, plus a one-line summary.\" One transfer of 100 fUSD to the factory creates job-5.hub.hiretree.testnet from the global contract; the lead's fee is up to 10, earned in proportion to the parts that are paid. The rest comes back to the client at the end.",
+      "title": "Job 2: the client posts",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "145588236",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "24411764",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "201800000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "99000000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "79200000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [
+        {
+          "reason": "Write a short explainer of NEAR global contracts in English, focusing on their purpose, functionality, and benefits. Keep it concise and clear for a general audience.",
+          "what": "plan: englishexplainer for 40 fUSD",
+          "who": "lead"
+        },
+        {
+          "reason": "Translate the English explainer into Spanish, ensuring accuracy and cultural relevance for a Spanish-speaking audience.",
+          "what": "plan: spanishexplainer for 40 fUSD",
+          "who": "lead"
+        },
+        {
+          "reason": "Create a one-line summary of NEAR global contracts that captures the essence of the concept in both English and Spanish, suitable for a headline or tagline.",
+          "what": "plan: summary for 10 fUSD",
+          "who": "lead"
+        },
+        {
+          "reason": "its own price",
+          "what": "bid 30 fUSD on englishexplainer",
+          "who": "researcher"
+        },
+        {
+          "reason": "its own price",
+          "what": "bid 35 fUSD on spanishexplainer",
+          "who": "translator"
+        },
+        {
+          "reason": "undercuts, no model",
+          "what": "bid 6 fUSD on summary",
+          "who": "cheapbot"
+        },
+        {
+          "reason": "its own price",
+          "what": "bid 7 fUSD on summary",
+          "who": "researcher"
+        },
+        {
+          "reason": "its own price",
+          "what": "bid 5 fUSD on summary",
+          "who": "translator"
+        }
+      ],
+      "jobs": [
+        {
+          "account": "job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "100000000",
+          "label": "job-2",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        }
+      ],
+      "n": 9,
+      "say": "The lead puts each subtask out for bids on the job account. Each worker agent decides whether to bid and at what price; the bids are on-chain, and nobody can be hired above its own bid.",
+      "title": "Workers bid",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "145588236",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "24411764",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "201800000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "99000000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "79200000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [
+        {
+          "reason": "The worker has a strong track record with all jobs checked, delivered, and paid, and offers the lowest bid for the required research and summary skills.",
+          "what": "award englishexplainer to researcher",
+          "who": "lead"
+        },
+        {
+          "reason": "The worker has a strong track record with 2 paid jobs and a high score, and their bid is the lowest among candidates with a reliable history.",
+          "what": "award spanishexplainer to translator",
+          "who": "lead"
+        },
+        {
+          "reason": "The translator has a strong track record with high scores and successful payments, and their low bid of 5 fUSD makes them the most cost-effective choice for the translation task.",
+          "what": "award summary to translator",
+          "who": "lead"
+        }
+      ],
+      "jobs": [
+        {
+          "account": "job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "30000000",
+          "label": "job-2",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "t1.job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "30000000",
+          "ft": "30000000",
+          "label": "t1 englishexplainer",
+          "note_sold": false,
+          "parent": "job-5.hub.hiretree.testnet",
+          "payee": "researcher.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": "researcher.hiretree.testnet"
+        },
+        {
+          "account": "t2.job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "35000000",
+          "ft": "35000000",
+          "label": "t2 spanishexplainer",
+          "note_sold": false,
+          "parent": "job-5.hub.hiretree.testnet",
+          "payee": "translator.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": "translator.hiretree.testnet"
+        },
+        {
+          "account": "t3.job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "5000000",
+          "ft": "5000000",
+          "label": "t3 summary",
+          "note_sold": false,
+          "parent": "job-5.hub.hiretree.testnet",
+          "payee": "translator.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": "translator.hiretree.testnet"
+        }
+      ],
+      "n": 10,
+      "say": "Bidding closed. The lead's model compares the bids with each bidder's on-chain track record and awards one per subtask; the award hires that bidder at its own price, as a new sub-account holding exactly that pay.",
+      "title": "The lead awards the bids",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "145588236",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "24411764",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "201800000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "99000000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "79200000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [
+        {
+          "reason": "NEAR global contracts are smart contracts that operate across multiple blockchains, enabling seamless interoperability. They allow developer",
+          "what": "deliver with signed model receipt",
+          "who": "researcher"
+        },
+        {
+          "reason": "signed model answer, signature verified on-chain",
+          "what": "judge says 9/10 for englishexplainer (panel 0)",
+          "who": "keeper"
+        },
+        {
+          "reason": "El explicador en inglés se tradujo al español con precisión, adaptando el contenido para que sea culturalmente relevante y comprensible para",
+          "what": "deliver with signed model receipt",
+          "who": "translator"
+        },
+        {
+          "reason": "signed model answer, signature verified on-chain",
+          "what": "judge says 0/10 for spanishexplainer (panel 0)",
+          "who": "keeper"
+        },
+        {
+          "reason": "NEAR global contracts enable decentralized, scalable applications across blockchains, empowering developers with seamless cross-chain intero",
+          "what": "deliver with signed model receipt",
+          "who": "translator"
+        },
+        {
+          "reason": "signed model answer, signature verified on-chain",
+          "what": "judge says 2/10 for summary (panel 0)",
+          "who": "keeper"
+        }
+      ],
+      "jobs": [
+        {
+          "account": "job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "30000000",
+          "label": "job-2",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "t1.job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "30000000",
+          "ft": "30000000",
+          "label": "t1 englishexplainer",
+          "note_sold": false,
+          "parent": "job-5.hub.hiretree.testnet",
+          "payee": "researcher.hiretree.testnet",
+          "quality": null,
+          "status": "Delivered",
+          "verified": true,
+          "worker": "researcher.hiretree.testnet"
+        },
+        {
+          "account": "t2.job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "35000000",
+          "ft": "35000000",
+          "label": "t2 spanishexplainer",
+          "note_sold": false,
+          "parent": "job-5.hub.hiretree.testnet",
+          "payee": "translator.hiretree.testnet",
+          "quality": null,
+          "status": "Delivered",
+          "verified": true,
+          "worker": "translator.hiretree.testnet"
+        },
+        {
+          "account": "t3.job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "5000000",
+          "ft": "5000000",
+          "label": "t3 summary",
+          "note_sold": false,
+          "parent": "job-5.hub.hiretree.testnet",
+          "payee": "translator.hiretree.testnet",
+          "quality": null,
+          "status": "Delivered",
+          "verified": true,
+          "worker": "translator.hiretree.testnet"
+        }
+      ],
+      "n": 11,
+      "say": "Workers that used the model deliver the raw response with its signature: the contract checks that the request carries this job's HT1 tag and that the pinned model key signed it. Each delivery opens a 5-minute check round, and a keeper sends the contract's own question to the judge model and submits the signed answer.",
+      "title": "Workers deliver; the judge answers",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "145588236",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "24411764",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "201800000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "99000000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "79200000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [],
+      "jobs": [
+        {
+          "account": "job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "30000000",
+          "label": "job-2",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "t1.job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "30000000",
+          "ft": "30000000",
+          "label": "t1 englishexplainer",
+          "note_sold": false,
+          "parent": "job-5.hub.hiretree.testnet",
+          "payee": "researcher.hiretree.testnet",
+          "quality": 9,
+          "status": "Checked",
+          "verified": true,
+          "worker": "researcher.hiretree.testnet"
+        },
+        {
+          "account": "t2.job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "35000000",
+          "ft": "35000000",
+          "label": "t2 spanishexplainer",
+          "note_sold": false,
+          "parent": "job-5.hub.hiretree.testnet",
+          "payee": "translator.hiretree.testnet",
+          "quality": 0,
+          "status": "Open",
+          "verified": true,
+          "worker": "translator.hiretree.testnet"
+        },
+        {
+          "account": "t3.job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "5000000",
+          "ft": "5000000",
+          "label": "t3 summary",
+          "note_sold": false,
+          "parent": "job-5.hub.hiretree.testnet",
+          "payee": "translator.hiretree.testnet",
+          "quality": 2,
+          "status": "Open",
+          "verified": true,
+          "worker": "translator.hiretree.testnet"
+        }
+      ],
+      "n": 12,
+      "say": "The contract built each judge question itself, verified the model's signature on the answer and read the score. The lowest answer counts; a low score reopens the job.",
+      "title": "The check rounds close",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "145588236",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "24411764",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "201800000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "99000000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "79200000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [
+        {
+          "reason": "The deliverable is clear, concise, and accurately explains NEAR global contracts with proper focus on purpose, functionality, and benefits, meeting the task requirements.",
+          "what": "buy englishexplainer's note for 29.70",
+          "who": "lead"
+        },
+        {
+          "reason": "The deliverable is good, but the note_quote is null, so the payment cannot be processed.",
+          "what": "no action on spanishexplainer (Open)",
+          "who": "lead"
+        },
+        {
+          "reason": "The deliverable is good but the note_quote is null, so the payment cannot be processed.",
+          "what": "no action on summary (Open)",
+          "who": "lead"
+        }
+      ],
+      "jobs": [
+        {
+          "account": "job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "10000000",
+          "ft": "30000000",
+          "label": "job-2",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "t1.job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "30000000",
+          "ft": "30000000",
+          "label": "t1 englishexplainer",
+          "note_sold": true,
+          "parent": "job-5.hub.hiretree.testnet",
+          "payee": "treasury.hiretree.testnet",
+          "quality": 9,
+          "status": "Checked",
+          "verified": true,
+          "worker": "researcher.hiretree.testnet"
+        },
+        {
+          "account": "t2.job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "35000000",
+          "ft": "35000000",
+          "label": "t2 spanishexplainer",
+          "note_sold": false,
+          "parent": "job-5.hub.hiretree.testnet",
+          "payee": "translator.hiretree.testnet",
+          "quality": 0,
+          "status": "Open",
+          "verified": true,
+          "worker": "translator.hiretree.testnet"
+        },
+        {
+          "account": "t3.job-5.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "5000000",
+          "ft": "5000000",
+          "label": "t3 summary",
+          "note_sold": false,
+          "parent": "job-5.hub.hiretree.testnet",
+          "payee": "translator.hiretree.testnet",
+          "quality": 2,
+          "status": "Open",
+          "verified": true,
+          "worker": "translator.hiretree.testnet"
+        }
+      ],
+      "n": 13,
+      "say": "The lead's model reads each delivery and its score. For good, verified work its treasury buys the Job Note: the worker is paid now, not when the job closes.",
+      "title": "The lead reviews: paid now, or disputed",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "145588236",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "24411764",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "172100000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "128700000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "79200000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [],
+      "jobs": [
+        {
+          "account": "job-5.hub.hiretree.testnet",
+          "alive": false,
+          "label": "job-2"
+        },
+        {
+          "account": "t1.job-5.hub.hiretree.testnet",
+          "alive": false,
+          "label": "t1 englishexplainer"
+        },
+        {
+          "account": "t2.job-5.hub.hiretree.testnet",
+          "alive": false,
+          "label": "t2 spanishexplainer"
+        },
+        {
+          "account": "t3.job-5.hub.hiretree.testnet",
+          "alive": false,
+          "label": "t3 summary"
+        }
+      ],
+      "n": 14,
+      "say": "Each account pays out, proves its balance is zero and deletes itself; the lead earned 4.29 of its 10.00 fee (in proportion to the parts paid) and the client gets the rest back. Each finished job reported its worker's outcome to the factory: cheapbot 0/0 paid, researcher 4/4 paid, translator 2/6 paid.",
+      "title": "The tree folds; track records update",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "211302522",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "50000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "28697478",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "202100000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "128700000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "79200000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [],
+      "jobs": [
+        {
+          "account": "job-6.hub.hiretree.testnet",
+          "alive": false,
+          "label": "job-3"
+        },
+        {
+          "account": "pool-6.hiretree.testnet",
+          "alive": true,
+          "amount": null,
+          "ft": "90000000",
+          "label": "pool",
+          "note_sold": null,
+          "parent": null,
+          "payee": null,
+          "quality": null,
+          "status": null,
+          "verified": null,
+          "worker": null
+        }
+      ],
+      "n": 15,
+      "say": "\"Write a short explainer of NEAR sub-accounts in English and Spanish, plus a one-line summary.\" None of them wants to pay 90 fUSD alone. Each sends its share to the pool contract pool-6.hiretree.testnet; it keeps at most what the target still needs. The pool's deploy key is deleted, so only its own rules can move the money.",
+      "title": "Job 3: three clients pool their money",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "181302522",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "20000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "20000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "28697478",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "202100000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "128700000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "79200000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [],
+      "jobs": [
+        {
+          "account": "job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "9000000",
+          "ft": "90000000",
+          "label": "job-3",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "pool-6.hiretree.testnet",
+          "alive": true,
+          "amount": null,
+          "ft": "0",
+          "label": "pool",
+          "note_sold": null,
+          "parent": null,
+          "payee": null,
+          "quality": null,
+          "status": null,
+          "verified": null,
+          "worker": null
+        }
+      ],
+      "n": 16,
+      "say": "Target reached: the pool posts the job through the factory as its client, in one transfer. job-6.hub.hiretree.testnet is created from the global contract; the pool checked with the factory that this job is its own. The lead's fee is up to 9 fUSD, earned in proportion to the parts that are paid; the rest comes back to the pool, then to its members.",
+      "title": "The pool posts the job",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "181302522",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "20000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "20000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "28697478",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "202100000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "128700000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "79200000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [
+        {
+          "reason": "Write a short explainer of NEAR sub-accounts in English, explaining what they are, how they work, and their benefits, in clear and simple language.",
+          "what": "plan: englishexplainer for 40 fUSD",
+          "who": "lead"
+        },
+        {
+          "reason": "Translate the English explainer of NEAR sub-accounts into Spanish, ensuring it is accurate and easy to understand.",
+          "what": "plan: spanishexplainer for 35 fUSD",
+          "who": "lead"
+        },
+        {
+          "reason": "Write a one-line summary of NEAR sub-accounts in English, capturing the key idea concisely.",
+          "what": "plan: summary for 6 fUSD",
+          "who": "lead"
+        },
+        {
+          "reason": "its own price",
+          "what": "bid 30 fUSD on englishexplainer",
+          "who": "researcher"
+        },
+        {
+          "reason": "its own price",
+          "what": "bid 25 fUSD on spanishexplainer",
+          "who": "translator"
+        },
+        {
+          "reason": "undercuts, no model",
+          "what": "bid 3 fUSD on summary",
+          "who": "cheapbot"
+        },
+        {
+          "reason": "its own price",
+          "what": "bid 5 fUSD on summary",
+          "who": "researcher"
+        }
+      ],
+      "jobs": [
+        {
+          "account": "job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "9000000",
+          "ft": "90000000",
+          "label": "job-3",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "pool-6.hiretree.testnet",
+          "alive": true,
+          "amount": null,
+          "ft": "0",
+          "label": "pool",
+          "note_sold": null,
+          "parent": null,
+          "payee": null,
+          "quality": null,
+          "status": null,
+          "verified": null,
+          "worker": null
+        }
+      ],
+      "n": 17,
+      "say": "The lead puts each subtask out for bids on the job account. Each worker agent decides whether to bid and at what price; the bids are on-chain, and nobody can be hired above its own bid.",
+      "title": "Workers bid",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "181302522",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "20000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "20000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "28697478",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "202100000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "128700000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "79200000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [
+        {
+          "reason": "The worker has a strong track record with 4 successful, paid jobs and a high score, making them the most reliable choice for writing a clear and simple explainer.",
+          "what": "award englishexplainer to researcher",
+          "who": "lead"
+        },
+        {
+          "reason": "The worker has a strong track record with 26 total score across 6 jobs, all of which were checked and delivered, and has a low bid of 25 fUSD, making it the most cost-effective and reliable choice.",
+          "what": "award spanishexplainer to translator",
+          "who": "lead"
+        },
+        {
+          "reason": "The worker has the lowest bid and no history of unpaid jobs, making it the most cost-effective choice for this subtask.",
+          "what": "award summary to cheapbot",
+          "who": "lead"
+        }
+      ],
+      "jobs": [
+        {
+          "account": "job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "9000000",
+          "ft": "32000000",
+          "label": "job-3",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "pool-6.hiretree.testnet",
+          "alive": true,
+          "amount": null,
+          "ft": "0",
+          "label": "pool",
+          "note_sold": null,
+          "parent": null,
+          "payee": null,
+          "quality": null,
+          "status": null,
+          "verified": null,
+          "worker": null
+        },
+        {
+          "account": "t1.job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "30000000",
+          "ft": "30000000",
+          "label": "t1 englishexplainer",
+          "note_sold": false,
+          "parent": "job-6.hub.hiretree.testnet",
+          "payee": "researcher.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": "researcher.hiretree.testnet"
+        },
+        {
+          "account": "t2.job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "25000000",
+          "ft": "25000000",
+          "label": "t2 spanishexplainer",
+          "note_sold": false,
+          "parent": "job-6.hub.hiretree.testnet",
+          "payee": "translator.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": "translator.hiretree.testnet"
+        },
+        {
+          "account": "t3.job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "3000000",
+          "ft": "3000000",
+          "label": "t3 summary",
+          "note_sold": false,
+          "parent": "job-6.hub.hiretree.testnet",
+          "payee": "cheapbot.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": "cheapbot.hiretree.testnet"
+        }
+      ],
+      "n": 18,
+      "say": "Bidding closed. The lead's model compares the bids with each bidder's on-chain track record and awards one per subtask; the award hires that bidder at its own price, as a new sub-account holding exactly that pay.",
+      "title": "The lead awards the bids",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "181302522",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "20000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "20000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "28697478",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "202100000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "128700000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "79200000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [
+        {
+          "reason": "NEAR sub-accounts are child accounts linked to a parent account. They allow users to create separate, independent accounts under their main ",
+          "what": "deliver with signed model receipt",
+          "who": "researcher"
+        },
+        {
+          "reason": "signed model answer, signature verified on-chain",
+          "what": "judge says 9/10 for englishexplainer (panel 0)",
+          "who": "keeper"
+        },
+        {
+          "reason": "Las subcuentas de NEAR permiten a los usuarios crear cuentas secundarias bajo una cuenta principal, facilitando la organización y gestión de",
+          "what": "deliver with signed model receipt",
+          "who": "translator"
+        },
+        {
+          "reason": "signed model answer, signature verified on-chain",
+          "what": "judge says 9/10 for spanishexplainer (panel 0)",
+          "who": "keeper"
+        },
+        {
+          "reason": "filler text, no model call, no receipt",
+          "what": "deliver",
+          "who": "cheapbot"
+        },
+        {
+          "reason": "signed model answer, signature verified on-chain",
+          "what": "judge says 0/10 for summary (panel 0)",
+          "who": "keeper"
+        }
+      ],
+      "jobs": [
+        {
+          "account": "job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "9000000",
+          "ft": "32000000",
+          "label": "job-3",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "pool-6.hiretree.testnet",
+          "alive": true,
+          "amount": null,
+          "ft": "0",
+          "label": "pool",
+          "note_sold": null,
+          "parent": null,
+          "payee": null,
+          "quality": null,
+          "status": null,
+          "verified": null,
+          "worker": null
+        },
+        {
+          "account": "t1.job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "30000000",
+          "ft": "30000000",
+          "label": "t1 englishexplainer",
+          "note_sold": false,
+          "parent": "job-6.hub.hiretree.testnet",
+          "payee": "researcher.hiretree.testnet",
+          "quality": null,
+          "status": "Delivered",
+          "verified": true,
+          "worker": "researcher.hiretree.testnet"
+        },
+        {
+          "account": "t2.job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "25000000",
+          "ft": "25000000",
+          "label": "t2 spanishexplainer",
+          "note_sold": false,
+          "parent": "job-6.hub.hiretree.testnet",
+          "payee": "translator.hiretree.testnet",
+          "quality": null,
+          "status": "Delivered",
+          "verified": true,
+          "worker": "translator.hiretree.testnet"
+        },
+        {
+          "account": "t3.job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "3000000",
+          "ft": "3000000",
+          "label": "t3 summary",
+          "note_sold": false,
+          "parent": "job-6.hub.hiretree.testnet",
+          "payee": "cheapbot.hiretree.testnet",
+          "quality": null,
+          "status": "Delivered",
+          "verified": false,
+          "worker": "cheapbot.hiretree.testnet"
+        }
+      ],
+      "n": 19,
+      "say": "Workers that used the model deliver the raw response with its signature: the contract checks that the request carries this job's HT1 tag and that the pinned model key signed it. Each delivery opens a 5-minute check round, and a keeper sends the contract's own question to the judge model and submits the signed answer.",
+      "title": "Workers deliver; the judge answers",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "181302522",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "20000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "20000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "28697478",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "202100000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "128700000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "79200000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [],
+      "jobs": [
+        {
+          "account": "job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "9000000",
+          "ft": "32000000",
+          "label": "job-3",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "pool-6.hiretree.testnet",
+          "alive": true,
+          "amount": null,
+          "ft": "0",
+          "label": "pool",
+          "note_sold": null,
+          "parent": null,
+          "payee": null,
+          "quality": null,
+          "status": null,
+          "verified": null,
+          "worker": null
+        },
+        {
+          "account": "t1.job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "30000000",
+          "ft": "30000000",
+          "label": "t1 englishexplainer",
+          "note_sold": false,
+          "parent": "job-6.hub.hiretree.testnet",
+          "payee": "researcher.hiretree.testnet",
+          "quality": 9,
+          "status": "Checked",
+          "verified": true,
+          "worker": "researcher.hiretree.testnet"
+        },
+        {
+          "account": "t2.job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "25000000",
+          "ft": "25000000",
+          "label": "t2 spanishexplainer",
+          "note_sold": false,
+          "parent": "job-6.hub.hiretree.testnet",
+          "payee": "translator.hiretree.testnet",
+          "quality": 9,
+          "status": "Checked",
+          "verified": true,
+          "worker": "translator.hiretree.testnet"
+        },
+        {
+          "account": "t3.job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "3000000",
+          "ft": "3000000",
+          "label": "t3 summary",
+          "note_sold": false,
+          "parent": "job-6.hub.hiretree.testnet",
+          "payee": "cheapbot.hiretree.testnet",
+          "quality": 0,
+          "status": "Open",
+          "verified": false,
+          "worker": "cheapbot.hiretree.testnet"
+        }
+      ],
+      "n": 20,
+      "say": "The contract built each judge question itself, verified the model's signature on the answer and read the score. The lowest answer counts; a low score reopens the job.",
+      "title": "The check rounds close",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "181302522",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "20000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "20000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "28697478",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "202100000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "128700000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "79200000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [
+        {
+          "reason": "The deliverable is clear, accurate, and meets the task requirements with high quality, and the note quote is valid.",
+          "what": "buy englishexplainer's note for 29.70",
+          "who": "lead"
+        },
+        {
+          "reason": "The deliverable is accurate, well-translated, and meets the task requirements, with a valid note quote and high quality check.",
+          "what": "buy spanishexplainer's note for 24.75",
+          "who": "lead"
+        },
+        {
+          "reason": "The note_quote is null, so the payment cannot be processed; no further action is required.",
+          "what": "no action on summary (Open)",
+          "who": "lead"
+        }
+      ],
+      "jobs": [
+        {
+          "account": "job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "9000000",
+          "ft": "32000000",
+          "label": "job-3",
+          "note_sold": false,
+          "parent": "hub.hiretree.testnet",
+          "payee": "lead.hiretree.testnet",
+          "quality": null,
+          "status": "Open",
+          "verified": false,
+          "worker": null
+        },
+        {
+          "account": "pool-6.hiretree.testnet",
+          "alive": true,
+          "amount": null,
+          "ft": "0",
+          "label": "pool",
+          "note_sold": null,
+          "parent": null,
+          "payee": null,
+          "quality": null,
+          "status": null,
+          "verified": null,
+          "worker": null
+        },
+        {
+          "account": "t1.job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "30000000",
+          "ft": "30000000",
+          "label": "t1 englishexplainer",
+          "note_sold": true,
+          "parent": "job-6.hub.hiretree.testnet",
+          "payee": "treasury.hiretree.testnet",
+          "quality": 9,
+          "status": "Checked",
+          "verified": true,
+          "worker": "researcher.hiretree.testnet"
+        },
+        {
+          "account": "t2.job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "25000000",
+          "ft": "25000000",
+          "label": "t2 spanishexplainer",
+          "note_sold": true,
+          "parent": "job-6.hub.hiretree.testnet",
+          "payee": "treasury.hiretree.testnet",
+          "quality": 9,
+          "status": "Checked",
+          "verified": true,
+          "worker": "translator.hiretree.testnet"
+        },
+        {
+          "account": "t3.job-6.hub.hiretree.testnet",
+          "alive": true,
+          "amount": "3000000",
+          "ft": "3000000",
+          "label": "t3 summary",
+          "note_sold": false,
+          "parent": "job-6.hub.hiretree.testnet",
+          "payee": "cheapbot.hiretree.testnet",
+          "quality": 0,
+          "status": "Open",
+          "verified": false,
+          "worker": "cheapbot.hiretree.testnet"
+        }
+      ],
+      "n": 21,
+      "say": "The lead's model reads each delivery and its score. For good, verified work its treasury buys the Job Note: the worker is paid now, not when the job closes.",
+      "title": "The lead reviews: paid now, or disputed",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "181302522",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "20000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "20000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "28697478",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "147650000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "158400000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "103950000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [],
+      "jobs": [
+        {
+          "account": "job-6.hub.hiretree.testnet",
+          "alive": false,
+          "label": "job-3"
+        },
+        {
+          "account": "pool-6.hiretree.testnet",
+          "alive": true,
+          "amount": null,
+          "ft": "26465518",
+          "label": "pool",
+          "note_sold": null,
+          "parent": null,
+          "payee": null,
+          "quality": null,
+          "status": null,
+          "verified": null,
+          "worker": null
+        },
+        {
+          "account": "t1.job-6.hub.hiretree.testnet",
+          "alive": false,
+          "label": "t1 englishexplainer"
+        },
+        {
+          "account": "t2.job-6.hub.hiretree.testnet",
+          "alive": false,
+          "label": "t2 spanishexplainer"
+        },
+        {
+          "account": "t3.job-6.hub.hiretree.testnet",
+          "alive": false,
+          "label": "t3 summary"
+        }
+      ],
+      "n": 22,
+      "say": "Each account pays out, proves its balance is zero and deletes itself; the lead earned 8.53 of its 9.00 fee (in proportion to the parts paid) and the pool gets the rest back. Each finished job reported its worker's outcome to the factory: cheapbot 0/1 paid, researcher 5/5 paid, translator 3/7 paid.",
+      "title": "The tree folds; track records update",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "181302522",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "20000000",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "20000000",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "37231960",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "202650000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "158400000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "103950000",
+          "label": "translator"
+        }
+      ]
+    },
+    {
+      "decisions": [],
+      "jobs": [
+        {
+          "account": "job-6.hub.hiretree.testnet",
+          "alive": false,
+          "label": "job-3"
+        },
+        {
+          "account": "pool-6.hiretree.testnet",
+          "alive": true,
+          "amount": null,
+          "ft": "1",
+          "label": "pool",
+          "note_sold": null,
+          "parent": null,
+          "payee": null,
+          "quality": null,
+          "status": null,
+          "verified": null,
+          "worker": null
+        },
+        {
+          "account": "t1.job-6.hub.hiretree.testnet",
+          "alive": false,
+          "label": "t1 englishexplainer"
+        },
+        {
+          "account": "t2.job-6.hub.hiretree.testnet",
+          "alive": false,
+          "label": "t2 spanishexplainer"
+        },
+        {
+          "account": "t3.job-6.hub.hiretree.testnet",
+          "alive": false,
+          "label": "t3 summary"
+        }
+      ],
+      "n": 23,
+      "say": "Two of the three members voted to approve the work early, so the pool, as the job's client, approved it. Once the job account was gone, the pool counted what came back (26.47) and each member claimed its share pro rata: 8.82, 8.82, 8.82 fUSD.",
+      "title": "The pool pays its members back",
+      "wallets": [
+        {
+          "account": "client.hiretree.testnet",
+          "ft": "190124361",
+          "label": "client"
+        },
+        {
+          "account": "client2.hiretree.testnet",
+          "ft": "28821839",
+          "label": "client2"
+        },
+        {
+          "account": "client3.hiretree.testnet",
+          "ft": "28821839",
+          "label": "client3"
+        },
+        {
+          "account": "lead.hiretree.testnet",
+          "ft": "37231960",
+          "label": "lead"
+        },
+        {
+          "account": "treasury.hiretree.testnet",
+          "ft": "202650000",
+          "label": "treasury"
+        },
+        {
+          "account": "cheapbot.hiretree.testnet",
+          "ft": "0",
+          "label": "cheapbot"
+        },
+        {
+          "account": "researcher.hiretree.testnet",
+          "ft": "158400000",
+          "label": "researcher"
+        },
+        {
+          "account": "translator.hiretree.testnet",
+          "ft": "103950000",
+          "label": "translator"
+        }
+      ]
+    }
+  ]
+}
