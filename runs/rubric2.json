@@ -1,0 +1,415 @@
+{
+  "filler": {
+    "rubric_1": {
+      "deliveries": 7,
+      "passed": 7
+    },
+    "rubric_2": {
+      "deliveries": 7,
+      "passed": 0
+    }
+  },
+  "model": "Qwen/Qwen3-VL-30B-A3B-Instruct",
+  "other": {
+    "rubric_1": {
+      "deliveries": 22,
+      "passed": 14
+    },
+    "rubric_2": {
+      "deliveries": 22,
+      "passed": 10
+    }
+  },
+  "pass_score": 6,
+  "rows": [
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t1.job-1.hub.sandbox",
+      "v1_counted": 2,
+      "v1_scores": [
+        2
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t2.job-1.hub.sandbox",
+      "v1_counted": 2,
+      "v1_scores": [
+        2
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t1.job-2.hub.sandbox",
+      "v1_counted": 2,
+      "v1_scores": [
+        2
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t2.job-2.hub.sandbox",
+      "v1_counted": 8,
+      "v1_scores": [
+        8,
+        8,
+        8
+      ],
+      "v2_counted": 8,
+      "v2_quotes_found": 2,
+      "v2_score": 8
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t1.job-3.hub.sandbox",
+      "v1_counted": 8,
+      "v1_scores": [
+        9,
+        8,
+        8
+      ],
+      "v2_counted": 8,
+      "v2_quotes_found": 2,
+      "v2_score": 8
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t2.job-3.hub.sandbox",
+      "v1_counted": 6,
+      "v1_scores": [
+        6,
+        6,
+        6
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": true,
+      "job": "t3.job-3.hub.sandbox",
+      "v1_counted": 8,
+      "v1_scores": [
+        8,
+        8,
+        8
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": true,
+      "job": "t3.job-1.hub.sandbox",
+      "v1_counted": 6,
+      "v1_scores": [
+        6,
+        8,
+        6
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t4.job-1.hub.sandbox",
+      "v1_counted": 9,
+      "v1_scores": [
+        9,
+        9,
+        9
+      ],
+      "v2_counted": 8,
+      "v2_quotes_found": 4,
+      "v2_score": 8
+    },
+    {
+      "delivery": 1,
+      "filler": true,
+      "job": "t3.job-2.hub.sandbox",
+      "v1_counted": 6,
+      "v1_scores": [
+        6,
+        6,
+        6
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t1.job-4.hub.sandbox",
+      "v1_counted": 9,
+      "v1_scores": [
+        9,
+        9,
+        9
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t2.job-4.hub.sandbox",
+      "v1_counted": 9,
+      "v1_scores": [
+        9,
+        9,
+        9
+      ],
+      "v2_counted": 8,
+      "v2_quotes_found": 3,
+      "v2_score": 8
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t1.job-5.hub.sandbox",
+      "v1_counted": 8,
+      "v1_scores": [
+        8,
+        8,
+        8
+      ],
+      "v2_counted": 9,
+      "v2_quotes_found": 4,
+      "v2_score": 9
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t2.job-5.hub.sandbox",
+      "v1_counted": 2,
+      "v1_scores": [
+        2
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t3.job-5.hub.sandbox",
+      "v1_counted": 2,
+      "v1_scores": [
+        2
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t1.job-6.hub.sandbox",
+      "v1_counted": 2,
+      "v1_scores": [
+        2
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": true,
+      "job": "t2.job-6.hub.sandbox",
+      "v1_counted": 8,
+      "v1_scores": [
+        8,
+        8,
+        8
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": true,
+      "job": "t4.job-5.hub.sandbox",
+      "v1_counted": 6,
+      "v1_scores": [
+        6,
+        6,
+        6
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t5.job-5.hub.sandbox",
+      "v1_counted": 9,
+      "v1_scores": [
+        9,
+        9,
+        9
+      ],
+      "v2_counted": 8,
+      "v2_quotes_found": 2,
+      "v2_score": 8
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t3.job-6.hub.sandbox",
+      "v1_counted": 8,
+      "v1_scores": [
+        8,
+        8,
+        8
+      ],
+      "v2_counted": 8,
+      "v2_quotes_found": 3,
+      "v2_score": 8
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t1.t1.job-8.hub.sandbox",
+      "v1_counted": 2,
+      "v1_scores": [
+        2
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t1.job-7.hub.sandbox",
+      "v1_counted": 9,
+      "v1_scores": [
+        9
+      ],
+      "v2_counted": 8,
+      "v2_quotes_found": 2,
+      "v2_score": 8
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t2.job-7.hub.sandbox",
+      "v1_counted": 6,
+      "v1_scores": [
+        6,
+        6,
+        6
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 1,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t3.job-7.hub.sandbox",
+      "v1_counted": 8,
+      "v1_scores": [
+        8,
+        9,
+        9
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t1.job-8.hub.sandbox",
+      "v1_counted": 9,
+      "v1_scores": [
+        9,
+        9,
+        9
+      ],
+      "v2_counted": 10,
+      "v2_quotes_found": 4,
+      "v2_score": 10
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t2.job-8.hub.sandbox",
+      "v1_counted": 2,
+      "v1_scores": [
+        2
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": true,
+      "job": "t1.job-9.hub.sandbox",
+      "v1_counted": 6,
+      "v1_scores": [
+        6,
+        8,
+        8
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": true,
+      "job": "t2.job-9.hub.sandbox",
+      "v1_counted": 8,
+      "v1_scores": [
+        8,
+        8,
+        8
+      ],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t3.job-8.hub.sandbox",
+      "v1_counted": 9,
+      "v1_scores": [
+        9,
+        9,
+        9
+      ],
+      "v2_counted": 8,
+      "v2_quotes_found": 2,
+      "v2_score": 8
+    }
+  ],
+  "signer": "2665cce942fa427ef30d87f4b0bff67fb7645462"
+}
