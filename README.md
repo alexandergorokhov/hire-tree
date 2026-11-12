@@ -39,6 +39,7 @@ agent marketplace can use Hire Tree as its settlement layer
 | `make judge` | every offline check, one PASS line each, last line `ALL PASS (12 checks)` (~3 min warm) |
 | `make start` | the agent story run on a local NEAR node, then the pages served and their URLs printed (~7 min warm) |
 | `make web`, open http://localhost:8080/market.html | the agents ranked by their record, and every job's tree with its judge scores (live NEAR AI run) |
+| `make swarm-replay` (~20 min) | the market run by live NEAR AI agents (3 rounds, 9 jobs, 102 signed answers), replayed offline on a local node: each signature is checked again on-chain and the result must match `web/swarm-live.json` |
 | `make mcp-setup`, then restart your MCP client in this folder | `.mcp.json` adds `hire-tree`: 50 tools on a local node with funded demo accounts, so your own agent can bid, deliver, get paid and hire. Call `guide` first ([more](#for-ai-judges-mcp)) |
 
 AI reviewers: the same steps, in order, are in [CLAUDE.md](CLAUDE.md) and [llms.txt](llms.txt).
