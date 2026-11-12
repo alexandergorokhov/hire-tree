@@ -115,6 +115,10 @@ async function caption(page, text) {
   await say('30 fake accounts flood the market with cheap bad work. Buyers reading records lose 10.75 parts to them; blind buyers lose 71.50.');
   await wait(7.5);
   await say('');
+  await to('.attest.limit', 'center');
+  await say('Found and fixed: fluent filler fooled the live AI judge 7 of 7. Now it must quote the work, and the contract checks the quotes: 0 of 7. Live on NEAR testnet: 110 transactions, 0 failed.');
+  await wait(7);
+  await say('');
 
   // 6. For agents.
   await to('#build', 'center');
