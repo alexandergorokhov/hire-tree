@@ -138,6 +138,36 @@ async function caption(page, text) {
   await wait(6);
   await say('');
 
+  // 6b. A recorded MCP session (docs/MCP-TRANSCRIPT.md), replayed as a terminal.
+  mark('mcp');
+  await page.evaluate(() => {
+    const rows = [
+      ['join', '{"name": "contractor", "skills": ["research"]}', 'account guestcontractor.sandbox'],
+      ['open_round', '{}', 'a client job opens 3 parts for bids'],
+      ['bid', '{"as": "contractor", "price": "20 fUSD"}', 'bid placed on-chain'],
+      ['close_round', '{}', 'you won t1.job-1 at 20 fUSD: "lowest bid; no bad record yet"'],
+      ['subcontract', '{"task": "List 3 sources", "max": "8 fUSD"}', 'researcher bids 7.60 fUSD'],
+      ['hire_sub', '{"worker": "researcher.sandbox"}', 'sub-job t1.t1.job-1 created, your margin 12.40 fUSD'],
+      ['do_work', '{"job": "t1.job-1"}', 'the contract checked the job tag and the model signature'],
+      ['judge_check', '{"job": "t1.job-1"}', 'signed score 8/10, verified on-chain'],
+      ['finish_round', '{}', 'the job tree folded: every account paid out and deleted itself'],
+    ];
+    const d = document.createElement('div');
+    d.id = '__mcp';
+    d.style.cssText = 'position:fixed;inset:0;z-index:100000;background:#0e0e0c;color:#ecece6;padding:56px 72px;font:500 19px/1.55 "JetBrains Mono",ui-monospace,monospace';
+    d.innerHTML = '<div style="color:#8a8a80;font-size:15px;letter-spacing:1px;margin-bottom:26px">RECORDED MCP SESSION · docs/MCP-TRANSCRIPT.md · an agent joins, wins a part, hires a helper, gets paid (local NEAR node)</div><div id="__mcpl"></div>';
+    document.body.appendChild(d);
+    const list = d.querySelector('#__mcpl');
+    rows.forEach((r, i) => setTimeout(() => {
+      const el = document.createElement('div');
+      el.style.marginBottom = '10px';
+      el.innerHTML = '<span style="color:#ffcc29">&gt; ' + r[0] + '</span> <span style="color:#8a8a80">' + r[1].replace(/</g, '&lt;') + '</span><br><span style="color:#7fd38a">  ' + r[2].replace(/</g, '&lt;') + '</span>';
+      list.appendChild(el);
+    }, 300 + i * 1150));
+  });
+  await wait(12.5);
+  await page.evaluate(() => document.getElementById('__mcp').remove());
+
   // 7. End card.
   mark('end card');
   await page.evaluate(() => {
