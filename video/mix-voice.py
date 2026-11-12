@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Lay the narration under the demo video.
 
-  python3 video/mix-voice.py VIDEO.mp4 VOICE_DIR OUT.mp4
+  python3 video/mix-voice.py VIDEO.mp4 VOICE_DIR OUT.mp4 [STARTS]
 
 VOICE_DIR holds 01.wav, 02.wav, ... one per line of video/voice-lines.tsv
 (make them with video/voice.sh). Each line starts at its time in the tsv, or
-just after the line before it ends, whichever is later; if the last line runs
+just after the line before it ends, whichever is later (STARTS, one time per
+line, overrides the tsv times: scripts/clip.js writes out/clip/voice-starts.tsv); if the last line runs
 past the video, the last frame is held. Needs ffmpeg and ffprobe.
 """
 import pathlib
@@ -22,11 +23,13 @@ def duration(path):
 
 
 def main():
-    if len(sys.argv) != 4:
+    if len(sys.argv) not in (4, 5):
         sys.exit(__doc__)
     video, voice_dir, out = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), sys.argv[3]
     tsv = pathlib.Path(__file__).with_name("voice-lines.tsv")
     starts = [float(line.split("\t", 1)[0]) for line in tsv.read_text().splitlines() if line.strip()]
+    if len(sys.argv) == 5:
+        starts = [float(x) for x in pathlib.Path(sys.argv[4]).read_text().split()]
     clips, t = [], 0.0
     for i, want in enumerate(starts, 1):
         wav = voice_dir / f"{i:02d}.wav"
