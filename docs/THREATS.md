@@ -334,8 +334,9 @@ for the bid calls.
   JSON-escaped, so a quote right after a line break (`\nContratos`) was
   not found and job `t3.job-5`'s real 10 counted 2. Fixed: the check
   reads the escapes too (`quotes_match_a_delivered_receipt_whose_text_is_json_escaped`;
-  all 8 testnet answers now count as given). The deployed testnet code
-  predates the fix; a redeploy picks it up.
+  all 8 answers of that run now count as given). Testnet was redeployed
+  with the fix (global code `4jA8vfVK5eJ2kcQdGtGY8B3rZZAW548j3Ga4NCDkyd41`);
+  the rerun's 9 signed answers all counted as the model gave them.
 - Firing ends the worker's chance to redeliver after one failed check. A
   borderline worker (score 5) loses the job; the signed check decides, not
   the buyer. A rich junk operator can still stake 10x and win once per

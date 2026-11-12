@@ -20,20 +20,20 @@ tree. An agent marketplace can use it as its settlement layer
 
 ![A recursive labor market: every node is a NEAR account](docs/screens/recursive-market.svg)
 
-**Live on NEAR testnet** (contract with judge rubric 2, live NEAR AI,
+**Live on NEAR testnet** (the current contract: judge rubric 2 with the quote fix below, global code `4jA8vfVK…`, live NEAR AI,
 [`web/scene-testnet.json`](web/scene-testnet.json), open
 `web/index.html?scene=scene-testnet.json`): factory `hub.hiretree.testnet`,
-fake token `usdc.hiretree.testnet`, 3 jobs, 23 scenes, 103 transactions,
-0 failed, 50 signed NEAR AI calls.
+fake token `usdc.hiretree.testnet`, 3 jobs, 23 scenes, 110 transactions,
+0 failed, 54 signed NEAR AI calls.
 
 | Step | Transaction |
 |---|---|
-| A part is awarded by bid | [6yj5UFDn…](https://testnet.nearblocks.io/txns/6yj5UFDnJQi3d9CYmwwmTgsdfG5BZUtQV9uDRvSktGAJ) |
-| Its NEAR AI judge answer, checked on-chain (score 9) | [B57A2AxA…](https://testnet.nearblocks.io/txns/B57A2AxARbtYDT2DYzCbLKTN7yNs5d1NV4zFHscGm35U) |
-| Paid, and its job account deletes itself | [Cx3HgMS7…](https://testnet.nearblocks.io/txns/Cx3HgMS7uYDonPxAWbNi9oUKwAgLckc97T7q38K9ypDz) |
-| Junk scored 0 by the judge | [8osAakEv…](https://testnet.nearblocks.io/txns/8osAakEv5J7EkWPo9LMeAbCNpZxnJfy11ePfp6ZYYoFd) |
-| Junk settled: fired, not paid | [3LHoxZuk…](https://testnet.nearblocks.io/txns/3LHoxZukdCeTQkr45Kxtwf3wD1huG541t5zd5me66ATY) |
-| A buying pool's members claim their refund | [H2GMbaYP…](https://testnet.nearblocks.io/txns/H2GMbaYPTUgcLLPq5a3yyvh6uF3pMzt2n5MummfMwu1j) |
+| A part is awarded by bid | [EKJVronw…](https://testnet.nearblocks.io/txns/EKJVronwWoQNW2CSECyVBnV1TqRMfLMkWZkAmehmsco3) |
+| Its NEAR AI judge answer, checked on-chain (score 10) | [f5DBZeW6…](https://testnet.nearblocks.io/txns/f5DBZeW6AJuLMtxQLf84o8ZNZy4FHo2HRTeLiAvLSoL) |
+| Paid, and its job account deletes itself | [27vkQQQT…](https://testnet.nearblocks.io/txns/27vkQQQTJb4LBHi6nVBKt2tTXv9VYPjRA6btw3ZPoD6Q) |
+| Junk scored 0 by the judge | [CZuLUh4U…](https://testnet.nearblocks.io/txns/CZuLUh4UVSi59Lqns34MiRweGVS9zXpYCiMGgQJdG4wv) |
+| Junk settled: fired, not paid | [27qk6rvZ…](https://testnet.nearblocks.io/txns/27qk6rvZYK8sWPrx28qEmmQxKPWf71GtnWqEn9yQwBb7) |
+| A buying pool's members claim their refund | [2GiEBWB1…](https://testnet.nearblocks.io/txns/2GiEBWB1BGbcoCRobkeRcx7vnwwZLfRRsSuFT5wrrRWE) |
 
 One job, as `make demo` records it on a local NEAR node (`web/scene.json`,
 step through it with `make web`):
@@ -102,13 +102,13 @@ answer signed and replayed offline by `make rubric-check`:
 | Fluent filler from the live run (`demo/rubric2-cassette.json`) | passed 7 of 7 | **passed 0 of 7** (others: 14 of 22 → 10 of 22) |
 | Filler written *for* the task vs a real answer, 6 tasks (`demo/probe-cassette.json`) | | **filler 0 of 6, real 6 of 6**; the contract's cap caught one filler the model gave 6 (its "quotes" came from the task) |
 | Harder probe, 8 tasks: the model's own answer, filler the model wrote to look finished, filler that copies the task (`demo/probe2-cassette.json`) | | **real 8 of 8; task-copy filler 0 of 8; model-written filler 1 of 8**, and that one lists the four steps it was asked for (a terse answer, not empty) |
-| Real answers on testnet (`demo/testnet-judge-cassette.json`) | 1 of 8 underpaid: a real 10 counted 2 | **bug fixed**: all 8 count as given |
+| Real answers on testnet (`demo/testnet-judge-cassette.json`) | first run: 1 of 8 underpaid, a real 10 counted 2 | **fixed and redeployed**: all 8 count as given under the fix; the rerun on the fixed contract counted all 9 answers as given |
 
 The new question does most of the work; the contract's quote check is the
 backstop. The testnet bug: a worker delivers the signed NEAR AI response,
 so the answer's line breaks are the two characters `\n` and a quote after
-one was missed; the check now also reads JSON escapes (the deployed
-testnet code predates the fix). The 4 other answers that stopped passing
+one was missed; the check now also reads JSON escapes, and testnet runs
+the fixed code (first run's answers: `demo/testnet-judge-cassette-run1.json`). The 4 other answers that stopped passing
 are generic answers to the run's one-line placeholder tasks. Details and
 tests: [THREATS.md](docs/THREATS.md), [runs/rubric2.json](runs/rubric2.json),
 [runs/filler-probe-result.json](runs/filler-probe-result.json),

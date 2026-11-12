@@ -245,6 +245,7 @@ verify-cassette: ## Re-check every NEAR AI signature in the cassettes: the story
 	@if [ -s $(PROBE_CASSETTE) ]; then cd agents && $(HT) verify-cassette $(PROBE_CASSETTE); fi
 	@if [ -s $(PROBE2_CASSETTE) ]; then cd agents && $(HT) verify-cassette $(PROBE2_MAKER) && $(HT) verify-cassette $(PROBE2_CASSETTE); fi
 	@if [ -s $(CURDIR)/demo/testnet-judge-cassette.json ]; then cd agents && $(HT) verify-cassette $(CURDIR)/demo/testnet-judge-cassette.json; fi
+	@if [ -s $(CURDIR)/demo/testnet-judge-cassette-run1.json ]; then cd agents && $(HT) verify-cassette $(CURDIR)/demo/testnet-judge-cassette-run1.json; fi
 
 .PHONY: testnet-dryrun
 testnet-dryrun: build ## The testnet code path (derived keys, tight funding, rerun reuse, real 5-min waits) against a local node; prints NEAR spent (~25 min)

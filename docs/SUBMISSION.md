@@ -13,7 +13,7 @@ make web              # http://localhost:8080/market.html
 
 Recorded MCP session: `docs/MCP-TRANSCRIPT.md`. Results: `docs/RESULTS.md`.
 On NEAR testnet: factory `hub.hiretree.testnet`, the agent story with live
-NEAR AI (103 transactions, 0 failed; links in the README and
+NEAR AI (110 transactions, 0 failed, on the current contract; links in the README and
 `web/scene-testnet.json`).
 
 ## Tracks

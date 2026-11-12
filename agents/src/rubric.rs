@@ -371,35 +371,39 @@ mod tests {
 
     #[test]
     fn every_signed_testnet_answer_counts_as_the_fixed_contract_counts_it() {
-        // demo/testnet-judge-cassette.json: the 8 answers the testnet jobs
-        // got (rubric 2). The worker delivers the signed NEAR AI response
-        // body, so the answer text is JSON-escaped in the deliverable. On
-        // testnet t3.job-5's second quote followed a `\n` and was missed:
-        // the model's 10 counted 2. Each answer must now count as given.
-        let f = format!(
-            "{}/../demo/testnet-judge-cassette.json",
-            env!("CARGO_MANIFEST_DIR")
-        );
-        let c: Cassette = serde_json::from_str(&std::fs::read_to_string(f).unwrap()).unwrap();
-        assert_eq!(c.entries.len(), 8);
-        for e in &c.entries {
-            let req: Value = serde_json::from_str(&e.req).unwrap();
-            let u: Value =
-                serde_json::from_str(req["messages"][1]["content"].as_str().unwrap()).unwrap();
-            let content = serde_json::from_str::<Value>(&e.resp).unwrap()["choices"][0]["message"]
-                ["content"]
-                .as_str()
-                .unwrap()
-                .to_string();
-            let given = serde_json::from_str::<Value>(&content).unwrap()["score"]
-                .as_u64()
-                .unwrap() as u8;
-            assert_eq!(
-                read_v2(&content, u["deliverable"].as_str().unwrap()),
-                Some(given),
-                "{}",
-                u["job"]
-            );
+        // The signed answers both testnet runs got (rubric 2). The worker
+        // delivers the signed NEAR AI response body, so the answer text is
+        // JSON-escaped in the deliverable. In the first run (8 answers,
+        // contract before the fix) t3.job-5's second quote followed a `\n`
+        // and was missed: the model's 10 counted 2. Under the fixed check
+        // every answer of both runs counts as given; the second run (9
+        // answers) ran the fixed contract.
+        for (file, n) in [
+            ("testnet-judge-cassette-run1.json", 8),
+            ("testnet-judge-cassette.json", 9),
+        ] {
+            let f = format!("{}/../demo/{file}", env!("CARGO_MANIFEST_DIR"));
+            let c: Cassette = serde_json::from_str(&std::fs::read_to_string(f).unwrap()).unwrap();
+            assert_eq!(c.entries.len(), n, "{file}");
+            for e in &c.entries {
+                let req: Value = serde_json::from_str(&e.req).unwrap();
+                let u: Value =
+                    serde_json::from_str(req["messages"][1]["content"].as_str().unwrap()).unwrap();
+                let content = serde_json::from_str::<Value>(&e.resp).unwrap()["choices"][0]
+                    ["message"]["content"]
+                    .as_str()
+                    .unwrap()
+                    .to_string();
+                let given = serde_json::from_str::<Value>(&content).unwrap()["score"]
+                    .as_u64()
+                    .unwrap() as u8;
+                assert_eq!(
+                    read_v2(&content, u["deliverable"].as_str().unwrap()),
+                    Some(given),
+                    "{file} {}",
+                    u["job"]
+                );
+            }
         }
     }
 
