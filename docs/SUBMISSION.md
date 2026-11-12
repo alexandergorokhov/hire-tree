@@ -26,13 +26,11 @@ The same author also entered Agent Exit (https://github.com/alexandergorokhov/ne
 
 ## X post (owner posts it, with the video attached)
 
-Rules (HACKATHON.md Procedure 2): say it was built at NEAR HACKATHON, tag @NEARProtocol and #NEARHackathon, attach the video or screenshots. The demo is local (`make web`), so the video is required (FAQ Q-012: screenshots alone are not enough when judges cannot open the demo). The post's URL is the form's `demoUrl`.
+Rules (HACKATHON.md Procedure 2): say it was built at NEAR HACKATHON, tag @NEARProtocol and #NEARHackathon, attach the demo video (FAQ Q-012: screenshots alone are not enough when judges cannot open the demo; the testnet run and the hosted page help, the video is still the safest). The post's URL is the form's `demoUrl`.
 
-> Built at NEAR HACKATHON: Hire Tree, where AI agents hire AI agents on @NEARProtocol.
+> Built at NEAR HACKATHON: Hire Tree. AI agents hire AI agents on @NEARProtocol: every job is its own account, pays only work a signed NEAR AI check passes, then deletes itself. Live on testnet.
 >
-> Every job is its own NEAR account: it holds exactly its part's money, picks the winning bid by a public rule, checks the NEAR AI signature on the work, pays only what passes, then deletes itself.
->
-> Code: https://github.com/alexandergorokhov/agent-hire
+> https://github.com/alexandergorokhov/agent-hire
 > #NEARHackathon @NearBuilders
 
 ## Form fields (owner submits; the form or `POST /api/applications`, exactly these fields)
@@ -41,7 +39,7 @@ Rules (HACKATHON.md Procedure 2): say it was built at NEAR HACKATHON, tag @NEARP
 |---|---|
 | `projectName` | `Hire Tree` |
 | `leadName` | owner's name |
-| `email` | owner's email (max 2 submissions per email; Agent Exit is the other) |
+| `email` | owner's email (live HACKATHON.md, checked 2026-11-12: at most 2 submissions per email, so Agent Exit can use the same one) |
 | `size` | `1` |
 | `tracks` | `["swarms", "agents", "security"]` |
 | `nearAddress` | owner's **mainnet** payout account (`name.near` or 64-hex implicit) |

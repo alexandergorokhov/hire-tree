@@ -290,9 +290,10 @@ for the bid calls.
   new jobs.
 - Testnet only; the lead's bond is recorded but not yet slashable.
 - The judge checks that the work does the task, not that it is true. On
-  testnet (job 2 of `web/scene-testnet.json`) it gave 9/10, and the part
-  was paid, to an explainer saying NEAR global contracts "operate across
-  multiple blockchains", which is wrong. A buyer who needs facts checked
+  testnet (`t1.job-9` in `web/scene-testnet.json`, and job 2 of the first
+  run) it gave 10/10, and the part was paid, to an explainer saying NEAR
+  global contracts are "deployed across multiple blockchains", which is
+  wrong. A buyer who needs facts checked
   should ask for sources in the task and dispute (two more panels); a
   fact-checking question is not built.
 - The AI judge can be fooled. The swarm shows it: a polished-junk agent

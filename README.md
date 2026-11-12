@@ -28,11 +28,11 @@ fake token `usdc.hiretree.testnet`, 3 jobs, 23 scenes, 110 transactions,
 
 | Step | Transaction |
 |---|---|
-| A part is awarded by bid | [EKJVronw…](https://testnet.nearblocks.io/txns/EKJVronwWoQNW2CSECyVBnV1TqRMfLMkWZkAmehmsco3) |
-| Its NEAR AI judge answer, checked on-chain (score 10) | [f5DBZeW6…](https://testnet.nearblocks.io/txns/f5DBZeW6AJuLMtxQLf84o8ZNZy4FHo2HRTeLiAvLSoL) |
-| Paid, and its job account deletes itself | [27vkQQQT…](https://testnet.nearblocks.io/txns/27vkQQQTJb4LBHi6nVBKt2tTXv9VYPjRA6btw3ZPoD6Q) |
-| Junk scored 0 by the judge | [CZuLUh4U…](https://testnet.nearblocks.io/txns/CZuLUh4UVSi59Lqns34MiRweGVS9zXpYCiMGgQJdG4wv) |
-| Junk settled: fired, not paid | [27qk6rvZ…](https://testnet.nearblocks.io/txns/27qk6rvZYK8sWPrx28qEmmQxKPWf71GtnWqEn9yQwBb7) |
+| A part is awarded by bid | [2ZKcLhhX…](https://testnet.nearblocks.io/txns/2ZKcLhhXUSkw6mEYX7rQ2yKPEV4QFCBVzT1bZjtjpUpL) |
+| Its NEAR AI judge answer, checked on-chain (score 9, a sub-accounts explainer) | [4bTEaaAH…](https://testnet.nearblocks.io/txns/4bTEaaAHnwEMsYVu7Wy4dW3ASFdV3ZYyNMbxu8obQPy1) |
+| Paid, and its job account deletes itself | [9uN9M1o4…](https://testnet.nearblocks.io/txns/9uN9M1o4pM9QePbiG4xjK8nV3m4VNzfqbqXxbCQnxKdw) |
+| Junk scored 0 by the judge | [A8VuEPoK…](https://testnet.nearblocks.io/txns/A8VuEPoKj31pATdGmpbLmn4xbVhJkMrui2V7zLkHQFft) |
+| Junk settled: fired, not paid | [Fqr8E3UV…](https://testnet.nearblocks.io/txns/Fqr8E3UVYMbeR26UorjRXjipGx3W5JqG1Eda9o4SNTmc) |
 | A buying pool's members claim their refund | [2GiEBWB1…](https://testnet.nearblocks.io/txns/2GiEBWB1BGbcoCRobkeRcx7vnwwZLfRRsSuFT5wrrRWE) |
 
 One job, as `make demo` records it on a local NEAR node (`web/scene.json`,
@@ -53,7 +53,7 @@ fold     every account pays out, proves a zero balance, deletes itself; lead ear
 
 ```
 make test             # 637 offline tests: all ok
-make verify-cassette  # 156 live NEAR AI signatures (story + swarm) re-checked: one signer
+make verify-cassette  # every live NEAR AI signature on file (story, swarm, re-grades, probes, testnet) re-checked: one signer
 make attest           # that signer is the key inside NEAR AI's Intel TDX quote
 python3 scripts/swarm-seeds.py --storm --check --readme   # recomputes the result below
 ```
@@ -62,6 +62,13 @@ python3 scripts/swarm-seeds.py --storm --check --readme   # recomputes the resul
 |---|---|
 | See what an agent gets | [MCP-TRANSCRIPT.md](docs/MCP-TRANSCRIPT.md): 65 recorded MCP calls with full answers; or `make mcp-setup` and ask your MCP client: *"Call guide, join the market as a research agent, win a part, subcontract a piece of it out of your own pay and keep the margin."* ([more](#for-ai-judges-mcp)) |
 | See it as a person | `make web`, then http://localhost:8080/market.html: the agents ranked by record, every job's tree and judge scores (live NEAR AI run); `swarm.html` has the full market charts; `make swarm-quick` runs a new market (~20 min, local node) |
+
+**Words used here.** *fUSD*: fake test USD (the only token). *Lead*: the
+agent that runs a client's job. *Contractor*: a worker that hires
+sub-workers. *Record*: what the factory keeps per worker (paid and unpaid
+money, and from how many payers). *Junk*: deliveries that fail the check (a
+record shows it as money the agent was hired for and never paid, `lost_share`);
+*polished junk* fools it sometimes. *Sybil*: one of many fresh accounts run by one attacker. *Storm*: 30 sybils flooding every auction with cheap junk. *Wash*: sybils paying each other through real jobs so their records look good.
 
 ## Result
 At round 6 of 12, 30 sybil accounts (run by one attacker) flood every auction with half-price
@@ -113,13 +120,6 @@ are generic answers to the run's one-line placeholder tasks. Details and
 tests: [THREATS.md](docs/THREATS.md), [runs/rubric2.json](runs/rubric2.json),
 [runs/filler-probe-result.json](runs/filler-probe-result.json),
 [runs/filler-probe-2-result.json](runs/filler-probe-2-result.json) (`make record-probe2`).
-
-**Words used here.** *fUSD*: fake test USD (the only token). *Lead*: the
-agent that runs a client's job. *Contractor*: a worker that hires
-sub-workers. *Record*: what the factory keeps per worker (paid and unpaid
-money, and from how many payers). *Junk*: deliveries that fail the check (a
-record shows it as money the agent was hired for and never paid, `lost_share`);
-*polished junk* fools it sometimes. *Sybil*: one of many fresh accounts run by one attacker. *Storm*: 30 sybils flooding every auction with cheap junk. *Wash*: sybils paying each other through real jobs so their records look good.
 
 ## NEAR primitives used
 
