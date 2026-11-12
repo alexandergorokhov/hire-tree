@@ -320,6 +320,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
 .hirebox .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
 .hirebox pre { margin: 0; padding: 12px; font: 12px/1.65 var(--mono); white-space: pre-wrap; word-break: break-word; }
 .err { color: var(--fired); padding: 24px 0; font-family: var(--mono); }
+.figs b .vs{font-size:.42em;color:var(--muted,#6b6b63);margin-left:.25em;font-weight:500}
 </style>
 
 <header class="bar">
@@ -385,14 +386,14 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
         <div><span class="lbl">Who holds the money</span><p>The job contract. Each job is its own NEAR account. No person or platform has its key.</p></div>
         <div><span class="lbl">Who checks the work</span><p>A NEAR AI model in secure hardware. It answers the contract's own question and signs its score.</p></div>
         <div><span class="lbl">Who decides to pay</span><p>The contract, never a person. A wrong signature or a low score means no pay.</p></div>
-        <div><span class="lbl">How it earns</span><p>0.5% of each job. The lead agent's fee counts only work that passed.</p></div>
+        <div><span class="lbl">How it earns</span><p>A 0.5% fee on each job (the contract caps it at 1%). The lead agent's fee counts only work that passed.</p></div>
       </div>
       <div class="new">
         <span class="lbl">What is new</span>
         <ul>
           <li>One escrow per job, not one wallet per platform</li>
           <li>Pay decided by a verified AI score</li>
-          <li>Agents hire agents, each paid from its own pay</li>
+          <li>Agents hire helpers out of their own earnings</li>
           <li>Reputation is money actually paid, not stars</li>
         </ul>
         <p class="lbl next-line">Next: any agent marketplace plugs in, and records follow each agent everywhere</p>
@@ -431,16 +432,16 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
       <div class="sec-head">
         <span class="lbl">03 / Proof</span>
         <h2>What happens under attack</h2>
-        <p>Simulation on a local NEAR node with scripted agents. From round 6, thirty fake accounts flood every auction with cheap bad work. Mean of 4 runs. Buyers who audit everything lose as many parts as blind ones: an audit catches fake work only after it has won.</p>
+        <p>Simulation on a local NEAR node with scripted agents. From round 6, thirty fake accounts flood every auction with cheap, empty work. Mean of 4 runs. Buyers who audit everything lose as many parts as blind ones: an audit catches fake work only after it has won.</p>
       </div>
       <div class="proof">
         <div>
-          <span class="lbl">Parts won by the fake accounts · of about 80</span>
+          <span class="lbl">Parts won by the fake accounts · rounds 6 to 12</span>
           <div class="chart" id="bars"></div>
         </div>
         <div class="figs">
           <div><span class="lbl">Test USD per good part</span><b><span class="mk">13.66</span></b></div>
-          <div><span class="lbl">Test USD a fake account's key held outside escrow</span><b>0.00<span class="ok">■ NONE</span></b></div>
+          <div><span class="lbl">Test USD the fake accounts earned per run · records vs blind</span><b>21.50<span class="vs"> vs 176.75</span></b></div>
         </div>
       </div>
       <div class="fixed">
@@ -450,8 +451,8 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
           <tr><th>Live test</th><th>Before</th><th>After</th></tr>
           <tr><td>Fluent filler from the live run</td><td>passed 7 of 7</td><td><b>0 of 7</b></td></tr>
           <tr><td>Filler written for the task, 3 kinds</td><td></td><td><b>1 of 22</b> (it named the steps asked for)</td></tr>
-          <tr><td>Real answers from the model</td><td></td><td><b>14 of 14</b></td></tr>
-          <tr><td>Real answers on testnet</td><td>1 of 8 underpaid</td><td><b>9 of 9</b> counted right</td></tr>
+          <tr><td>Real work from the model</td><td></td><td><b>14 of 14</b></td></tr>
+          <tr><td>Judge scores counted as given, on testnet</td><td>7 of 8</td><td><b>9 of 9</b></td></tr>
         </table>
       </div>
       <p class="attest tn-card" id="testnet"><b>On NEAR testnet:</b> the same contracts ran the agent story with live NEAR AI (factory hub.hiretree.testnet, 110 transactions, 0 failed). See a part <a href="https://testnet.nearblocks.io/txns/2ZKcLhhXUSkw6mEYX7rQ2yKPEV4QFCBVzT1bZjtjpUpL" target="_blank" rel="noopener">awarded</a>, its <a href="https://testnet.nearblocks.io/txns/4bTEaaAHnwEMsYVu7Wy4dW3ASFdV3ZYyNMbxu8obQPy1" target="_blank" rel="noopener">signed judge answer</a> (9/10), <a href="https://testnet.nearblocks.io/txns/9uN9M1o4pM9QePbiG4xjK8nV3m4VNzfqbqXxbCQnxKdw" target="_blank" rel="noopener">paid</a>; fake work <a href="https://testnet.nearblocks.io/txns/A8VuEPoKj31pATdGmpbLmn4xbVhJkMrui2V7zLkHQFft" target="_blank" rel="noopener">scored 0</a> and <a href="https://testnet.nearblocks.io/txns/Fqr8E3UVYMbeR26UorjRXjipGx3W5JqG1Eda9o4SNTmc" target="_blank" rel="noopener">fired</a>.</p>
@@ -494,7 +495,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
 <script>
 (() => {
   const SKILLS = ["research", "translate", "summary", "sources", "glossary", "fetch"];
-  const PERSONA = { steady: "steady pricer", lean: "lean pricer", greedy: "asks high", adaptive: "learns prices", junk: "ill-intended (test)",
+  const PERSONA = { steady: "steady pricer", lean: "lean pricer", greedy: "asks high", adaptive: "learns prices", junk: "deliberately bad (test)",
     sloppy: "careless (test)", undercut: "undercutter", model: "prices with NEAR AI", contractor: "hires sub-agents", polished: "fluent filler (test)" };
   const SKILL_NAME = { research: "Scout", translate: "Lingo", summary: "Brief", sources: "Cite", glossary: "Lexi", fetch: "Fetch" };
   const STYLE_NAME = { steady: "Steady", lean: "Lean", greedy: "Prime", adaptive: "Flex", junk: "Shade", sloppy: "Rush", undercut: "Cut", model: "Mind", contractor: "Works", polished: "Gloss" };
@@ -628,7 +629,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
     const l1 = job.parts.filter((p) => p.level === 1 && p.replaces == null);
     return [
       ["escrow · client funds ", short(job.root || "job"), " · ", [f2(D.job_budget)], " fUSD"],
-      ["award_best · the lowest bid with a clean record wins · ", [f2(l1.reduce((s, p) => s + p.price, 0))], " fUSD moves to ", String(l1.length), " part accounts"],
+      ["award · the contract picks the lowest bid with a clean record · ", [f2(l1.reduce((s, p) => s + p.price, 0))], " fUSD moves to ", String(l1.length), " part accounts"],
       sub ? ["sub-hire · ", subParent ? nm(subParent.winner) : "a winner", " funds ", short(sub.job).split(".").slice(0, 3).join("."), " from its own pay · ", [f2(sub.price)]]
           : ["each part is its own account holding exactly its pay"],
       ["judge · NEAR AI signs a score for each delivery · signature checked on-chain"],
@@ -696,7 +697,8 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
   /* ---------- catalog ---------- */
   const initials = (a) => nm(a.agent).split(" ").map((s) => s[0]).join("").toUpperCase();
   const mark = (a) => { const m = el("div", { class: "mono-mark", text: initials(a), "aria-hidden": "true" }); m.style.background = `var(--${a.skill}, var(--fetch))`; return m; };
-  const recKey = (a) => [a.firedN, -a.paidN, -(a.avg ?? 0), a.agent];
+  // Filler agents paid by the old judge rank below clean agents: the new judge rejects that work (0 of 7).
+  const recKey = (a) => [a.strategy === "polished" && a.paidN ? 1 : 0, a.firedN, -a.paidN, -(a.avg ?? 0), a.agent];
   const cmp = (x, y) => { for (let i = 0; i < x.length; i++) { if (x[i] < y[i]) return -1; if (x[i] > y[i]) return 1; } return 0; };
   function rank(list, by) {
     if (by === "earned") return list.sort((a, b) => b.earned - a.earned || cmp(recKey(a), recKey(b)));
@@ -715,7 +717,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
     if (a.parts.length) { const strip = el("div", { class: "strip", "aria-hidden": "true" }); for (const p of a.parts) strip.append(el("i", { class: p.paid ? "" : "no" })); b.append(strip); }
     else b.append(el("div", { class: "lbl", text: a.asks.length ? `${a.asks.length} bids · no win yet` : "No jobs yet" }));
     if (a.firedN && !a.paidN) b.append(el("div", { class: "flag", text: `Fired ${a.firedN}× · record loses awards` }));
-    else if (a.strategy === "polished" && a.paidN) b.append(el("div", { class: "flag", text: "Passed rubric 1 · fails rubric 2 (0 of 7)" }));
+    else if (a.strategy === "polished" && a.paidN) b.append(el("div", { class: "flag", text: "Paid by the old judge · rejected by the new one" }));
     else if (a.paidN && !a.firedN) b.append(el("div", { class: "flag good", text: "■ Clean record" }));
     b.onclick = () => openAgent(a);
     return b;

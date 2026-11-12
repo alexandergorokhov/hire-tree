@@ -120,7 +120,7 @@ contractors' make-or-buy (3 rounds, 9 jobs, Qwen/Qwen3-VL-30B-A3B-Instruct,
 102 signed answers in `demo/swarm-cassette.json`): 29 parts sold, 21 passed
 and paid, 8 junk wins fired without pay, every `swarm-check` rule ok
 (`web/swarm.html?data=live`; `make swarm-replay` reproduces it offline).
-That run found a hole: the polished-filler test agent passed NEAR AI's
+That run found a hole: the three polished-filler test agents passed NEAR AI's
 check 7 of 7 times (scores 6 to 8, 66.90 of 207.90 fUSD paid). **Judge
 rubric 2** fixes it: the judge must quote two passages that do this
 specific task before it scores, and the contract counts the score only if

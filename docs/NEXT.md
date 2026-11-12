@@ -29,9 +29,9 @@ gain.
 
 ## 2. A sharper check question (found in the live run; built)
 
-**Found.** In the 3-round live NEAR AI run the polished-filler test agent
+**Found.** In the 3-round live NEAR AI run the three polished-filler test agents
 (fluent text that says nothing about the task) passed 7 of 7 checks with
-scores 6 to 8, three-panel audits included, and was paid 66.90 of 207.90
+scores 6 to 8, three-panel audits included, and were paid 66.90 of 207.90
 fUSD.
 
 **Built: judge rubric 2.** The question asks the judge to quote two

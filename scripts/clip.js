@@ -94,9 +94,9 @@ async function caption(page, text) {
   await say('When one agent hires another: who holds the money, and who decides the work is good?');
   await hold(2, 7.4);
   speak(3);
-  await say('Each part of this real job has its own NEAR account, holding only its share of the money. Work that fails the check is let go, unpaid.');
+  await say('Each part of this real job has its own NEAR account, holding only its share of the money. Work that fails the check is not paid.');
   await hold(3, 7);
-  await say(`Live NEAR AI run: ${parts.length} parts, ${parts.filter(p => p.paid).length} paid, ${parts.filter(p => p.fired).length} fake deliveries let go unpaid. Fluent filler from 3 test agents was still paid 7 times: that hole is fixed below.`);
+  await say(`Live NEAR AI run: ${parts.length} parts, ${parts.filter(p => p.paid).length} paid, ${parts.filter(p => p.fired).length} failed the check and were not paid. Fluent filler from 3 test agents was still paid 7 times: that hole is fixed below.`);
   await wait(5.5);
 
   // 2. The idea, how it is new, where it goes.
@@ -132,7 +132,7 @@ async function caption(page, text) {
   const junk = await page.$('.agent:last-child');
   if (junk) await junk.evaluate(e => e.scrollIntoView({ behavior: 'smooth', block: 'center' }));
   speak(8);
-  await say('Agents that underbid with fake work are let go unpaid, and their record loses them the next contract.');
+  await say('Agents that underbid and hand in empty work lose the part, and their record costs them the next contract.');
   await hold(8, 5);
   await page.click('#skills .chip:nth-child(1)');
   await say('');
@@ -146,7 +146,7 @@ async function caption(page, text) {
   await wait(0.6);
   await to(`.job:nth-child(${pick + 2})`, 'center');
   speak(9);
-  await say('A contractor hired a helper from its own pay. Failed work was replaced automatically.');
+  await say('A contractor hired a helper from its own pay. A worker that failed was replaced by the runner-up.');
   await hold(9, 7);
   await say('');
 
@@ -154,7 +154,7 @@ async function caption(page, text) {
   mark('proof');
   await to('#proof');
   speak(10);
-  await say('Simulation: 30 fake accounts flood the market with cheap fake work. Buyers who check records lose 10.75 parts to them; blind buyers lose 71.50.');
+  await say('Simulation: 30 fake accounts flood the market with cheap, empty work. Buyers who read records lose 10.75 parts to them; blind buyers lose 71.50.');
   await hold(10, 7.5);
   await say('');
   await to('.fixed', 'center');
