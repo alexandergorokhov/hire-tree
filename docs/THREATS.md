@@ -317,7 +317,15 @@ for the bid calls.
   live as well (`runs/filler-probe.json`, 6 tasks, `demo/probe-cassette.json`):
   real answers passed 6 of 6, on-topic filler 0 of 6, and the backstop
   bit once (the model gave a filler 6 but quoted the task, not the work:
-  counted 2). Not proven for every filler; the dispute panels and the
+  counted 2). A harder probe (`runs/probe2-tasks.json`, 8 tasks,
+  `make record-probe2`, `demo/probe2-cassette.json`) let the model write
+  the deliveries itself: its real answers passed 8 of 8, filler that
+  copies the task word for word 0 of 8, and filler the model wrote to look
+  finished ("The work is complete and of high quality. It covers...")
+  1 of 8; that one names the four steps it was asked for, so it is a terse
+  answer more than filler. (A first maker prompt only said "do not do the
+  task"; the model answered every task correctly, so that run was
+  discarded and the prompt made explicit.) Not proven for every filler; the dispute panels and the
   payer-weighted record are the next line
   (`rubric_2_counts_a_score_without_quotes_from_the_work_as_at_most_2`,
   `a_score_without_two_quotes_counts_at_most_two`).

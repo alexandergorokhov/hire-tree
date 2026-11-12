@@ -101,6 +101,7 @@ answer signed and replayed offline by `make rubric-check`:
 |---|---|---|
 | Fluent filler from the live run (`demo/rubric2-cassette.json`) | passed 7 of 7 | **passed 0 of 7** (others: 14 of 22 → 10 of 22) |
 | Filler written *for* the task vs a real answer, 6 tasks (`demo/probe-cassette.json`) | | **filler 0 of 6, real 6 of 6**; the contract's cap caught one filler the model gave 6 (its "quotes" came from the task) |
+| Harder probe, 8 tasks: the model's own answer, filler the model wrote to look finished, filler that copies the task (`demo/probe2-cassette.json`) | | **real 8 of 8; task-copy filler 0 of 8; model-written filler 1 of 8**, and that one lists the four steps it was asked for (a terse answer, not empty) |
 | Real answers on testnet (`demo/testnet-judge-cassette.json`) | 1 of 8 underpaid: a real 10 counted 2 | **bug fixed**: all 8 count as given |
 
 The new question does most of the work; the contract's quote check is the
@@ -110,7 +111,8 @@ one was missed; the check now also reads JSON escapes (the deployed
 testnet code predates the fix). The 4 other answers that stopped passing
 are generic answers to the run's one-line placeholder tasks. Details and
 tests: [THREATS.md](docs/THREATS.md), [runs/rubric2.json](runs/rubric2.json),
-[runs/filler-probe-result.json](runs/filler-probe-result.json).
+[runs/filler-probe-result.json](runs/filler-probe-result.json),
+[runs/filler-probe-2-result.json](runs/filler-probe-2-result.json) (`make record-probe2`).
 
 **Words used here.** *fUSD*: fake test USD (the only token). *Lead*: the
 agent that runs a client's job. *Contractor*: a worker that hires
