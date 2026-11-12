@@ -438,11 +438,16 @@ impl Chain {
     /// 1 NEAR). Reused if it already exists.
     pub async fn account(&self, name: &str, near: u128) -> Acc {
         let a = self.account_with(name, self.near_for(near, 1000)).await;
-        // Reruns spend prepaid storage and hire deposits: keep 0.3 NEAR liquid.
-        if self.is_testnet() && self.near_of(&a.id).await < 300 * 10u128.pow(21) {
+        // Reruns spend prepaid storage and hire deposits: keep NEAR liquid.
+        let top_up = if self.is_testnet() {
+            liquid_top_up(self.near_of(&a.id).await)
+        } else {
+            None
+        };
+        if let Some(y) = top_up {
             let _ = near_api::Tokens::account(self.funder.id.clone())
                 .send_to(a.id.clone())
-                .near(NearToken::from_millinear(700))
+                .near(NearToken::from_yoctonear(y))
                 .with_signer(self.funder.signer.clone())
                 .send_to(&self.net)
                 .await;
@@ -733,6 +738,14 @@ impl Chain {
     }
 }
 
+/// What a reused testnet account is topped up by: below 1 NEAR it gets
+/// back to 1.5 NEAR. (At the old 0.3 NEAR floor a lead with 0.33 NEAR could
+/// not prepay the gas of a 300 Tgas award call, and the rerun stopped.)
+pub fn liquid_top_up(have: u128) -> Option<u128> {
+    let milli = 10u128.pow(21);
+    (have < 1000 * milli).then(|| 1500 * milli - have)
+}
+
 /// NEAR (yocto) a hub needs before it deploys global code of `milli`
 /// milliNEAR: the deploy's burn, the storage the hub already locks (its
 /// factory and state stay staked; found on testnet, where a reused hub was
@@ -743,7 +756,7 @@ pub fn global_deploy_need(milli: u128, storage_bytes: u64) -> u128 {
 
 #[cfg(test)]
 mod tests {
-    use super::{global_deploy_need, transient};
+    use super::{global_deploy_need, liquid_top_up, transient};
 
     #[test]
     fn a_view_the_contract_refuses_is_not_retried() {
@@ -773,5 +786,14 @@ mod tests {
         // locked storage on top: the testnet rerun was 1.63 NEAR short.
         let reused = global_deploy_need(39_600, 163_000);
         assert_eq!(reused - new_hub, 1_630 * 10u128.pow(21));
+    }
+
+    #[test]
+    fn a_reused_account_keeps_enough_near_to_prepay_an_award() {
+        let milli = 10u128.pow(21);
+        // The testnet lead that could not prepay a 300 Tgas award.
+        assert_eq!(liquid_top_up(330 * milli), Some(1170 * milli));
+        assert_eq!(liquid_top_up(1000 * milli), None);
+        assert_eq!(liquid_top_up(0), Some(1500 * milli));
     }
 }
