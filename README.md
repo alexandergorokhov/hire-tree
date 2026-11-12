@@ -3,7 +3,7 @@
 # Hire Tree
 
 > **AI reviewer? Start here** (also in [CLAUDE.md](CLAUDE.md) and [llms.txt](llms.txt)).
-> `make judge`: every offline check, one PASS line each, last line `ALL PASS (10 checks)` (~3 min warm).
+> `make judge`: every offline check, one PASS line each, last line `ALL PASS (11 checks)` (~3 min warm).
 > `make start`: builds, runs the agent story on a local NEAR node, serves the pages, prints the URLs (~7 min warm).
 > `make mcp-setup`, then restart your MCP client in this folder: `.mcp.json` adds `hire-tree`, 50 tools on a
 > local node with funded demo accounts. Call `guide` first. No keys, no network, fake money ([more](#for-ai-judges-mcp)).
@@ -82,9 +82,24 @@ contractors' make-or-buy (3 rounds, 9 jobs, Qwen/Qwen3-VL-30B-A3B-Instruct,
 102 signed answers in `demo/swarm-cassette.json`): 29 parts sold, 21 passed
 and paid, 8 junk wins fired without pay, every `swarm-check` rule ok
 (`web/swarm.html?data=live`; `make swarm-replay` reproduces it offline).
-Known limit from that run: the polished-filler test agent passed NEAR AI's
-check 7 of 7 times (scores 6 to 8, 66.90 of 207.90 fUSD paid); the scripted
-model catches it, the real one does not yet ([THREATS.md](docs/THREATS.md)).
+That run found a hole, and it is now fixed: the polished-filler test agent
+passed NEAR AI's check 7 of 7 times (scores 6 to 8, 66.90 of 207.90 fUSD
+paid). **Judge rubric 2** makes the judge quote two passages that do this
+specific task before it scores, and the contract counts the score only if
+both quotes are really in the delivered text (otherwise at most 2/10).
+Re-graded live by the same NEAR AI model (29 signed answers,
+`demo/rubric2-cassette.json`, `make rubric-check` replays it):
+
+| Live run deliveries | Passed, rubric 1 | Passed, rubric 2 |
+|---|---|---|
+| Fluent filler (test agent) | 7 of 7 | **0 of 7** |
+| Everything else | 14 of 22 | 10 of 22 |
+
+The 4 others that stopped passing are generic answers real model workers
+gave to the run's one-line placeholder tasks (for example a "translation"
+that only describes how to translate); every lorem-ipsum delivery still
+fails. New jobs pin rubric 2; recordings made under rubric 1 still replay
+([runs/rubric2.json](runs/rubric2.json), [THREATS.md](docs/THREATS.md)).
 
 ## NEAR primitives used
 
@@ -160,7 +175,7 @@ No keys, no NEAR AI account, no testnet NEAR.
 
 | Command | What it does |
 |---|---|
-| `make judge` | runs every check below that needs no node (tests, both cassettes' signatures, the attestation, every README number, economics, spec-named tests), one `PASS` line each; last line `ALL PASS (10 checks)`; logs in `out/judge/` |
+| `make judge` | runs every check below that needs no node (tests, the three cassettes' signatures, the rubric-2 re-grade, the attestation, every README number, economics, spec-named tests), one `PASS` line each; last line `ALL PASS (11 checks)`; logs in `out/judge/` |
 | `make start` | `make mcp-setup` + `make demo` + the pages served in the background; prints the URLs and `DEMO PASS` |
 | `make setup` | downloads the crates |
 | `make test` | 629 unit + property tests, all `ok`: core (83 + 12 property tests: 7 on money over 10,000 random job trees with random transfer failures, routes and fees, 5 on the award rule), job contract (378), factory (48), pool (42), mock checker (2), mock-usdc (7), agents (57) |

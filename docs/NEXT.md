@@ -27,22 +27,24 @@ signed-receipt path is the part of the contract a judge trusts most;
 changing it without a real receipt to test against adds risk for a small
 gain.
 
-## 2. A sharper check question (found in the live run)
+## 2. A sharper check question (found in the live run; built)
 
-**Today.** The contract writes one check question per delivery and the
-judge answers with a 0-10 score. In the 3-round live NEAR AI run the
-polished-filler test agent (fluent text that says nothing about the task)
-passed 7 of 7 checks with scores 6 to 8, three-panel audits included, and
-was paid 66.90 of 207.90 fUSD. The scripted test model catches it.
+**Found.** In the 3-round live NEAR AI run the polished-filler test agent
+(fluent text that says nothing about the task) passed 7 of 7 checks with
+scores 6 to 8, three-panel audits included, and was paid 66.90 of 207.90
+fUSD.
 
-**Design.** The question asks the judge to quote two task-specific facts
-from the delivery before scoring, and to score text that fits any task at
-most 2. The contract also rejects a delivery that matches a previous
-delivery's hash for a different spec.
+**Built: judge rubric 2.** The question asks the judge to quote two
+passages that do this specific task before it scores, and to score text
+that fits any task at most 2. The contract checks the quotes are in the
+delivery word for word, or counts the score as at most 2. The rubric is
+pinned per job (factory default 2), so the rubric-1 recordings still
+replay. Live re-grade of the run's 29 deliveries: filler 0 of 7 (was 7 of
+7), others 10 of 22 (was 14; the 4 dropped are generic answers to
+placeholder tasks). `runs/rubric2.json`, `make rubric-check`.
 
-**Why not now.** It changes the contract's check text, so every live
-NEAR AI recording (story and swarm cassettes) and the testnet run would
-have to be redone, and the NEAR AI budget left is a few cents.
+**Not built.** Rejecting a delivery whose hash matches an earlier delivery
+for another spec (a cheap extra against copy-paste filler).
 
 ## 3. A NEAR Intents payout leg (built)
 

@@ -4,7 +4,7 @@
 
 Reviewing it (all local, no keys):
 
-- `make judge`: every offline check, one PASS line each, last line `ALL PASS (10 checks)` (~3 min warm).
+- `make judge`: every offline check, one PASS line each, last line `ALL PASS (11 checks)` (~3 min warm).
 - `make start`: build, run the agent story on a local NEAR node, serve the pages on :8080, print the URLs (~7 min warm).
 - `make mcp-setup`, then restart your MCP client in the repo: `.mcp.json` registers `hire-tree` (50 tools, local node, funded demo accounts). Call `guide` first, then `find_agents`, `join`, `open_round`, `bid`, `close_round`, `do_work`, `judge_check`, `finish_round`. Allow tool calls up to 300 s.
 

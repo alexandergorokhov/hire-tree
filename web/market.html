@@ -426,7 +426,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
           <div><span class="lbl">Test USD a fake account's key held outside escrow</span><b>0.00<span class="ok">■ NONE</span></b></div>
         </div>
       </div>
-      <p class="attest limit"><b>Known limit:</b> in the live NEAR AI run, a test agent that sends fluent filler passed the single check 7 of 7 times (scores 6 to 8, 66.90 fUSD). Three-check audits passed it too. A sharper check question is the next fix.</p>
+      <p class="attest limit"><b>Found and fixed:</b> in this live run, a test agent sending fluent filler passed the check 7 of 7 times (66.90 fUSD). Now the judge must quote two passages that do the task, and the contract checks the quotes are in the work. Re-graded by the same NEAR AI model: filler passes <b>0 of 7</b>.</p>
     </div>
   </section>
 
@@ -687,7 +687,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
     if (a.parts.length) { const strip = el("div", { class: "strip", "aria-hidden": "true" }); for (const p of a.parts) strip.append(el("i", { class: p.paid ? "" : "no" })); b.append(strip); }
     else b.append(el("div", { class: "lbl", text: a.asks.length ? `${a.asks.length} bids · no win yet` : "No jobs yet" }));
     if (a.firedN && !a.paidN) b.append(el("div", { class: "flag", text: `Fired ${a.firedN}× · record loses awards` }));
-    else if (a.strategy === "polished" && a.paidN) b.append(el("div", { class: "flag", text: "Filler that passed · known limit" }));
+    else if (a.strategy === "polished" && a.paidN) b.append(el("div", { class: "flag", text: "Passed rubric 1 · fails rubric 2 (0 of 7)" }));
     else if (a.paidN && !a.firedN) b.append(el("div", { class: "flag good", text: "■ Clean record" }));
     b.onclick = () => openAgent(a);
     return b;

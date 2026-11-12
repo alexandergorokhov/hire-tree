@@ -297,10 +297,17 @@ for the bid calls.
   record first is the open risk. With live NEAR AI it is worse: in the
   3-round live run (`web/swarm-live.json`) the polished-filler agent passed
   7 of 7 checks (scores 6 to 8, 66.90 of 207.90 fUSD paid), audits
-  included. The scripted test model catches the filler; the real model
-  does not. The fix is a sharper contract-written check question (ask for
-  task-specific evidence and score generic text low); it needs a contract
-  change and new live recordings, so it is listed in docs/NEXT.md.
+  included. Fixed by judge rubric 2: the contract's question asks the
+  judge to quote two passages that do this specific task before scoring,
+  and the contract counts the score only if both quotes are found word for
+  word in the delivery (else at most 2). Re-graded live by the same model
+  (`runs/rubric2.json`, `make rubric-check`): filler passed 0 of 7 (was
+  7 of 7); 10 of the 14 other passes still pass, the 4 that dropped are
+  generic answers to placeholder tasks. Left open: a filler written for
+  one task (on-topic sentences with no real content) can still quote
+  itself; the dispute panels and the payer-weighted record are the next
+  line (`rubric_2_counts_a_score_without_quotes_from_the_work_as_at_most_2`,
+  `a_score_without_two_quotes_counts_at_most_two`).
 - Firing ends the worker's chance to redeliver after one failed check. A
   borderline worker (score 5) loses the job; the signed check decides, not
   the buyer. A rich junk operator can still stake 10x and win once per

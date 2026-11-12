@@ -12,7 +12,7 @@ Run these, in this order (all local, no keys, fake money, never mainnet):
 
 | Step | Command | Expect |
 |---|---|---|
-| 1 | `make judge` | one `PASS` line per check; last line `ALL PASS (10 checks)` (~3 min warm; a cold first build adds several minutes) |
+| 1 | `make judge` | one `PASS` line per check; last line `ALL PASS (11 checks)` (~3 min warm; a cold first build adds several minutes) |
 | 2 | `make start` | builds, runs the agent story on a local NEAR node (~5 min), serves `web/` on :8080, ends with `DEMO PASS` and the URLs |
 | 3 | `make mcp-setup`, then restart your MCP client in this folder | `.mcp.json` registers `hire-tree`: 50 tools on a local node with funded demo accounts |
 
@@ -36,7 +36,8 @@ Where the claims are checked:
 - every README number: `scripts/*.py --check` (run by `make judge` and `make lint`);
 - the contract rules: `openspec/` names the test for each requirement;
 - threats and known limits: `docs/THREATS.md` (including a known limit
-  found in the live NEAR AI run: fluent filler can pass the single check);
+  found in the live NEAR AI run, fluent filler passing the check, now fixed by
+  judge rubric 2: `make rubric-check`, filler 0 of 7 re-graded live);
 - a recorded MCP session: `docs/MCP-TRANSCRIPT.md`.
 
 Slower, optional: `make mcp-test` (4 scripted MCP sessions, ~8 min),
