@@ -121,5 +121,13 @@ window anyone calls `finalize_check`.
 - THEN rounds 1 and 2 open; after them `finalize_dispute` counts the original score plus each panel (no answer or split = junk); 2 junk of 3 uphold
 - unit: `dispute_opens_two_panels_and_two_junk_votes_uphold`, `dispute_with_one_good_panel_is_rejected`, `finalize_dispute_too_early_refused`
 
+#### Scenario: Rubric 2: the judge must point at the work (fluent filler)
+- GIVEN the factory pins judge rubric 2 (the default; sub-jobs take their parent's) and the live NEAR AI run showed fluent filler passing rubric 1 7 of 7 times
+- WHEN a NEAR AI answer is submitted
+- THEN the request asks the judge to copy two passages that do this specific task and to score text that fits any task at most 2; the answer is `{"quotes": [...], "score": N}`, and the contract counts N only if two distinct quotes of 3+ words are found word for word in the deliverable (case, punctuation and spacing ignored), at most 2 otherwise; an unknown rubric is refused; a job named no rubric (an older caller, or a replay of a rubric-1 recording) uses rubric 1
+- core: `rubric_v1_requests_are_unchanged_and_v2_differs`, `quotes_match_whatever_the_case_punctuation_or_spacing`, `invented_short_or_repeated_quotes_are_not_evidence`, `a_score_without_two_quotes_counts_at_most_two`
+- unit: `rubric_2_asks_for_quotes_and_pays_work_the_quotes_are_in`, `rubric_2_counts_a_score_without_quotes_from_the_work_as_at_most_2`, `rubric_2_counts_an_answer_with_no_quotes_as_at_most_2`, `a_sub_job_pins_its_parents_rubric`, `an_unknown_rubric_is_refused_and_no_rubric_reads_as_1`, `the_owner_can_pin_an_older_judge_rubric_but_not_an_unknown_one`
+- agents: `deliveries_are_read_from_the_rubric_1_requests_with_their_scores`, `a_v2_answer_counts_as_the_contract_counts_it`, `the_report_compares_both_rubrics_with_the_scripted_judge`; `make rubric-check` replays the live regrade of the run's 29 deliveries (`runs/rubric2.json`)
+
 #### Scenario: Note after a signed check
 - unit: `a_signed_check_makes_a_verified_note_sellable`

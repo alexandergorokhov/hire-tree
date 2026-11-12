@@ -32,6 +32,8 @@ pub struct Chain {
     pub explorer: Option<String>,
     /// Every transaction sent: {who, method, on, tx}.
     pub txs: std::sync::Mutex<Vec<Value>>,
+    /// Judge rubric the factory pins for new jobs (`ht_core::check::rubric`).
+    pub rubric: u8,
 }
 
 pub fn out_dir() -> String {
@@ -80,6 +82,12 @@ impl Chain {
     /// Start a local node and deploy mock-usdc, the global job code and the
     /// factory (pinning `signer` and, if given, the judge model).
     pub async fn sandbox(signer: &str, judge: Option<&str>) -> Chain {
+        Chain::sandbox_with(signer, judge, ht_core::check::RUBRIC_LATEST).await
+    }
+
+    /// [`Chain::sandbox`] with the judge rubric new jobs pin (a replay of
+    /// a recording pins the rubric it was recorded under).
+    pub async fn sandbox_with(signer: &str, judge: Option<&str>, rubric: u8) -> Chain {
         let sbx = near_sandbox::Sandbox::start_sandbox()
             .await
             .expect("start near-sandbox");
@@ -98,6 +106,7 @@ impl Chain {
             "near-sandbox (local node)",
             None,
         );
+        c.rubric = rubric;
         c.deploy(signer, judge).await.unwrap();
         c
     }
@@ -107,7 +116,17 @@ impl Chain {
     /// operator with a key derived from the operator key, so a rerun finds
     /// and reuses what an earlier (interrupted) run created.
     pub async fn testnet(signer: &str, judge: Option<&str>) -> Result<Chain, String> {
+        Chain::testnet_with(signer, judge, ht_core::check::RUBRIC_LATEST).await
+    }
+
+    /// [`Chain::testnet`] with the judge rubric new jobs pin.
+    pub async fn testnet_with(
+        signer: &str,
+        judge: Option<&str>,
+        rubric: u8,
+    ) -> Result<Chain, String> {
         let mut c = Chain::testnet_connect()?;
+        c.rubric = rubric;
         c.deploy(signer, judge).await?;
         Ok(c)
     }
@@ -166,6 +185,7 @@ impl Chain {
             network_name: name.into(),
             explorer,
             txs: Default::default(),
+            rubric: ht_core::check::RUBRIC_LATEST,
         }
     }
 
@@ -236,7 +256,7 @@ impl Chain {
         }
         self.hub = hub.id.clone();
         // Settings follow this run's model and signer (a rerun may change them).
-        self.ok(&hub, &hub.id, "set_settings", json!({ "code_hash": hash_s, "signer": signer, "judge": judge, "clear_judge": judge.is_none() }))
+        self.ok(&hub, &hub.id, "set_settings", json!({ "code_hash": hash_s, "signer": signer, "judge": judge, "clear_judge": judge.is_none(), "rubric": self.rubric }))
             .await;
         self.register(&hub).await;
         Ok(())

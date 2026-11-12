@@ -12,6 +12,7 @@
 //! - [`swarm`]: `hiretree swarm`, many strategy agents over many jobs.
 //! - [`verifier`]: NEAR Intents: the official Verifier wasm, pay landing there, swaps.
 //! - [`judge`]: `hiretree mcp --local`, a playground on a local node for any MCP client.
+//! - [`rubric`]: `hiretree rubric-check`, the live run graded again under judge rubric 2.
 
 pub mod agents;
 pub mod chain;
@@ -19,6 +20,7 @@ pub mod intent;
 pub mod judge;
 pub mod llm;
 pub mod mcp;
+pub mod rubric;
 pub mod scene;
 pub mod swarm;
 pub mod tools;

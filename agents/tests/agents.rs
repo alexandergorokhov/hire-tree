@@ -125,6 +125,7 @@ async fn agents_story_replays_from_a_cassette() {
             signer: signer.clone(),
             signer_source: "test key".into(),
             entries: vec![],
+            rubric: Some(ht_core::check::RUBRIC_LATEST),
         }),
         path.clone(),
     );

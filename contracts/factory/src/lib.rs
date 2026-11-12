@@ -300,6 +300,8 @@ pub struct Factory {
     used_nonces: LookupSet<(AccountId, u128)>,
     /// (worker, manager) pairs where that manager paid that worker.
     payers: LookupSet<(AccountId, AccountId)>,
+    /// Judge rubric version new jobs pin (`ht_core::check::rubric`).
+    rubric: u8,
 }
 
 /// The highest platform fee the owner may set: 1%.
@@ -348,6 +350,7 @@ impl Factory {
             intent_keys: LookupMap::new(b"k"),
             used_nonces: LookupSet::new(b"u"),
             payers: LookupSet::new(b"p"),
+            rubric: ht_core::check::RUBRIC_LATEST,
         }
     }
 
@@ -362,8 +365,16 @@ impl Factory {
         judge: Option<String>,
         clear_judge: Option<bool>,
         fee_bps: Option<u16>,
+        rubric: Option<u8>,
     ) {
         require!(env::predecessor_account_id() == self.owner, "owner only");
+        if let Some(r) = rubric {
+            require!(
+                ht_core::check::rubric(r).is_some(),
+                "unknown judge rubric version"
+            );
+            self.rubric = r;
+        }
         if let Some(f) = fee_bps {
             require!(f <= MAX_FEE_BPS, "fee_bps is at most 100 (1%)");
             self.fee_bps = f;
@@ -396,7 +407,7 @@ impl Factory {
         );
         emit(
             "settings",
-            json!({ "signer": self.signer, "checker": self.checker, "judge": self.judge, "fee_bps": self.fee_bps }),
+            json!({ "signer": self.signer, "checker": self.checker, "judge": self.judge, "fee_bps": self.fee_bps, "rubric": self.rubric }),
         );
     }
 
@@ -528,6 +539,7 @@ impl Factory {
             "window_secs": m.window_secs, "signer": self.signer,
             "code_hash": Base58CryptoHash::from(self.code_hash),
             "checker": self.checker, "treasury": m.treasury, "judge": self.judge,
+            "rubric": self.rubric,
         });
         emit(
             "post_started",
@@ -922,7 +934,7 @@ impl Factory {
             "owner": self.owner, "token": self.token, "fee_bps": self.fee_bps, "fees": U128(self.fees),
             "code_hash": Base58CryptoHash::from(self.code_hash),
             "signer": self.signer, "checker": self.checker, "judge": self.judge,
-            "next": self.next,
+            "next": self.next, "rubric": self.rubric,
         })
     }
 }
@@ -1228,7 +1240,16 @@ mod tests {
     fn only_owner_changes_settings() {
         let mut f = factory();
         ctx("eve.test", vec![]);
-        f.set_settings(None, Some("22".repeat(20)), None, None, None, None, None);
+        f.set_settings(
+            None,
+            Some("22".repeat(20)),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
     }
 
     #[test]
@@ -1240,6 +1261,7 @@ mod tests {
             Some("22".repeat(20)),
             None,
             Some(true),
+            None,
             None,
             None,
             None,
@@ -1260,6 +1282,7 @@ mod tests {
             Some("judge-model".into()),
             None,
             None,
+            None,
         );
         assert_eq!(f.get_settings()["judge"], "judge-model");
         ctx(TOKEN, vec![]);
@@ -1278,6 +1301,23 @@ mod tests {
             .unwrap();
         assert_eq!(init["judge"], "judge-model");
         assert!(init["checker"].is_null());
+        assert_eq!(init["rubric"], 2, "new jobs pin the latest judge rubric");
+    }
+
+    #[test]
+    fn the_owner_can_pin_an_older_judge_rubric_but_not_an_unknown_one() {
+        let mut f = factory();
+        assert_eq!(f.get_settings()["rubric"], ht_core::check::RUBRIC_LATEST);
+        ctx("owner.test", vec![]);
+        // A replay of a run recorded under rubric 1 needs jobs that build
+        // the same request bytes.
+        f.set_settings(None, None, None, None, None, None, None, Some(1));
+        assert_eq!(f.get_settings()["rubric"], 1);
+        let bad = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            f.set_settings(None, None, None, None, None, None, None, Some(9))
+        }));
+        assert!(bad.is_err());
+        assert_eq!(f.get_settings()["rubric"], 1);
     }
 
     #[test]
@@ -1590,6 +1630,7 @@ mod tests {
             Some("judge-model".into()),
             None,
             None,
+            None,
         );
     }
 
@@ -1607,7 +1648,7 @@ mod tests {
         assert_eq!(platform_fee(1, 100), 0);
         let mut f = factory();
         ctx("owner.test", vec![]);
-        f.set_settings(None, None, None, None, None, None, Some(50));
+        f.set_settings(None, None, None, None, None, None, Some(50), None);
         ctx(TOKEN, vec![]);
         f.ft_on_transfer(acc("client.test"), U128(BUDGET), msg());
         let fee = platform_fee(BUDGET, 50);
@@ -1649,7 +1690,7 @@ mod tests {
     fn the_fee_is_capped_at_one_percent() {
         let mut f = factory();
         ctx("owner.test", vec![]);
-        f.set_settings(None, None, None, None, None, None, Some(101));
+        f.set_settings(None, None, None, None, None, None, Some(101), None);
     }
 
     #[test]

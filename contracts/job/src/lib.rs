@@ -433,6 +433,8 @@ pub struct JobView {
     /// (`fee_parts`, `Ledger::fee_floor`; what settle pays once every part
     /// is closed). None on a sub-job.
     pub lead_fee_earned: Option<U128>,
+    /// Judge rubric version (signed-check mode).
+    pub rubric: u8,
 }
 
 #[near(contract_state)]
@@ -523,6 +525,10 @@ pub struct Job {
     /// Root: tokens sent back to the client so far; reported to the client
     /// (`job_refund`) after the settle, so a pool shares exactly this.
     returned_to_client: u128,
+    /// Signed-check mode: the judge rubric version (`ht_core::check::rubric`).
+    /// 2 asks the judge to quote two task-specific passages first; an
+    /// answer whose quotes are not in the deliverable counts at most 2.
+    rubric: u8,
 }
 
 fn emit(event: &str, data: serde_json::Value) {
@@ -622,10 +628,17 @@ impl Job {
         judge: Option<String>,
         registry: Option<AccountId>,
         bid: Option<bool>,
+        rubric: Option<u8>,
     ) -> Self {
         require!(
             !(checker.is_some() && judge.is_some()),
             "pin a checker contract or a judge model, not both"
+        );
+        // No rubric named: version 1 (the factory always names one).
+        let rubric = rubric.unwrap_or(1);
+        require!(
+            judgecheck::rubric(rubric).is_some(),
+            "unknown judge rubric version"
         );
         if let Some(m) = &judge {
             require!(
@@ -720,6 +733,7 @@ impl Job {
             work_passed: false,
             bond_forfeit: false,
             returned_to_client: 0,
+            rubric,
         };
         emit(
             "job_created",
@@ -1825,6 +1839,7 @@ impl Job {
             "judge": self.judge,
             "registry": self.registry,
             "bid": bid,
+            "rubric": self.rubric,
         });
         // The job keeps HIRE_KEEP_NEAR (child's token registration + its own
         // child record); the rest is the child's storage.
@@ -2430,6 +2445,37 @@ impl Job {
         Base64VecU8(self.build_check_request(panel, &task, &deliverable.0))
     }
 
+    /// The score an answer counts for. Rubric 1: `{"score": N}`. Rubric 2:
+    /// `{"quotes": [...], "score": N}`, capped at 2 unless two quotes are
+    /// found word for word in the deliverable (`ht_core::check::graded`).
+    fn read_score(rubric: u8, content: &str, deliverable: &[u8]) -> u8 {
+        if rubric < 2 {
+            return judgecheck::parse_score(content)
+                .unwrap_or_else(|| env::panic_str("answer is not {\"score\": 0-10}"));
+        }
+        let t = content
+            .trim()
+            .trim_start_matches("```json")
+            .trim_start_matches("```")
+            .trim_end_matches("```")
+            .trim();
+        let v: serde_json::Value = serde_json::from_str(t).unwrap_or_else(|_| {
+            env::panic_str("answer is not {\"quotes\": [...], \"score\": 0-10}")
+        });
+        let score = v["score"]
+            .as_u64()
+            .filter(|n| *n <= judgecheck::MAX_SCORE as u64)
+            .unwrap_or_else(|| env::panic_str("answer is not {\"quotes\": [...], \"score\": 0-10}"))
+            as u8;
+        let quotes: Vec<&str> = v["quotes"]
+            .as_array()
+            .map(|a| a.iter().filter_map(|q| q.as_str()).collect())
+            .unwrap_or_default();
+        // The deliverable was checked to be UTF-8 when the request was built.
+        let text = std::str::from_utf8(deliverable).unwrap_or_default();
+        judgecheck::graded(score, &quotes, text)
+    }
+
     fn build_check_request(&self, panel: u8, task: &str, deliverable: &[u8]) -> Vec<u8> {
         let model = self
             .judge
@@ -2453,7 +2499,8 @@ impl Job {
         );
         let text = std::str::from_utf8(deliverable)
             .unwrap_or_else(|_| env::panic_str("deliverable is not UTF-8 text"));
-        judgecheck::request_bytes(
+        judgecheck::request_bytes_v(
+            self.rubric,
             model,
             env::current_account_id().as_str(),
             self.seq,
@@ -2500,8 +2547,7 @@ impl Job {
                     .map(String::from)
             })
             .unwrap_or_else(|| env::panic_str("answer has no choices[0].message.content"));
-        let score = judgecheck::parse_score(&content)
-            .unwrap_or_else(|| env::panic_str("answer is not {\"score\": 0-10}"));
+        let score = Self::read_score(self.rubric, &content, &deliverable.0);
         let r = &mut self.rounds[i];
         // Storage stays bounded at MAX_ANSWERS stored answers, but a full
         // round still takes any answer that sets a new lowest or highest
@@ -3784,6 +3830,7 @@ impl Job {
                 let (paid, hired) = self.fee_parts();
                 U128(self.ledger.fee_earned(paid, hired).unwrap_or(0))
             }),
+            rubric: self.rubric,
         }
     }
 }

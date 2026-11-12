@@ -54,6 +54,10 @@ pub struct Cassette {
     /// Where `signer` came from (e.g. NEAR AI's attestation report URL).
     pub signer_source: String,
     pub entries: Vec<Entry>,
+    /// Judge rubric the recorded jobs pinned (`ht_core::check::rubric`).
+    /// Missing in recordings made before rubric 2: those are rubric 1.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rubric: Option<u8>,
 }
 
 impl Cassette {
@@ -359,6 +363,20 @@ impl Llm {
         }
     }
 
+    /// The judge rubric the factory must pin: a replay builds the same
+    /// judge requests the recording did.
+    pub fn rubric(&self) -> u8 {
+        match self {
+            Llm::Replay(c, _) => c.rubric.unwrap_or(1),
+            Llm::Record(_, c, _) => c
+                .lock()
+                .unwrap()
+                .rubric
+                .unwrap_or(ht_core::check::RUBRIC_LATEST),
+            _ => ht_core::check::RUBRIC_LATEST,
+        }
+    }
+
     /// The address the contracts must pin as signer.
     pub fn signer(&self) -> Option<String> {
         match self {
@@ -442,6 +460,7 @@ mod tests {
                 resp: String::from_utf8(r.body).unwrap(),
                 sig: r.sig,
             }],
+            rubric: None,
         };
         assert_eq!(c.verify().unwrap(), 1);
         c.entries[0].resp = c.entries[0].resp.replace("hi", "ho");

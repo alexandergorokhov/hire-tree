@@ -174,6 +174,7 @@ fn new_root() -> Job {
         None,
         None,
         None,
+        None,
     )
 }
 
@@ -199,6 +200,7 @@ fn new_sub(pay: u128) -> Job {
         WINDOW,
         signer(),
         code_hash(),
+        None,
         None,
         None,
         None,
@@ -292,6 +294,7 @@ fn init_must_be_called_by_parent_account() {
         None,
         None,
         None,
+        None,
     );
 }
 
@@ -307,6 +310,7 @@ fn root_with_fee(fee: u128) -> Job {
         WINDOW,
         signer(),
         code_hash(),
+        None,
         None,
         None,
         None,
@@ -746,6 +750,7 @@ fn client_and_worker_both_refused() {
         None,
         None,
         None,
+        None,
     );
 }
 
@@ -763,6 +768,7 @@ fn bad_spec_hash_refused() {
         WINDOW,
         signer(),
         code_hash(),
+        None,
         None,
         None,
         None,
@@ -790,6 +796,7 @@ fn bad_signer_refused() {
         None,
         None,
         None,
+        None,
     );
 }
 
@@ -807,6 +814,7 @@ fn window_too_long_refused() {
         MAX_WINDOW_SECS + 1,
         signer(),
         code_hash(),
+        None,
         None,
         None,
         None,
@@ -1373,6 +1381,7 @@ mod receipt_tests {
             WINDOW,
             addr_hex(&key(1)),
             code_hash(),
+            None,
             None,
             None,
             None,
@@ -2489,6 +2498,7 @@ fn two_level_tree_folds_bottom_up() {
         None,
         None,
         None,
+        None,
     );
     Ctx::new(GC, TOKEN).set();
     gc.ft_on_transfer(acc(T1), U128(8 * USD), "fund".into());
@@ -2551,6 +2561,7 @@ mod check_note_dispute {
             code_hash(),
             checker.then(|| acc(CHECKER)),
             Some(acc(TREASURY)),
+            None,
             None,
             None,
             None,
@@ -3167,6 +3178,7 @@ mod check_note_dispute {
             None,
             None,
             None,
+            None,
         );
         Ctx::new(ROOT, TOKEN).set();
         r.ft_on_transfer(acc(CLIENT), U128(100 * USD), "fund".into());
@@ -3582,6 +3594,7 @@ mod signed_check {
             Some(MODEL.into()),
             None,
             None,
+            None,
         );
         Ctx::new(T1, TOKEN).set();
         j.ft_on_transfer(acc(ROOT), U128(PAY), "fund".into());
@@ -3647,6 +3660,142 @@ mod signed_check {
         assert_eq!(v.status, "Checked");
         assert_eq!(v.quality, Some(8));
         assert!(!v.check_pending);
+    }
+
+    /// The live NEAR AI run found that fluent filler (text that fits any
+    /// task) passed rubric 1. Rubric 2 makes the judge quote two passages
+    /// that do this task first; the contract checks they are really in the
+    /// deliverable, and a score without them counts at most 2.
+    fn judged_sub_v2() -> Job {
+        Ctx::new(T1, ROOT).set();
+        let mut j = Job::new(
+            None,
+            acc(LEAD),
+            Some(acc(WORKER)),
+            acc(TOKEN),
+            U128(PAY),
+            task_spec(),
+            WINDOW,
+            addr_hex(&key(1)),
+            code_hash(),
+            None,
+            Some(acc(TREASURY)),
+            Some(MODEL.into()),
+            None,
+            None,
+            Some(2),
+        );
+        Ctx::new(T1, TOKEN).set();
+        j.ft_on_transfer(acc(ROOT), U128(PAY), "fund".into());
+        j
+    }
+
+    /// A rubric-2 answer, signed by key(1) over the request the job builds.
+    fn answer_v2(j: &Job, bytes: &[u8], content: &str, salt: &str) -> (Base64VecU8, String) {
+        let req = j
+            .check_request(0, TASK.into(), Base64VecU8(bytes.to_vec()))
+            .0;
+        let ans = serde_json::to_vec(&serde_json::json!({
+            "id": salt, "choices": [{ "message": { "content": content } }]
+        }))
+        .unwrap();
+        let text = format!("{MODEL}:{}:{}", sha256_hex(&req), sha256_hex(&ans));
+        (Base64VecU8(ans), sign(&key(1), &text))
+    }
+
+    const FILLER: &[u8] = b"Overview: this deliverable covers the requested points in full. Key points: the task is addressed end to end, and the result was reviewed.";
+
+    #[test]
+    fn rubric_2_asks_for_quotes_and_pays_work_the_quotes_are_in() {
+        let mut j = judged_sub_v2();
+        deliver(&mut j, DELIVERED);
+        let req = String::from_utf8(
+            j.check_request(0, TASK.into(), Base64VecU8(DELIVERED.to_vec()))
+                .0,
+        )
+        .unwrap();
+        assert!(req.contains("two different passages") && req.contains("\"max_tokens\":300"));
+        assert_eq!(j.get_job().rubric, 2);
+        let a = answer_v2(
+            &j,
+            DELIVERED,
+            r#"{"quotes": ["los contratos globales", "se despliegan una vez"], "score": 8}"#,
+            "a",
+        );
+        assert_eq!(submit(&mut j, EVE, 0, DELIVERED, a), 8);
+        assert!(finalize(&mut j));
+        assert_eq!(j.get_job().quality, Some(8));
+    }
+
+    #[test]
+    fn rubric_2_counts_a_score_without_quotes_from_the_work_as_at_most_2() {
+        // The judge was fooled (8) but could only quote filler it made up:
+        // the quotes are not in the deliverable, so the score counts as 2.
+        let mut j = judged_sub_v2();
+        deliver(&mut j, FILLER);
+        let a = answer_v2(
+            &j,
+            FILLER,
+            r#"{"quotes": ["a full Spanish translation", "global contracts in Spanish"], "score": 8}"#,
+            "a",
+        );
+        assert_eq!(submit(&mut j, EVE, 0, FILLER, a), 2);
+        // An honest answer that finds nothing scores low on its own.
+        let b = answer_v2(&j, FILLER, r#"{"quotes": [], "score": 1}"#, "b");
+        assert_eq!(submit(&mut j, LEAD, 0, FILLER, b), 1);
+        assert!(!finalize(&mut j));
+        assert_eq!(j.get_job().quality, Some(1));
+    }
+
+    #[test]
+    fn rubric_2_counts_an_answer_with_no_quotes_as_at_most_2() {
+        let mut j = judged_sub_v2();
+        deliver(&mut j, DELIVERED);
+        let a = answer_v2(&j, DELIVERED, r#"{"score": 8}"#, "a");
+        assert_eq!(submit(&mut j, EVE, 0, DELIVERED, a), 2);
+        // Not JSON at all: refused, as under rubric 1.
+        let b = answer_v2(&j, DELIVERED, "8", "b");
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            submit(&mut j, LEAD, 0, DELIVERED, b)
+        }));
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn a_sub_job_pins_its_parents_rubric() {
+        let mut j = judged_sub_v2();
+        Ctx::new(T1, WORKER)
+            .deposit(NearToken::from_millinear(50))
+            .set();
+        j.hire(acc(WORKER2), U128(10 * USD), task_spec(), None);
+        assert_eq!(super::call_args("new")["rubric"], 2);
+    }
+
+    #[test]
+    fn an_unknown_rubric_is_refused_and_no_rubric_reads_as_1() {
+        let r = std::panic::catch_unwind(|| {
+            Ctx::new(T1, ROOT).set();
+            Job::new(
+                None,
+                acc(LEAD),
+                Some(acc(WORKER)),
+                acc(TOKEN),
+                U128(PAY),
+                task_spec(),
+                WINDOW,
+                addr_hex(&key(1)),
+                code_hash(),
+                None,
+                None,
+                Some(MODEL.into()),
+                None,
+                None,
+                Some(7),
+            )
+        });
+        assert!(r.is_err());
+        // A job named no rubric (an older caller): version 1.
+        assert_eq!(judged_sub().get_job().rubric, 1);
     }
 
     #[test]
@@ -3994,6 +4143,7 @@ mod signed_check {
             Some(acc(CHECKER)),
             None,
             Some(MODEL.into()),
+            None,
             None,
             None,
         );
@@ -5048,6 +5198,7 @@ mod late_bids_and_unfunded_roots {
             None,
             None,
             None,
+            None,
         );
         // The fund arrives after the 1 s window and is refused.
         Ctx::new(ROOT, TOKEN).at(T0 + 2 * NS_PER_SEC).set();
@@ -5588,6 +5739,7 @@ mod award_best {
             None,
             None,
             bid,
+            None,
         );
         Ctx::new(T1, TOKEN).set();
         j.ft_on_transfer(acc(ROOT), U128(30 * USD), "fund".into());
@@ -5730,6 +5882,7 @@ mod award_best {
             WINDOW,
             signer(),
             code_hash(),
+            None,
             None,
             None,
             None,
@@ -6893,6 +7046,7 @@ mod review_contractor_treasury {
             None,
             Some(acc(TREASURY)),
             Some("judge-model".into()),
+            None,
             None,
             None,
         );

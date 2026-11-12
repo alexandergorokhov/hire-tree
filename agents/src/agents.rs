@@ -802,6 +802,17 @@ pub fn mock_script(req: &Value) -> String {
     // The contract's judge question.
     let u: Value = serde_json::from_str(user).unwrap_or(Value::Null);
     let d = u["deliverable"].as_str().unwrap_or_default();
+    if sys == ht_core::check::RUBRIC_V2 {
+        // Rubric 2: quote two passages that do the task, then score. The
+        // scripted judge finds none in filler (lorem or polished); how the
+        // real model does is measured by `hiretree rubric-check`.
+        if d.contains("lorem") || d.contains(POLISHED_MARK) {
+            return json!({ "quotes": [], "score": 1 }).to_string();
+        }
+        let words: Vec<&str> = d.split_whitespace().collect();
+        let quotes: Vec<String> = words.chunks(4).take(2).map(|c| c.join(" ")).collect();
+        return json!({ "quotes": quotes, "score": 8 }).to_string();
+    }
     let score = if d.contains("lorem") {
         2
     } else if d.contains(POLISHED_MARK) {
@@ -1006,6 +1017,33 @@ mod tests {
         };
         assert_eq!(judge("lorem ipsum"), r#"{"score":2}"#);
         assert_eq!(judge("a real answer"), r#"{"score":8}"#);
+    }
+
+    #[test]
+    fn under_rubric_2_the_scripted_judge_quotes_real_work_and_finds_nothing_in_filler() {
+        let judge = |d: &str| {
+            let user =
+                json!({ "job": "t1.job-1.hub", "delivery": 1, "panel": 0, "deliverable": d })
+                    .to_string();
+            let req = json!({ "messages": [{ "content": ht_core::check::RUBRIC_V2 }, { "content": user }] });
+            serde_json::from_str::<Value>(&mock_script(&req)).unwrap()
+        };
+        let good =
+            "Deliverable: Global contracts let many accounts share one deployed code by hash.";
+        let a = judge(good);
+        let quotes: Vec<&str> = a["quotes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|q| q.as_str().unwrap())
+            .collect();
+        assert_eq!(
+            ht_core::check::graded(a["score"].as_u64().unwrap() as u8, &quotes, good),
+            8
+        );
+        for filler in [POLISHED, "lorem ipsum dolor"] {
+            assert_eq!(judge(filler)["score"], 1, "{filler}");
+        }
     }
 
     #[test]

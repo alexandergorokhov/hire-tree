@@ -149,6 +149,22 @@ swarm-replay: build ## Replay the live NEAR AI swarm from its cassette (offline,
 	@$(SBX) $(HT) swarm --rounds 3 --llm replay:$(SWARM_CASSETTE) --out $(CURDIR)/out/swarm-replay.json
 	python3 scripts/swarm-check.py out/swarm-replay.json --same-as web/swarm-live.json
 
+RUBRIC_CASSETTE ?= $(CURDIR)/demo/rubric2-cassette.json
+
+.PHONY: record-rubric
+record-rubric: ## [NEAR AI key] The live run's 29 deliveries graded again under judge rubric 2 (29 small calls, about a cent); saves the signed answers and runs/rubric2.json
+	@rm -f $(RUBRIC_CASSETTE).new
+	@cd agents && $(HT) rubric-check --llm record:$(RUBRIC_CASSETTE).new --out $(CURDIR)/runs/rubric2.json
+	@cd agents && $(HT) verify-cassette $(RUBRIC_CASSETTE).new
+	@mv $(RUBRIC_CASSETTE).new $(RUBRIC_CASSETTE) && echo "rubric cassette saved: $(RUBRIC_CASSETTE); check it with make rubric-check"
+
+.PHONY: rubric-check
+rubric-check: ## Offline: replay the rubric-2 recording (every signature re-checked) and confirm it gives runs/rubric2.json
+	@test -s $(RUBRIC_CASSETTE) || { echo "no rubric cassette: the owner records it with make record-rubric" >&2; exit 1; }
+	@mkdir -p out
+	@cd agents && $(HT) rubric-check --llm replay:$(RUBRIC_CASSETTE) --out $(CURDIR)/out/rubric2.json
+	@python3 -I -c 'import json,sys; a,b=(json.load(open(f)) for f in sys.argv[1:]); sys.exit(0 if a==b else "out/rubric2.json differs from runs/rubric2.json")' out/rubric2.json runs/rubric2.json && echo "ok   rubric 2 replay matches runs/rubric2.json"
+
 .PHONY: mcp-setup
 mcp-setup: build ## Build what the MCP playground needs (.mcp.json runs scripts/mcp-local.sh)
 	cd agents && cargo build --locked --bin hiretree
@@ -194,10 +210,11 @@ attest: ## Check offline that the cassettes' NEAR AI signer is the key in the TD
 	python3 -I scripts/check-attestation.py demo/nearai-attestation.json
 
 .PHONY: verify-cassette
-verify-cassette: ## Re-check every NEAR AI signature in both cassettes: the story and the live swarm (offline)
+verify-cassette: ## Re-check every NEAR AI signature in the cassettes: the story, the live swarm and the rubric-2 regrade (offline)
 	@echo "verify-cassette: building hiretree if needed (first run: a few minutes)" >&2
 	@cd agents && $(HT) verify-cassette $(CASSETTE)
 	@if [ -s $(SWARM_CASSETTE) ]; then cd agents && $(HT) verify-cassette $(SWARM_CASSETTE); fi
+	@if [ -s $(RUBRIC_CASSETTE) ]; then cd agents && $(HT) verify-cassette $(RUBRIC_CASSETTE); fi
 
 .PHONY: testnet-dryrun
 testnet-dryrun: build ## The testnet code path (derived keys, tight funding, rerun reuse, real 5-min waits) against a local node; prints NEAR spent (~25 min)

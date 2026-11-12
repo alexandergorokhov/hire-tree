@@ -7,6 +7,7 @@
 //! hiretree verify-cassette FILE    # re-check every signature offline
 //! hiretree mcp --as NAME           # stdio MCP server on testnet as NAME.<operator>
 //! hiretree mcp --local             # stdio MCP playground on a local node (no keys)
+//! hiretree rubric-check [--llm mock|record:FILE|replay:FILE] # the live run's deliveries under judge rubric 2
 //! hiretree swarm [--rounds N] [--out FILE] [--blind|--audit-all] [--seed N] [--storm R [--wash]] [--allow-list] [--llm mock|live|record:FILE|replay:FILE] # 3 leads, 36 agents, trees up to 3 deep, N rounds on a local node
 //! ```
 //! Env: NEARAI_API_KEY, HT_MODEL, HT_OPERATOR, HT_OPERATOR_KEY, HT_RPC.
@@ -61,6 +62,7 @@ async fn llm_from(spec: &str) -> Llm {
                     signer,
                     signer_source: "test key (not NEAR AI)".into(),
                     entries: vec![],
+                    rubric: Some(ht_core::check::RUBRIC_LATEST),
                 }),
                 f.into(),
             )
@@ -80,6 +82,7 @@ async fn llm_from(spec: &str) -> Llm {
                     )
                 },
                 entries: vec![],
+                rubric: Some(ht_core::check::RUBRIC_LATEST),
             };
             Llm::Record(Source::Live(n), Mutex::new(c), f.into())
         }
@@ -110,8 +113,8 @@ async fn demo(args: &[String]) {
     llm.expect_signer(&signer);
     let model = llm.model();
     let c = match net.as_str() {
-        "sandbox" => Chain::sandbox(&signer, Some(&model)).await,
-        "testnet" => Chain::testnet(&signer, Some(&model))
+        "sandbox" => Chain::sandbox_with(&signer, Some(&model), llm.rubric()).await,
+        "testnet" => Chain::testnet_with(&signer, Some(&model), llm.rubric())
             .await
             .unwrap_or_else(|e| die(e)),
         n => die(format!("unknown --net {n}")),
@@ -223,6 +226,63 @@ async fn mcp(args: &[String]) {
     hire_tree_agents::mcp::serve(Tools { chain: &c }, who).await;
 }
 
+/// The live run's deliveries, graded again under judge rubric 2:
+///   hiretree rubric-check [--from demo/swarm-cassette.json] [--llm mock|record:FILE|replay:FILE] [--out FILE]
+/// `record` asks NEAR AI (the source run's model) once per delivery.
+async fn rubric_check(args: &[String]) {
+    let from =
+        arg(args, "--from").unwrap_or_else(|| format!("{}/../demo/swarm-cassette.json", out_dir()));
+    let src = Cassette::load(&from).unwrap_or_else(|e| die(e));
+    src.verify().unwrap_or_else(|e| die(format!("{from}: {e}")));
+    let items = hire_tree_agents::rubric::items_from(&src);
+    let spec = arg(args, "--llm").unwrap_or_else(|| "mock".into());
+    let llm = match spec.split_once(':') {
+        Some(("record", f)) => {
+            let n = NearAi::from_env(&src.model).unwrap_or_else(|e| die(e));
+            let signer = n.signing_address().await.unwrap_or_else(|e| die(e));
+            if !signer.eq_ignore_ascii_case(src.signer.trim_start_matches("0x")) {
+                eprintln!(
+                    "note: NEAR AI now signs with {signer}; the source run was signed by {}",
+                    src.signer
+                );
+            }
+            n.expect.lock().unwrap().replace(signer.to_lowercase());
+            Llm::Record(
+                Source::Live(n),
+                Mutex::new(Cassette {
+                    model: src.model.clone(),
+                    signer: signer.clone(),
+                    signer_source: src.signer_source.clone(),
+                    entries: vec![],
+                    rubric: Some(2),
+                }),
+                f.into(),
+            )
+        }
+        _ => llm_from(&spec).await,
+    };
+    eprintln!(
+        "grading {} deliveries from {from} under rubric 2 ({spec})",
+        items.len()
+    );
+    let r = hire_tree_agents::rubric::run(&items, &llm)
+        .await
+        .unwrap_or_else(|e| die(e));
+    let out = arg(args, "--out").unwrap_or_else(|| format!("{}/rubric2.json", out_dir()));
+    std::fs::write(&out, serde_json::to_string_pretty(&r).unwrap() + "\n")
+        .unwrap_or_else(|e| die(e));
+    for k in ["filler", "other"] {
+        println!(
+            "{k:7} rubric 1 passed {} of {}, rubric 2 passed {} of {}",
+            r[k]["rubric_1"]["passed"],
+            r[k]["rubric_1"]["deliveries"],
+            r[k]["rubric_2"]["passed"],
+            r[k]["rubric_2"]["deliveries"]
+        );
+    }
+    println!("report: {out}");
+}
+
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -239,6 +299,7 @@ async fn main() {
             );
         }
         Some("mcp") => mcp(&args).await,
+        Some("rubric-check") => rubric_check(&args).await,
         Some("swarm") => {
             let jobs: u32 = arg(&args, "--rounds")
                 .and_then(|j| j.parse().ok())
@@ -255,7 +316,7 @@ async fn main() {
                 },
             };
             llm.expect_signer(&signer);
-            let c = Chain::sandbox(&signer, Some(&llm.model())).await;
+            let c = Chain::sandbox_with(&signer, Some(&llm.model()), llm.rubric()).await;
             let v = hire_tree_agents::swarm::run(
                 &c,
                 &llm,
