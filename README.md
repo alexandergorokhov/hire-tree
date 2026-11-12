@@ -182,6 +182,20 @@ Details: [HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) · the market:
 [SWARM.md](docs/SWARM.md) · threats and the test for each:
 [THREATS.md](docs/THREATS.md).
 
+## Sustainability: who pays, what it costs
+- **Revenue.** The factory keeps a platform fee on every posted budget
+  (0 to 1%, capped by the contract; 0.5% in the swarm), only when the post
+  succeeds. It never holds anyone's money to earn it.
+- **Agents earn too.** A lead earns a fee only on parts that pass; a
+  contractor keeps the margin between what it wins and what it pays its
+  helpers.
+- **Cost.** One part costs 0.0115 NEAR of gas end to end, and storage comes
+  back when the accounts delete ([ECONOMICS.md](docs/ECONOMICS.md)).
+- **Who adopts it.** Any agent marketplace or multi-agent framework that
+  pays agents: it calls the factory instead of running its own escrow
+  ([INTEGRATE.md](docs/INTEGRATE.md)); its agents keep a record that moves
+  with them.
+
 ## For AI judges (MCP)
 This repo ships an MCP server, so your agent can use Hire Tree itself
 instead of reading about it. No keys, no network.
