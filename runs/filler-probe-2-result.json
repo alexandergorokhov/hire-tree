@@ -2,7 +2,7 @@
   "by_kind": {
     "model-written filler": {
       "deliveries": 8,
-      "passed_rubric_2": 8
+      "passed_rubric_2": 1
     },
     "real answer (model)": {
       "deliveries": 8,
@@ -31,7 +31,7 @@
     },
     "rubric_2": {
       "deliveries": 24,
-      "passed": 16
+      "passed": 9
     }
   },
   "pass_score": 6,
@@ -55,10 +55,10 @@
       "kind": "model-written filler",
       "v1_counted": null,
       "v1_scores": [],
-      "v2_counted": 10,
-      "v2_quotes_found": 3,
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
       "v2_quotes_from_task": 0,
-      "v2_score": 10
+      "v2_score": 0
     },
     {
       "delivery": 3,
@@ -91,10 +91,10 @@
       "kind": "model-written filler",
       "v1_counted": null,
       "v1_scores": [],
-      "v2_counted": 10,
-      "v2_quotes_found": 2,
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
       "v2_quotes_from_task": 0,
-      "v2_score": 10
+      "v2_score": 0
     },
     {
       "delivery": 3,
@@ -127,10 +127,10 @@
       "kind": "model-written filler",
       "v1_counted": null,
       "v1_scores": [],
-      "v2_counted": 10,
-      "v2_quotes_found": 2,
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
       "v2_quotes_from_task": 0,
-      "v2_score": 10
+      "v2_score": 0
     },
     {
       "delivery": 3,
@@ -163,10 +163,10 @@
       "kind": "model-written filler",
       "v1_counted": null,
       "v1_scores": [],
-      "v2_counted": 10,
-      "v2_quotes_found": 3,
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
       "v2_quotes_from_task": 0,
-      "v2_score": 10
+      "v2_score": 0
     },
     {
       "delivery": 3,
@@ -199,10 +199,10 @@
       "kind": "model-written filler",
       "v1_counted": null,
       "v1_scores": [],
-      "v2_counted": 10,
-      "v2_quotes_found": 2,
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
       "v2_quotes_from_task": 0,
-      "v2_score": 10
+      "v2_score": 0
     },
     {
       "delivery": 3,
@@ -235,10 +235,10 @@
       "kind": "model-written filler",
       "v1_counted": null,
       "v1_scores": [],
-      "v2_counted": 10,
+      "v2_counted": 8,
       "v2_quotes_found": 4,
       "v2_quotes_from_task": 0,
-      "v2_score": 10
+      "v2_score": 8
     },
     {
       "delivery": 3,
@@ -271,10 +271,10 @@
       "kind": "model-written filler",
       "v1_counted": null,
       "v1_scores": [],
-      "v2_counted": 10,
+      "v2_counted": 2,
       "v2_quotes_found": 2,
       "v2_quotes_from_task": 0,
-      "v2_score": 10
+      "v2_score": 2
     },
     {
       "delivery": 3,
@@ -307,10 +307,10 @@
       "kind": "model-written filler",
       "v1_counted": null,
       "v1_scores": [],
-      "v2_counted": 9,
-      "v2_quotes_found": 3,
+      "v2_counted": 2,
+      "v2_quotes_found": 0,
       "v2_quotes_from_task": 0,
-      "v2_score": 9
+      "v2_score": 4
     },
     {
       "delivery": 3,
