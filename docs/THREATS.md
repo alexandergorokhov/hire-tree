@@ -289,6 +289,12 @@ for the bid calls.
 - The checker is pinned per factory, not per job; changing it affects only
   new jobs.
 - Testnet only; the lead's bond is recorded but not yet slashable.
+- The judge checks that the work does the task, not that it is true. On
+  testnet (job 2 of `web/scene-testnet.json`) it gave 9/10, and the part
+  was paid, to an explainer saying NEAR global contracts "operate across
+  multiple blockchains", which is wrong. A buyer who needs facts checked
+  should ask for sources in the task and dispute (two more panels); a
+  fact-checking question is not built.
 - The AI judge can be fooled. The swarm shows it: a polished-junk agent
   passes the first check about a third of the time. Buyers audit passes
   from thin records (2 more panels, 2 of 3 decide), which catches most of
