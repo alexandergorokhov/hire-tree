@@ -58,11 +58,18 @@ async function caption(page, text) {
     await wait(1.2);
   };
   const say = (t) => caption(page, t);
+  const t0 = Date.now();
+  const mark = (name) => console.error(`${((Date.now() - t0) / 1000).toFixed(1)}s ${name}`);
 
   // 1. The hero: one real job from the live NEAR AI run plays out as a tree.
   await page.goto(`${base}/market.html`);
-  await wait(15.6);
-  await say(`Live NEAR AI run: ${parts.length} parts, ${parts.filter(p => p.paid).length} paid, ${parts.filter(p => p.fired).length} bad deliveries fired with no pay.`);
+  mark('hero');
+  await wait(1.2);
+  await say('AI agents now hire other AI agents. Who holds the money? Who decides the work was good?');
+  await wait(7.4);
+  await say('Each part of this real job is its own NEAR account, holding exactly its money. Bad work is fired, never paid.');
+  await wait(7);
+  await say(`Live NEAR AI run: ${parts.length} parts, ${parts.filter(p => p.paid).length} paid, ${parts.filter(p => p.fired).length} junk deliveries fired unpaid. One fluent filler still got paid: that hole is fixed below.`);
   await wait(4);
 
   // 2. The idea, how it is new, where it goes.
@@ -111,31 +118,43 @@ async function caption(page, text) {
   await say('');
 
   // 5. Proof under attack.
+  mark('proof');
   await to('#proof');
   await say('30 fake accounts flood the market with cheap bad work. Buyers reading records lose 10.75 parts to them; blind buyers lose 71.50.');
   await wait(7.5);
   await say('');
-  await to('.attest.limit', 'center');
-  await say('Found and fixed: fluent filler fooled the live AI judge 7 of 7. Now it must quote the work, and the contract checks the quotes: 0 of 7. Live on NEAR testnet: 110 transactions, 0 failed.');
-  await wait(7);
+  await to('.fixed', 'center');
+  await say('Found and fixed: fluent filler passed the AI judge 7 of 7. Now the contract checks quoted proof: 0 of 7.');
+  await wait(5);
+  await to('#testnet', 'center');
+  await say('Same contracts on NEAR testnet: 110 transactions, 0 failed.');
+  await wait(3);
   await say('');
 
   // 6. For agents.
+  mark('build');
   await to('#build', 'center');
   await say('Your agent can do all of this itself: one MCP server, no keys.');
-  await wait(5.5);
+  await wait(6);
   await say('');
 
-  // 7. The 12-round simulation, same page.
-  await to('#top');
-  await page.click('#run-sim');
-  await wait(1);
-  await to('#agents');
-  await say('Switch to the 12-round market: the same records, more history.');
-  await wait(5);
-  await say('');
-  await to('#top');
-  await wait(2);
+  // 7. End card.
+  mark('end card');
+  await page.evaluate(() => {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;inset:0;z-index:100000;background:#0e0e0c;color:#ecece6;display:flex;flex-direction:column;justify-content:center;padding:0 120px;gap:22px;opacity:0;transition:opacity .6s';
+    d.innerHTML = '<div style="display:flex;align-items:center;gap:18px"><img src="brand/sprout-256.png" width="64" height="64" alt=""><span style="font:700 64px/1 Inter,system-ui,sans-serif;letter-spacing:-1px">Hire Tree</span></div>' +
+      '<div style="font:500 30px/1.35 Inter,system-ui,sans-serif;max-width:900px">AI agents hire AI agents on NEAR. Pay waits for a signed, checked score.</div>' +
+      '<div style="font:500 20px/1.9 \'JetBrains Mono\',ui-monospace,monospace;color:#c9c9bf">' +
+      '<div><span style="color:#ffcc29">$</span> make judge &nbsp;&rarr; ALL PASS (12 checks)</div>' +
+      '<div><span style="color:#ffcc29">$</span> make mcp-setup &nbsp;&rarr; 50 MCP tools for your agent</div>' +
+      '<div>testnet factory: hub.hiretree.testnet &middot; 110 tx, 0 failed</div>' +
+      '<div>github.com/alexandergorokhov/agent-hire</div></div>';
+    document.body.appendChild(d);
+    requestAnimationFrame(() => { d.style.opacity = '1'; });
+  });
+  await wait(7);
+  mark('end');
 
   const video = page.video();
   await ctx.close();
