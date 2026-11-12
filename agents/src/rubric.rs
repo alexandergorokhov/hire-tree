@@ -116,6 +116,77 @@ pub fn items_from_file(path: &str) -> Result<Vec<Item>, String> {
         .map_err(|f| format!("{path}: an item has no {f}"))
 }
 
+/// The system prompt that asks the model for filler written for one task
+/// (the probe's hardest kind a model can write: it looks like the work).
+pub const FILLER_WRITER: &str = "ROLE: probe writer for a quality-check test. For the task in the user message, write text that looks like a finished deliverable for exactly this task and reuses the task's own words, but does not do the task: no facts, no real summary, translation, list or answer. Under 80 words. Reply with the text only.";
+
+/// Filler that copies the task word for word and claims it is done: every
+/// quote the judge could take from it is the task's own text.
+pub fn task_copy_filler(task: &str) -> String {
+    format!(
+        "Task: {task}\n\nDelivered as requested. {task} The deliverable meets every \
+         requirement of the task, in the requested format and length, and was checked before delivery."
+    )
+}
+
+/// A harder probe set from a list of tasks (`[{"job", "task"}]`): for each
+/// task the model writes a real answer (the worker prompt) and a filler
+/// told to look like the work (`FILLER_WRITER`), and `task_copy_filler`
+/// adds a third. Recorded once; a replay gives the same items.
+pub async fn make_probe(tasks_file: &str, llm: &Llm) -> Result<Vec<Item>, String> {
+    let v: Value = serde_json::from_str(
+        &std::fs::read_to_string(tasks_file).map_err(|e| format!("{tasks_file}: {e}"))?,
+    )
+    .map_err(|e| format!("{tasks_file}: {e}"))?;
+    let model = llm.model();
+    let mut out = Vec::new();
+    for t in v.as_array().ok_or(format!("{tasks_file}: not a list"))? {
+        let (job, task) = (
+            t["job"].as_str().ok_or("a task has no job")?,
+            t["task"].as_str().ok_or("a task has no task")?,
+        );
+        let ask = |system: &'static str, n: u32| {
+            let body =
+                crate::llm::chat_body(&model, system, &format!("HT1:{job}:probe:{n} {task}"), 300);
+            async move {
+                llm.chat(&body)
+                    .await
+                    .map(|r| r.content().trim().to_string())
+            }
+        };
+        let item = |delivery: u32, deliverable: String, kind: &str| Item {
+            job: job.into(),
+            delivery,
+            task: task.into(),
+            deliverable,
+            v1: vec![],
+            kind: Some(kind.into()),
+        };
+        out.push(item(
+            1,
+            ask(crate::agents::WORKER, 1).await?,
+            "real answer (model)",
+        ));
+        out.push(item(
+            2,
+            ask(FILLER_WRITER, 2).await?,
+            "model-written filler",
+        ));
+        out.push(item(3, task_copy_filler(task), "task-copy filler"));
+    }
+    Ok(out)
+}
+
+/// Items as a probe file (`items_from_file` reads it back).
+pub fn items_json(items: &[Item]) -> Value {
+    Value::Array(
+        items
+            .iter()
+            .map(|i| json!({ "job": i.job, "delivery": i.delivery, "task": i.task, "deliverable": i.deliverable, "kind": i.kind }))
+            .collect(),
+    )
+}
+
 /// The score a rubric-2 answer counts for on-chain (as `Job::read_score`):
 /// None if the contract would refuse the answer.
 pub fn read_v2(content: &str, deliverable: &str) -> Option<u8> {
@@ -163,6 +234,19 @@ pub async fn run(items: &[Item], llm: &Llm) -> Result<Value, String> {
         });
         if let Some(k) = &i.kind {
             row["kind"] = json!(k);
+            // Quotes found in the work that are also the task's own words.
+            let quotes: Vec<&str> = answer["quotes"]
+                .as_array()
+                .map(|a| a.iter().filter_map(|q| q.as_str()).collect())
+                .unwrap_or_default();
+            let found_in_task = quotes
+                .iter()
+                .filter(|q| {
+                    check::evidence(&[**q], &i.deliverable) == 1
+                        && check::evidence(&[**q], &i.task) == 1
+                })
+                .count();
+            row["v2_quotes_from_task"] = json!(found_in_task);
         }
         rows.push(row);
     }
@@ -315,6 +399,40 @@ mod tests {
                 u["job"]
             );
         }
+    }
+
+    #[tokio::test]
+    async fn a_harder_probe_has_a_real_answer_and_two_fillers_per_task() {
+        let dir = std::env::temp_dir().join(format!("ht-probe-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let f = dir.join("tasks.json");
+        std::fs::write(
+            &f,
+            r#"[{"job": "t1.p.hub", "task": "Explain NEAR global contracts in 3 sentences."},
+                {"job": "t2.p.hub", "task": "Write a one-line summary of: 'Each job is its own account.'"}]"#,
+        )
+        .unwrap();
+        let llm = Llm::Mock(Mock::new("scripted-test-model", Box::new(mock_script)));
+        let items = make_probe(f.to_str().unwrap(), &llm).await.unwrap();
+        let kinds: Vec<_> = items.iter().map(|i| i.kind.clone().unwrap()).collect();
+        assert_eq!(
+            kinds[..3],
+            [
+                "real answer (model)",
+                "model-written filler",
+                "task-copy filler"
+            ]
+        );
+        assert_eq!(items.len(), 6);
+        assert!(items[5].deliverable.contains("Each job is its own account"));
+        // The file round-trips, and the report counts quotes taken from the task.
+        std::fs::write(dir.join("items.json"), items_json(&items).to_string()).unwrap();
+        let back = items_from_file(dir.join("items.json").to_str().unwrap()).unwrap();
+        assert_eq!(back.len(), 6);
+        assert_eq!(back[2].deliverable, items[2].deliverable);
+        let r = run(&back, &llm).await.unwrap();
+        assert!(r["rows"][2]["v2_quotes_from_task"].is_u64());
+        assert_eq!(r["by_kind"]["task-copy filler"]["deliveries"], 2);
     }
 
     #[tokio::test]

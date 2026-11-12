@@ -8,6 +8,7 @@
 //! hiretree mcp --as NAME           # stdio MCP server on testnet as NAME.<operator>
 //! hiretree mcp --local             # stdio MCP playground on a local node (no keys)
 //! hiretree rubric-check [--items FILE] [--llm mock|record:FILE|replay:FILE] # the live run's deliveries (or a probe set) under judge rubric 2
+//! hiretree probe-make --tasks FILE [--llm mock|record:FILE|replay:FILE] [--out FILE] # a harder filler probe: per task a model answer, a model-written filler, a task-copy filler
 //! hiretree testnet-answers         # read a testnet run's signed judge answers back from the chain into a cassette
 //! hiretree swarm [--rounds N] [--out FILE] [--blind|--audit-all] [--seed N] [--storm R [--wash]] [--allow-list] [--llm mock|live|record:FILE|replay:FILE] # 3 leads, 36 agents, trees up to 3 deep, N rounds on a local node
 //! ```
@@ -240,31 +241,7 @@ async fn rubric_check(args: &[String]) {
         None => hire_tree_agents::rubric::items_from(&src),
     };
     let spec = arg(args, "--llm").unwrap_or_else(|| "mock".into());
-    let llm = match spec.split_once(':') {
-        Some(("record", f)) => {
-            let n = NearAi::from_env(&src.model).unwrap_or_else(|e| die(e));
-            let signer = n.signing_address().await.unwrap_or_else(|e| die(e));
-            if !signer.eq_ignore_ascii_case(src.signer.trim_start_matches("0x")) {
-                eprintln!(
-                    "note: NEAR AI now signs with {signer}; the source run was signed by {}",
-                    src.signer
-                );
-            }
-            n.expect.lock().unwrap().replace(signer.to_lowercase());
-            Llm::Record(
-                Source::Live(n),
-                Mutex::new(Cassette {
-                    model: src.model.clone(),
-                    signer: signer.clone(),
-                    signer_source: src.signer_source.clone(),
-                    entries: vec![],
-                    rubric: Some(2),
-                }),
-                f.into(),
-            )
-        }
-        _ => llm_from(&spec).await,
-    };
+    let llm = graded_llm(&spec, &src).await;
     eprintln!(
         "grading {} deliveries from {from} under rubric 2 ({spec})",
         items.len()
@@ -291,6 +268,59 @@ async fn rubric_check(args: &[String]) {
         );
     }
     println!("report: {out}");
+}
+
+/// The LLM for re-grading: `record:FILE` asks NEAR AI (the source run's
+/// model) and records into FILE; otherwise as `llm_from`.
+async fn graded_llm(spec: &str, src: &Cassette) -> Llm {
+    match spec.split_once(':') {
+        Some(("record", f)) => {
+            let n = NearAi::from_env(&src.model).unwrap_or_else(|e| die(e));
+            let signer = n.signing_address().await.unwrap_or_else(|e| die(e));
+            if !signer.eq_ignore_ascii_case(src.signer.trim_start_matches("0x")) {
+                eprintln!(
+                    "note: NEAR AI now signs with {signer}; the source run was signed by {}",
+                    src.signer
+                );
+            }
+            n.expect.lock().unwrap().replace(signer.to_lowercase());
+            Llm::Record(
+                Source::Live(n),
+                Mutex::new(Cassette {
+                    model: src.model.clone(),
+                    signer: signer.clone(),
+                    signer_source: src.signer_source.clone(),
+                    entries: vec![],
+                    rubric: Some(2),
+                }),
+                f.into(),
+            )
+        }
+        _ => llm_from(spec).await,
+    }
+}
+
+/// A harder filler probe, made by the model itself:
+///   hiretree probe-make --tasks runs/probe2-tasks.json [--llm mock|record:FILE|replay:FILE] [--out FILE]
+/// Per task: a real answer (worker prompt), a filler the model writes to
+/// look like the work, and a filler that copies the task. Writes the items
+/// for `rubric-check --items`. Uses the swarm run's model.
+async fn probe_make(args: &[String]) {
+    let from = format!("{}/../demo/swarm-cassette.json", out_dir());
+    let src = Cassette::load(&from).unwrap_or_else(|e| die(e));
+    let tasks = arg(args, "--tasks").unwrap_or_else(|| die("--tasks FILE"));
+    let spec = arg(args, "--llm").unwrap_or_else(|| "mock".into());
+    let llm = graded_llm(&spec, &src).await;
+    let items = hire_tree_agents::rubric::make_probe(&tasks, &llm)
+        .await
+        .unwrap_or_else(|e| die(e));
+    let out = arg(args, "--out").unwrap_or_else(|| format!("{}/probe-items.json", out_dir()));
+    std::fs::write(
+        &out,
+        serde_json::to_string_pretty(&hire_tree_agents::rubric::items_json(&items)).unwrap() + "\n",
+    )
+    .unwrap_or_else(|e| die(e));
+    println!("{} probe items: {out}", items.len());
 }
 
 /// The signed judge answers of a testnet run, fetched back from the chain:
@@ -431,6 +461,7 @@ async fn main() {
         }
         Some("mcp") => mcp(&args).await,
         Some("rubric-check") => rubric_check(&args).await,
+        Some("probe-make") => probe_make(&args).await,
         Some("testnet-answers") => testnet_answers(&args).await,
         Some("swarm") => {
             let jobs: u32 = arg(&args, "--rounds")

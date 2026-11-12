@@ -167,6 +167,17 @@ record-probe: ## [NEAR AI key] Real answers vs on-topic filler for the same 6 ta
 	@cd agents && $(HT) verify-cassette $(PROBE_CASSETTE).new
 	@mv $(PROBE_CASSETTE).new $(PROBE_CASSETTE) && echo "probe cassette saved: $(PROBE_CASSETTE)"
 
+PROBE2_MAKER ?= $(CURDIR)/demo/probe2-maker-cassette.json
+PROBE2_CASSETTE ?= $(CURDIR)/demo/probe2-cassette.json
+
+.PHONY: record-probe2
+record-probe2: ## [NEAR AI key] Harder filler probe: per task in runs/probe2-tasks.json the model writes a real answer and a filler made to look like the work, plus a task-copy filler; all graded under rubric 2 (40 small calls)
+	@rm -f $(PROBE2_MAKER).new $(PROBE2_CASSETTE).new
+	@cd agents && $(HT) probe-make --tasks $(CURDIR)/runs/probe2-tasks.json --llm record:$(PROBE2_MAKER).new --out $(CURDIR)/runs/filler-probe-2.json
+	@cd agents && $(HT) rubric-check --items $(CURDIR)/runs/filler-probe-2.json --llm record:$(PROBE2_CASSETTE).new --out $(CURDIR)/runs/filler-probe-2-result.json
+	@cd agents && $(HT) verify-cassette $(PROBE2_MAKER).new && $(HT) verify-cassette $(PROBE2_CASSETTE).new
+	@mv $(PROBE2_MAKER).new $(PROBE2_MAKER) && mv $(PROBE2_CASSETTE).new $(PROBE2_CASSETTE) && echo "probe 2 cassettes saved"
+
 .PHONY: rubric-check
 rubric-check: ## Offline: replay the rubric-2 recording (every signature re-checked) and confirm it gives runs/rubric2.json
 	@test -s $(RUBRIC_CASSETTE) || { echo "no rubric cassette: the owner records it with make record-rubric" >&2; exit 1; }
@@ -174,6 +185,7 @@ rubric-check: ## Offline: replay the rubric-2 recording (every signature re-chec
 	@cd agents && $(HT) rubric-check --llm replay:$(RUBRIC_CASSETTE) --out $(CURDIR)/out/rubric2.json
 	@python3 -I -c 'import json,sys; a,b=(json.load(open(f)) for f in sys.argv[1:]); sys.exit(0 if a==b else "out/rubric2.json differs from runs/rubric2.json")' out/rubric2.json runs/rubric2.json && echo "ok   rubric 2 replay matches runs/rubric2.json"
 	@if [ -s $(PROBE_CASSETTE) ]; then cd agents && $(HT) rubric-check --items $(CURDIR)/runs/filler-probe.json --llm replay:$(PROBE_CASSETTE) --out $(CURDIR)/out/filler-probe-result.json >/dev/null && python3 -I -c 'import json,sys; a,b=(json.load(open(f)) for f in sys.argv[1:]); sys.exit(0 if a==b else "out/filler-probe-result.json differs from runs/filler-probe-result.json")' $(CURDIR)/out/filler-probe-result.json $(CURDIR)/runs/filler-probe-result.json && echo "ok   filler probe replay matches runs/filler-probe-result.json"; fi
+	@if [ -s $(PROBE2_CASSETTE) ]; then cd agents && $(HT) probe-make --tasks $(CURDIR)/runs/probe2-tasks.json --llm replay:$(PROBE2_MAKER) --out $(CURDIR)/out/filler-probe-2.json >/dev/null && $(HT) rubric-check --items $(CURDIR)/runs/filler-probe-2.json --llm replay:$(PROBE2_CASSETTE) --out $(CURDIR)/out/filler-probe-2-result.json >/dev/null && python3 -I -c 'import json,sys; a,b,c,d=(json.load(open(f)) for f in sys.argv[1:]); sys.exit(0 if (a,c)==(b,d) else "probe 2 replay differs from runs/filler-probe-2*.json")' $(CURDIR)/out/filler-probe-2.json $(CURDIR)/runs/filler-probe-2.json $(CURDIR)/out/filler-probe-2-result.json $(CURDIR)/runs/filler-probe-2-result.json && echo "ok   probe 2 replay matches runs/filler-probe-2-result.json"; fi
 
 .PHONY: testnet-answers
 testnet-answers: ## [network] Read the testnet run's signed judge answers back from testnet RPC into demo/testnet-judge-cassette.json (no key)
@@ -231,6 +243,7 @@ verify-cassette: ## Re-check every NEAR AI signature in the cassettes: the story
 	@if [ -s $(SWARM_CASSETTE) ]; then cd agents && $(HT) verify-cassette $(SWARM_CASSETTE); fi
 	@if [ -s $(RUBRIC_CASSETTE) ]; then cd agents && $(HT) verify-cassette $(RUBRIC_CASSETTE); fi
 	@if [ -s $(PROBE_CASSETTE) ]; then cd agents && $(HT) verify-cassette $(PROBE_CASSETTE); fi
+	@if [ -s $(PROBE2_CASSETTE) ]; then cd agents && $(HT) verify-cassette $(PROBE2_MAKER) && $(HT) verify-cassette $(PROBE2_CASSETTE); fi
 	@if [ -s $(CURDIR)/demo/testnet-judge-cassette.json ]; then cd agents && $(HT) verify-cassette $(CURDIR)/demo/testnet-judge-cassette.json; fi
 
 .PHONY: testnet-dryrun
