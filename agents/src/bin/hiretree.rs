@@ -319,7 +319,10 @@ async fn testnet_answers(args: &[String]) {
     let mut cas = Cassette {
         model: model.into(),
         signer: signer.into(),
-        signer_source: format!("signed answers submitted on NEAR testnet, read back from {scene_f}'s submit_check transactions"),
+        signer_source: format!(
+            "signed answers submitted on NEAR testnet, read back from {}'s submit_check transactions",
+            std::path::Path::new(&scene_f).file_name().map(|n| n.to_string_lossy()).unwrap_or_default()
+        ),
         entries: vec![],
         rubric: Some(2),
     };
