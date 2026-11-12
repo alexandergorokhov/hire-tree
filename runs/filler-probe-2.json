@@ -1,0 +1,170 @@
+[
+  {
+    "deliverable": "A NEAR function-call access key restricts an AI agent to only call specific functions on an account, preventing unauthorized actions like transferring funds. It limits the agent to a predefined set of methods, enhancing security. This ensures the agent can only interact with the account in ways explicitly permitted by the key's configuration.",
+    "delivery": 1,
+    "job": "t1.probe2.hub.hiretree.testnet",
+    "kind": "real answer (model)",
+    "task": "Explain in 3 sentences how a NEAR function-call access key limits what an AI agent can do with an account."
+  },
+  {
+    "deliverable": "A NEAR function-call access key restricts an AI agent to only invoke specific functions on an account, limiting its actions to predefined operations. It prevents the agent from performing unauthorized transactions or accessing private keys. This ensures security by confining the agent’s capabilities to approved functions only.",
+    "delivery": 2,
+    "job": "t1.probe2.hub.hiretree.testnet",
+    "kind": "model-written filler",
+    "task": "Explain in 3 sentences how a NEAR function-call access key limits what an AI agent can do with an account."
+  },
+  {
+    "deliverable": "Task: Explain in 3 sentences how a NEAR function-call access key limits what an AI agent can do with an account.\n\nDelivered as requested. Explain in 3 sentences how a NEAR function-call access key limits what an AI agent can do with an account. The deliverable meets every requirement of the task, in the requested format and length, and was checked before delivery.",
+    "delivery": 3,
+    "job": "t1.probe2.hub.hiretree.testnet",
+    "kind": "task-copy filler",
+    "task": "Explain in 3 sentences how a NEAR function-call access key limits what an AI agent can do with an account."
+  },
+  {
+    "deliverable": "La cuenta de trabajo retiene el dinero y paga al trabajador solo después de que pase la verificación de calidad firmada.",
+    "delivery": 1,
+    "job": "t2.probe2.hub.hiretree.testnet",
+    "kind": "real answer (model)",
+    "task": "Translate into Spanish: 'The job account holds the money and pays the worker only after the signed quality check passes.'"
+  },
+  {
+    "deliverable": "La cuenta de trabajo retiene el dinero y paga al trabajador solo después de que pase la verificación de calidad firmada.",
+    "delivery": 2,
+    "job": "t2.probe2.hub.hiretree.testnet",
+    "kind": "model-written filler",
+    "task": "Translate into Spanish: 'The job account holds the money and pays the worker only after the signed quality check passes.'"
+  },
+  {
+    "deliverable": "Task: Translate into Spanish: 'The job account holds the money and pays the worker only after the signed quality check passes.'\n\nDelivered as requested. Translate into Spanish: 'The job account holds the money and pays the worker only after the signed quality check passes.' The deliverable meets every requirement of the task, in the requested format and length, and was checked before delivery.",
+    "delivery": 3,
+    "job": "t2.probe2.hub.hiretree.testnet",
+    "kind": "task-copy filler",
+    "task": "Translate into Spanish: 'The job account holds the money and pays the worker only after the signed quality check passes.'"
+  },
+  {
+    "deliverable": "A buying pool enables multiple clients to fund a job collectively, with decisions made by stake majority and refunds distributed proportionally.",
+    "delivery": 1,
+    "job": "t3.probe2.hub.hiretree.testnet",
+    "kind": "real answer (model)",
+    "task": "Write a one-line summary of: 'A buying pool lets several clients fund one job together; members approve by stake majority and claim refunds pro rata.'"
+  },
+  {
+    "deliverable": "A buying pool enables multiple clients to fund a job collectively, with approval via stake majority and refunds distributed proportionally.",
+    "delivery": 2,
+    "job": "t3.probe2.hub.hiretree.testnet",
+    "kind": "model-written filler",
+    "task": "Write a one-line summary of: 'A buying pool lets several clients fund one job together; members approve by stake majority and claim refunds pro rata.'"
+  },
+  {
+    "deliverable": "Task: Write a one-line summary of: 'A buying pool lets several clients fund one job together; members approve by stake majority and claim refunds pro rata.'\n\nDelivered as requested. Write a one-line summary of: 'A buying pool lets several clients fund one job together; members approve by stake majority and claim refunds pro rata.' The deliverable meets every requirement of the task, in the requested format and length, and was checked before delivery.",
+    "delivery": 3,
+    "job": "t3.probe2.hub.hiretree.testnet",
+    "kind": "task-copy filler",
+    "task": "Write a one-line summary of: 'A buying pool lets several clients fund one job together; members approve by stake majority and claim refunds pro rata.'"
+  },
+  {
+    "deliverable": "1. Uncontrolled financial spending due to lack of human oversight.  \n2. Potential for biased or unethical hiring decisions based on flawed training data.  \n3. Increased vulnerability to cyberattacks targeting autonomous financial systems.",
+    "delivery": 1,
+    "job": "t4.probe2.hub.hiretree.testnet",
+    "kind": "real answer (model)",
+    "task": "List 3 risks of letting AI agents hire other AI agents with real money, one short sentence each."
+  },
+  {
+    "deliverable": "1. Uncontrolled financial decisions may lead to significant monetary loss.  \n2. Lack of human oversight can result in unethical or illegal hiring practices.  \n3. AI agents might prioritize self-interest over organizational goals.",
+    "delivery": 2,
+    "job": "t4.probe2.hub.hiretree.testnet",
+    "kind": "model-written filler",
+    "task": "List 3 risks of letting AI agents hire other AI agents with real money, one short sentence each."
+  },
+  {
+    "deliverable": "Task: List 3 risks of letting AI agents hire other AI agents with real money, one short sentence each.\n\nDelivered as requested. List 3 risks of letting AI agents hire other AI agents with real money, one short sentence each. The deliverable meets every requirement of the task, in the requested format and length, and was checked before delivery.",
+    "delivery": 3,
+    "job": "t4.probe2.hub.hiretree.testnet",
+    "kind": "task-copy filler",
+    "task": "List 3 risks of letting AI agents hire other AI agents with real money, one short sentence each."
+  },
+  {
+    "deliverable": "An escrow held by a platform is managed centrally, relying on the platform's trust and governance, while an escrow held by a per-job NEAR account is decentralized, with funds controlled directly by the account and governed by smart contracts. This gives the per-job escrow greater transparency and autonomy, reducing counterparty risk.",
+    "delivery": 1,
+    "job": "t5.probe2.hub.hiretree.testnet",
+    "kind": "real answer (model)",
+    "task": "Compare an escrow held by a platform with an escrow held by a per-job NEAR account, in 2 sentences."
+  },
+  {
+    "deliverable": "An escrow held by a platform is managed centrally, while an escrow held by a per-job NEAR account is decentralized and specific to each job. The platform escrow relies on the platform's trust, whereas the per-job account escrow leverages blockchain security.",
+    "delivery": 2,
+    "job": "t5.probe2.hub.hiretree.testnet",
+    "kind": "model-written filler",
+    "task": "Compare an escrow held by a platform with an escrow held by a per-job NEAR account, in 2 sentences."
+  },
+  {
+    "deliverable": "Task: Compare an escrow held by a platform with an escrow held by a per-job NEAR account, in 2 sentences.\n\nDelivered as requested. Compare an escrow held by a platform with an escrow held by a per-job NEAR account, in 2 sentences. The deliverable meets every requirement of the task, in the requested format and length, and was checked before delivery.",
+    "delivery": 3,
+    "job": "t5.probe2.hub.hiretree.testnet",
+    "kind": "task-copy filler",
+    "task": "Compare an escrow held by a platform with an escrow held by a per-job NEAR account, in 2 sentences."
+  },
+  {
+    "deliverable": "1. Retrieve the AI response and its digital signature.  \n2. Extract the model’s public key from the NEAR blockchain or trusted source.  \n3. Use the public key to verify the signature matches the response’s hash.  \n4. Confirm the verification succeeds—indicating the response was signed by the model’s private key.",
+    "delivery": 1,
+    "job": "t6.probe2.hub.hiretree.testnet",
+    "kind": "real answer (model)",
+    "task": "Give a step-by-step plan (4 steps) for an agent to check that a NEAR AI answer was really signed by the model's key."
+  },
+  {
+    "deliverable": "1. Retrieve the NEAR AI answer and its associated digital signature.  \n2. Obtain the public key of the model from the trusted source.  \n3. Use the public key to verify the signature against the answer's content.  \n4. Confirm the verification result to ensure the answer is authentically signed.",
+    "delivery": 2,
+    "job": "t6.probe2.hub.hiretree.testnet",
+    "kind": "model-written filler",
+    "task": "Give a step-by-step plan (4 steps) for an agent to check that a NEAR AI answer was really signed by the model's key."
+  },
+  {
+    "deliverable": "Task: Give a step-by-step plan (4 steps) for an agent to check that a NEAR AI answer was really signed by the model's key.\n\nDelivered as requested. Give a step-by-step plan (4 steps) for an agent to check that a NEAR AI answer was really signed by the model's key. The deliverable meets every requirement of the task, in the requested format and length, and was checked before delivery.",
+    "delivery": 3,
+    "job": "t6.probe2.hub.hiretree.testnet",
+    "kind": "task-copy filler",
+    "task": "Give a step-by-step plan (4 steps) for an agent to check that a NEAR AI answer was really signed by the model's key."
+  },
+  {
+    "deliverable": "A marketplace where AI agents compete to complete tasks by bidding for jobs, ensuring efficiency and competition. Workers are paid only when their results are verified, guaranteeing quality and reducing risk for employers.",
+    "delivery": 1,
+    "job": "t7.probe2.hub.hiretree.testnet",
+    "kind": "real answer (model)",
+    "task": "Write a 2-sentence product description of a market where AI agents bid for work and are paid only for checked results."
+  },
+  {
+    "deliverable": "A marketplace where AI agents compete to complete tasks by submitting solutions that are verified before payment. Only validated results trigger compensation, ensuring quality and efficiency in automated work execution.",
+    "delivery": 2,
+    "job": "t7.probe2.hub.hiretree.testnet",
+    "kind": "model-written filler",
+    "task": "Write a 2-sentence product description of a market where AI agents bid for work and are paid only for checked results."
+  },
+  {
+    "deliverable": "Task: Write a 2-sentence product description of a market where AI agents bid for work and are paid only for checked results.\n\nDelivered as requested. Write a 2-sentence product description of a market where AI agents bid for work and are paid only for checked results. The deliverable meets every requirement of the task, in the requested format and length, and was checked before delivery.",
+    "delivery": 3,
+    "job": "t7.probe2.hub.hiretree.testnet",
+    "kind": "task-copy filler",
+    "task": "Write a 2-sentence product description of a market where AI agents bid for work and are paid only for checked results."
+  },
+  {
+    "deliverable": "A global contract on NEAR costs ten times more per byte because it's stored on the global state, which requires higher durability and availability. It pays off when the contract is widely used, as the high cost is offset by the value of reliable, persistent access across the network.",
+    "delivery": 1,
+    "job": "t8.probe2.hub.hiretree.testnet",
+    "kind": "real answer (model)",
+    "task": "Answer briefly: why does a global contract on NEAR cost ten times the normal storage price per byte, and when does it pay off?"
+  },
+  {
+    "deliverable": "A global contract on NEAR costs ten times the normal storage price per byte due to its persistent, shared state across the network, which requires higher security and coordination. It pays off when the contract serves many users or applications, enabling efficient, decentralized access without redundant deployments.",
+    "delivery": 2,
+    "job": "t8.probe2.hub.hiretree.testnet",
+    "kind": "model-written filler",
+    "task": "Answer briefly: why does a global contract on NEAR cost ten times the normal storage price per byte, and when does it pay off?"
+  },
+  {
+    "deliverable": "Task: Answer briefly: why does a global contract on NEAR cost ten times the normal storage price per byte, and when does it pay off?\n\nDelivered as requested. Answer briefly: why does a global contract on NEAR cost ten times the normal storage price per byte, and when does it pay off? The deliverable meets every requirement of the task, in the requested format and length, and was checked before delivery.",
+    "delivery": 3,
+    "job": "t8.probe2.hub.hiretree.testnet",
+    "kind": "task-copy filler",
+    "task": "Answer briefly: why does a global contract on NEAR cost ten times the normal storage price per byte, and when does it pay off?"
+  }
+]

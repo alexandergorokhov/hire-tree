@@ -1,0 +1,329 @@
+{
+  "by_kind": {
+    "model-written filler": {
+      "deliveries": 8,
+      "passed_rubric_2": 8
+    },
+    "real answer (model)": {
+      "deliveries": 8,
+      "passed_rubric_2": 8
+    },
+    "task-copy filler": {
+      "deliveries": 8,
+      "passed_rubric_2": 0
+    }
+  },
+  "filler": {
+    "rubric_1": {
+      "deliveries": 0,
+      "passed": 0
+    },
+    "rubric_2": {
+      "deliveries": 0,
+      "passed": 0
+    }
+  },
+  "model": "Qwen/Qwen3-VL-30B-A3B-Instruct",
+  "other": {
+    "rubric_1": {
+      "deliveries": 24,
+      "passed": 0
+    },
+    "rubric_2": {
+      "deliveries": 24,
+      "passed": 16
+    }
+  },
+  "pass_score": 6,
+  "rows": [
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t1.probe2.hub.hiretree.testnet",
+      "kind": "real answer (model)",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 10,
+      "v2_quotes_found": 3,
+      "v2_quotes_from_task": 0,
+      "v2_score": 10
+    },
+    {
+      "delivery": 2,
+      "filler": false,
+      "job": "t1.probe2.hub.hiretree.testnet",
+      "kind": "model-written filler",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 10,
+      "v2_quotes_found": 3,
+      "v2_quotes_from_task": 0,
+      "v2_score": 10
+    },
+    {
+      "delivery": 3,
+      "filler": false,
+      "job": "t1.probe2.hub.hiretree.testnet",
+      "kind": "task-copy filler",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_quotes_from_task": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t2.probe2.hub.hiretree.testnet",
+      "kind": "real answer (model)",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 10,
+      "v2_quotes_found": 2,
+      "v2_quotes_from_task": 0,
+      "v2_score": 10
+    },
+    {
+      "delivery": 2,
+      "filler": false,
+      "job": "t2.probe2.hub.hiretree.testnet",
+      "kind": "model-written filler",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 10,
+      "v2_quotes_found": 2,
+      "v2_quotes_from_task": 0,
+      "v2_score": 10
+    },
+    {
+      "delivery": 3,
+      "filler": false,
+      "job": "t2.probe2.hub.hiretree.testnet",
+      "kind": "task-copy filler",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 0,
+      "v2_quotes_found": 1,
+      "v2_quotes_from_task": 1,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t3.probe2.hub.hiretree.testnet",
+      "kind": "real answer (model)",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 10,
+      "v2_quotes_found": 2,
+      "v2_quotes_from_task": 0,
+      "v2_score": 10
+    },
+    {
+      "delivery": 2,
+      "filler": false,
+      "job": "t3.probe2.hub.hiretree.testnet",
+      "kind": "model-written filler",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 10,
+      "v2_quotes_found": 2,
+      "v2_quotes_from_task": 0,
+      "v2_score": 10
+    },
+    {
+      "delivery": 3,
+      "filler": false,
+      "job": "t3.probe2.hub.hiretree.testnet",
+      "kind": "task-copy filler",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_quotes_from_task": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t4.probe2.hub.hiretree.testnet",
+      "kind": "real answer (model)",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 10,
+      "v2_quotes_found": 3,
+      "v2_quotes_from_task": 0,
+      "v2_score": 10
+    },
+    {
+      "delivery": 2,
+      "filler": false,
+      "job": "t4.probe2.hub.hiretree.testnet",
+      "kind": "model-written filler",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 10,
+      "v2_quotes_found": 3,
+      "v2_quotes_from_task": 0,
+      "v2_score": 10
+    },
+    {
+      "delivery": 3,
+      "filler": false,
+      "job": "t4.probe2.hub.hiretree.testnet",
+      "kind": "task-copy filler",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_quotes_from_task": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t5.probe2.hub.hiretree.testnet",
+      "kind": "real answer (model)",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 9,
+      "v2_quotes_found": 2,
+      "v2_quotes_from_task": 0,
+      "v2_score": 9
+    },
+    {
+      "delivery": 2,
+      "filler": false,
+      "job": "t5.probe2.hub.hiretree.testnet",
+      "kind": "model-written filler",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 10,
+      "v2_quotes_found": 2,
+      "v2_quotes_from_task": 0,
+      "v2_score": 10
+    },
+    {
+      "delivery": 3,
+      "filler": false,
+      "job": "t5.probe2.hub.hiretree.testnet",
+      "kind": "task-copy filler",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_quotes_from_task": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t6.probe2.hub.hiretree.testnet",
+      "kind": "real answer (model)",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 10,
+      "v2_quotes_found": 4,
+      "v2_quotes_from_task": 0,
+      "v2_score": 10
+    },
+    {
+      "delivery": 2,
+      "filler": false,
+      "job": "t6.probe2.hub.hiretree.testnet",
+      "kind": "model-written filler",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 10,
+      "v2_quotes_found": 4,
+      "v2_quotes_from_task": 0,
+      "v2_score": 10
+    },
+    {
+      "delivery": 3,
+      "filler": false,
+      "job": "t6.probe2.hub.hiretree.testnet",
+      "kind": "task-copy filler",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_quotes_from_task": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t7.probe2.hub.hiretree.testnet",
+      "kind": "real answer (model)",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 10,
+      "v2_quotes_found": 2,
+      "v2_quotes_from_task": 0,
+      "v2_score": 10
+    },
+    {
+      "delivery": 2,
+      "filler": false,
+      "job": "t7.probe2.hub.hiretree.testnet",
+      "kind": "model-written filler",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 10,
+      "v2_quotes_found": 2,
+      "v2_quotes_from_task": 0,
+      "v2_score": 10
+    },
+    {
+      "delivery": 3,
+      "filler": false,
+      "job": "t7.probe2.hub.hiretree.testnet",
+      "kind": "task-copy filler",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_quotes_from_task": 0,
+      "v2_score": 0
+    },
+    {
+      "delivery": 1,
+      "filler": false,
+      "job": "t8.probe2.hub.hiretree.testnet",
+      "kind": "real answer (model)",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 9,
+      "v2_quotes_found": 2,
+      "v2_quotes_from_task": 0,
+      "v2_score": 9
+    },
+    {
+      "delivery": 2,
+      "filler": false,
+      "job": "t8.probe2.hub.hiretree.testnet",
+      "kind": "model-written filler",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 9,
+      "v2_quotes_found": 3,
+      "v2_quotes_from_task": 0,
+      "v2_score": 9
+    },
+    {
+      "delivery": 3,
+      "filler": false,
+      "job": "t8.probe2.hub.hiretree.testnet",
+      "kind": "task-copy filler",
+      "v1_counted": null,
+      "v1_scores": [],
+      "v2_counted": 0,
+      "v2_quotes_found": 0,
+      "v2_quotes_from_task": 0,
+      "v2_score": 0
+    }
+  ],
+  "signer": "2665cce942fa427ef30d87f4b0bff67fb7645462"
+}
