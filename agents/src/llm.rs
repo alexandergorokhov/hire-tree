@@ -191,21 +191,41 @@ impl NearAi {
     /// bytes):sha256(the response bytes we got)`: that is the format the
     /// contract checks, so a mismatch is a no-go.
     pub async fn chat(&self, body: &[u8]) -> Result<Reply, String> {
-        let r = self
-            .http
-            .post(format!("{}/v1/chat/completions", self.base))
-            .bearer_auth(&self.key)
-            .header("content-type", "application/json")
-            .body(body.to_vec())
-            .send()
-            .await
-            .map_err(|e| format!("chat: {e}"))?;
-        let status = r.status();
-        let resp = r
-            .bytes()
-            .await
-            .map_err(|e| format!("chat body: {e}"))?
-            .to_vec();
+        // A dropped connection, 429 or 5xx is retried (4 tries, 2-8 s
+        // apart): one network blip should not end a long testnet run.
+        let mut tries = 0u64;
+        let (status, resp) = loop {
+            tries += 1;
+            let sent = self
+                .http
+                .post(format!("{}/v1/chat/completions", self.base))
+                .bearer_auth(&self.key)
+                .header("content-type", "application/json")
+                .body(body.to_vec())
+                .send()
+                .await;
+            let r = match sent {
+                Ok(r) => r,
+                Err(e) if tries < 4 => {
+                    eprintln!("  NEAR AI: chat: {e}; retry {tries}");
+                    tokio::time::sleep(std::time::Duration::from_secs(2 * tries)).await;
+                    continue;
+                }
+                Err(e) => return Err(format!("chat: {e}")),
+            };
+            let status = r.status();
+            let resp = r
+                .bytes()
+                .await
+                .map_err(|e| format!("chat body: {e}"))?
+                .to_vec();
+            if (status.as_u16() == 429 || status.is_server_error()) && tries < 4 {
+                eprintln!("  NEAR AI: chat: HTTP {status}; retry {tries}");
+                tokio::time::sleep(std::time::Duration::from_secs(2 * tries)).await;
+                continue;
+            }
+            break (status, resp);
+        };
         if !status.is_success() {
             return Err(format!(
                 "chat: HTTP {status}: {}",
