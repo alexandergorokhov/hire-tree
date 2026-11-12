@@ -12,7 +12,7 @@ Run these, in this order (all local, no keys, fake money, never mainnet):
 
 | Step | Command | Expect |
 |---|---|---|
-| 1 | `make judge` | one `PASS` line per check; last line `ALL PASS (11 checks)` (~3 min warm; a cold first build adds several minutes) |
+| 1 | `make judge` | one `PASS` line per check; last line `ALL PASS (12 checks)` (~3 min warm; a cold first build adds several minutes) |
 | 2 | `make start` | builds, runs the agent story on a local NEAR node (~5 min), serves `web/` on :8080, ends with `DEMO PASS` and the URLs |
 | 3 | `make mcp-setup`, then restart your MCP client in this folder | `.mcp.json` registers `hire-tree`: 50 tools on a local node with funded demo accounts |
 

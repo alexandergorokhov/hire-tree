@@ -8,6 +8,7 @@
 //! hiretree mcp --as NAME           # stdio MCP server on testnet as NAME.<operator>
 //! hiretree mcp --local             # stdio MCP playground on a local node (no keys)
 //! hiretree rubric-check [--llm mock|record:FILE|replay:FILE] # the live run's deliveries under judge rubric 2
+//! hiretree testnet-answers         # read a testnet run's signed judge answers back from the chain into a cassette
 //! hiretree swarm [--rounds N] [--out FILE] [--blind|--audit-all] [--seed N] [--storm R [--wash]] [--allow-list] [--llm mock|live|record:FILE|replay:FILE] # 3 leads, 36 agents, trees up to 3 deep, N rounds on a local node
 //! ```
 //! Env: NEARAI_API_KEY, HT_MODEL, HT_OPERATOR, HT_OPERATOR_KEY, HT_RPC.
@@ -283,6 +284,124 @@ async fn rubric_check(args: &[String]) {
     println!("report: {out}");
 }
 
+/// The signed judge answers of a testnet run, fetched back from the chain:
+///   hiretree testnet-answers [--scene web/scene-testnet.json] [--out demo/testnet-judge-cassette.json]
+/// Reads every `submit_check` transaction the scene lists from testnet RPC
+/// (HT_RPC), rebuilds the exact request each job built (rubric 2), and
+/// saves request, answer and signature as a cassette, so `verify-cassette`
+/// re-checks them offline.
+async fn testnet_answers(args: &[String]) {
+    use base64::Engine;
+    let b64 = base64::engine::general_purpose::STANDARD;
+    let root = format!("{}/..", out_dir());
+    let scene_f = arg(args, "--scene").unwrap_or_else(|| format!("{root}/web/scene-testnet.json"));
+    let out =
+        arg(args, "--out").unwrap_or_else(|| format!("{root}/demo/testnet-judge-cassette.json"));
+    let scene: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&scene_f).unwrap_or_else(|e| die(e)))
+            .unwrap_or_else(|e| die(e));
+    let run = &scene["run"];
+    let (model, signer) = (
+        run["model"].as_str().unwrap_or_default(),
+        run["signer"].as_str().unwrap_or_default(),
+    );
+    let rpc = std::env::var("HT_RPC").unwrap_or_else(|_| "https://rpc.testnet.near.org".into());
+    let http = reqwest::Client::new();
+    let mut cas = Cassette {
+        model: model.into(),
+        signer: signer.into(),
+        signer_source: format!("signed answers submitted on NEAR testnet, read back from {scene_f}'s submit_check transactions"),
+        entries: vec![],
+        rubric: Some(2),
+    };
+    for t in run["transactions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|t| t["method"] == "submit_check" && t["ok"] == true)
+    {
+        let (hash, who, job) = (
+            t["tx"].as_str().unwrap(),
+            t["who"].as_str().unwrap(),
+            t["on"].as_str().unwrap(),
+        );
+        let body = json!({ "jsonrpc": "2.0", "id": "ht", "method": "tx",
+            "params": { "tx_hash": hash, "sender_account_id": who, "wait_until": "NONE" } });
+        let mut got = None;
+        for wait in [0u64, 2, 4, 8] {
+            tokio::time::sleep(std::time::Duration::from_secs(wait)).await;
+            if let Ok(r) = http.post(&rpc).json(&body).send().await {
+                if let Ok(v) = r.json::<serde_json::Value>().await {
+                    if v["result"].is_object() {
+                        got = Some(v);
+                        break;
+                    }
+                }
+            }
+        }
+        let v = got.unwrap_or_else(|| die(format!("tx {hash}: no answer from {rpc}")));
+        let a = &v["result"]["transaction"]["actions"][0]["FunctionCall"];
+        let call: serde_json::Value = serde_json::from_slice(
+            &b64.decode(a["args"].as_str().unwrap_or_default())
+                .unwrap_or_default(),
+        )
+        .unwrap_or_else(|e| die(format!("tx {hash}: args: {e}")));
+        let task = call["task"].as_str().unwrap_or_default();
+        let deliverable = String::from_utf8(
+            b64.decode(call["deliverable"].as_str().unwrap_or_default())
+                .unwrap_or_default(),
+        )
+        .unwrap_or_default();
+        let answer = String::from_utf8(
+            b64.decode(call["answer"].as_str().unwrap_or_default())
+                .unwrap_or_default(),
+        )
+        .unwrap_or_default();
+        let sig = call["sig"].as_str().unwrap_or_default().to_string();
+        let panel = call["panel"].as_u64().unwrap_or(0) as u8;
+        // The delivery number is not in the call: the one whose request the signature covers.
+        let req = (1..=8u32)
+            .map(|seq| {
+                String::from_utf8(ht_core::check::request_bytes_v(
+                    2,
+                    model,
+                    job,
+                    seq,
+                    panel,
+                    task,
+                    &deliverable,
+                ))
+                .unwrap()
+            })
+            .find(|req| {
+                recover(model, req.as_bytes(), answer.as_bytes(), &sig)
+                    .is_ok_and(|a| a.eq_ignore_ascii_case(signer))
+            })
+            .unwrap_or_else(|| {
+                die(format!(
+                    "tx {hash}: no delivery number makes the signature recover to {signer}"
+                ))
+            });
+        let content = hire_tree_agents::llm::Reply {
+            body: answer.clone().into_bytes(),
+            sig: sig.clone(),
+        }
+        .content();
+        println!(
+            "{hash} {job} panel {panel}: counted {:?} ({content})",
+            hire_tree_agents::rubric::read_v2(&content, &deliverable)
+        );
+        cas.entries.push(hire_tree_agents::llm::Entry {
+            req,
+            resp: answer,
+            sig,
+        });
+    }
+    let n = cas.verify().unwrap_or_else(|e| die(e));
+    cas.save(&out).unwrap_or_else(|e| die(e));
+    println!("ok   {n} testnet judge answers, all signed by {signer}: {out}");
+}
+
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -300,6 +419,7 @@ async fn main() {
         }
         Some("mcp") => mcp(&args).await,
         Some("rubric-check") => rubric_check(&args).await,
+        Some("testnet-answers") => testnet_answers(&args).await,
         Some("swarm") => {
             let jobs: u32 = arg(&args, "--rounds")
                 .and_then(|j| j.parse().ok())

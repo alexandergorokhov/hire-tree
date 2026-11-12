@@ -34,6 +34,7 @@ check seeds          python3 scripts/swarm-seeds.py --check --readme
 [ -d runs/storm ] && check storm python3 scripts/swarm-seeds.py --storm --check --readme
 [ -d runs/wash ]  && check wash  python3 scripts/swarm-seeds.py --wash --check --readme
 [ -s demo/rubric2-cassette.json ] && check rubric-2 make --no-print-directory rubric-check
+[ -f web/scene-testnet.json ] && check testnet python3 scripts/testnet-check.py --readme
 check economics      python3 scripts/economics.py --check
 check spec-tests     scripts/check-spec-tests.sh
 

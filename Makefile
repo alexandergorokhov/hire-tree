@@ -165,6 +165,11 @@ rubric-check: ## Offline: replay the rubric-2 recording (every signature re-chec
 	@cd agents && $(HT) rubric-check --llm replay:$(RUBRIC_CASSETTE) --out $(CURDIR)/out/rubric2.json
 	@python3 -I -c 'import json,sys; a,b=(json.load(open(f)) for f in sys.argv[1:]); sys.exit(0 if a==b else "out/rubric2.json differs from runs/rubric2.json")' out/rubric2.json runs/rubric2.json && echo "ok   rubric 2 replay matches runs/rubric2.json"
 
+.PHONY: testnet-answers
+testnet-answers: ## [network] Read the testnet run's signed judge answers back from testnet RPC into demo/testnet-judge-cassette.json (no key)
+	@cd agents && $(HT) testnet-answers
+	python3 scripts/testnet-check.py
+
 .PHONY: mcp-setup
 mcp-setup: build ## Build what the MCP playground needs (.mcp.json runs scripts/mcp-local.sh)
 	cd agents && cargo build --locked --bin hiretree
@@ -215,6 +220,7 @@ verify-cassette: ## Re-check every NEAR AI signature in the cassettes: the story
 	@cd agents && $(HT) verify-cassette $(CASSETTE)
 	@if [ -s $(SWARM_CASSETTE) ]; then cd agents && $(HT) verify-cassette $(SWARM_CASSETTE); fi
 	@if [ -s $(RUBRIC_CASSETTE) ]; then cd agents && $(HT) verify-cassette $(RUBRIC_CASSETTE); fi
+	@if [ -s $(CURDIR)/demo/testnet-judge-cassette.json ]; then cd agents && $(HT) verify-cassette $(CURDIR)/demo/testnet-judge-cassette.json; fi
 
 .PHONY: testnet-dryrun
 testnet-dryrun: build ## The testnet code path (derived keys, tight funding, rerun reuse, real 5-min waits) against a local node; prints NEAR spent (~25 min)
