@@ -241,7 +241,7 @@ async fn rubric_check(args: &[String]) {
         None => hire_tree_agents::rubric::items_from(&src),
     };
     let spec = arg(args, "--llm").unwrap_or_else(|| "mock".into());
-    let llm = graded_llm(&spec, &src).await;
+    let llm = graded_llm(&spec, &src, arg(args, "--reuse")).await;
     eprintln!(
         "grading {} deliveries from {from} under rubric 2 ({spec})",
         items.len()
@@ -271,8 +271,10 @@ async fn rubric_check(args: &[String]) {
 }
 
 /// The LLM for re-grading: `record:FILE` asks NEAR AI (the source run's
-/// model) and records into FILE; otherwise as `llm_from`.
-async fn graded_llm(spec: &str, src: &Cassette) -> Llm {
+/// model) and records into FILE; otherwise as `llm_from`. With `reuse`
+/// (an earlier recording, by the same signer) its signed answers to the
+/// same requests are copied instead of asked again.
+async fn graded_llm(spec: &str, src: &Cassette, reuse: Option<String>) -> Llm {
     match spec.split_once(':') {
         Some(("record", f)) => {
             let n = NearAi::from_env(&src.model).unwrap_or_else(|e| die(e));
@@ -284,8 +286,26 @@ async fn graded_llm(spec: &str, src: &Cassette) -> Llm {
                 );
             }
             n.expect.lock().unwrap().replace(signer.to_lowercase());
+            let source = match reuse {
+                Some(r) => {
+                    let old = Cassette::load(&r).unwrap_or_else(|e| die(e));
+                    if !old
+                        .signer
+                        .trim_start_matches("0x")
+                        .eq_ignore_ascii_case(&signer)
+                    {
+                        die(format!(
+                            "{r} was signed by {}, NEAR AI now signs with {signer}: cannot reuse",
+                            old.signer
+                        ));
+                    }
+                    Source::reusing(Source::Live(n), old)
+                        .unwrap_or_else(|e| die(format!("{r}: {e}")))
+                }
+                None => Source::Live(n),
+            };
             Llm::Record(
-                Source::Live(n),
+                source,
                 Mutex::new(Cassette {
                     model: src.model.clone(),
                     signer: signer.clone(),
@@ -310,7 +330,7 @@ async fn probe_make(args: &[String]) {
     let src = Cassette::load(&from).unwrap_or_else(|e| die(e));
     let tasks = arg(args, "--tasks").unwrap_or_else(|| die("--tasks FILE"));
     let spec = arg(args, "--llm").unwrap_or_else(|| "mock".into());
-    let llm = graded_llm(&spec, &src).await;
+    let llm = graded_llm(&spec, &src, arg(args, "--reuse")).await;
     let items = hire_tree_agents::rubric::make_probe(&tasks, &llm)
         .await
         .unwrap_or_else(|e| die(e));

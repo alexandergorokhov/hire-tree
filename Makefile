@@ -171,10 +171,10 @@ PROBE2_MAKER ?= $(CURDIR)/demo/probe2-maker-cassette.json
 PROBE2_CASSETTE ?= $(CURDIR)/demo/probe2-cassette.json
 
 .PHONY: record-probe2
-record-probe2: ## [NEAR AI key] Harder filler probe: per task in runs/probe2-tasks.json the model writes a real answer and a filler made to look like the work, plus a task-copy filler; all graded under rubric 2 (40 small calls)
+record-probe2: ## [NEAR AI key] Harder filler probe: per task in runs/probe2-tasks.json the model writes a real answer and a filler made to look like the work, plus a task-copy filler; all graded under rubric 2 (40 small calls; a re-record reuses the signed answers to unchanged requests)
 	@rm -f $(PROBE2_MAKER).new $(PROBE2_CASSETTE).new
-	@cd agents && $(HT) probe-make --tasks $(CURDIR)/runs/probe2-tasks.json --llm record:$(PROBE2_MAKER).new --out $(CURDIR)/runs/filler-probe-2.json
-	@cd agents && $(HT) rubric-check --items $(CURDIR)/runs/filler-probe-2.json --llm record:$(PROBE2_CASSETTE).new --out $(CURDIR)/runs/filler-probe-2-result.json
+	@cd agents && $(HT) probe-make --tasks $(CURDIR)/runs/probe2-tasks.json --llm record:$(PROBE2_MAKER).new $(if $(wildcard $(PROBE2_MAKER)),--reuse $(PROBE2_MAKER)) --out $(CURDIR)/runs/filler-probe-2.json
+	@cd agents && $(HT) rubric-check --items $(CURDIR)/runs/filler-probe-2.json --llm record:$(PROBE2_CASSETTE).new $(if $(wildcard $(PROBE2_CASSETTE)),--reuse $(PROBE2_CASSETTE)) --out $(CURDIR)/runs/filler-probe-2-result.json
 	@cd agents && $(HT) verify-cassette $(PROBE2_MAKER).new && $(HT) verify-cassette $(PROBE2_CASSETTE).new
 	@mv $(PROBE2_MAKER).new $(PROBE2_MAKER) && mv $(PROBE2_CASSETTE).new $(PROBE2_CASSETTE) && echo "probe 2 cassettes saved"
 

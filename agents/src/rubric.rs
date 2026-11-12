@@ -116,9 +116,11 @@ pub fn items_from_file(path: &str) -> Result<Vec<Item>, String> {
         .map_err(|f| format!("{path}: an item has no {f}"))
 }
 
-/// The system prompt that asks the model for filler written for one task
-/// (the probe's hardest kind a model can write: it looks like the work).
-pub const FILLER_WRITER: &str = "ROLE: probe writer for a quality-check test. For the task in the user message, write text that looks like a finished deliverable for exactly this task and reuses the task's own words, but does not do the task: no facts, no real summary, translation, list or answer. Under 80 words. Reply with the text only.";
+/// The system prompt that asks the model for filler written for one task:
+/// it looks finished and says nothing. (A first version only asked for text
+/// that "does not do the task"; the model answered the task correctly
+/// every time, so it was not filler.)
+pub const FILLER_WRITER: &str = "ROLE: test fixture writer. A quality checker must learn to reject deliverables that only look finished. For the task in the user message, write such a fake deliverable: restate the task in your own words, say the work is complete and of high quality, and describe its structure and what it covers in general terms, but do NOT include the actual content: no actual facts, steps, translated sentence, risks, comparison or answer. Under 80 words. Reply with the fake deliverable only.";
 
 /// Filler that copies the task word for word and claims it is done: every
 /// quote the judge could take from it is the task's own text.

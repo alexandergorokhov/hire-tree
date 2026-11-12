@@ -333,6 +333,11 @@ impl Mock {
 pub enum Source {
     Live(NearAi),
     Mock(Mock),
+    /// Answers already signed in an earlier cassette are reused (same
+    /// request bytes, each entry once); only new requests reach the inner
+    /// source. Re-recording after one prompt changes costs only the calls
+    /// that changed.
+    Reuse(Box<Source>, Cassette, Mutex<Vec<bool>>),
 }
 
 impl Source {
@@ -340,13 +345,46 @@ impl Source {
         match self {
             Source::Live(n) => n.model.clone(),
             Source::Mock(m) => m.model.clone(),
+            Source::Reuse(inner, _, _) => inner.model(),
         }
     }
     async fn chat(&self, body: &[u8]) -> Result<Reply, String> {
         match self {
             Source::Live(n) => n.chat(body).await,
             Source::Mock(m) => Ok(m.chat(body)),
+            Source::Reuse(inner, c, used) => {
+                let want = String::from_utf8_lossy(body);
+                let hit = {
+                    let mut used = used.lock().unwrap();
+                    c.entries
+                        .iter()
+                        .enumerate()
+                        .find(|(i, e)| !used[*i] && e.req == want)
+                        .map(|(i, e)| {
+                            used[i] = true;
+                            Reply {
+                                body: e.resp.clone().into_bytes(),
+                                sig: e.sig.clone(),
+                            }
+                        })
+                };
+                match hit {
+                    Some(r) => Ok(r),
+                    None => Box::pin(inner.chat(body)).await,
+                }
+            }
         }
+    }
+
+    /// `inner`, reusing the signed answers in `c` (checked first).
+    pub fn reusing(inner: Source, c: Cassette) -> Result<Source, String> {
+        c.verify()?;
+        let n = c.entries.len();
+        Ok(Source::Reuse(
+            Box::new(inner),
+            c,
+            Mutex::new(vec![false; n]),
+        ))
     }
 }
 
@@ -485,6 +523,48 @@ mod tests {
         assert_eq!(c.verify().unwrap(), 1);
         c.entries[0].resp = c.entries[0].resp.replace("hi", "ho");
         assert!(c.verify().is_err(), "an edited answer must fail");
+    }
+
+    #[tokio::test]
+    async fn a_reusing_source_copies_signed_answers_and_asks_only_new_requests() {
+        let (a, b) = (chat_body("m", "s", "a", 4), chat_body("m", "s", "b", 4));
+        // An earlier recording holds the answer to `a`.
+        let first = Llm::Mock(Mock::new("m", Box::new(|_| "old".into())));
+        let r = first.chat(&a).await.unwrap();
+        let old = Cassette {
+            model: "m".into(),
+            signer: first.signer().unwrap(),
+            signer_source: "test".into(),
+            entries: vec![Entry {
+                req: String::from_utf8(a.clone()).unwrap(),
+                resp: String::from_utf8(r.body).unwrap(),
+                sig: r.sig,
+            }],
+            rubric: None,
+        };
+        let asked = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let n = asked.clone();
+        let inner = Source::Mock(Mock::new(
+            "m",
+            Box::new(move |_| {
+                n.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                "new".into()
+            }),
+        ));
+        let src = Source::reusing(inner, old.clone()).unwrap();
+        assert_eq!(src.chat(&a).await.unwrap().content(), "old");
+        assert_eq!(src.chat(&b).await.unwrap().content(), "new");
+        // Each recorded answer is used once: a second `a` is asked anew.
+        assert_eq!(src.chat(&a).await.unwrap().content(), "new");
+        assert_eq!(asked.load(std::sync::atomic::Ordering::SeqCst), 2);
+        // A tampered earlier recording is refused.
+        let mut bad = old;
+        bad.entries[0].resp = bad.entries[0].resp.replace("old", "odd");
+        assert!(Source::reusing(
+            Source::Mock(Mock::new("m", Box::new(|_| String::new()))),
+            bad
+        )
+        .is_err());
     }
 
     #[tokio::test]
