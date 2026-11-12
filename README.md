@@ -95,10 +95,15 @@ Re-graded live by the same NEAR AI model (29 signed answers,
 | Fluent filler (test agent) | 7 of 7 | **0 of 7** |
 | Everything else | 14 of 22 | 10 of 22 |
 
-The 4 others that stopped passing are generic answers real model workers
-gave to the run's one-line placeholder tasks (for example a "translation"
-that only describes how to translate); every lorem-ipsum delivery still
-fails. New jobs pin rubric 2; recordings made under rubric 1 still replay
+What did the work: the new question. Asked to quote first, the model
+itself scored every filler 0 and quoted nothing; the contract's quote
+check changed none of these 29 scores. It is the backstop for a judge that
+is fooled into a high score anyway: quotes it made up, or none, count at
+most 2 (unit tests `rubric_2_counts_a_score_without_quotes_from_the_work_as_at_most_2`
+and `invented_short_or_repeated_quotes_are_not_evidence`). The 4 others that
+stopped passing are generic answers real model workers gave to the run's
+one-line placeholder tasks (for example a "translation" that only
+describes how to translate); every lorem-ipsum delivery still fails. New jobs pin rubric 2; recordings made under rubric 1 still replay
 ([runs/rubric2.json](runs/rubric2.json), [THREATS.md](docs/THREATS.md)).
 
 ## NEAR primitives used

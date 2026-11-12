@@ -303,7 +303,10 @@ for the bid calls.
   word in the delivery (else at most 2). Re-graded live by the same model
   (`runs/rubric2.json`, `make rubric-check`): filler passed 0 of 7 (was
   7 of 7); 10 of the 14 other passes still pass, the 4 that dropped are
-  generic answers to placeholder tasks. Left open: a filler written for
+  generic answers to placeholder tasks. The new question did that: the
+  model scored the filler 0 with no quotes, and the contract's quote check
+  changed none of the 29 scores; it is the on-chain backstop for a judge
+  that is still fooled. Left open: a filler written for
   one task (on-topic sentences with no real content) can still quote
   itself; the dispute panels and the payer-weighted record are the next
   line (`rubric_2_counts_a_score_without_quotes_from_the_work_as_at_most_2`,

@@ -426,7 +426,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
           <div><span class="lbl">Test USD a fake account's key held outside escrow</span><b>0.00<span class="ok">■ NONE</span></b></div>
         </div>
       </div>
-      <p class="attest limit"><b>Found and fixed:</b> in this live run, a test agent sending fluent filler passed the check 7 of 7 times (66.90 fUSD). Now the judge must quote two passages that do the task, and the contract checks the quotes are in the work. Re-graded by the same NEAR AI model: filler passes <b>0 of 7</b>.</p>
+      <p class="attest limit"><b>Found and fixed:</b> in this live run, a test agent sending fluent filler passed the check 7 of 7 times (66.90 fUSD). Now the judge must first quote two passages that do the task. Re-graded by the same NEAR AI model, it found nothing to quote in the filler: <b>0 of 7</b> pass. As a backstop, the contract counts a score whose quotes are not in the work as at most 2.</p>
     </div>
   </section>
 
