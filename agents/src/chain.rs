@@ -240,8 +240,25 @@ impl Chain {
         self.ensure_global(&hub, code, code_hash, global_milli)
             .await?;
         if !self.has_code(&hub.id).await {
+            let factory = wasm("FACTORY_WASM", "hire_tree_factory.wasm");
+            // A reused hub can come out of the global deploy with ~1 NEAR:
+            // top it up to the factory's storage (1e19 yocto per byte) plus
+            // 3 NEAR of headroom for its records and posts.
+            let need = factory.len() as u128 * 10u128.pow(19) + 3 * 10u128.pow(24);
+            let have = self.near_of(&hub.id).await;
+            if self.is_testnet() && have < need {
+                near_api::Tokens::account(self.funder.id.clone())
+                    .send_to(hub.id.clone())
+                    .near(NearToken::from_yoctonear(need - have))
+                    .with_signer(self.funder.signer.clone())
+                    .send_to(&self.net)
+                    .await
+                    .map_err(|e| format!("top up hub for the factory: {e:?}"))?
+                    .into_result()
+                    .map_err(|e| format!("top up hub for the factory: {e:?}"))?;
+            }
             Contract::deploy(hub.id.clone())
-                .use_code(wasm("FACTORY_WASM", "hire_tree_factory.wasm"))
+                .use_code(factory)
                 .with_init_call(
                     "new",
                     json!({ "owner": hub.id, "token": usdc.id, "code_hash": hash_s,
