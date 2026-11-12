@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Narration for the demo video with Piper (free, offline TTS):
+# Older narration with Piper (video/voice-kokoro.py is the current one) (free, offline TTS):
 #   PIPER=/path/to/piper PIPER_MODEL=/path/to/en-us-libritts-high.onnx [PIPER_SPEAKER=n] video/voice.sh OUT_DIR
 # Writes OUT_DIR/01.wav, 02.wav, ... one per line of video/voice-lines.tsv.
 # Then: python3 video/mix-voice.py VIDEO.mp4 OUT_DIR OUT.mp4
