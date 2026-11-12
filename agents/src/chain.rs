@@ -327,7 +327,7 @@ impl Chain {
             return Ok(());
         }
         // Missing: top up the hub if needed, deploy, then prove it.
-        let need = milli * 10u128.pow(21) + 10u128.pow(24);
+        let need = global_deploy_need(milli, self.storage_of(&hub.id).await);
         let have = self.near_of(&hub.id).await;
         if self.is_testnet() && have < need {
             near_api::Tokens::account(self.funder.id.clone())
@@ -365,6 +365,16 @@ impl Chain {
             tokio::time::sleep(std::time::Duration::from_secs(3)).await;
         }
         Err(format!("global code still missing after deploy: {last}"))
+    }
+
+    /// Bytes of storage `id` already uses (0 if it does not exist).
+    pub async fn storage_of(&self, id: &AccountId) -> u64 {
+        Account(id.clone())
+            .view()
+            .fetch_from(&self.net)
+            .await
+            .map(|v| v.data.storage_usage)
+            .unwrap_or(0)
     }
 
     pub async fn near_of(&self, id: &AccountId) -> u128 {
@@ -723,9 +733,17 @@ impl Chain {
     }
 }
 
+/// NEAR (yocto) a hub needs before it deploys global code of `milli`
+/// milliNEAR: the deploy's burn, the storage the hub already locks (its
+/// factory and state stay staked; found on testnet, where a reused hub was
+/// 1.63 NEAR short), and 1 NEAR of headroom.
+pub fn global_deploy_need(milli: u128, storage_bytes: u64) -> u128 {
+    milli * 10u128.pow(21) + storage_bytes as u128 * 10u128.pow(19) + 10u128.pow(24)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::transient;
+    use super::{global_deploy_need, transient};
 
     #[test]
     fn a_view_the_contract_refuses_is_not_retried() {
@@ -745,5 +763,15 @@ mod tests {
         ] {
             assert!(transient(e), "{e}");
         }
+    }
+
+    #[test]
+    fn a_reused_hub_is_topped_up_for_the_storage_it_already_locks() {
+        let new_hub = global_deploy_need(39_600, 0);
+        assert_eq!(new_hub, 40_600 * 10u128.pow(21));
+        // A hub running the factory (~163 KB of code and state) needs that
+        // locked storage on top: the testnet rerun was 1.63 NEAR short.
+        let reused = global_deploy_need(39_600, 163_000);
+        assert_eq!(reused - new_hub, 1_630 * 10u128.pow(21));
     }
 }
