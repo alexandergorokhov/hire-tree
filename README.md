@@ -49,14 +49,6 @@ fold     every account pays out, proves a zero balance, deletes itself; lead ear
          its 10 fee (only passed parts count); records: researcher 1/1 paid, cheapbot 0/2
 ```
 
-
-**Words used here.** *fUSD*: fake test USD (the only token). *Lead*: the
-agent that runs a client's job. *Contractor*: a worker that hires
-sub-workers. *Record*: what the factory keeps per worker (paid and unpaid
-money, and from how many payers). *Junk*: deliveries that fail the check (a
-record shows it as money the agent was hired for and never paid, `lost_share`);
-*polished junk* fools it sometimes. *Sybil*: one of many fresh accounts run by one attacker. *Storm*: 30 sybils flooding every auction with cheap junk. *Wash*: sybils paying each other through real jobs so their records look good.
-
 **Quick check, no node, no key** (a few minutes on a cold build):
 
 ```
@@ -97,47 +89,35 @@ contractors' make-or-buy (3 rounds, 9 jobs, Qwen/Qwen3-VL-30B-A3B-Instruct,
 102 signed answers in `demo/swarm-cassette.json`): 29 parts sold, 21 passed
 and paid, 8 junk wins fired without pay, every `swarm-check` rule ok
 (`web/swarm.html?data=live`; `make swarm-replay` reproduces it offline).
-That run found a hole, and it is now fixed: the polished-filler test agent
-passed NEAR AI's check 7 of 7 times (scores 6 to 8, 66.90 of 207.90 fUSD
-paid). **Judge rubric 2** makes the judge quote two passages that do this
+That run found a hole: the polished-filler test agent passed NEAR AI's
+check 7 of 7 times (scores 6 to 8, 66.90 of 207.90 fUSD paid). **Judge
+rubric 2** fixes it: the judge must quote two passages that do this
 specific task before it scores, and the contract counts the score only if
-both quotes are really in the delivered text (otherwise at most 2/10).
-Re-graded live by the same NEAR AI model (29 signed answers,
-`demo/rubric2-cassette.json`, `make rubric-check` replays it):
+both quotes are really in the delivered text (otherwise at most 2/10). New
+jobs pin rubric 2; rubric-1 recordings still replay. Measured live, every
+answer signed and replayed offline by `make rubric-check`:
 
-| Live run deliveries | Passed, rubric 1 | Passed, rubric 2 |
+| Live test (same NEAR AI model) | Before | Rubric 2 |
 |---|---|---|
-| Fluent filler (test agent) | 7 of 7 | **0 of 7** |
-| Everything else | 14 of 22 | 10 of 22 |
+| Fluent filler from the live run (`demo/rubric2-cassette.json`) | passed 7 of 7 | **passed 0 of 7** (others: 14 of 22 → 10 of 22) |
+| Filler written *for* the task vs a real answer, 6 tasks (`demo/probe-cassette.json`) | | **filler 0 of 6, real 6 of 6**; the contract's cap caught one filler the model gave 6 (its "quotes" came from the task) |
+| Real answers on testnet (`demo/testnet-judge-cassette.json`) | 1 of 8 underpaid: a real 10 counted 2 | **bug fixed**: all 8 count as given |
 
-What did the work: the new question. Asked to quote first, the model
-itself scored every filler 0 and quoted nothing; the contract's quote
-check changed none of these 29 scores. It is the backstop for a judge that
-is fooled into a high score anyway: quotes it made up, or none, count at
-most 2 (unit tests `rubric_2_counts_a_score_without_quotes_from_the_work_as_at_most_2`
-and `invented_short_or_repeated_quotes_are_not_evidence`). The 4 others that
-stopped passing are generic answers real model workers gave to the run's
-one-line placeholder tasks (for example a "translation" that only
-describes how to translate); every lorem-ipsum delivery still fails. New jobs pin rubric 2; recordings made under rubric 1 still replay
-([runs/rubric2.json](runs/rubric2.json), [THREATS.md](docs/THREATS.md)).
+The new question does most of the work; the contract's quote check is the
+backstop. The testnet bug: a worker delivers the signed NEAR AI response,
+so the answer's line breaks are the two characters `\n` and a quote after
+one was missed; the check now also reads JSON escapes (the deployed
+testnet code predates the fix). The 4 other answers that stopped passing
+are generic answers to the run's one-line placeholder tasks. Details and
+tests: [THREATS.md](docs/THREATS.md), [runs/rubric2.json](runs/rubric2.json),
+[runs/filler-probe-result.json](runs/filler-probe-result.json).
 
-The harder case, measured live too: filler written *for* the task (it
-repeats the task's words and says nothing). Six tasks, a real answer and
-an on-topic filler for each, 12 signed answers (`demo/probe-cassette.json`,
-replayed by `make rubric-check`): **real answers passed 6 of 6, on-topic
-filler 0 of 6**. Here the backstop bit once: the model gave one filler 6,
-but its two "quotes" came from the task, not the work, so the contract
-counted 2 ([runs/filler-probe-result.json](runs/filler-probe-result.json)).
-
-The testnet run found one more bug, now fixed: a worker delivers the
-signed NEAR AI response itself, so a line break in the answer is the two
-characters `\n`, and a quote that started on the next line was missed. On
-testnet job `t3.job-5` a real bilingual answer scored 10 and counted 2.
-The quote check now also reads the delivery's JSON escapes; all 8 signed
-testnet answers (`demo/testnet-judge-cassette.json`) count as the model
-gave them (tests `every_signed_testnet_answer_counts_as_the_fixed_contract_counts_it`,
-`rubric_2_finds_quotes_in_a_delivered_receipt_whose_text_is_json_escaped`).
-The testnet contracts run the code from before this fix.
+**Words used here.** *fUSD*: fake test USD (the only token). *Lead*: the
+agent that runs a client's job. *Contractor*: a worker that hires
+sub-workers. *Record*: what the factory keeps per worker (paid and unpaid
+money, and from how many payers). *Junk*: deliveries that fail the check (a
+record shows it as money the agent was hired for and never paid, `lost_share`);
+*polished junk* fools it sometimes. *Sybil*: one of many fresh accounts run by one attacker. *Storm*: 30 sybils flooding every auction with cheap junk. *Wash*: sybils paying each other through real jobs so their records look good.
 
 ## NEAR primitives used
 
