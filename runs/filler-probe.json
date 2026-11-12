@@ -1,0 +1,86 @@
+[
+  {
+    "job": "t1.probe.hub.hiretree.testnet",
+    "delivery": 1,
+    "task": "Explain NEAR global contracts in 3 sentences.",
+    "deliverable": "A global contract is code deployed to NEAR once and stored by its hash (or by an account id), so it is not copied into every account that uses it. Any account can then point at that code with a small UseGlobalContract action instead of paying storage for its own copy. Deploying it costs ten times the normal storage price per byte, which pays off once many accounts run the same code.",
+    "kind": "real answer"
+  },
+  {
+    "job": "t1.probe.hub.hiretree.testnet",
+    "delivery": 2,
+    "task": "Explain NEAR global contracts in 3 sentences.",
+    "deliverable": "This explanation of NEAR global contracts covers what NEAR global contracts are and why NEAR global contracts matter. NEAR global contracts are explained here clearly in three sentences, as the task asks. In summary, NEAR global contracts are now fully explained for the reader.",
+    "kind": "on-topic filler"
+  },
+  {
+    "job": "t2.probe.hub.hiretree.testnet",
+    "delivery": 1,
+    "task": "Translate into Spanish: 'The job contract holds the money and pays only when the work passes the check.'",
+    "deliverable": "El contrato del trabajo guarda el dinero y paga solo cuando el trabajo pasa la verificación.",
+    "kind": "real answer"
+  },
+  {
+    "job": "t2.probe.hub.hiretree.testnet",
+    "delivery": 2,
+    "task": "Translate into Spanish: 'The job contract holds the money and pays only when the work passes the check.'",
+    "deliverable": "Here is the Spanish translation of the sentence about the job contract, the money and the check. The translation into Spanish keeps the meaning of the job contract sentence. Spanish translation complete: the job contract, the money and the check are all translated.",
+    "kind": "on-topic filler"
+  },
+  {
+    "job": "t3.probe.hub.hiretree.testnet",
+    "delivery": 1,
+    "task": "Write a one-line summary of: 'Hire Tree lets AI agents hire other AI agents on NEAR; each job is its own account that holds its part's money and pays only checked work.'",
+    "deliverable": "Hire Tree: AI agents hire agents on NEAR, each job an account that holds its money and pays only checked work.",
+    "kind": "real answer"
+  },
+  {
+    "job": "t3.probe.hub.hiretree.testnet",
+    "delivery": 2,
+    "task": "Write a one-line summary of: 'Hire Tree lets AI agents hire other AI agents on NEAR; each job is its own account that holds its part's money and pays only checked work.'",
+    "deliverable": "One-line summary of Hire Tree, AI agents hiring AI agents on NEAR, each job and its money and its checked work, summarized in one line as asked.",
+    "kind": "on-topic filler"
+  },
+  {
+    "job": "t4.probe.hub.hiretree.testnet",
+    "delivery": 1,
+    "task": "List three risks of paying AI agents before their work is checked.",
+    "deliverable": "1. The agent delivers fluent but empty text and is paid anyway. 2. The agent takes the money and never delivers, with no escrow to recover it. 3. A copied or stale answer from another job is passed off as new work.",
+    "kind": "real answer"
+  },
+  {
+    "job": "t4.probe.hub.hiretree.testnet",
+    "delivery": 2,
+    "task": "List three risks of paying AI agents before their work is checked.",
+    "deliverable": "Here are three risks of paying AI agents before their work is checked. These three risks of paying AI agents early are the main risks to consider. Together, these three risks show why paying AI agents before checking their work is risky.",
+    "kind": "on-topic filler"
+  },
+  {
+    "job": "t5.probe.hub.hiretree.testnet",
+    "delivery": 1,
+    "task": "Give the formula for the lead's earned fee in Hire Tree and one example with numbers.",
+    "deliverable": "earned = fee x paid / max(hired, floor), where floor is half the work budget. Example: fee 10 fUSD, work budget 90 so floor 45, the lead hired parts worth 60 and 30 of them passed: earned = 10 x 30 / 60 = 5 fUSD.",
+    "kind": "real answer"
+  },
+  {
+    "job": "t5.probe.hub.hiretree.testnet",
+    "delivery": 2,
+    "task": "Give the formula for the lead's earned fee in Hire Tree and one example with numbers.",
+    "deliverable": "The formula for the lead's earned fee in Hire Tree is given here, along with one example with numbers. The lead's earned fee follows this formula, and the example with numbers shows the lead's earned fee. That is the formula and one example for the lead's earned fee.",
+    "kind": "on-topic filler"
+  },
+  {
+    "job": "t6.probe.hub.hiretree.testnet",
+    "delivery": 1,
+    "task": "Name the NEAR feature that lets a contract check an Ethereum-style signature, and say what it returns.",
+    "deliverable": "env::ecrecover: given the 32-byte message hash, the 64-byte signature, the recovery id v and a malleability flag, it returns the 64-byte uncompressed secp256k1 public key (or nothing if the signature is invalid); the contract hashes it with keccak256 to get the 20-byte address.",
+    "kind": "real answer"
+  },
+  {
+    "job": "t6.probe.hub.hiretree.testnet",
+    "delivery": 2,
+    "task": "Name the NEAR feature that lets a contract check an Ethereum-style signature, and say what it returns.",
+    "deliverable": "The NEAR feature that lets a contract check an Ethereum-style signature is named here, and what it returns is said. This NEAR feature checks Ethereum-style signatures and returns what it returns. So the NEAR feature and what it returns are both covered.",
+    "kind": "on-topic filler"
+  }
+]

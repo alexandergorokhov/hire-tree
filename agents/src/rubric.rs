@@ -25,6 +25,8 @@ pub struct Item {
     pub deliverable: String,
     /// Every rubric-1 score the judge gave it (one per panel answer).
     pub v1: Vec<u8>,
+    /// A probe set's label for the delivery (e.g. "on-topic filler").
+    pub kind: Option<String>,
 }
 
 impl Item {
@@ -83,10 +85,35 @@ pub fn items_from(c: &Cassette) -> Vec<Item> {
                 task: u["task"].as_str().unwrap_or_default().into(),
                 deliverable: u["deliverable"].as_str().unwrap_or_default().into(),
                 v1: score.into_iter().collect(),
+                kind: None,
             }),
         }
     }
     out
+}
+
+/// A probe set: `[{"job", "delivery", "task", "deliverable", "kind"}]`
+/// (e.g. runs/filler-probe.json: real answers and on-topic filler for the
+/// same tasks).
+pub fn items_from_file(path: &str) -> Result<Vec<Item>, String> {
+    let v: Value =
+        serde_json::from_str(&std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?)
+            .map_err(|e| format!("{path}: {e}"))?;
+    v.as_array()
+        .ok_or(format!("{path}: not a list"))?
+        .iter()
+        .map(|i| {
+            Ok(Item {
+                job: i["job"].as_str().ok_or("job")?.into(),
+                delivery: i["delivery"].as_u64().ok_or("delivery")? as u32,
+                task: i["task"].as_str().ok_or("task")?.into(),
+                deliverable: i["deliverable"].as_str().ok_or("deliverable")?.into(),
+                v1: vec![],
+                kind: i["kind"].as_str().map(String::from),
+            })
+        })
+        .collect::<Result<_, &str>>()
+        .map_err(|f| format!("{path}: an item has no {f}"))
 }
 
 /// The score a rubric-2 answer counts for on-chain (as `Job::read_score`):
@@ -126,14 +153,18 @@ pub async fn run(items: &[Item], llm: &Llm) -> Result<Value, String> {
                 .trim(),
         )
         .unwrap_or(Value::Null);
-        rows.push(json!({
+        let mut row = json!({
             "job": i.job, "delivery": i.delivery, "filler": i.filler(),
             "v1_scores": i.v1, "v1_counted": i.v1_counted(),
             "v2_score": answer["score"], "v2_counted": v2,
             "v2_quotes_found": check::evidence(
                 &answer["quotes"].as_array().map(|a| a.iter().filter_map(|q| q.as_str()).collect::<Vec<_>>()).unwrap_or_default(),
                 &i.deliverable),
-        }));
+        });
+        if let Some(k) = &i.kind {
+            row["kind"] = json!(k);
+        }
+        rows.push(row);
     }
     let passed = |rows: &[Value], filler: bool, key: &str| {
         let set: Vec<&Value> = rows.iter().filter(|r| r["filler"] == filler).collect();
@@ -143,14 +174,39 @@ pub async fn run(items: &[Item], llm: &Llm) -> Result<Value, String> {
             .count();
         json!({ "deliveries": set.len(), "passed": pass })
     };
-    Ok(json!({
+    let mut kinds: Vec<String> = items.iter().filter_map(|i| i.kind.clone()).collect();
+    kinds.sort();
+    kinds.dedup();
+    let by_kind: serde_json::Map<String, Value> = kinds
+        .iter()
+        .map(|k| {
+            let set: Vec<&Value> = rows.iter().filter(|r| r["kind"] == k.as_str()).collect();
+            let pass = set
+                .iter()
+                .filter(|r| {
+                    r["v2_counted"]
+                        .as_u64()
+                        .is_some_and(|s| s >= PASS_SCORE_HINT as u64)
+                })
+                .count();
+            (
+                k.clone(),
+                json!({ "deliveries": set.len(), "passed_rubric_2": pass }),
+            )
+        })
+        .collect();
+    let mut report = json!({
         "model": model,
         "signer": llm.signer(),
         "pass_score": PASS_SCORE_HINT,
         "filler": { "rubric_1": passed(&rows, true, "v1_counted"), "rubric_2": passed(&rows, true, "v2_counted") },
         "other": { "rubric_1": passed(&rows, false, "v1_counted"), "rubric_2": passed(&rows, false, "v2_counted") },
         "rows": rows,
-    }))
+    });
+    if !by_kind.is_empty() {
+        report["by_kind"] = Value::Object(by_kind);
+    }
+    Ok(report)
 }
 
 #[cfg(test)]
@@ -225,6 +281,20 @@ mod tests {
             Some(2)
         );
         assert_eq!(read_v2("9", d), None, "not JSON: the contract refuses it");
+    }
+
+    #[tokio::test]
+    async fn a_probe_set_is_reported_by_kind() {
+        let f = format!("{}/../runs/filler-probe.json", env!("CARGO_MANIFEST_DIR"));
+        let items = items_from_file(&f).unwrap();
+        assert_eq!(items.len(), 12);
+        let llm = Llm::Mock(Mock::new("scripted-test-model", Box::new(mock_script)));
+        let r = run(&items, &llm).await.unwrap();
+        assert_eq!(r["by_kind"]["real answer"]["deliveries"], 6);
+        assert_eq!(r["by_kind"]["on-topic filler"]["deliveries"], 6);
+        // The scripted judge cannot tell on-topic filler from work: that is
+        // what the live probe (make record-probe) measures.
+        assert_eq!(r["rows"][1]["kind"], "on-topic filler");
     }
 
     #[tokio::test]

@@ -7,7 +7,7 @@
 //! hiretree verify-cassette FILE    # re-check every signature offline
 //! hiretree mcp --as NAME           # stdio MCP server on testnet as NAME.<operator>
 //! hiretree mcp --local             # stdio MCP playground on a local node (no keys)
-//! hiretree rubric-check [--llm mock|record:FILE|replay:FILE] # the live run's deliveries under judge rubric 2
+//! hiretree rubric-check [--items FILE] [--llm mock|record:FILE|replay:FILE] # the live run's deliveries (or a probe set) under judge rubric 2
 //! hiretree testnet-answers         # read a testnet run's signed judge answers back from the chain into a cassette
 //! hiretree swarm [--rounds N] [--out FILE] [--blind|--audit-all] [--seed N] [--storm R [--wash]] [--allow-list] [--llm mock|live|record:FILE|replay:FILE] # 3 leads, 36 agents, trees up to 3 deep, N rounds on a local node
 //! ```
@@ -235,7 +235,10 @@ async fn rubric_check(args: &[String]) {
         arg(args, "--from").unwrap_or_else(|| format!("{}/../demo/swarm-cassette.json", out_dir()));
     let src = Cassette::load(&from).unwrap_or_else(|e| die(e));
     src.verify().unwrap_or_else(|e| die(format!("{from}: {e}")));
-    let items = hire_tree_agents::rubric::items_from(&src);
+    let items = match arg(args, "--items") {
+        Some(f) => hire_tree_agents::rubric::items_from_file(&f).unwrap_or_else(|e| die(e)),
+        None => hire_tree_agents::rubric::items_from(&src),
+    };
     let spec = arg(args, "--llm").unwrap_or_else(|| "mock".into());
     let llm = match spec.split_once(':') {
         Some(("record", f)) => {
@@ -272,6 +275,12 @@ async fn rubric_check(args: &[String]) {
     let out = arg(args, "--out").unwrap_or_else(|| format!("{}/rubric2.json", out_dir()));
     std::fs::write(&out, serde_json::to_string_pretty(&r).unwrap() + "\n")
         .unwrap_or_else(|e| die(e));
+    for (k, v) in r["by_kind"].as_object().into_iter().flatten() {
+        println!(
+            "{k}: rubric 2 passed {} of {}",
+            v["passed_rubric_2"], v["deliveries"]
+        );
+    }
     for k in ["filler", "other"] {
         println!(
             "{k:7} rubric 1 passed {} of {}, rubric 2 passed {} of {}",
