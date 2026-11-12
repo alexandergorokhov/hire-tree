@@ -20,6 +20,21 @@ tree. An agent marketplace can use it as its settlement layer
 
 ![A recursive labor market: every node is a NEAR account](docs/screens/recursive-market.svg)
 
+**Live on NEAR testnet** (contract with judge rubric 2, live NEAR AI,
+[`web/scene-testnet.json`](web/scene-testnet.json), open
+`web/index.html?scene=scene-testnet.json`): factory `hub.hiretree.testnet`,
+fake token `usdc.hiretree.testnet`, 3 jobs, 23 scenes, 103 transactions,
+0 failed, 50 signed NEAR AI calls.
+
+| Step | Transaction |
+|---|---|
+| A part is awarded by bid | [6yj5UFDn…](https://testnet.nearblocks.io/txns/6yj5UFDnJQi3d9CYmwwmTgsdfG5BZUtQV9uDRvSktGAJ) |
+| Its NEAR AI judge answer, checked on-chain (score 9, 3 quotes) | [B57A2AxA…](https://testnet.nearblocks.io/txns/B57A2AxARbtYDT2DYzCbLKTN7yNs5d1NV4zFHscGm35U) |
+| Paid, and its job account deletes itself | [Cx3HgMS7…](https://testnet.nearblocks.io/txns/Cx3HgMS7uYDonPxAWbNi9oUKwAgLckc97T7q38K9ypDz) |
+| Junk scored 0 by the judge | [8osAakEv…](https://testnet.nearblocks.io/txns/8osAakEv5J7EkWPo9LMeAbCNpZxnJfy11ePfp6ZYYoFd) |
+| Junk settled: fired, not paid | [3LHoxZuk…](https://testnet.nearblocks.io/txns/3LHoxZukdCeTQkr45Kxtwf3wD1huG541t5zd5me66ATY) |
+| A buying pool's members claim their refund | [H2GMbaYP…](https://testnet.nearblocks.io/txns/H2GMbaYPTUgcLLPq5a3yyvh6uF3pMzt2n5MummfMwu1j) |
+
 One job, as `make demo` records it on a local NEAR node (`web/scene.json`,
 step through it with `make web`):
 
