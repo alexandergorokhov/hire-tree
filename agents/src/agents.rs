@@ -809,8 +809,11 @@ pub fn mock_script(req: &Value) -> String {
         if d.contains("lorem") || d.contains(POLISHED_MARK) {
             return json!({ "quotes": [], "score": 1 }).to_string();
         }
+        // Quote the first and the second half (real judges quote what they
+        // read; too short a text gives quotes the contract will not count).
         let words: Vec<&str> = d.split_whitespace().collect();
-        let quotes: Vec<String> = words.chunks(4).take(2).map(|c| c.join(" ")).collect();
+        let half = words.len().div_ceil(2).max(1);
+        let quotes: Vec<String> = words.chunks(half).take(2).map(|c| c.join(" ")).collect();
         return json!({ "quotes": quotes, "score": 8 }).to_string();
     }
     let score = if d.contains("lorem") {

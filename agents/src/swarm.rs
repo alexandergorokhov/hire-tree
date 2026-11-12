@@ -586,7 +586,10 @@ pub async fn pay_through_job_via(
                 "task": task, "window_secs": WINDOW_SECS, "lead_fee": "0" }),
         )
         .await?;
-    let delivered = b64(format!("Deliverable: {task}").as_bytes());
+    let delivered = b64(format!(
+        "Deliverable for {task}: the facts, the sources and a one-line summary."
+    )
+    .as_bytes());
     for (i, w) in workers.iter().enumerate() {
         let child = format!("t{}.{root}", i + 1);
         tools

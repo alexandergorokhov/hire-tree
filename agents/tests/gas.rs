@@ -153,7 +153,9 @@ async fn gas_and_storage_per_part() {
         .unwrap();
     let task = "four bidders";
     use base64::Engine;
-    let resp = base64::engine::general_purpose::STANDARD.encode(format!("Deliverable: {task}"));
+    let resp = base64::engine::general_purpose::STANDARD.encode(format!(
+        "Deliverable for {task}: the facts, the sources and a one-line summary."
+    ));
     let m = mark(&c);
     tools
         .call(winner, "deliver", &json!({ "job": child, "resp": resp }))

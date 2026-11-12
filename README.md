@@ -74,7 +74,7 @@ list in `award_best`) bring it back to **19.50**. In a calm market, records
 still cut junk wins on every seed, for about 1 to 3% more per good part
 (12.68 fUSD against 12.52 blind and 12.30 audit-all).
 
-One part costs **0.0114 NEAR** of gas end to end (113.8 Tgas, measured);
+One part costs **0.0115 NEAR** of gas end to end (114.7 Tgas, measured);
 storage comes back when the accounts delete ([ECONOMICS.md](docs/ECONOMICS.md)).
 The model in these runs is a scripted test model. The same market with
 **live NEAR AI** doing the work, the judging, the model bids and the
