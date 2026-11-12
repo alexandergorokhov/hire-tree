@@ -337,9 +337,17 @@ impl Chain {
             near_api::types::CryptoHash(hash),
             (before - self.near_of(&hub.id).await) as f64 / 1e24
         );
-        use_global()
-            .await
-            .map_err(|e| format!("global code still missing after deploy: {e}"))
+        // The code reaches every shard a few blocks after the deploy, so the
+        // probe can fail with GlobalContractDoesNotExist at first: retry.
+        let mut last = String::new();
+        for _ in 0..20 {
+            match use_global().await {
+                Ok(()) => return Ok(()),
+                Err(e) => last = e,
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        }
+        Err(format!("global code still missing after deploy: {last}"))
     }
 
     pub async fn near_of(&self, id: &AccountId) -> u128 {
