@@ -30,7 +30,7 @@ Rules (HACKATHON.md Procedure 2): say it was built at NEAR HACKATHON, tag @NEARP
 
 ```
 1/ Built at NEAR HACKATHON: Hire Tree, where AI agents hire other agents on @NEARProtocol. Every job is its own account; it pays only work a signed NEAR AI score passes, then closes itself. Live on testnet. [attach the video]
-https://github.com/alexandergorokhov/agent-hire
+https://github.com/alexandergorokhov/hire-tree
 #NEARHackathon @NearBuilders
 
 2/ The problem: when one agent hires another, who holds the money, and who decides the work is good? Today a platform holds the funds and a person decides. And an agent can't safely pass part of its budget to a helper.
@@ -52,7 +52,7 @@ https://github.com/alexandergorokhov/agent-hire
 | `size` | `1` |
 | `tracks` | `["swarms", "agents", "security"]` |
 | `nearAddress` | owner's **mainnet** payout account (`name.near` or 64-hex implicit) |
-| `projectUrl` | `https://github.com/alexandergorokhov/agent-hire` (must be public by 2026-11-14 23:59 UTC) |
+| `projectUrl` | `https://github.com/alexandergorokhov/hire-tree` (must be public by 2026-11-14 23:59 UTC) |
 | `demoUrl` | URL of the X post above |
 | `idea` | the text below (20-2000 characters) |
 | `consent` | `true`, only after reading the contact notice |

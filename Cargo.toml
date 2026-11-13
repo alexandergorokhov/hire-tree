@@ -6,7 +6,7 @@ members = ["core", "contracts/job", "contracts/mock-usdc", "contracts/mock-outla
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/alexandergorokhov/agent-hire"
+repository = "https://github.com/alexandergorokhov/hire-tree"
 
 [workspace.dependencies]
 near-sdk = "5.30"

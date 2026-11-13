@@ -203,7 +203,7 @@ async function caption(page, text) {
       '<div><span style="color:#ffcc29">$</span> make judge &nbsp;&rarr; ALL PASS (12 checks)</div>' +
       '<div><span style="color:#ffcc29">$</span> make mcp-setup &nbsp;&rarr; 50 MCP tools for your agent</div>' +
       '<div>testnet factory: hub.hiretree.testnet &middot; 110 tx, 0 failed</div>' +
-      '<div>github.com/alexandergorokhov/agent-hire</div></div>';
+      '<div>github.com/alexandergorokhov/hire-tree</div></div>';
     document.body.appendChild(d);
     requestAnimationFrame(() => { d.style.opacity = '1'; });
   });
