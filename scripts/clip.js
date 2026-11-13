@@ -76,7 +76,7 @@ async function caption(page, text) {
   const starts = { 1: 0.3 - CARD };
   const speak = (n) => { starts[n] = now(); };
   const hold = async (n, min) => {
-    const left = starts[n] + Math.max(min, wavSecs(n) + 0.7) - now();
+    const left = starts[n] + Math.max(min, wavSecs(n) + 0.35) - now();
     if (left > 0) await wait(left);
   };
   const to = async (sel, block = 'start') => {
@@ -89,90 +89,61 @@ async function caption(page, text) {
   // 1. The hero: one real job from the live NEAR AI run plays out as a tree.
   await page.goto(`${base}/market.html`);
   mark('hero');
-  await wait(Math.max(1.2, wavSecs(1) + 0.3 - CARD - now()));
+  await wait(Math.max(1.2, wavSecs(1) + 0.2 - CARD - now()));
   speak(2);
   await say('When one agent hires another: who holds the money, and who decides the work is good?');
-  await hold(2, 7.4);
+  await hold(2, 5);
   speak(3);
-  await say('Each part of this real job has its own NEAR account, holding only its share of the money. Work that fails the check is not paid.');
-  await hold(3, 7);
-  await say(`Live NEAR AI run: ${parts.length} parts, ${parts.filter(p => p.paid).length} paid, ${parts.filter(p => p.fired).length} failed the check and were not paid. Fluent filler from 3 test agents was still paid 7 times: that hole is fixed below.`);
-  await wait(5.5);
+  await say('Each part of this real job has its own NEAR account, holding only its share of the money. Here a contractor hired a helper from its own pay.');
+  await hold(3, 8);
 
-  // 2. The idea, how it is new, where it goes.
-  await say('');
-  await to('#idea');
+  // 2. How the contract decides, and what is new.
   speak(4);
-  await say('Use case: an editing agent hires other agents for a brief. Only work that passes the check is paid.');
-  await hold(4, 8);
   await page.$eval('.loop', e => e.scrollIntoView({ behavior: 'smooth', block: 'center' }));
-  speak(5);
   await say('The job contract holds the money. A NEAR AI model scores the work and signs the score. The contract pays only if the score passes.');
-  await hold(5, 8);
+  await hold(4, 6);
+  speak(5);
   await page.$eval('.new', e => e.scrollIntoView({ behavior: 'smooth', block: 'center' }));
-  speak(6);
   await say('What is new: one escrow per job, payment decided by a verified score, and agents hiring their own helpers.');
-  await hold(6, 6);
+  await hold(5, 5);
 
   // 3. The catalog.
   await say('');
+  speak(6);
   await to('#agents');
-  speak(7);
-  await say('Agents for hire, ranked by their on-chain record.');
-  await wait(3.5);
-  await page.hover('.agent:nth-child(2)');
-  await wait(1);
-  await page.click('.agent:nth-child(2)');
-  await say('Every job, judge score and payment. Hire it from your own agent over MCP.');
-  await hold(7, 10.5);
-  await page.keyboard.press('Escape');
-  await say('');
+  await say('Agents for hire, ranked by their on-chain record: every job, judge score and payment.');
+  await hold(6, 4);
   await page.click('#skills .chip:nth-child(2)');
-  await wait(2);
-  const junk = await page.$('.agent:last-child');
-  if (junk) await junk.evaluate(e => e.scrollIntoView({ behavior: 'smooth', block: 'center' }));
-  speak(8);
-  await say('Agents that underbid and hand in empty work lose the part, and their record costs them the next contract.');
-  await hold(8, 5);
+  await wait(0.8);
+  const bad = await page.$('.agent:last-child');
+  if (bad) await bad.evaluate(e => e.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  speak(7);
+  await say('Agents that hand in empty work go unpaid, and their record costs them the next contract.');
+  await hold(7, 4);
   await page.click('#skills .chip:nth-child(1)');
   await say('');
 
-  // 4. Jobs: open the one with a sub-hire and a rehire.
-  await to('#jobs');
-  const jobs = await page.$$('.job > button');
-  const pick = Math.max(0, live.rounds.flatMap(r => r.plans.map((_, i) => r.intents[i] && r.intents[i].root))
-    .findIndex(root => parts.some(p => p.root === root && p.level === 2)));
-  await jobs[pick].click();
-  await wait(0.6);
-  await to(`.job:nth-child(${pick + 2})`, 'center');
-  speak(9);
-  await say('A contractor hired a helper from its own pay. A worker that failed was replaced by the runner-up.');
-  await hold(9, 7);
-  await say('');
-
-  // 5. Proof under attack.
+  // 4. Proof under attack (simulation), then the weakness found live and fixed.
   mark('proof');
+  speak(8);
   await to('#proof');
-  speak(10);
   await say('Simulation: 30 fake accounts flood the market with cheap, empty work. Buyers who read records lose 10.75 parts to them; blind buyers lose 71.50.');
-  await hold(10, 7.5);
+  await hold(8, 6);
   await say('');
-  await to('.fixed', 'center');
-  speak(11);
+  speak(9);
+  await to('.fixed', 'start');
   await say('Found and fixed: polished filler passed the judge 7 of 7. Now the contract checks quoted proof: 0 of 7.');
-  await wait(5);
+  await wait(Math.max(4, wavSecs(9) - 3.5));
   await to('#testnet', 'center');
   await say('Same contracts on NEAR testnet: 110 transactions, 0 failed.');
-  await hold(11, 9.2);
+  await hold(9, 6);
   await say('');
 
-  // 6. For agents.
+  // 5. For agents.
   mark('build');
+  speak(10);
   await to('#build', 'center');
-  speak(12);
-  await say('Your agent can do all of this itself: one MCP server, no keys.');
-  await wait(4);
-  await say('');
+  await wait(1);
 
   // 6b. A recorded MCP session (docs/MCP-TRANSCRIPT.md), replayed as a terminal.
   mark('mcp');
@@ -199,15 +170,15 @@ async function caption(page, text) {
       el.style.marginBottom = '10px';
       el.innerHTML = '<span style="color:#ffcc29">&gt; ' + r[0] + '</span> <span style="color:#8a8a80">' + r[1].replace(/</g, '&lt;') + '</span><br><span style="color:#7fd38a">  ' + r[2].replace(/</g, '&lt;') + '</span>';
       list.appendChild(el);
-    }, 300 + i * 1150));
+    }, 200 + i * 900));
   });
-  await wait(11.5);
-  await hold(12, 0);
+  await wait(8.8);
+  await hold(10, 0);
   await page.evaluate(() => document.getElementById('__mcp').remove());
 
   // 7. End card.
   mark('end card');
-  speak(13);
+  speak(11);
   await page.evaluate(() => {
     const d = document.createElement('div');
     d.style.cssText = 'position:fixed;inset:0;z-index:100000;background:#0e0e0c;color:#ecece6;display:flex;flex-direction:column;justify-content:center;padding:0 120px;gap:22px;opacity:0;transition:opacity .6s';
@@ -221,7 +192,7 @@ async function caption(page, text) {
     document.body.appendChild(d);
     requestAnimationFrame(() => { d.style.opacity = '1'; });
   });
-  await hold(13, 7);
+  await hold(11, 5);
   mark('end');
 
   // Where each narration line starts in the final video (logo card included).
