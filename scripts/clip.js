@@ -132,7 +132,7 @@ async function caption(page, text) {
   await say('');
   speak(9);
   await to('.fixed', 'start');
-  await say('Found and fixed: polished filler passed the judge 7 of 7. Now the contract checks quoted proof: 0 of 7.');
+  await say('Found and fixed: polished but empty answers passed the score 7 of 7. Now the scorer must quote the work, and the contract checks the quotes: 0 of 7.');
   await wait(Math.max(4, wavSecs(9) - 3.5));
   await to('#testnet', 'center');
   await say('Same contracts on NEAR testnet: 110 transactions, 0 failed.');

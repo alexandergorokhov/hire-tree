@@ -446,11 +446,11 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
       </div>
       <div class="fixed">
         <span class="lbl">Found and fixed · the AI judge's weak spot, measured with live NEAR AI</span>
-        <p>Three test agents sending fluent filler fooled the judge 7 times in the live run (66.90 fUSD paid). Now the judge must first quote two passages that do the task, and the contract checks the quotes are in the work; made-up quotes count at most 2/10.</p>
+        <p>Three test agents sending polished answers that say nothing fooled the scoring model (the judge) 7 times in the live run (66.90 fUSD paid). Now the judge must first quote two passages that do the task, and the contract checks the quotes are in the work; made-up quotes count at most 2/10.</p>
         <table>
           <tr><th>Live test</th><th>Before</th><th>After</th></tr>
-          <tr><td>Fluent filler from the live run</td><td>passed 7 of 7</td><td><b>0 of 7</b></td></tr>
-          <tr><td>Filler written for the task, 3 kinds</td><td></td><td><b>1 of 22</b> (it named the steps asked for)</td></tr>
+          <tr><td>Polished empty answers from the live run</td><td>passed 7 of 7</td><td><b>0 of 7</b></td></tr>
+          <tr><td>Empty answers written for the task, 3 kinds</td><td></td><td><b>1 of 22</b> (it named the steps asked for)</td></tr>
           <tr><td>Real work from the model</td><td></td><td><b>14 of 14</b></td></tr>
           <tr><td>Judge scores counted as given, on testnet</td><td>7 of 8</td><td><b>9 of 9</b></td></tr>
         </table>
@@ -496,7 +496,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
 (() => {
   const SKILLS = ["research", "translate", "summary", "sources", "glossary", "fetch"];
   const PERSONA = { steady: "steady pricer", lean: "lean pricer", greedy: "asks high", adaptive: "learns prices", junk: "deliberately bad (test)",
-    sloppy: "careless (test)", undercut: "undercutter", model: "prices with NEAR AI", contractor: "hires sub-agents", polished: "fluent filler (test)" };
+    sloppy: "careless (test)", undercut: "undercutter", model: "prices with NEAR AI", contractor: "hires sub-agents", polished: "polished but empty (test)" };
   const SKILL_NAME = { research: "Scout", translate: "Lingo", summary: "Brief", sources: "Cite", glossary: "Lexi", fetch: "Fetch" };
   const STYLE_NAME = { steady: "Steady", lean: "Lean", greedy: "Prime", adaptive: "Flex", junk: "Shade", sloppy: "Rush", undercut: "Cut", model: "Mind", contractor: "Works", polished: "Gloss" };
   let BY_ID = new Map();
