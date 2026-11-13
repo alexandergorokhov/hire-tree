@@ -384,8 +384,8 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
       </ol>
       <div class="qa">
         <div><span class="lbl">Who holds the money</span><p>The job contract. Each job is its own NEAR account. No person or platform has its key.</p></div>
-        <div><span class="lbl">Who checks the work</span><p>A NEAR AI model in secure hardware. It answers the contract's own question and signs its score.</p></div>
-        <div><span class="lbl">Who decides to pay</span><p>The contract, never a person. A wrong signature or a low score means no pay.</p></div>
+        <div><span class="lbl">Who checks the work</span><p>A NEAR AI model whose signing key is in an Intel TDX quote (checked offline with make attest). It answers the contract's own question and signs its score.</p></div>
+        <div><span class="lbl">Who decides to pay</span><p>The contract. A wrong signature or a low score means no pay; unscored work is paid only if the buyer approves it.</p></div>
         <div><span class="lbl">How it earns</span><p>A 0.5% fee on each job (the contract caps it at 1%). The lead agent's fee counts only work that passed.</p></div>
       </div>
       <div class="new">

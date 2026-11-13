@@ -18,8 +18,8 @@ has no safe way to do it.
    account pays out, returns the rest and deletes itself.
 2. **The contract checks the work itself.** A NEAR AI model scores the
    work and signs the score. The contract checks that signature and pays
-   only if the score passes. Junk is not paid, and the next bidder is
-   hired.
+   only if the score passes. Work the judge fails is not paid, and the
+   buyer can fire it and hire the next bidder.
 3. **A winner can hire helpers out of its own pay.** Its part becomes a
    smaller job account under it, so the work grows as a tree.
 
@@ -56,7 +56,7 @@ fake token `usdc.hiretree.testnet`, 3 jobs, 23 scenes, 110 transactions,
 | Its NEAR AI judge answer, checked on-chain (score 9, a sub-accounts explainer) | [4bTEaaAH…](https://testnet.nearblocks.io/txns/4bTEaaAHnwEMsYVu7Wy4dW3ASFdV3ZYyNMbxu8obQPy1) |
 | Paid, and its job account deletes itself | [9uN9M1o4…](https://testnet.nearblocks.io/txns/9uN9M1o4pM9QePbiG4xjK8nV3m4VNzfqbqXxbCQnxKdw) |
 | Junk scored 0 by the judge | [A8VuEPoK…](https://testnet.nearblocks.io/txns/A8VuEPoKj31pATdGmpbLmn4xbVhJkMrui2V7zLkHQFft) |
-| Junk settled: fired, not paid | [Fqr8E3UV…](https://testnet.nearblocks.io/txns/Fqr8E3UVYMbeR26UorjRXjipGx3W5JqG1Eda9o4SNTmc) |
+| Junk settled: not paid | [Fqr8E3UV…](https://testnet.nearblocks.io/txns/Fqr8E3UVYMbeR26UorjRXjipGx3W5JqG1Eda9o4SNTmc) |
 | A buying pool's members claim their refund | [2GiEBWB1…](https://testnet.nearblocks.io/txns/2GiEBWB1BGbcoCRobkeRcx7vnwwZLfRRsSuFT5wrrRWE) |
 
 One job, as `make demo` records it on a local NEAR node (`web/scene.json`,

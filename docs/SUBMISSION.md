@@ -37,9 +37,9 @@ https://github.com/alexandergorokhov/agent-hire
 
 3/ Hire Tree: each job is its own NEAR account, holding only its money, with no owner key. A model on NEAR AI scores the work and signs the score. The contract checks the signature and pays only work that passes. Winners can hire helpers from their own pay.
 
-4/ We attacked our own market in a simulation: 30 fake agents bidding half price with empty work. Buyers who chose on price alone gave them 71 jobs per run. Buyers who read each agent's on-chain record first: just 11.
+4/ We attacked our own market in a simulation: 30 fake agents bidding half price with empty work. Buyers who chose on price alone gave them 71.5 tasks per run. Buyers who read each agent's on-chain record first: 10.75 (mean of 4 runs).
 
-5/ Any agent can try it on a local NEAR node through our MCP server: 50 tools to bid, deliver, get paid and hire helpers. `make judge` re-checks every number offline; `make start` runs the demo. Test tokens only, no real money.
+5/ Any agent can try it on a local NEAR node through our MCP server: 50 tools to bid, deliver, get paid and hire helpers. `make judge` recomputes our numbers offline from the recorded runs; `make start` runs the demo. Test tokens only, no real money.
 ```
 
 ## Form fields (owner submits; the form or `POST /api/applications`, exactly these fields)
@@ -59,7 +59,7 @@ https://github.com/alexandergorokhov/agent-hire
 
 Never fill `website` (spam trap). One submission per repository, and it cannot be edited.
 
-`idea` ("What did you build?", 1901 characters, limit 2000):
+`idea` ("What did you build?", 1989 characters, limit 2000):
 
 ```
 THE PROBLEM
@@ -68,18 +68,18 @@ AI agents now hire other agents to do parts of a task. Two questions have no goo
 WHAT WE BUILT
 Hire Tree: a job market for agents, where payment waits for a verified score.
 - Every job is its own NEAR account. It holds only that job's money and has no owner key, so no platform or person can take the funds.
-- Agents bid on-chain. The contract picks the lowest bid, marked up by how much of the bidder's past work went unpaid (its on-chain record).
+- Agents bid on-chain. The buyer can let the contract pick: the lowest bid, marked up by how much of the bidder's past work went unpaid (its on-chain record).
 - A model on NEAR AI scores the work and signs the score. The contract checks that signature itself and pays only work that passes. Failed work is not paid, and the buyer can hire the next bidder.
 - A winner can hire helpers out of its own pay and keep the difference, so the market grows as a tree. When a job ends, its account pays out and deletes itself.
 - Any agent can try it through our MCP server, on a local NEAR node.
 
 HOW NEAR FITS
-Sub-accounts make each job its own account, and one global contract runs them all. NEAR AI Cloud signs the scores; env::ecrecover checks them on-chain. Function-call keys let a worker deliver but never move money. NEAR Intents can swap the pay.
+Sub-accounts make each job its own account, and one global contract runs them all. NEAR AI Cloud signs the scores; env::ecrecover checks them on-chain. Function-call keys let a worker deliver but never move money. NEAR Intents can swap the pay (tested on a local node).
 
 PROOF
 - Live on NEAR testnet (hub.hiretree.testnet): 3 jobs with live NEAR AI, 110 transactions, 0 failed.
-- In a simulation, 30 fake agents bid half price with empty work. Buyers who chose on price alone gave them 71 jobs per run; buyers who read the on-chain record first, 11.
-- A live run found a weakness: polished answers that say nothing passed 7 of 7. Now the model must quote the real work, and the contract checks the quotes: 0 of 7.
+- In a simulation, 30 fake agents bid half price with empty work. Buyers who chose on price alone gave them 71.5 tasks per run; buyers who read the on-chain record first, 10.75.
+- A live run found a weakness: polished answers that say nothing passed 7 of 7. Now the judge must quote the real work, and the contract checks the quotes. Re-graded with live NEAR AI: 0 of 7.
 
-Test tokens only. `make judge` re-checks every number above, offline.
+Test tokens only. `make judge` recomputes these offline from the recorded runs.
 ```
