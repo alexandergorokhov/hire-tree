@@ -137,6 +137,21 @@ async function caption(page, text) {
   await to('#testnet', 'center');
   await say('Same contracts on NEAR testnet: 110 transactions, 0 failed.');
   await hold(9, 6);
+  // The same steps on the public testnet explorer (screenshots in video/explorer/, if present).
+  const shots = [['judge-answer.png', 'NEAR testnet explorer: the signed NEAR AI judge answer, checked by the contract (9/10).'],
+    ['settle.png', 'NEAR testnet explorer: the part is paid and its account closes itself.']]
+    .filter(([f]) => fs.existsSync(path.join(root, 'video', 'explorer', f)));
+  for (const [f, text] of shots) {
+    const uri = 'data:image/png;base64,' + fs.readFileSync(path.join(root, 'video', 'explorer', f)).toString('base64');
+    await page.evaluate((u) => {
+      let d = document.getElementById('__shot');
+      if (!d) { d = document.createElement('div'); d.id = '__shot'; d.style.cssText = 'position:fixed;inset:0;z-index:99990;background:#fff center/contain no-repeat'; document.body.appendChild(d); }
+      d.style.backgroundImage = `url(${u})`;
+    }, uri);
+    await say(text);
+    await wait(2.6);
+  }
+  if (shots.length) await page.evaluate(() => document.getElementById('__shot').remove());
   await say('');
 
   // 5. For agents.
