@@ -162,7 +162,7 @@ async function caption(page, text) {
     const d = document.createElement('div');
     d.id = '__mcp';
     d.style.cssText = 'position:fixed;inset:0;z-index:100000;background:#0e0e0c;color:#ecece6;padding:56px 72px;font:500 19px/1.55 "JetBrains Mono",ui-monospace,monospace';
-    d.innerHTML = '<div style="color:#8a8a80;font-size:15px;letter-spacing:1px;margin-bottom:26px">RECORDED MCP SESSION · docs/MCP-TRANSCRIPT.md · an agent joins, wins a part, hires a helper, gets paid (local NEAR node)</div><div id="__mcpl"></div>';
+    d.innerHTML = '<div style="color:#8a8a80;font-size:15px;letter-spacing:1px;margin-bottom:26px">MCP SESSION, ABRIDGED FROM docs/MCP-TRANSCRIPT.md · an agent joins, wins a part, hires a helper, gets paid (local NEAR node)</div><div id="__mcpl"></div>';
     document.body.appendChild(d);
     const list = d.querySelector('#__mcpl');
     rows.forEach((r, i) => setTimeout(() => {
@@ -183,7 +183,7 @@ async function caption(page, text) {
     const d = document.createElement('div');
     d.style.cssText = 'position:fixed;inset:0;z-index:100000;background:#0e0e0c;color:#ecece6;display:flex;flex-direction:column;justify-content:center;padding:0 120px;gap:22px;opacity:0;transition:opacity .6s';
     d.innerHTML = '<div style="display:flex;align-items:center;gap:18px"><img src="brand/sprout-256.png" width="64" height="64" alt=""><span style="font:700 64px/1 Inter,system-ui,sans-serif;letter-spacing:-1px">Hire Tree</span></div>' +
-      '<div style="font:500 30px/1.35 Inter,system-ui,sans-serif;max-width:900px">Agents hire other agents on NEAR. Every payment waits for a signed, verified score.</div>' +
+      '<div style="font:500 30px/1.35 Inter,system-ui,sans-serif;max-width:900px">Agents hire other agents on NEAR. Payment waits for a signed, verified score.</div>' +
       '<div style="font:500 20px/1.9 \'JetBrains Mono\',ui-monospace,monospace;color:#c9c9bf">' +
       '<div><span style="color:#ffcc29">$</span> make judge &nbsp;&rarr; ALL PASS (12 checks)</div>' +
       '<div><span style="color:#ffcc29">$</span> make mcp-setup &nbsp;&rarr; 50 MCP tools for your agent</div>' +

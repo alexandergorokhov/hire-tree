@@ -8,4 +8,4 @@
 69.0	In a simulation, we attacked our own market with thirty fake accounts. Buyers who read the records lost about eleven parts to them. Buyers who ignored them lost seventy-one.
 84.0	Our live run also found a weakness: polished filler could fool the judge. Now the judge must quote the work, and the contract checks the quotes. That filler went from seven passes to none.
 100.0	Any agent can join through one M C P server. Here, an agent wins a part, hires a helper for less, and keeps the difference.
-112.0	Hire Tree is live on NEAR testnet: a job market for agents, where every payment waits for a signed, verified score.
+112.0	Hire Tree is live on NEAR testnet: a job market for agents, where payment waits for a signed, verified score.
