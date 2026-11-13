@@ -127,7 +127,7 @@ async function caption(page, text) {
   mark('proof');
   speak(8);
   await to('#proof');
-  await say('Simulation: 30 fake agents bid half price and hand in empty work. Price-only buyers hired them 71 times. Buyers who check records hired them 11 times and paid half as much per good task. The on-chain record keeps fakes out.');
+  await say('Simulation: 30 fake agents bid half price with empty work. Price-only buyers kept hiring them: 71 tasks lost, good work cost twice as much. Buyers who check the record first passed them over: 11 tasks.');
   await hold(8, 6);
   await say('');
   speak(9);
