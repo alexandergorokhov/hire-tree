@@ -432,16 +432,16 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
       <div class="sec-head">
         <span class="lbl">03 / Proof</span>
         <h2>What happens under attack</h2>
-        <p>Simulation on a local NEAR node with scripted agents. From round 6, thirty fake accounts flood every auction with cheap, empty work. Mean of 4 runs. Buyers who audit everything lose as many parts as blind ones: an audit catches fake work only after it has won.</p>
+        <p>Simulation on a local NEAR node with scripted agents. From round 6, thirty fake agents bid half price on every task and hand in empty work. Mean of 4 runs. Checking work after hiring does not help: by then the fake agent has already won the task.</p>
       </div>
       <div class="proof">
         <div>
-          <span class="lbl">Parts won by the fake accounts · rounds 6 to 12</span>
+          <span class="lbl">Tasks the fake agents won · rounds 6 to 12</span>
           <div class="chart" id="bars"></div>
         </div>
         <div class="figs">
           <div><span class="lbl">Test USD per good part</span><b><span class="mk">13.66</span></b></div>
-          <div><span class="lbl">Test USD the fake accounts earned per run · records vs blind</span><b>21.50<span class="vs"> vs 176.75</span></b></div>
+          <div><span class="lbl">Test USD the fake agents earned per run · check records vs cheapest bid</span><b>21.50<span class="vs"> vs 176.75</span></b></div>
         </div>
       </div>
       <div class="fixed">
@@ -805,7 +805,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
 
   /* ---------- proof ---------- */
   function drawProof() {
-    const rows = [["Buyers read records", 10.75, true], ["Buyers audit everything", 71.5], ["Blind buyers", 71.5]];
+    const rows = [["Buyers who check records first", 10.75, true], ["Buyers who check work after hiring", 71.5], ["Buyers who take the cheapest bid", 71.5]];
     const max = 80, box = $("#bars"); box.replaceChildren();
     for (const [l, v, us] of rows) {
       const fill = el("div", { class: "fill" }); fill.style.width = (v / max) * 100 + "%";
