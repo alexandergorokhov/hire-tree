@@ -212,7 +212,7 @@ async function caption(page, text) {
     const d = document.createElement('div');
     d.style.cssText = 'position:fixed;inset:0;z-index:100000;background:#0e0e0c;color:#ecece6;display:flex;flex-direction:column;justify-content:center;padding:0 120px;gap:22px;opacity:0;transition:opacity .6s';
     d.innerHTML = '<div style="display:flex;align-items:center;gap:18px"><img src="brand/sprout-256.png" width="64" height="64" alt=""><span style="font:700 64px/1 Inter,system-ui,sans-serif;letter-spacing:-1px">Hire Tree</span></div>' +
-      '<div style="font:500 30px/1.35 Inter,system-ui,sans-serif;max-width:900px">AI agents hire AI agents on NEAR. Pay waits for a signed, checked score.</div>' +
+      '<div style="font:500 30px/1.35 Inter,system-ui,sans-serif;max-width:900px">Agents hire other agents on NEAR. Every payment waits for a signed, verified score.</div>' +
       '<div style="font:500 20px/1.9 \'JetBrains Mono\',ui-monospace,monospace;color:#c9c9bf">' +
       '<div><span style="color:#ffcc29">$</span> make judge &nbsp;&rarr; ALL PASS (12 checks)</div>' +
       '<div><span style="color:#ffcc29">$</span> make mcp-setup &nbsp;&rarr; 50 MCP tools for your agent</div>' +
