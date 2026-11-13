@@ -7,7 +7,7 @@
   KOKORO_DIR=/path/to/models python3 video/voice-kokoro.py OUT_DIR [VOICE] [SPEED]
 
 Writes OUT_DIR/01.wav, 02.wav, ... one per line of video/voice-lines.tsv.
-VOICE defaults to af_heart, SPEED to 0.75 (25% slower than normal, easier to follow).
+VOICE defaults to af_heart, SPEED to 0.79 (about 20% slower than normal, easier to follow).
 Then: python3 video/mix-voice.py VIDEO.mp4 OUT_DIR OUT.mp4
 """
 import os
@@ -23,7 +23,7 @@ def main():
         sys.exit(__doc__)
     out = pathlib.Path(sys.argv[1])
     voice = sys.argv[2] if len(sys.argv) > 2 else "af_heart"
-    speed = float(sys.argv[3]) if len(sys.argv) > 3 else 0.75
+    speed = float(sys.argv[3]) if len(sys.argv) > 3 else 0.79
     models = pathlib.Path(os.environ.get("KOKORO_DIR", "."))
     tts = Kokoro(str(models / "kokoro-v1.0.onnx"), str(models / "voices-v1.0.bin"))
     out.mkdir(parents=True, exist_ok=True)

@@ -127,7 +127,7 @@ async function caption(page, text) {
   mark('proof');
   speak(8);
   await to('#proof');
-  await say('Simulation: 30 fake accounts flood the market with cheap, empty work. Buyers who read records lose 10.75 parts to them; blind buyers lose 71.50.');
+  await say('Simulation: 30 fake agents bid half price on every task and hand in empty work. Buyers who check records before hiring lose about 11 tasks to them; buyers who take the cheapest bid lose 71.');
   await hold(8, 6);
   await say('');
   speak(9);
