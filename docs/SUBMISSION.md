@@ -26,12 +26,21 @@ The same author also entered Agent Exit (https://github.com/alexandergorokhov/ne
 
 ## X post (owner posts it, with the video attached)
 
-Rules (HACKATHON.md Procedure 2): say it was built at NEAR HACKATHON, tag @NEARProtocol and #NEARHackathon, attach the demo video (FAQ Q-012: screenshots alone are not enough when judges cannot open the demo; the testnet run and the hosted page help, the video is still the safest). The post's URL is the form's `demoUrl`.
+Rules (HACKATHON.md Procedure 2): say it was built at NEAR HACKATHON, tag @NEARProtocol and #NEARHackathon, attach the demo video. The first post's URL is the form's `demoUrl`. Posts 2-5 are replies, so the pitch is on X even without a deck. Each fits 280 (a link counts as 23).
 
-> Built at NEAR HACKATHON: Hire Tree, where AI agents hire other agents on @NEARProtocol. Every job is its own account; it pays only work a signed NEAR AI score passes, then closes itself. Live on testnet.
->
-> https://github.com/alexandergorokhov/agent-hire
-> #NEARHackathon @NearBuilders
+```
+1/ Built at NEAR HACKATHON: Hire Tree, where AI agents hire other agents on @NEARProtocol. Every job is its own account; it pays only work a signed NEAR AI score passes, then closes itself. Live on testnet. [attach the video]
+https://github.com/alexandergorokhov/agent-hire
+#NEARHackathon @NearBuilders
+
+2/ The problem: when one agent hires another, who holds the money, and who decides the work is good? Today a platform holds the funds and a person decides. And an agent can't safely pass part of its budget to a helper.
+
+3/ Hire Tree: each job is its own NEAR account, holding only its money, with no owner key. A model on NEAR AI scores the work and signs the score. The contract checks the signature and pays only work that passes. Winners can hire helpers from their own pay.
+
+4/ We attacked our own market in a simulation: 30 fake agents bidding half price with empty work. Buyers who chose on price alone gave them 71 jobs per run, about 3 in 4. Buyers who read each agent's on-chain record first: 11, about 1 in 6.
+
+5/ Any agent can try it on a local NEAR node through our MCP server: 50 tools to bid, deliver, get paid and hire helpers. `make judge` re-checks every number offline; `make start` runs the demo. Test tokens only, no real money.
+```
 
 ## Form fields (owner submits; the form or `POST /api/applications`, exactly these fields)
 
@@ -50,6 +59,27 @@ Rules (HACKATHON.md Procedure 2): say it was built at NEAR HACKATHON, tag @NEARP
 
 Never fill `website` (spam trap). One submission per repository, and it cannot be edited.
 
-`idea`:
+`idea` ("What did you build?", 1955 characters, limit 2000):
 
-> Hire Tree is a settlement layer for AI agents that hire other AI agents, on NEAR. When one agent splits a task and pays others for the parts, someone has to hold the money, and a subcontracting agent has no safe way to hand part of its budget to a sub-agent. In Hire Tree every job is its own NEAR sub-account running one global contract with no owner key. It holds exactly its part's money, takes bids on-chain and hires by a public rule that reads each bidder's on-chain record, checks the NEAR AI Cloud signature on the delivered work and on the contract's own quality question (env::ecrecover), pays only work that passes (optionally into NEAR Intents to swap the pay), lets failed work go unpaid and hires the runner-up, then pays out and deletes itself. A winner can hire sub-agents out of its own pay, so the market grows as a tree. In a simulated market of 36 workers, 30 fake accounts flooding every auction with cheap, empty work won 10.75 parts (mean of 4 seeds) when buyers read on-chain records, against 71.5 when they did not. A live NEAR AI run found that fluent filler fooled the judge 7 of 7 times; the contract's question now makes the judge quote the work first, and on the same deliveries filler passed 0 of 7, and in two more live probes filler written for the task passed 1 of 22 (that one named the steps asked for) while real answers passed 14 of 14. Live on NEAR testnet (hub.hiretree.testnet). Any agent can use it through an MCP server. No mainnet; all money is a fake test token.
+```
+THE PROBLEM
+AI agents now hire other agents to do parts of a task. Two questions have no good answer: who holds the money while the work is done, and who decides the work is good enough? Today a platform holds the funds and a person settles disputes, and an agent that hires a helper has no safe way to pass on part of its budget.
+
+WHAT WE BUILT
+Hire Tree: a job market for agents, where payment waits for a verified score.
+- Every job is its own NEAR account. It holds only that job's money and has no owner key, so no platform or person can take the funds.
+- Agents bid on-chain. The contract picks the lowest bid, marked up by how much of the bidder's past work went unpaid (its on-chain record).
+- A model on NEAR AI scores the work and signs the score. The contract checks that signature itself and pays only work that passes. Failed work is not paid, and the buyer can hire the next bidder.
+- A winner can hire helpers out of its own pay and keep the difference, so the market grows as a tree. When a job ends, its account pays out and deletes itself.
+- Any agent can try it through our MCP server, on a local NEAR node.
+
+HOW NEAR FITS
+Sub-accounts make each job its own account, and one global contract runs them all. NEAR AI Cloud signs the scores; env::ecrecover checks them on-chain. Function-call keys let a worker deliver but never move money. NEAR Intents can swap the pay.
+
+PROOF
+- Live on NEAR testnet (hub.hiretree.testnet): 3 jobs with live NEAR AI, 110 transactions, 0 failed.
+- In a simulation, 30 fake agents bid half price with empty work. Buyers who chose on price alone gave them 71 jobs per run (3 in 4); buyers who read the on-chain record first, 11 (1 in 6).
+- A live run found a weakness: polished answers that say nothing passed 7 of 7. Now the model must quote the real work, and the contract checks the quotes: 0 of 7, while real answers passed 14 of 14.
+
+Test tokens only. `make judge` re-checks every number above, offline.
+```

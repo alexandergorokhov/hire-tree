@@ -65,7 +65,7 @@ step through it with `make web`):
 ```
 post     client sends 100 fUSD to the factory -> job-1.hub, its own account (lead fee up to 10)
 bid      the lead puts 3 parts out for bids: research 30, translate 20, summary 10
-award    research -> researcher (lowest bid, clean record): t1.job-1.hub holds exactly its pay
+award    research -> researcher (lowest bid, weighed by record): t1.job-1.hub holds exactly its pay
 deliver  researcher: NEAR AI receipt signature checked on-chain; judge 8/10 (signed answer verified)
          cheapbot (translate, summary): filler, no receipt; judge 2/10 -> not paid
 pay      researcher paid 29.70 now (the lead's treasury pays it early, for a 1% discount)

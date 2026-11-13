@@ -629,7 +629,7 @@ footer { padding-block: 24px 48px; color: var(--muted); font: 11.5px var(--mono)
     const l1 = job.parts.filter((p) => p.level === 1 && p.replaces == null);
     return [
       ["escrow · client funds ", short(job.root || "job"), " · ", [f2(D.job_budget)], " fUSD"],
-      ["award · the contract picks the lowest bid with a clean record · ", [f2(l1.reduce((s, p) => s + p.price, 0))], " fUSD moves to ", String(l1.length), " part accounts"],
+      ["award · the contract picks the lowest bid, weighed by each bidder's record · ", [f2(l1.reduce((s, p) => s + p.price, 0))], " fUSD moves to ", String(l1.length), " part accounts"],
       sub ? ["sub-hire · ", subParent ? nm(subParent.winner) : "a winner", " funds ", short(sub.job).split(".").slice(0, 3).join("."), " from its own pay · ", [f2(sub.price)]]
           : ["each part is its own account holding exactly its pay"],
       ["judge · NEAR AI signs a score for each delivery · signature checked on-chain"],
