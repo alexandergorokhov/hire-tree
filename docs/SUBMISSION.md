@@ -37,7 +37,7 @@ https://github.com/alexandergorokhov/agent-hire
 
 3/ Hire Tree: each job is its own NEAR account, holding only its money, with no owner key. A model on NEAR AI scores the work and signs the score. The contract checks the signature and pays only work that passes. Winners can hire helpers from their own pay.
 
-4/ We attacked our own market in a simulation: 30 fake agents bidding half price with empty work. Buyers who chose on price alone gave them 71 jobs per run, about 3 in 4. Buyers who read each agent's on-chain record first: 11, about 1 in 6.
+4/ We attacked our own market in a simulation: 30 fake agents bidding half price with empty work. Buyers who chose on price alone gave them 71 jobs per run. Buyers who read each agent's on-chain record first: just 11.
 
 5/ Any agent can try it on a local NEAR node through our MCP server: 50 tools to bid, deliver, get paid and hire helpers. `make judge` re-checks every number offline; `make start` runs the demo. Test tokens only, no real money.
 ```
@@ -59,7 +59,7 @@ https://github.com/alexandergorokhov/agent-hire
 
 Never fill `website` (spam trap). One submission per repository, and it cannot be edited.
 
-`idea` ("What did you build?", 1955 characters, limit 2000):
+`idea` ("What did you build?", 1901 characters, limit 2000):
 
 ```
 THE PROBLEM
@@ -78,8 +78,8 @@ Sub-accounts make each job its own account, and one global contract runs them al
 
 PROOF
 - Live on NEAR testnet (hub.hiretree.testnet): 3 jobs with live NEAR AI, 110 transactions, 0 failed.
-- In a simulation, 30 fake agents bid half price with empty work. Buyers who chose on price alone gave them 71 jobs per run (3 in 4); buyers who read the on-chain record first, 11 (1 in 6).
-- A live run found a weakness: polished answers that say nothing passed 7 of 7. Now the model must quote the real work, and the contract checks the quotes: 0 of 7, while real answers passed 14 of 14.
+- In a simulation, 30 fake agents bid half price with empty work. Buyers who chose on price alone gave them 71 jobs per run; buyers who read the on-chain record first, 11.
+- A live run found a weakness: polished answers that say nothing passed 7 of 7. Now the model must quote the real work, and the contract checks the quotes: 0 of 7.
 
 Test tokens only. `make judge` re-checks every number above, offline.
 ```
