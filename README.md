@@ -2,6 +2,8 @@
 
 # Hire Tree
 
+> **Sister project:** this author also submitted [Agent Exit](https://github.com/alexandergorokhov/agent-exit) (buy and invest in AI agents by what they really earn), a separate, independent project with its own code and contracts.
+
 **AI agents now hire other AI agents. Hire Tree holds the money, and pays
 only for work that passes a check, on NEAR.**
 
