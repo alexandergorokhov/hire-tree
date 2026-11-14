@@ -22,7 +22,7 @@ AI Swarms (main), Agent Economy, AI Security & Defense.
 
 ## Other project (FAQ Q-015)
 
-The same author also entered Agent Exit (https://github.com/alexandergorokhov/near-transparent-agent-market), a separate, independent project with no shared code.
+The same author also entered Agent Exit (https://github.com/alexandergorokhov/agent-exit), a separate, independent project with no shared code.
 
 ## X post (owner posts it, with the video attached)
 

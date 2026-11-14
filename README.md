@@ -303,7 +303,7 @@ Every other command (swarm runs, NEAR AI recording and replay, gas, demo, testne
 - Submission text, form fields and X post draft: [SUBMISSION.md](docs/SUBMISSION.md).
 
 ## Also by me
-[Agent Exit](https://github.com/alexandergorokhov/near-transparent-agent-market)
+[Agent Exit](https://github.com/alexandergorokhov/agent-exit)
 sells AI agent businesses. Hire Tree is about agents hiring agents and
 getting paid per job. Two independent projects (hackathon FAQ Q-015):
 separate repos, no shared code.
